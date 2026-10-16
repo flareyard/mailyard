@@ -116,21 +116,51 @@ export const segments = sqliteTable("segments", {
   createdAt: createdAt(),
 })
 
+/**
+ * A template and its versions. Sends and campaigns use the latest published version; editing writes a
+ * draft, so a live template never changes under a send in flight.
+ */
 export const templates = sqliteTable(
   "templates",
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
-    kind: text("kind", { enum: ["code", "blocks"] }).notNull(),
+    /** `html`: an HTML document with placeholders. `blocks`: a JSON document of kit blocks, laid out in the brand. */
+    kind: text("kind", { enum: ["html", "blocks"] }).notNull(),
+    publishedVersion: integer("published_version"),
+    latestVersion: integer("latest_version").notNull(),
+    archivedAt: integer("archived_at"),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("templates_name").on(t.name)],
+)
+
+export const templateVersions = sqliteTable(
+  "template_versions",
+  {
+    templateId: text("template_id")
+      .notNull()
+      .references(() => templates.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
     subject: text("subject").notNull(),
+    /** HTML for `html` templates; the blocks document as JSON for `blocks` templates. */
     source: text("source").notNull(),
-    variables: text("variables", { mode: "json" }).$type<unknown>(),
+    /** Optional hand-written text part; otherwise it is derived from the HTML. */
+    text: text("text"),
     publishedAt: integer("published_at"),
+    createdBy: text("created_by"),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("templates_name_version").on(t.name, t.version)],
+  (t) => [primaryKey({ columns: [t.templateId, t.version] })],
 )
+
+/** Workspace settings as JSON documents by key: `brand` (the theme templates are laid out in), and more later. */
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value", { mode: "json" }).$type<unknown>().notNull(),
+  updatedAt: integer("updated_at").notNull(),
+})
 
 export const campaigns = sqliteTable(
   "campaigns",
@@ -170,6 +200,7 @@ export const messagesOut = sqliteTable(
     campaignId: text("campaign_id").references(() => campaigns.id),
     automationRunId: text("automation_run_id"),
     templateId: text("template_id"),
+    templateVersion: integer("template_version"),
     recipient: text("recipient").notNull(),
     sender: text("sender").notNull(),
     subject: text("subject").notNull(),

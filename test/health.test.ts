@@ -36,8 +36,10 @@ describe("D1 schema", () => {
       "messages_out",
       "processed_events",
       "segments",
+      "settings",
       "subscriptions",
       "suppressions",
+      "template_versions",
       "templates",
       "topics",
     ])
@@ -57,6 +59,14 @@ describe("GET /openapi.json", () => {
       "/v1/messages",
       "/v1/messages/{id}",
       "/v1/send",
+      "/v1/settings/brand",
+      "/v1/templates",
+      "/v1/templates/preview",
+      "/v1/templates/{id}",
+      "/v1/templates/{id}/draft",
+      "/v1/templates/{id}/publish",
+      "/v1/templates/{id}/render",
+      "/v1/templates/{id}/rollback",
       "/v1/track",
     ])
   })

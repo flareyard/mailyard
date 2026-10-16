@@ -11,11 +11,19 @@ import {
   MessagesHandlers,
   SystemHandlers,
 } from "../http/handlers.ts"
+import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
 import { appLayer } from "../layers.ts"
 import { handleQueue } from "./queue.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
-  Layer.provide([SystemHandlers, ActionsHandlers, ApiKeysHandlers, MessagesHandlers]),
+  Layer.provide([
+    SystemHandlers,
+    ActionsHandlers,
+    ApiKeysHandlers,
+    MessagesHandlers,
+    TemplatesHandlers,
+    SettingsHandlers,
+  ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
   Layer.provide(HttpServer.layerServices),

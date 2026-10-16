@@ -1,7 +1,7 @@
 import { eq, inArray, sql } from "drizzle-orm"
 import { Effect, Option, Schedule, Schema } from "effect"
 import { Bindings } from "../Bindings.ts"
-import { contacts, messagesOut, suppressions, templates } from "../db/schema.ts"
+import { contacts, messagesOut, suppressions } from "../db/schema.ts"
 import {
   type Attachment,
   BlobStore,
@@ -14,9 +14,11 @@ import {
 } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { SendQueue } from "../services/SendQueue.ts"
+import { renderTemplate, type TemplateSource } from "../templates/render.ts"
+import { getBrand } from "./brand.ts"
 import { upsertContact } from "./contacts.ts"
 import { bumpDailyStat } from "./deliveryEvents.ts"
-import { htmlToText, render } from "./render.ts"
+import { resolveForSend } from "./templates.ts"
 
 export interface Party {
   readonly email: string
@@ -41,10 +43,6 @@ export interface TransactionalRequest {
 export class SendRequestInvalid extends Schema.TaggedError<SendRequestInvalid>()("SendRequestInvalid", {
   field: Schema.String,
   message: Schema.String,
-}) {}
-
-export class TemplateNotFound extends Schema.TaggedError<TemplateNotFound>()("TemplateNotFound", {
-  template: Schema.String,
 }) {}
 
 /** Giving up on a deferred message after this many attempts marks it failed. */
@@ -95,21 +93,24 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
   const database = yield* Database
   const env = yield* Bindings
 
-  let subject = request.subject
-  let body = request.body
+  let source: TemplateSource
   let templateId: string | undefined
+  let templateVersion: number | undefined
   if (request.template) {
-    const id = request.template
-    const template = yield* database.query("templates.find", (db) =>
-      db.select().from(templates).where(eq(templates.id, id)).get(),
-    )
-    if (!template) return yield* new TemplateNotFound({ template: id })
-    subject = subject ?? template.subject
-    body = body ?? template.source
-    templateId = template.id
+    const resolved = yield* resolveForSend(request.template)
+    templateId = resolved.template.id
+    templateVersion = resolved.version.version
+    // Plunk lets a request override the template's subject or body.
+    source = request.body
+      ? { kind: "html", subject: request.subject ?? resolved.source.subject, source: request.body }
+      : { ...resolved.source, subject: request.subject ?? resolved.source.subject }
+  } else {
+    if (!request.subject)
+      return yield* new SendRequestInvalid({ field: "subject", message: "A subject is required." })
+    if (!request.body) return yield* new SendRequestInvalid({ field: "body", message: "A body is required." })
+    source = { kind: "html", subject: request.subject, source: request.body }
   }
-  if (!subject) return yield* new SendRequestInvalid({ field: "subject", message: "A subject is required." })
-  if (!body) return yield* new SendRequestInvalid({ field: "body", message: "A body is required." })
+  const brand = yield* getBrand()
   const from = request.from ?? (env.DEFAULT_FROM ? parseParty(env.DEFAULT_FROM) : undefined)
   if (!from) {
     return yield* new SendRequestInvalid({
@@ -150,14 +151,18 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
       whenNew: "unsubscribed",
     })
     const vars = { ...merged, email: contact.email, name: contact.name ?? recipient.name, data: merged }
-    const html = render(body, vars, { escape: true })
+    const rendered = yield* Effect.try({
+      try: () => renderTemplate(source, vars, brand),
+      catch: (e) =>
+        new SendRequestInvalid({ field: "template", message: e instanceof Error ? e.message : String(e) }),
+    })
     const message: Outgoing = {
       from: party(from),
       to: [party(recipient)],
       ...(request.reply ? { replyTo: party(parseParty(request.reply)) } : {}),
-      subject: render(subject, vars, { escape: false }),
-      html,
-      text: htmlToText(html),
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
       ...(request.headers ? { headers: request.headers } : {}),
       ...(attachments ? { attachments } : {}),
     }
@@ -179,6 +184,7 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
           apiKeyId: request.apiKeyId,
           contactId: contact.id,
           templateId: templateId ?? null,
+          templateVersion: templateVersion ?? null,
           // One idempotency key covers the whole request; suffix it per recipient to keep rows unique.
           idempotencyKey: request.idempotencyKey
             ? `${request.apiKeyId}:${request.idempotencyKey}:${index}`

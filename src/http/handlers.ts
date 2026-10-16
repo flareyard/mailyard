@@ -41,15 +41,15 @@ export const ApiKeyAuthLive = Layer.effect(
 )
 
 /** The app's services, captured when a handler group is built and provided to each request. */
-const provideTo =
+export const provideTo =
   <C>(context: Context.Context<C>) =>
   <Args extends ReadonlyArray<unknown>, A, E, R>(handler: (...args: Args) => Effect.Effect<A, E, R>) =>
   (...args: Args) =>
     handler(...args).pipe(Effect.provideContext(context))
 
-const appContext = Effect.context<Database | Bindings | BlobStore | Ids | Sender | SendQueue>()
+export const appContext = Effect.context<Database | Bindings | BlobStore | Ids | Sender | SendQueue>()
 
-const requireScope = (scope: Scope) =>
+export const requireScope = (scope: Scope) =>
   Effect.gen(function* () {
     const caller = yield* CurrentCaller
     if (!caller.scopes.includes(scope)) {
@@ -137,8 +137,8 @@ export const ActionsHandlers = HttpApiBuilder.group(
             Effect.catchTags({
               SendRequestInvalid: (e) =>
                 Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
-              TemplateNotFound: (e) =>
-                Effect.fail(new NotFound({ message: `Template ${e.template} not found.` })),
+              TemplateMissing: (e) =>
+                Effect.fail(new NotFound({ message: `Template ${e.template}: ${e.reason}.` })),
               InvalidMessage: (e) => Effect.fail(new Unprocessable({ message: e.reason })),
             }),
             Effect.catchTags({ DatabaseError: Effect.die, BlobStoreError: Effect.die }),

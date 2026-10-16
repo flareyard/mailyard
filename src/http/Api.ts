@@ -247,10 +247,156 @@ export class MessagesApi extends HttpApiGroup.make("messages")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Templates and brand
+// ---------------------------------------------------------------------------------------------
+
+const TemplateKind = Schema.Literals(["html", "blocks"])
+const Variables = Schema.Struct({ used: Schema.Array(Schema.String), required: Schema.Array(Schema.String) })
+
+export const TemplateSummary = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  kind: TemplateKind,
+  publishedVersion: Schema.NullOr(Schema.Number),
+  latestVersion: Schema.Number,
+  hasUnpublishedChanges: Schema.Boolean,
+  archived: Schema.Boolean,
+  updatedAt: Schema.Number,
+  createdAt: Schema.Number,
+})
+
+export const TemplateDetail = Schema.Struct({
+  ...TemplateSummary.fields,
+  latest: Schema.NullOr(
+    Schema.Struct({
+      version: Schema.Number,
+      subject: Schema.String,
+      source: Schema.String,
+      text: Schema.NullOr(Schema.String),
+      publishedAt: Schema.NullOr(Schema.Number),
+      variables: Variables,
+    }),
+  ),
+  versions: Schema.Array(
+    Schema.Struct({
+      version: Schema.Number,
+      subject: Schema.String,
+      publishedAt: Schema.NullOr(Schema.Number),
+      createdBy: Schema.NullOr(Schema.String),
+      createdAt: Schema.Number,
+    }),
+  ),
+})
+
+export const RenderResult = Schema.Struct({
+  subject: Schema.String,
+  html: Schema.String,
+  text: Schema.String,
+  size: Schema.Number,
+  /** Email Service's 5 MiB limit, before attachments. */
+  withinLimit: Schema.Boolean,
+  variables: Schema.Struct({ ...Variables.fields, missing: Schema.Array(Schema.String) }),
+})
+
+const TemplateBody = {
+  subject: Schema.String.check(Schema.isMaxLength(998)),
+  /** HTML for `html` templates; the blocks document as JSON text for `blocks` templates. */
+  source: Schema.String,
+  text: Schema.optionalKey(Schema.NullOr(Schema.String)),
+}
+
+const RenderData = Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown))
+
+export class TemplatesApi extends HttpApiGroup.make("templates")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/templates", {
+      query: { archived: Schema.optionalKey(Schema.Literals(["true", "false"])) },
+      success: Schema.Struct({ templates: Schema.Array(TemplateSummary) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/templates", {
+      payload: Schema.Struct({
+        name: Schema.NonEmptyString.check(Schema.isMaxLength(120)),
+        kind: TemplateKind,
+        ...TemplateBody,
+        publish: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: TemplateDetail,
+      error: [Forbidden, InvalidRequest, NotFound],
+    }),
+    HttpApiEndpoint.get("get", "/v1/templates/:id", {
+      params: { id: Schema.String },
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.put("saveDraft", "/v1/templates/:id/draft", {
+      params: { id: Schema.String },
+      payload: Schema.Struct(TemplateBody),
+      success: TemplateDetail,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("publish", "/v1/templates/:id/publish", {
+      params: { id: Schema.String },
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("rollback", "/v1/templates/:id/rollback", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ version: Schema.Int.check(Schema.isGreaterThan(0)) }),
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.delete("archive", "/v1/templates/:id", {
+      params: { id: Schema.String },
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("render", "/v1/templates/:id/render", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        data: RenderData,
+        /** `published` (default), `latest` (the draft), or a version number. */
+        version: Schema.optionalKey(Schema.Union([Schema.Literals(["published", "latest"]), Schema.Int])),
+      }),
+      success: RenderResult,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("preview", "/v1/templates/preview", {
+      payload: Schema.Struct({ kind: TemplateKind, ...TemplateBody, data: RenderData }),
+      success: RenderResult,
+      error: [Forbidden, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+export const BrandSettingsSchema = Schema.Struct({
+  name: Schema.NonEmptyString,
+  siteUrl: Schema.String,
+  tagline: Schema.String,
+  logoUrl: Schema.optionalKey(Schema.String),
+  fontsHref: Schema.optionalKey(Schema.String),
+  colors: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  fonts: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+})
+
+export class SettingsApi extends HttpApiGroup.make("settings")
+  .add(
+    HttpApiEndpoint.get("getBrand", "/v1/settings/brand", { success: BrandSettingsSchema, error: Forbidden }),
+    HttpApiEndpoint.put("putBrand", "/v1/settings/brand", {
+      payload: Schema.Unknown,
+      success: BrandSettingsSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailflare's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailflare")
   .add(SystemApi)
   .add(ActionsApi)
   .add(ApiKeysApi)
   .add(MessagesApi)
+  .add(TemplatesApi)
+  .add(SettingsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailflare API" })) {}

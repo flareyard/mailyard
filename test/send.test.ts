@@ -119,7 +119,8 @@ describe("POST /v1/send (Plunk-compatible)", () => {
   })
 
   it("refuses a message over the 5 MiB limit with 422, before sending anything", async () => {
-    const big = btoa("a".repeat(4 * 1024 * 1024))
+    // 3.8 MiB raw is just over the 5 MiB limit once base64-encoded (×4/3).
+    const big = btoa("a".repeat(3_985_000))
     const response = await send({
       to: "big@example.net",
       subject: "Big",

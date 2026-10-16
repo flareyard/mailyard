@@ -1,0 +1,82 @@
+[
+  ["heading", ["Your code is **ready**, ==Ada==\nwelcome"]],
+  ["subheading", ["What happens next"]],
+  [
+    "para",
+    ["Hello **Ada**, here is __your link__(https://mbprep.app/x?a=1&b=2) and ~~indigo~~ text <script>"]
+  ],
+  ["note", ["Proud of it? Share your stat card."]],
+  ["warn", ["If this wasn't you, **ignore** this email."]],
+  ["button", ["Open MBPrep →", "https://mbprep.app/start?a=1&b=2"]],
+  ["button", ["Sign it out", "https://mbprep.app/out", "danger"]],
+  [
+    "buttons",
+    [
+      [
+        { "label": "It was me", "url": "https://mbprep.app/me" },
+        { "label": "Sign it out", "url": "https://mbprep.app/out", "style": "ghost" }
+      ]
+    ]
+  ],
+  [
+    "stats",
+    [
+      [
+        { "label": "Answers", "value": "412" },
+        { "label": "Streak", "value": "12 days" },
+        { "label": "Rank", "value": "#6" }
+      ]
+    ]
+  ],
+  [
+    "bars",
+    [
+      [
+        { "label": "M", "value": 0.2 },
+        { "label": "T", "value": 0.9 },
+        { "label": "W", "value": 1.4 },
+        { "label": "T", "value": 0 }
+      ]
+    ]
+  ],
+  [
+    "list",
+    [
+      [
+        { "title": "Nephrology · 52%", "sub": "Your weakest system", "url": "https://mbprep.app/n" },
+        { "title": "Cardiology" }
+      ]
+    ]
+  ],
+  ["steps", [[{ "title": "Pick your exam", "sub": "MB3" }, { "title": "Start a drill" }]]],
+  [
+    "meta",
+    [
+      [
+        { "label": "Requested from", "value": "Chrome on Android" },
+        { "label": "Place", "value": "Lagos, NG" }
+      ]
+    ]
+  ],
+  ["receipt", [[{ "label": "MB3 · 1 month", "value": "₦4,000" }], { "label": "Total", "value": "₦4,000" }]],
+  ["otp", ["123456"]],
+  [
+    "questionCard",
+    [
+      "Question of the day",
+      "Which nerve is injured?",
+      [{ "label": "A", "url": "https://mbprep.app/a" }, { "label": "B", "url": "https://mbprep.app/b" }]
+    ]
+  ],
+  ["progress", [["Past questions collected", "Being solved", "Checked", "Open"], 2]],
+  [
+    "feedback",
+    [
+      "Quick question",
+      "Was this useful?",
+      [{ "label": "Yes", "url": "https://mbprep.app/y" }, { "label": "No", "url": "https://mbprep.app/n" }]
+    ]
+  ],
+  ["file", ["CSV", "answers.csv", "412 rows · 38 KB"]],
+  ["lit", ["**not bold** ==x== __y__"]]
+]
