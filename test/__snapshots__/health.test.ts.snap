@@ -1,0 +1,1837 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GET /openapi.json > matches the committed contract, so any API change shows up in review 1`] = `
+{
+  "components": {
+    "schemas": {
+      "ForbiddenEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "Forbidden",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+        ],
+        "type": "object",
+      },
+      "IdempotencyConflictEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "IdempotencyConflict",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+        ],
+        "type": "object",
+      },
+      "InvalidRequestEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "InvalidRequest",
+            ],
+            "type": "string",
+          },
+          "field": {
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "field",
+          "message",
+        ],
+        "type": "object",
+      },
+      "NotFoundEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "NotFound",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+        ],
+        "type": "object",
+      },
+      "UnauthorizedEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "Unauthorized",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+        ],
+        "type": "object",
+      },
+      "UnhealthyEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "Unhealthy",
+            ],
+            "type": "string",
+          },
+          "database": {
+            "enum": [
+              "unreachable",
+            ],
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "database",
+        ],
+        "type": "object",
+      },
+      "UnprocessableEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "Unprocessable",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+        ],
+        "type": "object",
+      },
+    },
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "Bearer",
+        "type": "http",
+      },
+    },
+  },
+  "info": {
+    "title": "Mailflare API",
+    "version": "0.0.1",
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "app": {
+                      "enum": [
+                        "mailflare",
+                      ],
+                      "type": "string",
+                    },
+                    "database": {
+                      "enum": [
+                        "ok",
+                      ],
+                      "type": "string",
+                    },
+                    "status": {
+                      "enum": [
+                        "ok",
+                      ],
+                      "type": "string",
+                    },
+                    "version": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "status",
+                    "app",
+                    "version",
+                    "database",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnhealthyEncoded",
+                },
+              },
+            },
+            "description": "Unhealthy",
+          },
+        },
+        "security": [],
+        "tags": [
+          "system",
+        ],
+      },
+    },
+    "/v1/api-keys": {
+      "get": {
+        "operationId": "apiKeys.list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "keys": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "createdBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "kind": {
+                            "enum": [
+                              "secret",
+                              "public",
+                            ],
+                            "type": "string",
+                          },
+                          "lastUsedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "prefix": {
+                            "type": "string",
+                          },
+                          "revokedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "scopes": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "kind",
+                          "prefix",
+                          "scopes",
+                          "createdBy",
+                          "lastUsedAt",
+                          "revokedAt",
+                          "createdAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "keys",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "apiKeys",
+        ],
+      },
+      "post": {
+        "operationId": "apiKeys.create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "secret",
+                      "public",
+                    ],
+                    "type": "string",
+                  },
+                  "name": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "type": "string",
+                  },
+                  "scopes": {
+                    "items": {
+                      "enum": [
+                        "send",
+                        "track",
+                        "read",
+                        "admin",
+                      ],
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                },
+                "required": [
+                  "name",
+                  "kind",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "apiKey": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "createdBy": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "kind": {
+                          "enum": [
+                            "secret",
+                            "public",
+                          ],
+                          "type": "string",
+                        },
+                        "lastUsedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                        "prefix": {
+                          "type": "string",
+                        },
+                        "revokedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "scopes": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "prefix",
+                        "scopes",
+                        "createdBy",
+                        "lastUsedAt",
+                        "revokedAt",
+                        "createdAt",
+                      ],
+                      "type": "object",
+                    },
+                    "key": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "key",
+                    "apiKey",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "apiKeys",
+        ],
+      },
+    },
+    "/v1/api-keys/{id}": {
+      "delete": {
+        "operationId": "apiKeys.revoke",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "createdBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "kind": {
+                      "enum": [
+                        "secret",
+                        "public",
+                      ],
+                      "type": "string",
+                    },
+                    "lastUsedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "prefix": {
+                      "type": "string",
+                    },
+                    "revokedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "scopes": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "prefix",
+                    "scopes",
+                    "createdBy",
+                    "lastUsedAt",
+                    "revokedAt",
+                    "createdAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "apiKeys",
+        ],
+      },
+    },
+    "/v1/messages": {
+      "get": {
+        "operationId": "messages.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "queued",
+                "sent",
+                "delivered",
+                "deferred",
+                "bounced",
+                "failed",
+                "rejected",
+                "complained",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "recipient",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "messages": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "apiKeyId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "attempts": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "bounceType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "cfMessageId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "provider": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "recipient": {
+                            "type": "string",
+                          },
+                          "sender": {
+                            "type": "string",
+                          },
+                          "status": {
+                            "enum": [
+                              "queued",
+                              "sent",
+                              "delivered",
+                              "deferred",
+                              "bounced",
+                              "failed",
+                              "rejected",
+                              "complained",
+                            ],
+                            "type": "string",
+                          },
+                          "stream": {
+                            "type": "string",
+                          },
+                          "subject": {
+                            "type": "string",
+                          },
+                          "templateId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "updatedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "stream",
+                          "recipient",
+                          "sender",
+                          "subject",
+                          "status",
+                          "bounceType",
+                          "provider",
+                          "error",
+                          "attempts",
+                          "cfMessageId",
+                          "templateId",
+                          "apiKeyId",
+                          "createdAt",
+                          "updatedAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "messages",
+                    "nextCursor",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "messages",
+        ],
+      },
+    },
+    "/v1/messages/{id}": {
+      "get": {
+        "operationId": "messages.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "apiKeyId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "attempts": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "bounceType": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "cfMessageId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "recipient": {
+                      "type": "string",
+                    },
+                    "rendered": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attachments": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "filename": {
+                                    "type": "string",
+                                  },
+                                  "size": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "filename",
+                                  "type",
+                                  "size",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
+                            "from": {
+                              "type": "string",
+                            },
+                            "html": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "subject": {
+                              "type": "string",
+                            },
+                            "text": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "to": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "subject",
+                            "html",
+                            "text",
+                            "attachments",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "sender": {
+                      "type": "string",
+                    },
+                    "smtpResponse": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "sent",
+                        "delivered",
+                        "deferred",
+                        "bounced",
+                        "failed",
+                        "rejected",
+                        "complained",
+                      ],
+                      "type": "string",
+                    },
+                    "stream": {
+                      "type": "string",
+                    },
+                    "subject": {
+                      "type": "string",
+                    },
+                    "templateId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "stream",
+                    "recipient",
+                    "sender",
+                    "subject",
+                    "status",
+                    "bounceType",
+                    "provider",
+                    "error",
+                    "attempts",
+                    "cfMessageId",
+                    "templateId",
+                    "apiKeyId",
+                    "createdAt",
+                    "updatedAt",
+                    "smtpResponse",
+                    "rendered",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "messages",
+        ],
+      },
+    },
+    "/v1/send": {
+      "post": {
+        "operationId": "actions.send",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "maxLength": 255,
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "attachments": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "content": {
+                          "type": "string",
+                        },
+                        "contentType": {
+                          "minLength": 1,
+                          "type": "string",
+                        },
+                        "filename": {
+                          "minLength": 1,
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "filename",
+                        "content",
+                        "contentType",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "body": {
+                    "type": "string",
+                  },
+                  "data": {
+                    "type": "object",
+                  },
+                  "from": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "email": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "email",
+                        ],
+                        "type": "object",
+                      },
+                    ],
+                  },
+                  "headers": {
+                    "additionalProperties": {
+                      "type": "string",
+                    },
+                    "type": "object",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "reply": {
+                    "type": "string",
+                  },
+                  "subject": {
+                    "type": "string",
+                  },
+                  "subscribed": {
+                    "type": "boolean",
+                  },
+                  "template": {
+                    "type": "string",
+                  },
+                  "to": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "email": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "email",
+                            ],
+                            "type": "object",
+                          },
+                        ],
+                      },
+                      {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "email": {
+                                  "type": "string",
+                                },
+                                "name": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "email",
+                              ],
+                              "type": "object",
+                            },
+                          ],
+                        },
+                        "minItems": 1,
+                        "prefixItems": [
+                          {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "email": {
+                                    "type": "string",
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "email",
+                                ],
+                                "type": "object",
+                              },
+                            ],
+                          },
+                        ],
+                        "type": "array",
+                      },
+                    ],
+                  },
+                },
+                "required": [
+                  "to",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "emails": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "contact": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "email": {
+                                    "type": "string",
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "email",
+                                ],
+                                "type": "object",
+                              },
+                              "email": {
+                                "type": "string",
+                              },
+                              "status": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "contact",
+                              "email",
+                              "status",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "timestamp": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "emails",
+                        "timestamp",
+                      ],
+                      "type": "object",
+                    },
+                    "success": {
+                      "enum": [
+                        true,
+                      ],
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdempotencyConflictEncoded",
+                },
+              },
+            },
+            "description": "IdempotencyConflict",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnprocessableEncoded",
+                },
+              },
+            },
+            "description": "Unprocessable",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "Actions",
+        ],
+      },
+    },
+    "/v1/track": {
+      "post": {
+        "operationId": "actions.track",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "maxLength": 255,
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "data": {
+                    "type": "object",
+                  },
+                  "email": {
+                    "type": "string",
+                  },
+                  "event": {
+                    "minLength": 1,
+                    "type": "string",
+                  },
+                  "subscribed": {
+                    "type": "boolean",
+                  },
+                },
+                "required": [
+                  "event",
+                  "email",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "contact": {
+                          "type": "string",
+                        },
+                        "event": {
+                          "type": "string",
+                        },
+                        "timestamp": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "contact",
+                        "event",
+                        "timestamp",
+                      ],
+                      "type": "object",
+                    },
+                    "success": {
+                      "enum": [
+                        true,
+                      ],
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "success",
+                    "data",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdempotencyConflictEncoded",
+                },
+              },
+            },
+            "description": "IdempotencyConflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "Actions",
+        ],
+      },
+    },
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "system",
+    },
+    {
+      "description": "Send and track, compatible with Plunk.",
+      "name": "Actions",
+    },
+    {
+      "name": "apiKeys",
+    },
+    {
+      "name": "messages",
+    },
+  ],
+}
+`;

@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mailflare-api",
+  "main": "src/workers/api.ts",
+  "compatibility_date": "2026-10-16",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "mailflare", "database_id": "local", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [{ "binding": "STORE", "bucket_name": "mailflare-store" }],
+  "send_email": [{ "name": "EMAIL" }],
+  "queues": {
+    "producers": [{ "binding": "SEND_QUEUE", "queue": "mailflare-send" }],
+    "consumers": [
+      {
+        "queue": "mailflare-send",
+        "max_batch_size": 10,
+        "max_retries": 10,
+        "dead_letter_queue": "mailflare-send-dlq"
+      }
+    ]
+  },
+  "observability": { "enabled": true }
+}
