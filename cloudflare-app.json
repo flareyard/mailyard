@@ -63,6 +63,16 @@
       "name": "SMTP_PASSWORD",
       "ask": "Password for an SMTP mailbox used only as a fallback when Email Service is unavailable",
       "optional": true
+    },
+    {
+      "name": "CLOUDFLARE_ACCOUNT_ID",
+      "ask": "Your Cloudflare account ID, so the Overview can show your daily sending quota and reputation",
+      "optional": true
+    },
+    {
+      "name": "CLOUDFLARE_EMAIL_READ_TOKEN",
+      "ask": "A read-only API token with Email Sending: Read, for the quota and reputation on the Overview",
+      "optional": true
     }
   ],
   "domain": {

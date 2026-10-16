@@ -1,7 +1,9 @@
 import { Layer } from "effect"
 import { Bindings, type Env } from "./Bindings.ts"
+import { SecretBox, WebhookQueue } from "./domain/webhooks.ts"
 import { BlobStore, Ids, Sender, SenderCloudflareWithSmtpFallback } from "./kit/index.ts"
 import { workerSmtpTransport } from "./kit/smtp-worker.ts"
+import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { Database } from "./services/Database.ts"
 import { SendQueue } from "./services/SendQueue.ts"
 
@@ -31,6 +33,9 @@ export const appLayer = (env: Env) => {
   return Layer.mergeAll(
     Database.layer,
     SendQueue.layer,
+    WebhookQueue.layer,
+    SecretBox.layer,
+    CloudflareEmail.layer,
     BlobStore.layerR2(env.STORE),
     senderLayer(env).pipe(Layer.provideMerge(Ids.layer)),
   ).pipe(Layer.provideMerge(bindings))

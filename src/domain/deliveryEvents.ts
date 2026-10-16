@@ -3,6 +3,7 @@ import { Effect, Schema } from "effect"
 import { contacts, dailyStats, events, messagesOut, processedEvents, suppressions } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { emitSafely } from "./webhooks.ts"
 
 /**
  * Email Sending lifecycle events, as published to a Queue by an event subscription
@@ -235,5 +236,21 @@ export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: Em
     }
   }
 
+  yield* emitSafely(`message.${kind}`, {
+    messageId: row?.id ?? null,
+    cfMessageId: payload.messageId,
+    recipient,
+    subject: payload.subject ?? row?.subject ?? null,
+    provider: payload.delivery.provider ?? null,
+    smtpResponse: payload.delivery.smtpResponse ?? null,
+    ...(payload.bounce ? { bounce: payload.bounce.type } : {}),
+    at: new Date(at).toISOString(),
+  })
+  if (hardBounce || kind === "complained") {
+    yield* emitSafely("contact.suppressed", {
+      email: recipient,
+      reason: kind === "complained" ? "complaint" : "hard_bounce",
+    })
+  }
   return (row ? "applied" : "applied-unmatched") as Outcome
 })

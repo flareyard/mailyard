@@ -157,6 +157,7 @@ CREATE TABLE `messages_out` (
 	`campaign_id` text,
 	`automation_run_id` text,
 	`template_id` text,
+	`template_version` integer,
 	`recipient` text NOT NULL,
 	`sender` text NOT NULL,
 	`subject` text NOT NULL,
@@ -193,6 +194,12 @@ CREATE TABLE `segments` (
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `settings` (
+	`key` text PRIMARY KEY NOT NULL,
+	`value` text NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `subscriptions` (
 	`contact_id` text NOT NULL,
 	`topic_id` text NOT NULL,
@@ -213,19 +220,31 @@ CREATE TABLE `suppressions` (
 	`at` integer NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `template_versions` (
+	`template_id` text NOT NULL,
+	`version` integer NOT NULL,
+	`subject` text NOT NULL,
+	`source` text NOT NULL,
+	`text` text,
+	`published_at` integer,
+	`created_by` text,
+	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
+	PRIMARY KEY(`template_id`, `version`),
+	FOREIGN KEY (`template_id`) REFERENCES `templates`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `templates` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`kind` text NOT NULL,
-	`version` integer NOT NULL,
-	`subject` text NOT NULL,
-	`source` text NOT NULL,
-	`variables` text,
-	`published_at` integer,
-	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL
+	`published_version` integer,
+	`latest_version` integer NOT NULL,
+	`archived_at` integer,
+	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
+	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `templates_name_version` ON `templates` (`name`,`version`);--> statement-breakpoint
+CREATE UNIQUE INDEX `templates_name` ON `templates` (`name`);--> statement-breakpoint
 CREATE TABLE `topics` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -233,4 +252,36 @@ CREATE TABLE `topics` (
 	`double_opt_in` integer DEFAULT true NOT NULL,
 	`archived` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `webhook_deliveries` (
+	`id` text PRIMARY KEY NOT NULL,
+	`endpoint_id` text NOT NULL,
+	`event_id` text NOT NULL,
+	`event_type` text NOT NULL,
+	`payload` text NOT NULL,
+	`status` text NOT NULL,
+	`attempts` integer DEFAULT 0 NOT NULL,
+	`last_status_code` integer,
+	`last_error` text,
+	`last_duration_ms` integer,
+	`last_attempt_at` integer,
+	`next_attempt_at` integer,
+	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
+	FOREIGN KEY (`endpoint_id`) REFERENCES `webhook_endpoints`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `webhook_deliveries_endpoint` ON `webhook_deliveries` (`endpoint_id`,`created_at`);--> statement-breakpoint
+CREATE INDEX `webhook_deliveries_status` ON `webhook_deliveries` (`status`);--> statement-breakpoint
+CREATE TABLE `webhook_endpoints` (
+	`id` text PRIMARY KEY NOT NULL,
+	`url` text NOT NULL,
+	`description` text,
+	`events` text NOT NULL,
+	`secret_ciphertext` text NOT NULL,
+	`enabled` integer DEFAULT true NOT NULL,
+	`last_success_at` integer,
+	`last_failure_at` integer,
+	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
+	`updated_at` integer NOT NULL
 );

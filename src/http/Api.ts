@@ -250,10 +250,415 @@ export class MessagesApi extends HttpApiGroup.make("messages")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Templates and brand
+// ---------------------------------------------------------------------------------------------
+
+const TemplateKind = Schema.Literals(["html", "blocks"])
+const Variables = Schema.Struct({ used: Schema.Array(Schema.String), required: Schema.Array(Schema.String) })
+
+export const TemplateSummary = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  kind: TemplateKind,
+  publishedVersion: Schema.NullOr(Schema.Number),
+  latestVersion: Schema.Number,
+  hasUnpublishedChanges: Schema.Boolean,
+  archived: Schema.Boolean,
+  updatedAt: Schema.Number,
+  createdAt: Schema.Number,
+})
+
+export const TemplateDetail = Schema.Struct({
+  ...TemplateSummary.fields,
+  latest: Schema.NullOr(
+    Schema.Struct({
+      version: Schema.Number,
+      subject: Schema.String,
+      source: Schema.String,
+      text: Schema.NullOr(Schema.String),
+      publishedAt: Schema.NullOr(Schema.Number),
+      variables: Variables,
+    }),
+  ),
+  versions: Schema.Array(
+    Schema.Struct({
+      version: Schema.Number,
+      subject: Schema.String,
+      publishedAt: Schema.NullOr(Schema.Number),
+      createdBy: Schema.NullOr(Schema.String),
+      createdAt: Schema.Number,
+    }),
+  ),
+})
+
+export const RenderResult = Schema.Struct({
+  subject: Schema.String,
+  html: Schema.String,
+  text: Schema.String,
+  size: Schema.Number,
+  /** Email Service's 5 MiB limit, before attachments. */
+  withinLimit: Schema.Boolean,
+  variables: Schema.Struct({ ...Variables.fields, missing: Schema.Array(Schema.String) }),
+})
+
+const TemplateBody = {
+  subject: Schema.String.check(Schema.isMaxLength(998)),
+  /** HTML for `html` templates; the blocks document as JSON text for `blocks` templates. */
+  source: Schema.String,
+  text: Schema.optionalKey(Schema.NullOr(Schema.String)),
+}
+
+const RenderData = Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown))
+
+export class TemplatesApi extends HttpApiGroup.make("templates")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/templates", {
+      query: { archived: Schema.optionalKey(Schema.Literals(["true", "false"])) },
+      success: Schema.Struct({ templates: Schema.Array(TemplateSummary) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/templates", {
+      payload: Schema.Struct({
+        name: Schema.NonEmptyString.check(Schema.isMaxLength(120)),
+        kind: TemplateKind,
+        ...TemplateBody,
+        publish: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: TemplateDetail,
+      error: [Forbidden, InvalidRequest, NotFound],
+    }),
+    HttpApiEndpoint.get("get", "/v1/templates/:id", {
+      params: { id: Schema.String },
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.put("saveDraft", "/v1/templates/:id/draft", {
+      params: { id: Schema.String },
+      payload: Schema.Struct(TemplateBody),
+      success: TemplateDetail,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("publish", "/v1/templates/:id/publish", {
+      params: { id: Schema.String },
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("rollback", "/v1/templates/:id/rollback", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ version: Schema.Int.check(Schema.isGreaterThan(0)) }),
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.delete("archive", "/v1/templates/:id", {
+      params: { id: Schema.String },
+      success: TemplateDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("render", "/v1/templates/:id/render", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        data: RenderData,
+        /** `published` (default), `latest` (the draft), or a version number. */
+        version: Schema.optionalKey(Schema.Union([Schema.Literals(["published", "latest"]), Schema.Int])),
+      }),
+      success: RenderResult,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("preview", "/v1/templates/preview", {
+      payload: Schema.Struct({ kind: TemplateKind, ...TemplateBody, data: RenderData }),
+      success: RenderResult,
+      error: [Forbidden, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+export const BrandSettingsSchema = Schema.Struct({
+  name: Schema.NonEmptyString,
+  siteUrl: Schema.String,
+  tagline: Schema.String,
+  logoUrl: Schema.optionalKey(Schema.String),
+  fontsHref: Schema.optionalKey(Schema.String),
+  colors: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  fonts: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+})
+
+export class SettingsApi extends HttpApiGroup.make("settings")
+  .add(
+    HttpApiEndpoint.get("getBrand", "/v1/settings/brand", { success: BrandSettingsSchema, error: Forbidden }),
+    HttpApiEndpoint.put("putBrand", "/v1/settings/brand", {
+      payload: Schema.Unknown,
+      success: BrandSettingsSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+// ---------------------------------------------------------------------------------------------
+// Webhooks (Standard Webhooks signatures)
+// ---------------------------------------------------------------------------------------------
+
+export const WebhookEndpoint = Schema.Struct({
+  id: Schema.String,
+  url: Schema.String,
+  description: Schema.NullOr(Schema.String),
+  events: Schema.Array(Schema.String),
+  enabled: Schema.Boolean,
+  lastSuccessAt: Schema.NullOr(Schema.Number),
+  lastFailureAt: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+const DeliveryStatus = Schema.Literals(["pending", "succeeded", "retrying", "dead"])
+
+export const WebhookDelivery = Schema.Struct({
+  id: Schema.String,
+  eventId: Schema.String,
+  eventType: Schema.String,
+  status: DeliveryStatus,
+  attempts: Schema.Number,
+  lastStatusCode: Schema.NullOr(Schema.Number),
+  lastError: Schema.NullOr(Schema.String),
+  lastDurationMs: Schema.NullOr(Schema.Number),
+  lastAttemptAt: Schema.NullOr(Schema.Number),
+  nextAttemptAt: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+  payload: Schema.Unknown,
+})
+
+const WithSecret = Schema.Struct({
+  endpoint: WebhookEndpoint,
+  /** `whsec_…`, shown here once. Verify signatures with any Standard Webhooks library. */
+  secret: Schema.String,
+})
+
+export class WebhooksApi extends HttpApiGroup.make("webhooks")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/webhooks", {
+      success: Schema.Struct({
+        webhooks: Schema.Array(WebhookEndpoint),
+        events: Schema.Array(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/webhooks", {
+      payload: Schema.Struct({
+        url: Schema.String,
+        description: Schema.optionalKey(Schema.String),
+        events: Schema.NonEmptyArray(Schema.String),
+      }),
+      success: WithSecret,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("get", "/v1/webhooks/:id", {
+      params: { id: Schema.String },
+      success: WebhookEndpoint,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/webhooks/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        url: Schema.optionalKey(Schema.String),
+        description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        events: Schema.optionalKey(Schema.NonEmptyArray(Schema.String)),
+        enabled: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: WebhookEndpoint,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/webhooks/:id", {
+      params: { id: Schema.String },
+      success: WebhookEndpoint,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("rotateSecret", "/v1/webhooks/:id/rotate-secret", {
+      params: { id: Schema.String },
+      success: WithSecret,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("deliveries", "/v1/webhooks/:id/deliveries", {
+      params: { id: Schema.String },
+      query: {
+        status: Schema.optionalKey(DeliveryStatus),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      },
+      success: Schema.Struct({
+        deliveries: Schema.Array(WebhookDelivery),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("replay", "/v1/webhooks/:id/deliveries/:deliveryId/replay", {
+      params: { id: Schema.String, deliveryId: Schema.String },
+      success: Schema.Struct({ id: Schema.String, status: DeliveryStatus }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("test", "/v1/webhooks/:id/test", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ deliveryId: Schema.String, eventId: Schema.String }),
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+// ---------------------------------------------------------------------------------------------
+// Insights: what the Overview screen shows (docs/email-ui.html#overview)
+// ---------------------------------------------------------------------------------------------
+
+const Range = Schema.Literals(["24h", "7d", "30d"])
+const Num = Schema.Number
+const NullableNum = Schema.NullOr(Schema.Number)
+
+export const Totals = Schema.Struct({
+  sent: Num,
+  delivered: Num,
+  deferred: Num,
+  bouncedHard: Num,
+  bouncedSoft: Num,
+  complained: Num,
+  rejected: Num,
+  failed: Num,
+})
+
+export const Rates = Schema.Struct({
+  /** True under the minimum volume; the rates are then null rather than misleading. */
+  insufficientData: Schema.Boolean,
+  minimumSends: Num,
+  bounceRate: NullableNum,
+  complaintRate: NullableNum,
+  rejectionRate: NullableNum,
+  deliveryRate: NullableNum,
+})
+
+const ThresholdSchema = Schema.Struct({ warning_at: Num, at_risk_at: Num, minimum_denominator: Num })
+const Level = Schema.Literals(["ok", "warning", "at-risk", "insufficient-data"])
+
+export class InsightsApi extends HttpApiGroup.make("insights")
+  .add(
+    HttpApiEndpoint.get("health", "/v1/health", {
+      success: Schema.Struct({
+        status: Schema.Literals(["ok", "warn", "fail"]),
+        checks: Schema.Array(
+          Schema.Struct({
+            name: Schema.String,
+            status: Schema.Literals(["ok", "warn", "fail", "unknown"]),
+            detail: Schema.String,
+          }),
+        ),
+        checkedAt: Schema.String,
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("usage", "/v1/usage", {
+      success: Schema.Struct({
+        today: Schema.Struct({
+          sent: Num,
+          quota: NullableNum,
+          remaining: NullableNum,
+          overQuota: Schema.NullOr(Schema.Boolean),
+          resetsAt: Schema.NullOr(Schema.String),
+          source: Schema.Literals(["cloudflare", "cloudflare-unreachable", "not-connected"]),
+        }),
+        month: Schema.Struct({
+          from: Schema.String,
+          billed: Num,
+          included: Num,
+          overage: Num,
+          costUsd: Num,
+          projectedBilled: Num,
+          projectedCostUsd: Num,
+        }),
+        pricing: Schema.Struct({ includedPerMonth: Num, usdPerThousand: Num, measuredAt: Schema.String }),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("forecast", "/v1/usage/forecast", {
+      query: {
+        recipients: Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 10_000_000 })),
+      },
+      success: Schema.Union([
+        Schema.Struct({ recipients: Num, possible: Schema.Literal(false), reason: Schema.String }),
+        Schema.Struct({
+          recipients: Num,
+          possible: Schema.Literal(true),
+          quota: Num,
+          sendableToday: Num,
+          additionalDays: Num,
+          finishesBy: Schema.NullOr(Schema.String),
+          cost: Schema.Struct({ billedAfter: Num, extraUsd: Num }),
+        }),
+      ]),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("delivery", "/v1/stats/delivery", {
+      query: { range: Schema.optionalKey(Range) },
+      success: Schema.Struct({ range: Range, from: Schema.String, totals: Totals, rates: Rates }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("volume", "/v1/stats/volume", {
+      query: { range: Schema.optionalKey(Range) },
+      success: Schema.Struct({
+        range: Range,
+        days: Schema.Array(
+          Schema.Struct({ day: Schema.String, byStream: Schema.Record(Schema.String, Num) }),
+        ),
+        streams: Schema.Array(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("providers", "/v1/stats/providers", {
+      query: { range: Schema.optionalKey(Range) },
+      success: Schema.Struct({
+        range: Range,
+        providers: Schema.Array(
+          Schema.Struct({
+            provider: Schema.String,
+            delivered: Num,
+            deferred: Num,
+            bounced: Num,
+            complained: Num,
+            total: Num,
+          }),
+        ),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("reputation", "/v1/reputation", {
+      success: Schema.Struct({
+        status: Schema.NullOr(Schema.String),
+        statusSince: Schema.NullOr(Schema.String),
+        graceStartedAt: Schema.NullOr(Schema.String),
+        evaluatedAt: Schema.NullOr(Schema.String),
+        source: Schema.Literals(["cloudflare", "not-connected"]),
+        policySource: Schema.Literals(["account", "measured-2026-10-16"]),
+        policy: Schema.Struct({
+          customer_bounce: ThresholdSchema,
+          complaint: ThresholdSchema,
+          spam_rejection: ThresholdSchema,
+          suspension_after_hours: Num,
+        }),
+        window: Schema.Literal("30d"),
+        totals: Totals,
+        rates: Rates,
+        levels: Schema.Struct({ bounce: Level, complaint: Level, spamRejection: Level }),
+      }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailflare's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailflare")
   .add(SystemApi)
   .add(ActionsApi)
   .add(ApiKeysApi)
   .add(MessagesApi)
+  .add(TemplatesApi)
+  .add(SettingsApi)
+  .add(WebhooksApi)
+  .add(InsightsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailflare API" })) {}

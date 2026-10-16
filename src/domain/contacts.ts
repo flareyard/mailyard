@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { contacts } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { emitSafely } from "./webhooks.ts"
 
 export type ContactRow = typeof contacts.$inferSelect
 
@@ -86,5 +87,10 @@ export const upsertContact = Effect.fn("contacts.upsert")(function* (input: {
       .returning()
       .get(),
   )
+  yield* emitSafely("contact.created", {
+    contactId: created.id,
+    email: created.email,
+    status: created.status,
+  })
   return { contact: created, merged: { ...persistent, ...transient } }
 })
