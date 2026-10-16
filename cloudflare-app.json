@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "id": "mail",
-  "name": "Mail",
+  "id": "mailflare",
+  "name": "Mailflare",
   "description": "Inboxes, transactional email, contacts, campaigns and automations on your own Cloudflare account.",
   "version": "0.1.0",
   "stack": "alchemy.run.ts",

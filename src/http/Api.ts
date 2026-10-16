@@ -3,7 +3,7 @@ import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/http-api
 
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
-  app: Schema.Literal("mail"),
+  app: Schema.Literal("mailflare"),
   version: Schema.String,
   database: Schema.Literal("ok"),
 })
@@ -19,7 +19,7 @@ export class SystemApi extends HttpApiGroup.make("system", { topLevel: true }).a
   HttpApiEndpoint.get("health", "/healthz", { success: Health, error: Unhealthy }),
 ) {}
 
-/** The mail app's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
-export class MailApi extends HttpApi.make("mail")
+/** Mailflare's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
+export class MailApi extends HttpApi.make("mailflare")
   .add(SystemApi)
-  .annotateMerge(OpenApi.annotations({ title: "Flareyard Mail API" })) {}
+  .annotateMerge(OpenApi.annotations({ title: "Mailflare API" })) {}

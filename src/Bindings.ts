@@ -6,4 +6,4 @@ export interface Env {
   readonly STORE: R2Bucket
 }
 
-export class Bindings extends Context.Service<Bindings, Env>()("@flareyard/mail/Bindings") {}
+export class Bindings extends Context.Service<Bindings, Env>()("@flareyard/mailflare/Bindings") {}

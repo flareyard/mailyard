@@ -18,7 +18,7 @@ export class Database extends Context.Service<
     readonly ping: Effect.Effect<void, DatabaseError>
     query<A>(operation: string, run: (db: Db) => Promise<A>): Effect.Effect<A, DatabaseError>
   }
->()("@flareyard/mail/Database") {
+>()("@flareyard/mailflare/Database") {
   static readonly layer = Layer.effect(
     Database,
     Effect.gen(function* () {

@@ -1,16 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "flareyard-mail-api",
+  "name": "mailflare-api",
   "main": "src/workers/api.ts",
   "compatibility_date": "2026-10-16",
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "flareyard-mail",
+      "database_name": "mailflare",
       "database_id": "local",
       "migrations_dir": "migrations"
     }
   ],
-  "r2_buckets": [{ "binding": "STORE", "bucket_name": "flareyard-mail-store" }],
+  "r2_buckets": [{ "binding": "STORE", "bucket_name": "mailflare-store" }],
   "observability": { "enabled": true }
 }
