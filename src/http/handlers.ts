@@ -1,4 +1,3 @@
-import { BlobStore, type Ids, type Sender } from "@flareyard/kit"
 import { and, desc, eq, lt, or } from "drizzle-orm"
 import { type Context, Effect, Layer, Option, Redacted } from "effect"
 import { HttpApiBuilder } from "effect/http-api"
@@ -9,6 +8,7 @@ import { authenticate, type Caller, createKey, listKeys, revokeKey, type Scope }
 import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
 import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
+import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import type { SendQueue } from "../services/SendQueue.ts"
 import {

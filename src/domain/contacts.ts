@@ -1,7 +1,7 @@
-import { Ids } from "@flareyard/kit"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { contacts } from "../db/schema.ts"
+import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 
 export type ContactRow = typeof contacts.$inferSelect

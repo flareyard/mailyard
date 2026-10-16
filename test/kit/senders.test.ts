@@ -15,7 +15,7 @@ import {
   SenderCloudflareWithSmtpFallback,
   type SmtpTransport,
   validate,
-} from "../src/index.ts"
+} from "../../src/kit/index.ts"
 
 const message: Outgoing = {
   from: { email: "hello@mbprep.app", name: "MBPrep" },

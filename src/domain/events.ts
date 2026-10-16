@@ -1,6 +1,6 @@
-import { Ids } from "@flareyard/kit"
 import { Effect, Schema } from "effect"
 import { events } from "../db/schema.ts"
+import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { upsertContact } from "./contacts.ts"
 

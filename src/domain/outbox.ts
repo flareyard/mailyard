@@ -1,3 +1,7 @@
+import { eq, inArray, sql } from "drizzle-orm"
+import { Effect, Option, Schedule, Schema } from "effect"
+import { Bindings } from "../Bindings.ts"
+import { contacts, messagesOut, suppressions, templates } from "../db/schema.ts"
 import {
   type Attachment,
   BlobStore,
@@ -7,11 +11,7 @@ import {
   type SendError,
   Sender,
   validate,
-} from "@flareyard/kit"
-import { eq, inArray, sql } from "drizzle-orm"
-import { Effect, Option, Schedule, Schema } from "effect"
-import { Bindings } from "../Bindings.ts"
-import { contacts, messagesOut, suppressions, templates } from "../db/schema.ts"
+} from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { SendQueue } from "../services/SendQueue.ts"
 import { upsertContact } from "./contacts.ts"

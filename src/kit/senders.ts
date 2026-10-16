@@ -9,7 +9,7 @@ import { makeSmtpSender, type SmtpConfig, type SmtpTransport } from "./smtp.ts"
 export const SenderCloudflare = (binding: SendEmailBinding) =>
   Layer.succeed(Sender, Sender.of(makeCloudflareSender(binding)))
 
-/** Sender over SMTP. Pass `workerSmtpTransport` from `@flareyard/kit/smtp-worker` inside a Worker. */
+/** Sender over SMTP. Pass `workerSmtpTransport` from `./smtp-worker.ts` inside a Worker. */
 export const SenderSmtp = (config: SmtpConfig, transport: SmtpTransport) =>
   Layer.effect(
     Sender,

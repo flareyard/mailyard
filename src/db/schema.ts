@@ -4,7 +4,7 @@ import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "driz
 /**
  * The account-wide D1 database. Per-mailbox data (threads, messages, search) lives in each
  * MailboxDO's own SQLite, not here. Data model: docs/plans/email-platform.html#data.
- * Times are Unix milliseconds. Ids are time-ordered strings from @flareyard/kit's Ids.
+ * Times are Unix milliseconds. Ids are time-ordered strings from src/kit/Ids.ts.
  */
 
 const createdAt = () => integer("created_at").notNull().default(sql`(unixepoch('subsec') * 1000)`)

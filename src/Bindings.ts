@@ -1,5 +1,5 @@
-import type { SendEmailBinding } from "@flareyard/kit"
 import { Context } from "effect"
+import type { SendEmailBinding } from "./kit/index.ts"
 import type { SendJob } from "./services/SendQueue.ts"
 
 /** The Worker's bindings, as declared in wrangler.jsonc and, later, in alchemy.run.ts. */
@@ -22,4 +22,4 @@ export interface Env {
   readonly SMTP_PASSWORD?: string
 }
 
-export class Bindings extends Context.Service<Bindings, Env>()("@flareyard/mailflare/Bindings") {}
+export class Bindings extends Context.Service<Bindings, Env>()("mailflare/Bindings") {}

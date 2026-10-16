@@ -1,26 +1,32 @@
 {
-  "name": "@flareyard/mailflare",
+  "name": "mailflare",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit -p .",
-    "test": "flareyard-manifest cloudflare-app.json && vitest run",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tools/manifest",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "check": "bun run typecheck && bun run lint && bun run manifest && bun run test",
+    "manifest": "bun tools/manifest/cli.ts cloudflare-app.json",
     "dev": "wrangler dev",
-    "db:generate": "drizzle-kit generate",
-    "manifest": "flareyard-manifest cloudflare-app.json"
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@flareyard/kit": "workspace:*",
     "drizzle-orm": "0.45.4",
-    "effect": "4.0.5"
+    "effect": "4.0.5",
+    "worker-mailer": "1.2.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@cloudflare/vitest-plugin": "1.4.4",
     "@cloudflare/workers-types": "5.20261016.1",
-    "@flareyard/manifest": "workspace:*",
     "@plunk/node": "3.0.3",
+    "@types/bun": "1.4.3",
     "drizzle-kit": "0.31.11",
+    "typescript": "7.0.2",
     "vitest": "5.0.5",
     "wrangler": "4.151.1"
   }

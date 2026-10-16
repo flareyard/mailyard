@@ -1,7 +1,15 @@
 import { Effect, Exit, Fiber, Layer, Option, Ref } from "effect"
 import { TestClock } from "effect/testing"
 import { describe, expect, it } from "vitest"
-import { BlobStore, backoff, Ids, MAX_RECIPIENTS, MemoryOutbox, type Outgoing, Sender } from "../src/index.ts"
+import {
+  BlobStore,
+  backoff,
+  Ids,
+  MAX_RECIPIENTS,
+  MemoryOutbox,
+  type Outgoing,
+  Sender,
+} from "../../src/kit/index.ts"
 
 const SenderTest = Sender.layerMemory.pipe(Layer.provide(Ids.layerSequential("msg")))
 

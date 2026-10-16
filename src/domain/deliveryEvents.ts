@@ -1,7 +1,7 @@
-import { Ids } from "@flareyard/kit"
 import { eq, sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { contacts, dailyStats, events, messagesOut, processedEvents, suppressions } from "../db/schema.ts"
+import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 
 /**

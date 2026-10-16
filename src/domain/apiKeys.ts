@@ -1,8 +1,8 @@
-import { Ids } from "@flareyard/kit"
 import { desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { Bindings } from "../Bindings.ts"
 import { apiKeys } from "../db/schema.ts"
+import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { randomToken, sha256, timingSafeEqual } from "./crypto.ts"
 

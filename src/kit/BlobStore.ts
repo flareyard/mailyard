@@ -20,7 +20,7 @@ export class BlobStore extends Context.Service<
     get(key: string): Effect.Effect<Option.Option<Blob>, BlobStoreError>
     delete(key: string): Effect.Effect<void, BlobStoreError>
   }
->()("@flareyard/kit/BlobStore") {
+>()("mailflare/kit/BlobStore") {
   static readonly layerR2 = (bucket: R2Bucket) =>
     Layer.succeed(
       BlobStore,
