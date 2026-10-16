@@ -1,6 +1,7 @@
 CREATE TABLE `api_keys` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
+	`kind` text NOT NULL,
 	`prefix` text NOT NULL,
 	`hash` text NOT NULL,
 	`scopes` text NOT NULL,
@@ -120,6 +121,19 @@ CREATE TABLE `events` (
 --> statement-breakpoint
 CREATE INDEX `events_contact` ON `events` (`contact_id`,`at`);--> statement-breakpoint
 CREATE INDEX `events_name` ON `events` (`name`,`at`);--> statement-breakpoint
+CREATE TABLE `idempotency_keys` (
+	`api_key_id` text NOT NULL,
+	`key` text NOT NULL,
+	`route` text NOT NULL,
+	`request_hash` text NOT NULL,
+	`status` integer,
+	`response` text,
+	`created_at` integer NOT NULL,
+	`expires_at` integer NOT NULL,
+	PRIMARY KEY(`api_key_id`, `key`)
+);
+--> statement-breakpoint
+CREATE INDEX `idempotency_keys_expires` ON `idempotency_keys` (`expires_at`);--> statement-breakpoint
 CREATE TABLE `mailboxes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`domain_id` text NOT NULL,
@@ -150,6 +164,9 @@ CREATE TABLE `messages_out` (
 	`bounce_type` text,
 	`provider` text,
 	`smtp_response` text,
+	`error` text,
+	`attempts` integer DEFAULT 0 NOT NULL,
+	`rendered_key` text,
 	`created_at` integer DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
 	`updated_at` integer,
 	FOREIGN KEY (`contact_id`) REFERENCES `contacts`(`id`) ON UPDATE no action ON DELETE set null,

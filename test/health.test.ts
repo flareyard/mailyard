@@ -31,6 +31,7 @@ describe("D1 schema", () => {
       "daily_stats",
       "domains",
       "events",
+      "idempotency_keys",
       "mailboxes",
       "messages_out",
       "processed_events",
@@ -49,6 +50,19 @@ describe("GET /openapi.json", () => {
     expect(response.status).toBe(200)
     const doc = (await response.json()) as { info: { title: string }; paths: Record<string, unknown> }
     expect(doc.info.title).toBe("Mailflare API")
-    expect(Object.keys(doc.paths)).toContain("/healthz")
+    expect(Object.keys(doc.paths).sort()).toEqual([
+      "/healthz",
+      "/v1/api-keys",
+      "/v1/api-keys/{id}",
+      "/v1/messages",
+      "/v1/messages/{id}",
+      "/v1/send",
+      "/v1/track",
+    ])
+  })
+
+  it("matches the committed contract, so any API change shows up in review", async () => {
+    const doc = await (await call("/openapi.json")).json()
+    expect(doc).toMatchSnapshot()
   })
 })

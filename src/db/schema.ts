@@ -181,6 +181,11 @@ export const messagesOut = sqliteTable(
     bounceType: text("bounce_type", { enum: ["hard", "soft"] }),
     provider: text("provider"),
     smtpResponse: text("smtp_response"),
+    /** Why the last attempt failed, in the sender's words (a typed error tag and its message). */
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(0),
+    /** R2 key of the rendered message as sent, for the message log and for retries. */
+    renderedKey: text("rendered_key"),
     createdAt: createdAt(),
     updatedAt: integer("updated_at"),
   },
@@ -246,6 +251,11 @@ export const apiKeys = sqliteTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    /**
+     * `secret` keys (sk_…) can send and manage; `public` keys (pk_…) can only track events, so they
+     * are safe in a browser. Same split as Plunk, so its SDKs work unchanged.
+     */
+    kind: text("kind", { enum: ["secret", "public"] }).notNull(),
     /** The first characters of the key, shown in the UI so people can tell keys apart. */
     prefix: text("prefix").notNull(),
     /** SHA-256 of the full key. The key itself is shown once and never stored. */
@@ -290,4 +300,23 @@ export const dailyStats = sqliteTable(
     failed: integer("failed").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.stream, t.provider] })],
+)
+
+/**
+ * Idempotency-Key records. A repeat with the same key and the same body replays the stored response;
+ * the same key with a different body is refused with 409, as Plunk does. Kept for 24 hours.
+ */
+export const idempotencyKeys = sqliteTable(
+  "idempotency_keys",
+  {
+    apiKeyId: text("api_key_id").notNull(),
+    key: text("key").notNull(),
+    route: text("route").notNull(),
+    requestHash: text("request_hash").notNull(),
+    status: integer("status"),
+    response: text("response"),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.apiKeyId, t.key] }), index("idempotency_keys_expires").on(t.expiresAt)],
 )
