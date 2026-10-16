@@ -1,6 +1,6 @@
 import { and, desc, eq, lt, or } from "drizzle-orm"
 import { type Context, Effect, Layer, Option, Redacted } from "effect"
-import { HttpApiBuilder } from "effect/http-api"
+import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import pkg from "../../package.json" with { type: "json" }
 import { Bindings } from "../Bindings.ts"
 import { messagesOut } from "../db/schema.ts"
