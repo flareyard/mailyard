@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers"
 import { Layer } from "effect"
-import { HttpRouter, HttpServer } from "effect/http"
-import { HttpApiBuilder } from "effect/http-api"
+import * as HttpRouter from "effect/http/HttpRouter"
+import * as HttpServer from "effect/http/HttpServer"
+import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import type { Env } from "../Bindings.ts"
 import { MailApi } from "../http/Api.ts"
 import {
