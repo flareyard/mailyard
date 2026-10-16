@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // A copy of the Flareyard platform's manifest validator (flareyard/flareyard packages/manifest), kept here so
-// Mailflare can check its own cloudflare-app.json without depending on the platform repo.
+// Mailyard can check its own cloudflare-app.json without depending on the platform repo.
 import { Exit } from "effect"
 import { crossFieldProblems } from "./check.ts"
 import { decodeManifestExit } from "./Manifest.ts"

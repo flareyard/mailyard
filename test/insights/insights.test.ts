@@ -44,7 +44,7 @@ const seed = async (
 }
 
 describe("without a Cloudflare read token", () => {
-  it("reports what Mailflare knows and leaves the quota and reputation unknown, not guessed", async () => {
+  it("reports what Mailyard knows and leaves the quota and reputation unknown, not guessed", async () => {
     await seed([{ day: day(0), sent: 12 }])
     const u = await json<{ today: { sent: number; quota: number | null; source: string } }>(
       await call("/v1/usage", { key }),

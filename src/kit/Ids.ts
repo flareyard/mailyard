@@ -6,7 +6,7 @@ export class Ids extends Context.Service<
   {
     readonly next: Effect.Effect<string>
   }
->()("mailflare/kit/Ids") {
+>()("mailyard/kit/Ids") {
   /** Time-ordered ids: a millisecond timestamp in base 36 followed by 80 random bits, so they sort by creation. */
   static readonly layer = Layer.succeed(
     Ids,

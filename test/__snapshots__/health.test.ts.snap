@@ -153,7 +153,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
   },
   "info": {
-    "title": "Mailflare API",
+    "title": "Mailyard API",
     "version": "0.0.1",
   },
   "openapi": "3.1.0",
@@ -171,7 +171,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "properties": {
                     "app": {
                       "enum": [
-                        "mailflare",
+                        "mailyard",
                       ],
                       "type": "string",
                     },

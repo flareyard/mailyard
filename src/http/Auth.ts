@@ -3,7 +3,7 @@ import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity"
 import type { Caller } from "../domain/apiKeys.ts"
 
-export class CurrentCaller extends Context.Service<CurrentCaller, Caller>()("mailflare/CurrentCaller") {}
+export class CurrentCaller extends Context.Service<CurrentCaller, Caller>()("mailyard/CurrentCaller") {}
 
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
@@ -24,7 +24,7 @@ export class Forbidden extends Schema.TaggedError<Forbidden>()(
 export class ApiKeyAuth extends HttpApiMiddleware.Service<
   ApiKeyAuth,
   { provides: CurrentCaller; requires: never }
->()("mailflare/ApiKeyAuth", {
+>()("mailyard/ApiKeyAuth", {
   requiredForClient: true,
   security: { bearer: HttpApiSecurity.bearer },
   error: Unauthorized,

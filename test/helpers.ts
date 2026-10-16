@@ -7,7 +7,7 @@ export const call = (path: string, init: RequestInit & { key?: string; json?: un
   if (init.key) headers.set("authorization", `Bearer ${init.key}`)
   if (init.json !== undefined) headers.set("content-type", "application/json")
   return exports.default.fetch(
-    new Request(`https://mailflare.test${path}`, {
+    new Request(`https://mailyard.test${path}`, {
       ...init,
       headers,
       ...(init.json !== undefined ? { body: JSON.stringify(init.json) } : {}),

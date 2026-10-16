@@ -10,9 +10,9 @@ type AppServices = Layer.Success<ReturnType<typeof appLayer>>
 let runtime: ManagedRuntime.ManagedRuntime<AppServices, never> | undefined
 
 /** Queue names, as in wrangler.jsonc (and, later, alchemy.run.ts). */
-export const SEND_QUEUE = "mailflare-send"
-export const EMAIL_EVENTS_QUEUE = "mailflare-email-events"
-export const WEBHOOK_QUEUE = "mailflare-webhooks"
+export const SEND_QUEUE = "mailyard-send"
+export const EMAIL_EVENTS_QUEUE = "mailyard-email-events"
+export const WEBHOOK_QUEUE = "mailyard-webhooks"
 
 const handle = <T, A>(
   message: Message<unknown>,

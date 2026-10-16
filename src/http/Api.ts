@@ -7,7 +7,7 @@ import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
-  app: Schema.Literal("mailflare"),
+  app: Schema.Literal("mailyard"),
   version: Schema.String,
   database: Schema.Literal("ok"),
 })
@@ -65,7 +65,7 @@ export const SendResponse = Schema.Struct({
       Schema.Struct({
         contact: Schema.Struct({ id: Schema.String, email: Schema.String }),
         email: Schema.String,
-        /** Mailflare addition: sent, deferred (queued for retry), failed or rejected. */
+        /** Mailyard addition: sent, deferred (queued for retry), failed or rejected. */
         status: Schema.String,
       }),
     ),
@@ -651,8 +651,8 @@ export class InsightsApi extends HttpApiGroup.make("insights")
   )
   .middleware(ApiKeyAuth) {}
 
-/** Mailflare's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
-export class MailApi extends HttpApi.make("mailflare")
+/** Mailyard's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
+export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
   .add(ApiKeysApi)
@@ -661,4 +661,4 @@ export class MailApi extends HttpApi.make("mailflare")
   .add(SettingsApi)
   .add(WebhooksApi)
   .add(InsightsApi)
-  .annotateMerge(OpenApi.annotations({ title: "Mailflare API" })) {}
+  .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

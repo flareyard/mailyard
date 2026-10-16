@@ -10,12 +10,12 @@ export interface Env {
   readonly WEBHOOK_QUEUE: Queue<{ readonly deliveryId: string }>
   /** Deploy-time secret that encrypts webhook endpoint secrets at rest (manifest secret). */
   readonly WEBHOOK_SIGNING_KEY?: string
-  /** Cloudflare Email Service. Absent only when MAILFLARE_SENDER says otherwise (tests, local dev). */
+  /** Cloudflare Email Service. Absent only when MAILYARD_SENDER says otherwise (tests, local dev). */
   readonly EMAIL?: SendEmailBinding
   /** Root key generated at deploy time (manifest secret ADMIN_KEY). */
   readonly ADMIN_KEY?: string
   /** `memory` swaps Email Service for the in-memory sender: tests and local development only. */
-  readonly MAILFLARE_SENDER?: "cloudflare" | "memory"
+  readonly MAILYARD_SENDER?: "cloudflare" | "memory"
   /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
   readonly CLOUDFLARE_ACCOUNT_ID?: string
   readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string
@@ -28,4 +28,4 @@ export interface Env {
   readonly SMTP_PASSWORD?: string
 }
 
-export class Bindings extends Context.Service<Bindings, Env>()("mailflare/Bindings") {}
+export class Bindings extends Context.Service<Bindings, Env>()("mailyard/Bindings") {}

@@ -1,24 +1,24 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "mailflare-api",
+  "name": "mailyard-api",
   "main": "src/workers/api.ts",
   "compatibility_date": "2026-10-16",
   "d1_databases": [
-    { "binding": "DB", "database_name": "mailflare", "database_id": "local", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "mailyard", "database_id": "local", "migrations_dir": "migrations" }
   ],
-  "r2_buckets": [{ "binding": "STORE", "bucket_name": "mailflare-store" }],
+  "r2_buckets": [{ "binding": "STORE", "bucket_name": "mailyard-store" }],
   "send_email": [{ "name": "EMAIL" }],
   "queues": {
     "producers": [
-      { "binding": "SEND_QUEUE", "queue": "mailflare-send" },
-      { "binding": "WEBHOOK_QUEUE", "queue": "mailflare-webhooks" }
+      { "binding": "SEND_QUEUE", "queue": "mailyard-send" },
+      { "binding": "WEBHOOK_QUEUE", "queue": "mailyard-webhooks" }
     ],
     "consumers": [
       {
-        "queue": "mailflare-send",
+        "queue": "mailyard-send",
         "max_batch_size": 10,
         "max_retries": 10,
-        "dead_letter_queue": "mailflare-send-dlq"
+        "dead_letter_queue": "mailyard-send-dlq"
       }
     ]
   },

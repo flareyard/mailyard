@@ -10,7 +10,7 @@ export class ReservedEvent extends Schema.TaggedError<ReservedEvent>()("Reserved
 }) {}
 
 /** Event names the app records itself (sends, opens, unsubscribes); callers can't fake them. */
-export const isReserved = (event: string) => /^(mailflare|email|contact|segment)\./i.test(event)
+export const isReserved = (event: string) => /^(mailyard|email|contact|segment)\./i.test(event)
 
 /**
  * Records an event for a contact, creating the contact if needed. New contacts from events start

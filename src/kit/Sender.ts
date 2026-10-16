@@ -121,7 +121,7 @@ export class Sender extends Context.Service<
   {
     send(message: Outgoing): Effect.Effect<SendResult, SendError>
   }
->()("mailflare/kit/Sender") {
+>()("mailyard/kit/Sender") {
   /**
    * An in-memory sender for tests and local development. It validates like the real one and records
    * every accepted message in `MemoryOutbox`.
@@ -151,7 +151,7 @@ export class MemoryOutbox extends Context.Service<
     readonly all: Effect.Effect<ReadonlyArray<SentMessage>>
     record(message: SentMessage): Effect.Effect<void>
   }
->()("mailflare/kit/Sender/MemoryOutbox") {
+>()("mailyard/kit/Sender/MemoryOutbox") {
   static readonly layer = Layer.effect(
     MemoryOutbox,
     Effect.gen(function* () {
