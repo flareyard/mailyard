@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect"
-import { HttpApiBuilder } from "effect/http-api"
+import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { BrandSettings, getBrand, getBrandSettings, putBrandSettings } from "../domain/brand.ts"
 import {
   archiveTemplate,

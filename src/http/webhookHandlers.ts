@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/http-api"
+import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import {
   createEndpoint,
   deleteEndpoint,
