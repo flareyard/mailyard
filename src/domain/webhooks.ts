@@ -66,7 +66,7 @@ export const sign = async (secret: string, id: string, timestamp: number, body: 
 export class SecretBox extends Context.Service<
   SecretBox,
   { seal(plain: string): Effect.Effect<string>; open(sealed: string): Effect.Effect<string> }
->()("mailflare/SecretBox") {
+>()("mailyard/SecretBox") {
   static readonly layer = Layer.effect(
     SecretBox,
     Effect.gen(function* () {
@@ -75,7 +75,7 @@ export class SecretBox extends Context.Service<
         if (!WEBHOOK_SIGNING_KEY) throw new Error("WEBHOOK_SIGNING_KEY is not set")
         const material = await crypto.subtle.digest(
           "SHA-256",
-          enc.encode(`mailflare-webhook-secrets:${WEBHOOK_SIGNING_KEY}`),
+          enc.encode(`mailyard-webhook-secrets:${WEBHOOK_SIGNING_KEY}`),
         )
         return crypto.subtle.importKey("raw", material, "AES-GCM", false, ["encrypt", "decrypt"])
       })()
@@ -297,7 +297,7 @@ export const listDeliveries = Effect.fn("webhooks.deliveries")(function* (
 export class WebhookQueue extends Context.Service<
   WebhookQueue,
   { enqueue(deliveryId: string, delaySeconds: number): Effect.Effect<void> }
->()("mailflare/WebhookQueue") {
+>()("mailyard/WebhookQueue") {
   static readonly layer = Layer.effect(
     WebhookQueue,
     Effect.gen(function* () {
@@ -371,7 +371,7 @@ export const deliver = Effect.fn("webhooks.deliver")(function* (deliveryId: stri
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "user-agent": "Mailflare-Webhooks/1",
+          "user-agent": "Mailyard-Webhooks/1",
           "webhook-id": delivery.eventId,
           "webhook-timestamp": String(timestamp),
           "webhook-signature": signature,
@@ -463,7 +463,7 @@ export const sendTest = Effect.fn("webhooks.test")(function* (endpointId: string
     id: eventId,
     type: "webhook.test",
     createdAt: new Date().toISOString(),
-    data: { message: "A test event from Mailflare." },
+    data: { message: "A test event from Mailyard." },
   })
   yield* database.query("webhooks.testInsert", (db) =>
     db

@@ -3,7 +3,7 @@ import { Bindings } from "../Bindings.ts"
 
 /**
  * Read-only views of the account's Email Sending limits and reputation, from the Cloudflare API.
- * Mailflare holds no Cloudflare token by default, so this is optional: with CLOUDFLARE_ACCOUNT_ID and a
+ * Mailyard holds no Cloudflare token by default, so this is optional: with CLOUDFLARE_ACCOUNT_ID and a
  * read-only CLOUDFLARE_EMAIL_READ_TOKEN set it reads them; without, every call answers `None` and the
  * screens say "not connected" instead of guessing. Shapes measured on 2026-10-16
  * (GET /accounts/{id}/email/sending/limits and /reputation).
@@ -61,7 +61,7 @@ export class CloudflareEmail extends Context.Service<
     readonly limits: Effect.Effect<Option.Option<Limits>>
     readonly reputation: Effect.Effect<Option.Option<Reputation>>
   }
->()("mailflare/CloudflareEmail") {
+>()("mailyard/CloudflareEmail") {
   static readonly layer = Layer.effect(
     CloudflareEmail,
     Effect.gen(function* () {

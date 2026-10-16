@@ -48,7 +48,7 @@ const verify = async (whsec: string, headers: Record<string, string>, body: stri
 }
 
 const runDelivery = async (deliveryId: string) => {
-  const batch = createMessageBatch("mailflare-webhooks", [
+  const batch = createMessageBatch("mailyard-webhooks", [
     { id: crypto.randomUUID(), timestamp: new Date(), attempts: 1, body: { deliveryId } },
   ])
   const ctx = createExecutionContext()
@@ -68,7 +68,7 @@ const deliveryRow = (id: string) =>
       last_status_code: number | null
     }>()
 
-const createHook = async (events: Array<string>, url = "https://hooks.test/mailflare") => {
+const createHook = async (events: Array<string>, url = "https://hooks.test/mailyard") => {
   const response = await call("/v1/webhooks", { method: "POST", key: ADMIN, json: { url, events } })
   return { response, body: await json<{ endpoint: { id: string }; secret: string }>(response) }
 }
@@ -103,7 +103,7 @@ describe("delivery", () => {
     await call("/v1/send", {
       method: "POST",
       key: secret,
-      json: { to: "hook@example.net", subject: "Hooked", body: "<p>x</p>", from: "hello@mailflare.test" },
+      json: { to: "hook@example.net", subject: "Hooked", body: "<p>x</p>", from: "hello@mailyard.test" },
     })
     const pending = await env.DB.prepare(
       "select id from webhook_deliveries where endpoint_id = ? and event_type = 'message.sent'",
@@ -132,7 +132,7 @@ describe("delivery", () => {
     await call("/v1/send", {
       method: "POST",
       key: secret,
-      json: { to: "nohook@example.net", subject: "s", body: "<p>x</p>", from: "hello@mailflare.test" },
+      json: { to: "nohook@example.net", subject: "s", body: "<p>x</p>", from: "hello@mailyard.test" },
     })
     const count = await env.DB.prepare("select count(*) as n from webhook_deliveries where endpoint_id = ?")
       .bind(body.endpoint.id)

@@ -126,7 +126,7 @@ describe("versions", () => {
         json: {
           to: "buyer@example.net",
           template: "receipt",
-          from: "billing@mailflare.test",
+          from: "billing@mailyard.test",
           data: { amount: "₦4,000" },
         },
       })
@@ -182,7 +182,7 @@ describe("versions", () => {
     const response = await call("/v1/send", {
       method: "POST",
       key: secret,
-      json: { to: "x@example.net", template: t.id, from: "hello@mailflare.test" },
+      json: { to: "x@example.net", template: t.id, from: "hello@mailyard.test" },
     })
     expect(response.status).toBe(404)
   })

@@ -70,7 +70,7 @@ export const SystemHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       health: () =>
         database.ping.pipe(
-          Effect.as({ status: "ok", app: "mailflare", version: pkg.version, database: "ok" } as const),
+          Effect.as({ status: "ok", app: "mailyard", version: pkg.version, database: "ok" } as const),
           Effect.catchTag("DatabaseError", (e) =>
             Effect.logError("health check: database unreachable", e.cause).pipe(
               Effect.andThen(Effect.fail(new Unhealthy({ database: "unreachable" }))),

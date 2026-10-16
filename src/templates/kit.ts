@@ -5,7 +5,7 @@
  * the text part of a message says the same thing.
  *
  * MBPrep's version hard-coded its colours, fonts, logo and name; here they come from a Theme, so every
- * Mailflare sender gets the same quality in their own brand. With MBPREP_THEME the output is byte for
+ * Mailyard sender gets the same quality in their own brand. With MBPREP_THEME the output is byte for
  * byte what MBPrep sends (test/templates/kit.test.ts checks it against fixtures from MBPrep's kit).
  */
 
@@ -59,10 +59,10 @@ export const MBPREP_THEME: Theme = {
   },
 }
 
-/** Mailflare's own neutral default, for senders who haven't set a brand. */
+/** Mailyard's own neutral default, for senders who haven't set a brand. */
 export const DEFAULT_THEME: Theme = {
   ...MBPREP_THEME,
-  name: "Mailflare",
+  name: "Mailyard",
   classPrefix: "mf",
   colors: { ...MBPREP_THEME.colors, lime: "#ffffff", indigo: "#2f5bd8" },
 }

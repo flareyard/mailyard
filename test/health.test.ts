@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 
-const call = (path: string) => exports.default.fetch(new Request(`https://mailflare.test${path}`))
+const call = (path: string) => exports.default.fetch(new Request(`https://mailyard.test${path}`))
 
 describe("GET /healthz", () => {
   it("answers 200 with the app, version and a reachable database", async () => {
@@ -9,7 +9,7 @@ describe("GET /healthz", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       status: "ok",
-      app: "mailflare",
+      app: "mailyard",
       version: "0.1.0",
       database: "ok",
     })
@@ -53,7 +53,7 @@ describe("GET /openapi.json", () => {
     const response = await call("/openapi.json")
     expect(response.status).toBe(200)
     const doc = (await response.json()) as { info: { title: string }; paths: Record<string, unknown> }
-    expect(doc.info.title).toBe("Mailflare API")
+    expect(doc.info.title).toBe("Mailyard API")
     expect(Object.keys(doc.paths).sort()).toEqual([
       "/healthz",
       "/v1/api-keys",

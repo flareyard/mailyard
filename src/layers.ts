@@ -7,11 +7,11 @@ import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { Database } from "./services/Database.ts"
 import { SendQueue } from "./services/SendQueue.ts"
 
-/** Email Service with optional SMTP fallback, or the in-memory sender when MAILFLARE_SENDER=memory. */
+/** Email Service with optional SMTP fallback, or the in-memory sender when MAILYARD_SENDER=memory. */
 const senderLayer = (env: Env) => {
-  if (env.MAILFLARE_SENDER === "memory") return Sender.layerMemory
+  if (env.MAILYARD_SENDER === "memory") return Sender.layerMemory
   if (!env.EMAIL)
-    throw new Error("No EMAIL (send_email) binding; set MAILFLARE_SENDER=memory for local tests.")
+    throw new Error("No EMAIL (send_email) binding; set MAILYARD_SENDER=memory for local tests.")
   const smtp =
     env.SMTP_HOST && env.SMTP_USERNAME && env.SMTP_PASSWORD
       ? {

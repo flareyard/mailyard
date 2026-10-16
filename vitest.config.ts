@@ -17,7 +17,7 @@ export default defineConfig({
               bindings: {
                 TEST_MIGRATIONS: await readD1Migrations(path.join(import.meta.dirname, "migrations")),
                 ADMIN_KEY: "test-admin-key",
-                MAILFLARE_SENDER: "memory",
+                MAILYARD_SENDER: "memory",
                 WEBHOOK_SIGNING_KEY: "test-webhook-signing-key",
               },
             },

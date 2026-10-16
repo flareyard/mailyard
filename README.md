@@ -1,4 +1,4 @@
-# Mailflare
+# Mailyard
 
 Email on your own Cloudflare account: inboxes, Plunk-compatible sending, contacts, campaigns and automations. A Flareyard app.
 

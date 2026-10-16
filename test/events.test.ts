@@ -18,11 +18,11 @@ const event = (
   eventId = crypto.randomUUID(),
 ) => ({
   type: `cf.email.sending.message.${type}`,
-  source: { type: "email.sending", zoneId: "023e105f4ecef8ad9ca31a8372d0c353", domain: "mailflare.test" },
+  source: { type: "email.sending", zoneId: "023e105f4ecef8ad9ca31a8372d0c353", domain: "mailyard.test" },
   payload: {
     eventId,
     messageId,
-    sender: "hello@mailflare.test",
+    sender: "hello@mailyard.test",
     recipient,
     subject: "Welcome",
     terminal: type !== "deferred",
@@ -39,7 +39,7 @@ const event = (
 
 const deliver = async (...bodies: Array<unknown>) => {
   const batch = createMessageBatch(
-    "mailflare-email-events",
+    "mailyard-email-events",
     bodies.map((body, i) => ({
       id: `e${i}-${crypto.randomUUID()}`,
       timestamp: new Date(),
@@ -56,7 +56,7 @@ const sendOne = async (to: string) => {
   const response = await call("/v1/send", {
     method: "POST",
     key: secret,
-    json: { to, subject: "Welcome", body: "<p>hi</p>", from: "hello@mailflare.test" },
+    json: { to, subject: "Welcome", body: "<p>hi</p>", from: "hello@mailyard.test" },
   })
   const { data } = await json<{ data: { emails: Array<{ email: string; contact: { id: string } }> } }>(
     response,
@@ -175,7 +175,7 @@ describe("Email Sending events", () => {
     expect(day?.delivered).toBeGreaterThanOrEqual(1)
   })
 
-  it("counts events for mail sent outside Mailflare as the external stream", async () => {
+  it("counts events for mail sent outside Mailyard as the external stream", async () => {
     await deliver(event("delivered", "not-ours-123", "someone@example.net"))
     const row = await env.DB.prepare(
       "select delivered from daily_stats where day = '2026-10-16' and stream = 'external' and provider = 'gmail'",

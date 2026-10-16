@@ -280,7 +280,7 @@ export const health = Effect.fn("insights.health")(function* () {
   })
 
   const sender =
-    env.MAILFLARE_SENDER === "memory"
+    env.MAILYARD_SENDER === "memory"
       ? ({ status: "warn", detail: "In-memory sender: nothing leaves this Worker." } as const)
       : env.EMAIL
         ? ({ status: "ok", detail: "Email Service binding present." } as const)
@@ -295,7 +295,7 @@ export const health = Effect.fn("insights.health")(function* () {
   )
   checks.push(
     domainRows.length === 0
-      ? { name: "domains", status: "unknown", detail: "No domain set up in Mailflare yet." }
+      ? { name: "domains", status: "unknown", detail: "No domain set up in Mailyard yet." }
       : {
           name: "domains",
           status: domainRows.every((d) => d.sending) ? "ok" : "warn",

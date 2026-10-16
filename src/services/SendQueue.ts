@@ -8,7 +8,7 @@ export type SendJob = typeof SendJob.Type
 export class SendQueue extends Context.Service<
   SendQueue,
   { enqueue(job: SendJob, delaySeconds: number): Effect.Effect<void> }
->()("mailflare/SendQueue") {
+>()("mailyard/SendQueue") {
   static readonly layer = Layer.effect(
     SendQueue,
     Effect.gen(function* () {

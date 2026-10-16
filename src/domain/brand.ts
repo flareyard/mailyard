@@ -7,7 +7,7 @@ import type { Brand } from "../templates/render.ts"
 
 const Hex = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/))
 
-/** The sender's brand, as stored in `settings.brand`. Anything left out falls back to Mailflare's default. */
+/** The sender's brand, as stored in `settings.brand`. Anything left out falls back to Mailyard's default. */
 export const BrandSettings = Schema.Struct({
   name: Schema.NonEmptyString,
   siteUrl: Schema.String.check(Schema.isPattern(/^https?:\/\//)),
@@ -39,9 +39,9 @@ export const BrandSettings = Schema.Struct({
 export type BrandSettings = typeof BrandSettings.Type
 
 export const DEFAULT_BRAND: BrandSettings = {
-  name: "Mailflare",
+  name: "Mailyard",
   siteUrl: "https://example.com",
-  tagline: "Sent with Mailflare.",
+  tagline: "Sent with Mailyard.",
 }
 
 export const toBrand = (s: BrandSettings): Brand => {

@@ -37,8 +37,8 @@ describe("POST /v1/send (Plunk-compatible)", () => {
       to: "Ada@Example.net",
       subject: "Reset for {{ firstName }}",
       body: '<p>Hello {{firstName}}! Code: {{resetCode}}. Plan: {{ plan ?? "free" }}</p>',
-      from: "hello@mailflare.test",
-      name: "Mailflare",
+      from: "hello@mailyard.test",
+      name: "Mailyard",
       data: { firstName: "<Ada>", resetCode: { value: "ABC123", persistent: false } },
     })
     expect(response.status).toBe(200)
@@ -52,13 +52,13 @@ describe("POST /v1/send (Plunk-compatible)", () => {
     const message = await row(sent?.email ?? "")
     expect(message?.status).toBe("sent")
     expect(message?.subject).toBe("Reset for <Ada>")
-    expect(message?.sender).toBe("hello@mailflare.test")
+    expect(message?.sender).toBe("hello@mailyard.test")
 
     // The rendered copy escapes data in HTML and keeps the one-off value out of the contact.
     const detail = await json<{ rendered: { html: string; text: string; from: string } }>(
       await call(`/v1/messages/${sent?.email}`, { key: secret }),
     )
-    expect(detail.rendered.from).toBe("Mailflare <hello@mailflare.test>")
+    expect(detail.rendered.from).toBe("Mailyard <hello@mailyard.test>")
     expect(detail.rendered.html).toBe("<p>Hello &lt;Ada&gt;! Code: ABC123. Plan: free</p>")
     expect(detail.rendered.text).toBe("Hello <Ada>! Code: ABC123. Plan: free")
     const contact = await env.DB.prepare("select status, fields from contacts where email = ?")
@@ -73,7 +73,7 @@ describe("POST /v1/send (Plunk-compatible)", () => {
       to: [{ name: "Jane", email: "jane@example.net" }, "john@example.net"],
       subject: "Newsletter",
       body: "<p>Hi {{name ?? 'there'}}</p>",
-      from: { name: "News", email: "news@mailflare.test" },
+      from: { name: "News", email: "news@mailyard.test" },
       subscribed: true,
     })
     const result = await json<SendResult>(response)
@@ -93,7 +93,7 @@ describe("POST /v1/send (Plunk-compatible)", () => {
       to: "idem@example.net",
       subject: "Once",
       body: "<p>once</p>",
-      from: "hello@mailflare.test",
+      from: "hello@mailyard.test",
     }
     const first = await json<SendResult>(await send(body, { idempotencyKey: "order-42" }))
     const again = await send(body, { idempotencyKey: "order-42" })
@@ -114,7 +114,7 @@ describe("POST /v1/send (Plunk-compatible)", () => {
   })
 
   it("answers 404 for an unknown template", async () => {
-    const response = await send({ to: "x@example.net", template: "nope", from: "hello@mailflare.test" })
+    const response = await send({ to: "x@example.net", template: "nope", from: "hello@mailyard.test" })
     expect(response.status).toBe(404)
   })
 
@@ -125,7 +125,7 @@ describe("POST /v1/send (Plunk-compatible)", () => {
       to: "big@example.net",
       subject: "Big",
       body: "<p>big</p>",
-      from: "hello@mailflare.test",
+      from: "hello@mailyard.test",
       attachments: [{ filename: "big.txt", content: big, contentType: "text/plain" }],
     })
     expect(response.status).toBe(422)
@@ -202,7 +202,7 @@ describe("GET /v1/messages", () => {
         to: "pager@example.net",
         subject: `Page ${n}`,
         body: "<p>x</p>",
-        from: "hello@mailflare.test",
+        from: "hello@mailyard.test",
       })
     }
     const first = await json<{ messages: Array<{ subject: string }>; nextCursor: string | null }>(
@@ -224,7 +224,7 @@ describe("send queue", () => {
   it("delivers a deferred message when its retry job runs", async () => {
     const id = "deferred-1"
     const rendered = {
-      from: { email: "hello@mailflare.test" },
+      from: { email: "hello@mailyard.test" },
       to: [{ email: "later@example.net" }],
       subject: "Later",
       html: "<p>later</p>",
@@ -232,11 +232,11 @@ describe("send queue", () => {
     }
     await env.STORE.put(`out/${id}.json`, JSON.stringify(rendered))
     await env.DB.prepare(
-      "insert into messages_out (id, stream, recipient, sender, subject, status, attempts, rendered_key) values (?, 'transactional', 'later@example.net', 'hello@mailflare.test', 'Later', 'deferred', 1, ?)",
+      "insert into messages_out (id, stream, recipient, sender, subject, status, attempts, rendered_key) values (?, 'transactional', 'later@example.net', 'hello@mailyard.test', 'Later', 'deferred', 1, ?)",
     )
       .bind(id, `out/${id}.json`)
       .run()
-    const batch = createMessageBatch("mailflare-send", [
+    const batch = createMessageBatch("mailyard-send", [
       { id: "job-1", timestamp: new Date(), attempts: 1, body: { messageId: id } },
     ])
     const ctx = createExecutionContext()
