@@ -1,0 +1,2 @@
+# Mail fixtures are byte-exact (CRLF and LF-only on purpose).
+*.eml -text

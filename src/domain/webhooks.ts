@@ -24,6 +24,7 @@ export const WEBHOOK_EVENTS = [
   "contact.unsubscribed",
   "contact.suppressed",
   "event.tracked",
+  "mail.received",
 ] as const
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]
 

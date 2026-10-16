@@ -12,11 +12,15 @@ import {
   MessagesHandlers,
   SystemHandlers,
 } from "../http/handlers.ts"
+import { InboundHandlers } from "../http/inboundHandlers.ts"
 import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { appLayer } from "../layers.ts"
+import { handleEmail } from "./inbound.ts"
 import { handleQueue } from "./queue.ts"
+
+export { MailboxDO } from "../objects/MailboxDO.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide([
@@ -28,6 +32,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     SettingsHandlers,
     WebhooksHandlers,
     InsightsHandlers,
+    InboundHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
@@ -40,4 +45,7 @@ const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 export default {
   fetch: (request) => handler(request),
   queue: (batch, env) => handleQueue(batch, env),
+  email: async (message, env) => {
+    await handleEmail(message, env)
+  },
 } satisfies ExportedHandler<Env>

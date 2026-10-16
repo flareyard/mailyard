@@ -1,0 +1,24 @@
+From: Newsletter <news@example.org>
+To: sam@acme.test
+Subject: Our new logo
+Date: Fri, 16 Oct 2026 09:00:00 +0100
+Message-ID: <logo@example.org>
+List-Id: Example News <news.example.org>
+List-Unsubscribe: <https://example.org/u/1>, <mailto:unsub@example.org>
+Precedence: bulk
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="rel"
+
+--rel
+Content-Type: text/html; charset=us-ascii
+
+<html><body><img src="cid:logo@example.org" alt="logo"><p>Hello</p></body></html>
+--rel
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-ID: <logo@example.org>
+Content-Disposition: inline; filename="logo.png"
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgAAACAAAB4iG8MwAA
+AABJRU5ErkJggg==
+--rel--

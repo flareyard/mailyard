@@ -17,6 +17,7 @@
   "dependencies": {
     "drizzle-orm": "0.45.4",
     "effect": "4.0.5",
+    "postal-mime": "4.0.7",
     "worker-mailer": "1.2.1"
   },
   "devDependencies": {

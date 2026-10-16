@@ -134,6 +134,28 @@ CREATE TABLE `idempotency_keys` (
 );
 --> statement-breakpoint
 CREATE INDEX `idempotency_keys_expires` ON `idempotency_keys` (`expires_at`);--> statement-breakpoint
+CREATE TABLE `inbound_messages` (
+	`id` text PRIMARY KEY NOT NULL,
+	`sha256` text NOT NULL,
+	`raw_key` text NOT NULL,
+	`size` integer NOT NULL,
+	`envelope_from` text NOT NULL,
+	`envelope_to` text NOT NULL,
+	`message_id` text,
+	`subject` text,
+	`from_address` text,
+	`status` text NOT NULL,
+	`resolution` text,
+	`delivered_to` text DEFAULT '[]' NOT NULL,
+	`attempts` integer DEFAULT 0 NOT NULL,
+	`error` text,
+	`received_at` integer NOT NULL,
+	`filed_at` integer
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `inbound_messages_recipient` ON `inbound_messages` (`sha256`,`envelope_to`);--> statement-breakpoint
+CREATE INDEX `inbound_messages_status` ON `inbound_messages` (`status`,`received_at`);--> statement-breakpoint
+CREATE INDEX `inbound_messages_received` ON `inbound_messages` (`received_at`);--> statement-breakpoint
 CREATE TABLE `mailboxes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`domain_id` text NOT NULL,

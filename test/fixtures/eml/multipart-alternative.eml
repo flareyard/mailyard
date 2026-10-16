@@ -1,0 +1,37 @@
+Authentication-Results: mx.cloudflare.net;
+ dkim=pass header.d=example.org header.s=s1 header.b=abc123;
+ spf=pass (mx.cloudflare.net: domain of bounce@example.org designates 192.0.2.10 as permitted sender) smtp.mailfrom=bounce@example.org;
+ dmarc=pass header.from=example.org policy.dmarc=reject;
+ arc=none
+Received: from mail.example.org (mail.example.org [192.0.2.10])
+ by mx.cloudflare.net with ESMTPS id 4abc; Fri, 16 Oct 2026 21:00:00 +0000
+From: "Ada Lovelace" <ada@example.org>
+To: "Sam" <sam@acme.test>, team@acme.test
+Cc: grace@example.org
+Reply-To: replies@example.org
+Subject: Re: Engine design notes
+Date: Fri, 16 Oct 2026 20:59:58 +0000
+Message-ID: <reply-2@example.org>
+In-Reply-To: <note-1@acme.test>
+References: <thread-0@acme.test>
+ <note-1@acme.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-boundary"
+
+--alt-boundary
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Thanks, the diagrams help =E2=80=94 more below.
+
+On Thu, 15 Oct 2026 at 10:00, Sam <sam@acme.test> wrote:
+> Here are the notes.
+
+--alt-boundary
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<p>Thanks, the diagrams help =E2=80=94 more below.</p><blockquote>Here are the n=
+otes.</blockquote>
+
+--alt-boundary--

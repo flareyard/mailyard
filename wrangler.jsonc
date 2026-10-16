@@ -8,10 +8,15 @@
   ],
   "r2_buckets": [{ "binding": "STORE", "bucket_name": "mailyard-store" }],
   "send_email": [{ "name": "EMAIL" }],
+  "durable_objects": {
+    "bindings": [{ "name": "MAILBOX", "class_name": "MailboxDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MailboxDO"] }],
   "queues": {
     "producers": [
       { "binding": "SEND_QUEUE", "queue": "mailyard-send" },
-      { "binding": "WEBHOOK_QUEUE", "queue": "mailyard-webhooks" }
+      { "binding": "WEBHOOK_QUEUE", "queue": "mailyard-webhooks" },
+      { "binding": "INBOUND_QUEUE", "queue": "mailyard-inbound" }
     ],
     "consumers": [
       {
@@ -19,6 +24,28 @@
         "max_batch_size": 10,
         "max_retries": 10,
         "dead_letter_queue": "mailyard-send-dlq"
+      },
+      {
+        // Email Sending delivery events (event subscription on the account).
+        "queue": "mailyard-email-events",
+        "max_batch_size": 100,
+        "max_batch_timeout": 5,
+        "max_retries": 10,
+        "dead_letter_queue": "mailyard-email-events-dlq"
+      },
+      {
+        "queue": "mailyard-webhooks",
+        "max_batch_size": 10,
+        "max_retries": 10,
+        "dead_letter_queue": "mailyard-webhooks-dlq"
+      },
+      {
+        // Inbound messages whose filing failed after the raw copy was stored. The ledger row stays
+        // `failed` after the last retry and can be reprocessed from POST /v1/inbound/{id}/reprocess.
+        "queue": "mailyard-inbound",
+        "max_batch_size": 5,
+        "max_retries": 10,
+        "dead_letter_queue": "mailyard-inbound-dlq"
       }
     ]
   },

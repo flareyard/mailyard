@@ -9,9 +9,11 @@ import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
 import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
 import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
+import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
 import type { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
+import type { Mailboxes } from "../services/Mailboxes.ts"
 import type { SendQueue } from "../services/SendQueue.ts"
 import {
   type ApiKeySummary,
@@ -50,7 +52,17 @@ export const provideTo =
     handler(...args).pipe(Effect.provideContext(context))
 
 export const appContext = Effect.context<
-  Database | Bindings | BlobStore | Ids | Sender | SendQueue | WebhookQueue | SecretBox | CloudflareEmail
+  | Database
+  | Bindings
+  | BlobStore
+  | Ids
+  | Sender
+  | SendQueue
+  | WebhookQueue
+  | SecretBox
+  | CloudflareEmail
+  | Mailboxes
+  | InboundQueue
 >()
 
 export const requireScope = (scope: Scope) =>
