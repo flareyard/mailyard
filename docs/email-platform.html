@@ -1,0 +1,643 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email on Cloudflare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Adamina&display=swap">
+<style>
+:root{
+  --paper:#ffffff; --ink:#000000; --near:#111111; --graphite:#595959; --soft:#919191;
+  --oat:#f7f4f1; --oat-line:#ebe5df; --ledger:#3b281d; --espresso:#211006;
+  --copper:#e07122; --terracotta:#d66733;
+  --green:#1e681d; --green-dot:#288a26; --ochre:#8b6900; --red:#99001c;
+  --green-bg:#e8f1e7; --ochre-bg:#f5eedb; --red-bg:#f6e3e6;
+  /* diagram panel (always espresso) */
+  --dg-bg:#211006; --dg-box:#2f1b0e; --dg-line:#5a4232; --dg-text:#ffffff; --dg-sub:#cbbcaf;
+  --dg-native:#6cc469; --dg-legacy:#e8853b; --dg-out:#9b8e85;
+  --sans:"Inter",Arial,"Helvetica Neue",sans-serif;
+  --mono:"IBM Plex Mono",SFMono-Regular,Consolas,monospace;
+  --serif:"Adamina",Georgia,serif;
+  font-feature-settings:"cv02","cv03","cv04","cv11";
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#140a04; --ink:#f7f4f1; --near:#ece6e0; --graphite:#bcaea2; --soft:#8f8178;
+    --oat:#22150c; --oat-line:#3a2a1f; --ledger:#f7f4f1; --espresso:#1b0d05;
+    --copper:#f08a40; --green:#7fd27c; --green-dot:#4fb34c; --ochre:#e0b84a; --red:#ff7d8f;
+    --green-bg:#16301a; --ochre-bg:#33290f; --red-bg:#3a1219;
+    --dg-bg:#1b0d05;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#140a04; --ink:#f7f4f1; --near:#ece6e0; --graphite:#bcaea2; --soft:#8f8178;
+  --oat:#22150c; --oat-line:#3a2a1f; --ledger:#f7f4f1; --espresso:#1b0d05;
+  --copper:#f08a40; --green:#7fd27c; --green-dot:#4fb34c; --ochre:#e0b84a; --red:#ff7d8f;
+  --green-bg:#16301a; --ochre-bg:#33290f; --red-bg:#3a1219;
+  --dg-bg:#1b0d05;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;letter-spacing:-.01em;padding-inline:20px;padding-block:0 80px}
+.wrap{max-width:1120px;margin:0 auto}
+h1,h2,h3{margin:0;font-weight:400;text-wrap:balance}
+h1{font-size:clamp(46px,8vw,82px);line-height:1;letter-spacing:-.029em}
+h2{font-size:clamp(30px,4.4vw,56px);line-height:1.05;letter-spacing:-.025em}
+h3{font-size:18px;font-weight:600;letter-spacing:-.022em;line-height:1.3}
+p{margin:0}
+a{color:var(--copper);text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--copper);outline-offset:3px;border-radius:4px}
+code{font-family:var(--mono);font-size:.86em;letter-spacing:0}
+p code,li code,td code,figcaption code{background:var(--oat);padding:.06em .35em;border-radius:6px}
+.eyebrow{font-family:var(--mono);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.03em;color:var(--ink)}
+.muted{color:var(--graphite)}
+.prose{max-width:66ch;color:var(--graphite);font-size:17px;line-height:1.5;letter-spacing:-.015em}
+.prose strong{color:var(--ink);font-weight:500}
+
+/* nav */
+.bar{height:54px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--oat-line)}
+.bar .mark{font-weight:600;font-size:15px;letter-spacing:-.03em}
+.bar .mark span{font-family:var(--mono);font-weight:400;font-size:11px;text-transform:uppercase;letter-spacing:.01em;color:var(--graphite);margin-left:8px}
+.pill{display:inline-flex;align-items:center;border-radius:9999px;padding:12px 20px;font-size:15px;font-weight:500;letter-spacing:-.012em;text-decoration:none;white-space:nowrap}
+.pill.dark{background:var(--ledger);color:var(--paper);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.pill.oat{background:var(--oat);color:var(--ink)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:32px 56px;align-items:end;padding-block:80px 40px}
+.hero .side{display:grid;gap:20px;padding-bottom:8px}
+.hero .side p{color:var(--graphite);font-size:17px;line-height:1.35}
+.stamp{display:flex;flex-wrap:wrap;gap:6px 16px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.01em;color:var(--graphite)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;padding-block:8px 24px}
+.toc a{font-size:14px;font-weight:500;letter-spacing:-.022em;color:var(--ink);text-decoration:none;background:var(--oat);border-radius:9999px;padding:8px 14px}
+.toc a:hover{background:var(--oat-line)}
+@media (max-width:820px){.hero{grid-template-columns:1fr;padding-block:48px 24px}}
+
+section{padding-block:72px 8px;display:grid;gap:24px}
+.head{display:grid;gap:14px}
+
+/* fact cells */
+.cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));border:1px solid var(--oat-line);border-radius:16px;overflow:hidden}
+.cells div{padding:22px;display:grid;gap:6px;align-content:start;border-right:1px solid var(--oat-line);border-bottom:1px solid var(--oat-line);margin:0 -1px -1px 0}
+.cells .n{font-size:36px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.cells .l{font-size:14px;color:var(--graphite);line-height:1.35}
+
+.quote{background:var(--oat);border-radius:16px;padding:32px 40px;display:grid;gap:12px;max-width:820px}
+.quote p{font-family:var(--serif);font-size:19px;line-height:1.4;letter-spacing:-.006em;color:var(--ink)}
+.quote p b{font-family:var(--sans);font-weight:600;letter-spacing:-.02em}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--oat-line);border-radius:16px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.4;min-width:640px}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--oat-line);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:.01em;color:var(--graphite);background:var(--oat)}
+tr:last-child td{border-bottom:0}
+td b{font-weight:600}
+td .ref{display:block;font-family:var(--mono);font-size:11px;color:var(--soft);margin-top:3px;letter-spacing:0}
+.mono{font-family:var(--mono);font-size:13px;letter-spacing:0}
+
+/* status labels */
+.st{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.01em;padding:3px 9px;border-radius:9999px;white-space:nowrap}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st.go{color:var(--green);background:var(--green-bg)}
+.st.wait{color:var(--ochre);background:var(--ochre-bg)}
+.st.no{color:var(--red);background:var(--red-bg)}
+
+/* diagrams on espresso */
+figure{margin:0;display:grid;gap:12px}
+.panel{background:var(--dg-bg);border-radius:24px;padding:24px;overflow-x:auto}
+.panel svg{display:block;min-width:760px;width:100%;height:auto}
+.panel .plabel{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.01em;color:var(--dg-sub);margin-bottom:12px}
+figcaption{font-size:14px;color:var(--graphite);max-width:80ch;line-height:1.45}
+svg text{font-family:var(--sans);letter-spacing:-.01em}
+svg .tl{fill:var(--dg-text);font-size:13px;font-weight:500}
+svg .ts{fill:var(--dg-sub);font-size:11px}
+svg .tm{fill:var(--dg-sub);font-family:var(--mono);font-size:10px;letter-spacing:0}
+svg .tk{fill:var(--dg-native);font-family:var(--mono);font-size:10px;letter-spacing:0}
+svg .tw{fill:var(--dg-legacy);font-family:var(--mono);font-size:10px;letter-spacing:0}
+svg .bx{fill:var(--dg-box);stroke:var(--dg-line)}
+svg .bn{fill:var(--dg-box);stroke:var(--dg-native);stroke-width:1.3}
+svg .bl{fill:var(--dg-box);stroke:var(--dg-legacy);stroke-width:1.3}
+svg .bo{fill:none;stroke:var(--dg-out);stroke-dasharray:4 4}
+svg .frame{fill:none;stroke:var(--dg-line);stroke-width:1.2}
+svg .fn{fill:none;stroke:var(--dg-native);stroke-width:1.2;stroke-dasharray:5 4}
+svg .e{stroke:var(--dg-sub);stroke-width:1.3;fill:none}
+svg .en{stroke:var(--dg-native);stroke-width:1.5;fill:none}
+svg .el{stroke:var(--dg-legacy);stroke-width:1.3;fill:none;stroke-dasharray:5 4}
+svg .ah{fill:var(--dg-sub)} svg .ahn{fill:var(--dg-native)} svg .ahl{fill:var(--dg-legacy)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--graphite)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:14px;height:10px;border-radius:3px;border:1.5px solid;background:var(--dg-box)}
+.sw.n{border-color:var(--dg-native)} .sw.l{border-color:var(--dg-legacy)} .sw.x{border-color:var(--dg-line)} .sw.o{border-color:var(--dg-out);border-style:dashed;background:none}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{background:var(--oat);border-radius:16px;padding:24px;display:grid;gap:8px;align-content:start}
+.card p{font-size:14px;color:var(--graphite);line-height:1.45}
+.card .eyebrow{font-size:11px;font-weight:400;color:var(--graphite)}
+.card code{background:var(--paper)}
+.card .who{font-family:var(--mono);font-size:11px;color:var(--soft);letter-spacing:0}
+
+/* pipeline */
+ol.pipe{list-style:none;margin:0;padding:0;counter-reset:s;border:1px solid var(--oat-line);border-radius:16px;overflow:hidden}
+ol.pipe li{counter-increment:s;display:grid;grid-template-columns:56px 1fr;gap:2px 16px;padding:18px 22px;border-bottom:1px solid var(--oat-line)}
+ol.pipe li:last-child{border-bottom:0}
+ol.pipe li::before{content:counter(s,decimal-leading-zero);grid-row:span 3;font-family:var(--mono);font-size:13px;color:var(--soft);padding-top:2px}
+ol.pipe p{font-size:14px;color:var(--graphite);line-height:1.45;max-width:78ch}
+ol.pipe .ref{font-family:var(--mono);font-size:11px;color:var(--soft);letter-spacing:0}
+
+/* phases */
+.phases{display:grid;gap:12px}
+.phase{border:1px solid var(--oat-line);border-radius:16px;padding:24px 28px;display:grid;gap:12px}
+.phase.now{background:var(--oat);border-color:var(--oat)}
+.phase .top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.phase .top .eyebrow{color:var(--copper)}
+.phase ul{margin:0;padding-left:1.1em;display:grid;gap:5px;font-size:14px;color:var(--graphite)}
+.phase ul b{color:var(--ink);font-weight:500}
+.phase .done{font-size:14px;border-top:1px dashed var(--oat-line);padding-top:12px;color:var(--graphite)}
+.phase .done b{color:var(--ink);font-weight:600}
+.phase.now .done{border-color:var(--oat-line)}
+
+/* code */
+pre.code{background:var(--espresso);color:#f3ece6;border-radius:16px;padding:22px 24px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65;margin:0;letter-spacing:0}
+pre.code .c{color:#a8968a} pre.code .k{color:#8fd38c} pre.code .s{color:#f2a46a}
+.note{font-size:13px;color:var(--graphite);border-left:2px solid var(--copper);padding:4px 0 4px 14px;max-width:80ch}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+ul.tight{margin:0;padding-left:1.1em;display:grid;gap:6px;font-size:14px;color:var(--graphite)}
+ul.tight b{color:var(--ink);font-weight:500}
+
+footer{margin-top:72px;padding-top:32px;border-top:1px solid var(--oat-line);display:grid;gap:12px;font-size:13px;color:var(--graphite)}
+footer ul{margin:0;padding-left:1.1em;display:grid;gap:5px}
+@media (prefers-reduced-motion:no-preference){.toc a{transition:background .15s}}
+</style>
+
+</head><body>
+<div class="wrap">
+
+<div class="bar">
+  <span class="mark">Email on Cloudflare<span>App 1 plan · draft 1</span></span>
+  <a class="pill dark" href="#phases">The phases</a>
+</div>
+
+<header class="hero">
+  <div style="display:grid;gap:20px">
+    <span class="eyebrow">Flareyard app 1 · the email platform</span>
+    <h1>Your domains, your inboxes, your sending. All in your Cloudflare.</h1>
+  </div>
+  <div class="side">
+    <p>Bring a domain from any registrar in one flow. Get real inboxes on it, transactional sending, contacts, campaigns and automations, with no mail server and no SaaS bill. Every piece is a Cloudflare primitive. Every number below was measured on 16 Oct 2026 or is marked as unmeasured.</p>
+    <div class="stamp"><span>measured 16 Oct 2026</span><span>Email Service · Workers · DO · D1 · R2 · Queues · Workflows</span><span>Effect inside handlers</span></div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#today">Where you are today</a>
+  <a href="#facts">What Cloudflare gives us</a>
+  <a href="#domains">One-click domain import</a>
+  <a href="#inbox">Inboxes on Cloudflare</a>
+  <a href="#features">Every feature</a>
+  <a href="#deliverability">Deliverability</a>
+  <a href="#arch">System design</a>
+  <a href="#data">Data model</a>
+  <a href="#code">How the code is written</a>
+  <a href="#cost">Cost</a>
+  <a href="#limits">Hard limits</a>
+  <a href="#spikes">Spikes</a>
+  <a href="#phases">Phases</a>
+  <a href="#decide">Your decisions</a>
+  <a href="email-ui.html">UI specification →</a>
+</nav>
+
+<!-- TODAY -->
+<section id="today">
+  <div class="head">
+    <span class="eyebrow">Measured against your own accounts</span>
+    <h2>Where your mail is today</h2>
+    <p class="prose">Five domains, four different mail setups. This plan moves them all onto one system you own, starting with the one that hurts most.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Domain</th><th>DNS</th><th>Inbound</th><th>Outbound</th><th>Move</th></tr></thead>
+    <tbody>
+      <tr><td><b>mbprep.app</b></td><td>Cloudflare</td><td>Google Workspace (MX <code>smtp.google.com</code>)</td><td>Email Service for bulk; Spacemail SMTP first for sign-in codes</td><td><span class="st go">mostly done</span><span class="ref">keep Workspace on the apex; app inboxes on a subdomain (spike S3)</span></td></tr>
+      <tr><td><b>coursified.app</b></td><td>Hostinger (<code>dns-parking.com</code>)</td><td>Hostinger mailbox</td><td>Worker → Vercel relay → Hostinger SMTP</td><td><span class="st no">first customer</span><span class="ref">HAL-3096 · zone import is phase M1's acceptance test</span></td></tr>
+      <tr><td><b>bridgehook.dev</b></td><td>Cloudflare</td><td>Spacemail</td><td>Email Service domain set up 7 Oct</td><td><span class="st wait">optional</span></td></tr>
+      <tr><td><b>lorx.space</b></td><td>Cloudflare</td><td>Spacemail</td><td>none configured</td><td><span class="st wait">optional</span></td></tr>
+      <tr><td><b>flareyard</b> (domain not yet registered, HAL-2813)</td><td>—</td><td>Spacemail mailbox (credentials going into <code>.env</code>)</td><td>—</td><td><span class="st wait">dogfood</span><span class="ref">once registered, it should be the first domain born on this app</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">The account's Email Sending quota today is <b>1,000 a day</b> and its reputation reads <b>healthy</b>, measured via <code>/email/sending/limits</code> and <code>/reputation</code>. That quota caps campaign throughput until Cloudflare raises it, so the send scheduler is built around it from day one.</p>
+</section>
+
+<!-- FACTS -->
+<section id="facts">
+  <div class="head">
+    <span class="eyebrow">Measured, not assumed</span>
+    <h2>What Cloudflare gives us, and what it doesn't</h2>
+    <p class="prose">Cloudflare now covers the whole mail transport: receive, send, events, suppression and SMTP. What's missing is the product layer: mailboxes, contacts, campaigns and automations. That layer is what this app is.</p>
+  </div>
+  <div class="grid">
+    <div class="card"><span class="st go">GA · free + paid</span><h3>Email Routing</h3><p>Inbound mail to your domain, unlimited on both plans. A rule sends an address, or a <b>catch-all</b>, to a Worker's <code>email()</code> handler, which gets the raw MIME stream and can <code>forward()</code>, <code>reply()</code> or <code>setReject()</code>. Rules can now live in Wrangler config (<code>addresses</code>, 4 Sep 2026). Inbound mail failing the sender's DMARC policy, and mail from RBL-listed IPs, is rejected before our code runs.</p></div>
+    <div class="card"><span class="st wait">beta · Workers Paid</span><h3>Email Sending</h3><p>Send to any recipient through a Workers binding, REST, or authenticated SMTP. 3,000 a month included, then $0.35 per 1,000. Automatic DKIM and ARC signing, a <code>cf-bounce</code> return path, an account suppression list, and a reputation API. Sends to your own verified addresses are free.</p></div>
+    <div class="card"><span class="st go">since 15 Jul 2026</span><h3>Sending events on Queues</h3><p>Six events per sending domain: <code>delivered</code>, <code>deferred</code>, <code>bounced</code> (hard/soft), <code>failed</code>, <code>rejected</code>, <code>complained</code>, each with SMTP status and response. This is Plunk's webhook layer, built in.</p></div>
+    <div class="card"><span class="st go">beta since 8 Jun 2026</span><h3>SMTP submission</h3><p><code>smtp.mx.cloudflare.net:465</code>, implicit TLS, username <code>api_token</code>, password a Cloudflare API token with <b>Email Sending: Edit</b>. Any SMTP library or mail client can send through it. The catch: that token can send from <i>every</i> onboarded domain on the account.</p></div>
+    <div class="card"><span class="st go">API</span><h3>Zones, scan, import, activation</h3><p><code>POST /zones</code> (Zone Edit), <code>/dns_records/scan/trigger</code> plus <code>/scan/review</code> for the quick scan, <code>/dns_records/import</code> for a BIND file, <code>PUT /activation_check</code> to re-check nameservers. Everything the dashboard's onboarding does is scriptable.</p></div>
+    <div class="card"><span class="st no">not via API yet</span><h3>Registrar transfers</h3><p>The Registrar API (beta) can search, check and register, but <b>transfers, renewals and contact updates are not available through it</b>. Moving a registration to Cloudflare stays a dashboard step. Moving <i>DNS</i> to Cloudflare doesn't need a transfer, only a nameserver change at the current registrar.</p></div>
+  </div>
+  <p class="note">Not offered by Cloudflare, measured in the API spec today: mailboxes, IMAP or POP access, contacts, lists, campaigns, automations, templates, open and click tracking. Workers also can't accept inbound TCP, so a Worker can't <i>be</i> an IMAP server. It can still be an IMAP <i>client</i> through <code>connect()</code>, which is how mailbox import works.</p>
+</section>
+
+<!-- DOMAINS -->
+<section id="domains">
+  <div class="head">
+    <span class="eyebrow">A platform feature every app uses</span>
+    <h2>One-click domain import from any registrar</h2>
+    <p class="prose">Domain import belongs in the <b>platform</b>, not in the email app, because every Flareyard app needs a domain. It runs as a <b>Workflow</b>, so a move that takes hours to propagate survives restarts, retries each step, and emails you when the domain is live. It's "one click" when the registrar has an API, and a guided two-minute task when it doesn't.</p>
+  </div>
+  <ol class="pipe">
+    <li><h3>Detect</h3><p>Look the domain up over <b>RDAP</b> (public HTTPS) for the registrar, current nameservers and DNSSEC state. Pick the matching connector, or the guided path.</p><span class="ref">Worker fetch · no credentials</span></li>
+    <li><h3>Collect every record</h3><p>Three sources, merged. (1) Cloudflare's quick scan after <code>POST /zones</code>. (2) The old provider's own DNS export when its API is connected: Hostinger and Spaceship both have one. (3) Our own DNS-over-HTTPS probe of the names quick scan tends to miss, such as <code>_dmarc</code>, DKIM selectors (<code>google._domainkey</code>, <code>selector1/2</code>, <code>spacemail._domainkey</code>, <code>hostingermail-*</code>, <code>k1</code>, <code>s1/s2</code>), <code>autodiscover</code>, <code>_sip</code>/<code>_srv</code>, verification TXTs and every CNAME the website uses.</p><span class="ref">/zones/{id}/dns_records/scan/trigger · /scan/review · /dns_records/batch</span></li>
+    <li><h3>Review the diff</h3><p>One screen: what moves, what's new, what conflicts. Mail records are forced <b>DNS only</b>. Anything we can't classify is flagged, never silently dropped. Nothing changes at the registrar until you confirm.</p></li>
+    <li><h3>Make it safe to switch</h3><p>If DNSSEC is on, turn it off at the registrar first (through the API where it exists, otherwise a guided step), because switching nameservers with DNSSEC on takes the domain offline. Then wait out the old DS TTL.</p></li>
+    <li><h3>Switch nameservers</h3><p><b>Connector path:</b> one API call sets Cloudflare's two assigned nameservers. <b>Guided path:</b> a deep link to the registrar's nameserver page, both names with copy buttons, and a live checker that turns green the moment the registry shows them.</p></li>
+    <li><h3>Wait for active</h3><p>The Workflow sleeps and polls RDAP and DoH with backoff, calls <code>activation_check</code>, and verifies that MX and the website still resolve the same as before the move. You get an email when it's active, or when something resolved differently.</p><span class="ref">step.sleep · Schedule.exponential · PUT /zones/{id}/activation_check</span></li>
+    <li><h3>Finish</h3><p>Re-enable DNSSEC on Cloudflare and push the DS record to the registrar (API or guided). Delete the registrar API key we used. Optionally offer the dashboard link to transfer the registration to Cloudflare Registrar.</p></li>
+  </ol>
+  <div class="tbl"><table>
+    <thead><tr><th>Registrar</th><th>Nameserver change</th><th>Path</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><b>Hostinger</b> (coursified.app, hallelx2.com)</td><td><code>domains_portfolio_update-nameservers</code>, ns1–ns4</td><td>Connector</td><td><span class="st go">measured</span><span class="ref">operation present in the Hostinger API today</span></td></tr>
+      <tr><td><b>Spaceship</b> (mbprep.app)</td><td>Nameserver update endpoint; you already hold an API key in MBPrep's <code>.env</code></td><td>Connector</td><td><span class="st wait">spike S7</span></td></tr>
+      <tr><td><b>Porkbun</b></td><td><code>POST api.porkbun.com/api/json/v3/domain/updateNs/{domain}</code></td><td>Connector</td><td><span class="st wait">documented</span></td></tr>
+      <tr><td><b>Namecheap</b></td><td><code>domains.dns.setCustom</code>, but every call must come from a whitelisted IPv4</td><td>Guided (Workers have no fixed egress IP)</td><td><span class="st wait">documented</span></td></tr>
+      <tr><td><b>GoDaddy</b></td><td>The API has been gated by account eligibility since May 2024; a later policy relaxed it</td><td>Connector when eligible, else guided</td><td><span class="st wait">unmeasured</span><span class="ref">re-check eligibility at build time</span></td></tr>
+      <tr><td>Squarespace, Wix, others</td><td>No public API</td><td>Guided</td><td><span class="st wait">—</span></td></tr>
+      <tr><td>Already on Cloudflare</td><td>None</td><td>Skip to the email setup</td><td><span class="st go">—</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note"><b>A departure from the platform plan.</b> The platform never asks for a pasted Cloudflare token. Registrars have no OAuth, so connectors need the user's registrar API key. The rule for it: you paste it for one move, it's envelope-encrypted, it's used only inside the Workflow, and it's deleted when the Workflow ends. The guided path is always offered beside it.</p>
+</section>
+
+<!-- INBOX -->
+<section id="inbox">
+  <div class="head">
+    <span class="eyebrow">Real mailboxes with no mail server</span>
+    <h2>How an inbox works on Cloudflare</h2>
+    <p class="prose">Cloudflare doesn't host mailboxes, so the app is the mailbox. A catch-all routes every address on the domain to one Worker. That Worker stores the message and files it into a <b>Durable Object per mailbox</b>, which holds that mailbox's index in its own SQLite database, pushes new mail live to open tabs over hibernating WebSockets, and uses alarms for snooze and scheduled send. Adding an address is a database row, not a Cloudflare rule.</p>
+  </div>
+  <ol class="pipe">
+    <li><h3>Receive</h3><p>Email Routing accepts SMTP on Cloudflare's MX, checks SPF, DKIM, DMARC and ARC, and hands the message to <code>email()</code>. Messages over 25 MiB are rejected at the door.</p></li>
+    <li><h3>Store first</h3><p>The raw <code>.eml</code> goes to R2 under a content hash <b>before</b> anything else happens. If parsing or indexing fails, nothing is lost and a Queue retries it.</p></li>
+    <li><h3>Parse and resolve</h3><p><code>postal-mime</code> (already pinned in MBPrep at 2.7.6) splits headers, bodies and attachments. Attachments go to R2. The recipient resolves to a mailbox, alias, group or catch-all; unknown addresses either bounce or land in catch-all, which you choose per domain.</p></li>
+    <li><h3>Filter</h3><p>Your rules run (from, to, subject, list-id → label, archive, forward, auto-reply, webhook), then a spam score: authentication results plus a classifier behind an Effect service (Workers AI on Cloudflare, any OpenAI-compatible endpoint off it).</p></li>
+    <li><h3>File into the mailbox</h3><p>The <code>MailboxDO</code> threads the message by <code>Message-ID</code>, <code>In-Reply-To</code> and <code>References</code>, writes the index row and its full-text entry, and pushes it to every connected client.</p></li>
+    <li><h3>Fan out</h3><p>An event goes on the <code>mail-events</code> Queue so other apps can react: Hermes's email lane, the support inbox app, your webhooks.</p></li>
+    <li><h3>Reply</h3><p>Compose in the web app. Sending goes through Email Service with the right <code>In-Reply-To</code> and <code>References</code> headers, and the sent copy is filed into the same thread. Attachments over the 5 MiB outbound limit become expiring R2 links automatically.</p></li>
+  </ol>
+  <div class="head" style="margin-top:16px"><h3>Four ways to read your mail</h3></div>
+  <div class="grid">
+    <div class="card"><span class="st go">phase M3</span><h3>The web app, installable</h3><p>The primary client: threads, search, labels, keyboard shortcuts, offline-capable PWA with Web Push for new mail. Works on phones from day one.</p></div>
+    <div class="card"><span class="st wait">spike S4</span><h3>Gmail mode, free</h3><p>Route an address to your Gmail (a free verified destination) and add it in Gmail's "Send mail as" through <code>smtp.mx.cloudflare.net:465</code>. That gives you a real Gmail inbox for your domain with no seat cost. It suits one owner, because the token can send as any domain on the account.</p></div>
+    <div class="card"><span class="st wait">spike S8</span><h3>JMAP over HTTPS</h3><p>JMAP is mail access over HTTP and JSON, so a Worker can serve it natively. Client support is narrower than IMAP, so it's a bonus, not the plan.</p></div>
+    <div class="card"><span class="st no">not native</span><h3>IMAP for Outlook and Apple Mail</h3><p>Workers can't accept inbound TCP. IMAP would need a Container behind a TCP front, which isn't free and isn't scale-to-zero. Parked until there's a real need, and priced first if there is.</p></div>
+  </div>
+  <div class="grid">
+    <div class="card"><span class="eyebrow">Moving in</span><h3>Import an existing mailbox</h3><p>A Workflow logs in to the old provider over IMAP using Workers' <code>connect()</code> (TLS to port 993), copies each folder in batches of UIDs with a checkpoint per batch, and resumes where it stopped. This covers Hostinger, Spacemail and Gmail with an app password. It runs <b>before</b> MX moves, then catches up the gap afterwards.</p></div>
+    <div class="card"><span class="eyebrow">Coexisting</span><h3>Keep Google Workspace on the apex</h3><p>MX is per hostname, so <code>mbprep.app</code> can keep Workspace while <code>support.mbprep.app</code> or <code>in.mbprep.app</code> routes to this app. Whether Email Routing accepts a subdomain is spike S3.</p></div>
+    <div class="card"><span class="eyebrow">Moving out</span><h3>Export everything</h3><p>mbox and per-message <code>.eml</code> to a zip in R2, with a signed download. Owning it means you can leave.</p></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="head">
+    <span class="eyebrow">Plunk's product layer, plus a real inbox</span>
+    <h2>Every feature, and the primitive under it</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Area</th><th>Features</th><th>Built on</th></tr></thead>
+    <tbody>
+      <tr><td><b>Domains and deliverability</b></td><td>Onboard sending domain and routing in one step; SPF, DKIM, DMARC written for you; DMARC <code>rua</code> reports parsed into a dashboard; reputation and complaint rates; warm-up schedule that respects the daily quota; BIMI later</td><td>Platform Workflow with Alchemy · <code>/email/sending/subdomains</code> · <code>/email/routing/enable</code> · <code>/reputation</code> · an inbound address that parses DMARC XML</td></tr>
+      <tr><td><b>Transactional API</b></td><td>REST send with idempotency keys; templates with variables; <b>Plunk-compatible</b> <code>/v1/send</code> and <code>/v1/track</code> so existing Plunk SDK code works; SMTP for legacy apps; per-key scopes and rate limits</td><td>API Worker · <code>send_email</code> binding · D1 · API keys hashed in D1</td></tr>
+      <tr><td><b>Events and suppression</b></td><td>Every delivery event on the contact's timeline; hard bounces and complaints suppress automatically and sync both ways with Cloudflare's list; outbound webhooks with signatures, retries and a dead-letter queue</td><td>Queues event subscription · <code>/email/sending/suppressions</code> · <code>webhooks</code> Queue with DLQ</td></tr>
+      <tr><td><b>Contacts</b></td><td>Custom fields, subscription state per topic, double opt-in, CSV import with column mapping and dedupe, tracked events (<code>track("signed-up")</code>), activity timeline, GDPR export and delete</td><td>D1 · R2 for uploads · <code>ContactImport</code> Workflow</td></tr>
+      <tr><td><b>Segments</b></td><td>Filters on fields, events, engagement and topics, compiled to SQL; live counts; saved and reusable</td><td>D1 with indexed columns · JSON fields promoted to generated columns when filtered often</td></tr>
+      <tr><td><b>Campaigns</b></td><td>Compose, preview, test-send, schedule, send to a segment; throttled to the daily quota and per-recipient-domain pacing; pause and resume; per-recipient render; A/B subject test</td><td><code>CampaignSend</code> Workflow (<code>sleepUntil</code>) · <code>send</code> Queue · <code>SendGovernorDO</code> token bucket</td></tr>
+      <tr><td><b>Automations</b></td><td>Trigger on event, contact created, segment entered or a date; steps: wait, branch, send, update contact, webhook, stop; a visual builder that saves a versioned JSON graph; per-contact run history</td><td>One <code>AutomationRun</code> Workflow per contact per automation · <code>step.sleep</code> for waits</td></tr>
+      <tr><td><b>Tracking</b></td><td>Opens (with Apple Mail Privacy Protection marked as unreliable), clicks via a redirect domain, per-link stats; can be turned off per campaign</td><td><code>track</code> Worker on its own hostname · Analytics Engine for raw hits · D1 rollups</td></tr>
+      <tr><td><b>Unsubscribe and preferences</b></td><td><code>List-Unsubscribe</code> plus RFC 8058 one-click on every bulk mail; a hosted preference page per topic; signed links that need no login</td><td>API Worker · HMAC from a key in Secrets Store</td></tr>
+      <tr><td><b>Templates</b></td><td>Code templates (MBPrep's <code>make()</code> kit, lifted to <code>packages/kit</code>), a block editor for campaigns, MJML-free responsive layout, dark-mode-safe, live preview with real contact data</td><td>Templates in D1, assets in R2 · rendered in the Worker</td></tr>
+      <tr><td><b>Inbox</b></td><td>Mailboxes, aliases, groups, catch-all; threads; labels and folders; full-text search; drafts, signatures, scheduled send, snooze, undo send; rules; auto-reply; forwarding; attachments with preview; spam folder; read receipts off by default</td><td><code>MailboxDO</code> (SQLite, FTS, WebSockets, alarms) · R2 · inbound Worker</td></tr>
+      <tr><td><b>Shared inbox</b></td><td>Assign, internal notes, collision warning, status. The full support desk is the Chatwoot app (HAL-3094), which consumes this app's events rather than duplicating it.</td><td><code>MailboxDO</code> per shared mailbox · <code>mail-events</code> Queue</td></tr>
+      <tr><td><b>AI, behind services</b></td><td>Thread summaries, reply drafts, smart categories, spam classification, natural-language segment builder; all off by default and swappable</td><td>Workers AI through AI Gateway, or any OpenAI-compatible endpoint · Vectorize for semantic search (optional)</td></tr>
+      <tr><td><b>Agents</b></td><td>An MCP server (read, search, draft, send, segment, campaign stats); shipped agent skills so your coding agent can reshape the app; Hermes's email lane reads from the event Queue</td><td><code>McpAgent</code> Durable Object · <code>skills/</code> in the app repo</td></tr>
+      <tr><td><b>Admin</b></td><td>Team members and roles, API keys, audit log of every send and setting change, usage page with a real cost meter against the 3,000 included and the daily quota</td><td>D1 · GraphQL Analytics <code>emailSendingAdaptive</code> dataset</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+
+<!-- DELIVERABILITY -->
+<section id="deliverability">
+  <div class="head">
+    <span class="eyebrow">Landing in the inbox</span>
+    <h2>Deliverability, built in</h2>
+    <p class="prose">No sender can guarantee the inbox; Gmail and Outlook decide. What we control is authentication, reputation, list quality and content, and we measure where mail actually lands rather than assuming. Measured on 16 Oct 2026: MBPrep's mail through Email Service arrives with <b>SPF pass, DKIM pass with <code>d=mbprep.app</code> (aligned), and DMARC pass</b>; 201 threads from mbprep.app in 14 days, none in Spam. That sample is mail to your own Gmail, so it's biased in our favour.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Lever</th><th>What the app does</th></tr></thead>
+    <tbody>
+      <tr><td><b>Authentication</b></td><td>SPF on the <code>cf-bounce</code> return path, aligned DKIM, DMARC written at setup. The DMARC report screen shows when it's safe to move from <code>p=none</code> to <code>quarantine</code>, which Gmail rewards and BIMI logos require.</td></tr>
+      <tr><td><b>Separate streams</b></td><td>Transactional mail from the apex (<code>hello@mbprep.app</code>); campaigns from a sending subdomain (<code>news.mbprep.app</code>). Email Service supports verified sending subdomains, so a bad campaign can't drag down sign-in codes.</td></tr>
+      <tr><td><b>Gmail and Yahoo bulk-sender rules</b></td><td>RFC 8058 one-click unsubscribe on every bulk message, honoured immediately; complaint rate kept far under Gmail's 0.3% line, with our own alarm at Cloudflare's 0.1% warning.</td></tr>
+      <tr><td><b>Warm-up and pacing</b></td><td><code>SendGovernorDO</code> ramps volume for a new domain or subdomain, paces per mailbox provider, and pauses a campaign automatically when its bounce or complaint rate crosses the warning line.</td></tr>
+      <tr><td><b>List quality</b></td><td>Double opt-in by default, consent attestation on import, automatic suppression of hard bounces and complaints, and sunsetting of contacts who haven't engaged in a set period.</td></tr>
+      <tr><td><b>Content checks</b></td><td>Pre-flight checks before every campaign: plain-text part, size, broken links, link domains matching the sender, no URL shorteners, tracking on your own subdomain, real reply-to.</td></tr>
+      <tr><td><b>Replies are welcome</b></td><td>Reply-to goes to a real mailbox in this app, never <code>noreply@</code>. Replies are a strong positive signal and land in your inbox.</td></tr>
+      <tr><td><b>Measuring placement</b></td><td>A seed test sends each campaign to your own Gmail, Outlook and Yahoo addresses (verified, so free) and reads which folder it landed in. Google Postmaster Tools' domain reputation and spam rate show on the Reputation screen. Shared Cloudflare IPs mean IP-level tools such as Microsoft SNDS don't apply to us; domain reputation is what we build.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Not ours to control: Cloudflare sends from shared IP ranges (<code>104.30.0.0/19</code>), and I found no dedicated-IP option in its docs. Gmail may also defer new identities with <code>421 4.7.28</code> while reputation builds, which MBPrep saw in early October.</p>
+</section>
+
+<!-- ARCH -->
+<section id="arch">
+  <div class="head">
+    <span class="eyebrow">System design</span>
+    <h2>Three Workers, three Durable Objects, one database, no server</h2>
+    <p class="prose">Everything runs in the user's own Cloudflare account. Cloudflare owns <b>when</b> things run and that they persist: Durable Objects, alarms, Workflows, Queues. Effect owns <b>how</b> each handler behaves: typed failures, retry schedules, and swappable services.</p>
+  </div>
+  <figure>
+    <div class="panel">
+      <div class="plabel">Mail in · mail out · inside the user's Cloudflare account</div>
+      <svg viewBox="0 0 1000 520" role="img" aria-label="Architecture: senders reach Email Routing, which calls the inbound Worker; the inbound Worker writes to R2 and the MailboxDO; the API Worker serves the web app and sends through Email Service via the send Queue and SendGovernorDO; Email Service publishes events to a Queue that updates D1; Workflows run campaigns, automations and imports.">
+        <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="ah"/></marker><marker id="an" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="ahn"/></marker></defs>
+        <rect x="10" y="20" width="150" height="56" rx="10" class="bo"/><text x="24" y="44" class="tl">The internet</text><text x="24" y="62" class="ts">senders · recipients</text>
+        <rect x="10" y="420" width="150" height="56" rx="10" class="bo"/><text x="24" y="444" class="tl">You, your apps</text><text x="24" y="462" class="ts">browser · SDK · MCP</text>
+        <rect x="200" y="10" width="780" height="500" rx="18" class="fn"/><text x="216" y="32" class="tk">USER'S CLOUDFLARE ACCOUNT</text>
+        <rect x="220" y="50" width="170" height="60" rx="10" class="bn"/><text x="234" y="74" class="tl">Email Routing</text><text x="234" y="92" class="tm">MX · SPF/DKIM/DMARC</text>
+        <rect x="430" y="50" width="170" height="60" rx="10" class="bx"/><text x="444" y="74" class="tl">inbound Worker</text><text x="444" y="92" class="tm">email() · postal-mime</text>
+        <rect x="640" y="50" width="150" height="60" rx="10" class="bx"/><text x="654" y="74" class="tl">R2</text><text x="654" y="92" class="tm">raw .eml · attachments</text>
+        <rect x="820" y="50" width="145" height="60" rx="10" class="bx"/><text x="834" y="74" class="tl">mail-events Q</text><text x="834" y="92" class="tm">Hermes · inbox app</text>
+        <rect x="430" y="160" width="170" height="70" rx="10" class="bx"/><text x="444" y="184" class="tl">MailboxDO</text><text x="444" y="202" class="tm">SQLite + FTS · WS</text><text x="444" y="218" class="tm">alarms: snooze, schedule</text>
+        <rect x="220" y="300" width="170" height="70" rx="10" class="bx"/><text x="234" y="324" class="tl">api Worker</text><text x="234" y="342" class="tm">web app · REST · MCP</text><text x="234" y="358" class="tm">Plunk-compatible /v1</text>
+        <rect x="430" y="300" width="170" height="70" rx="10" class="bx"/><text x="444" y="324" class="tl">D1</text><text x="444" y="342" class="tm">contacts · segments</text><text x="444" y="358" class="tm">campaigns · events</text>
+        <rect x="640" y="160" width="150" height="70" rx="10" class="bx"/><text x="654" y="184" class="tl">Workflows</text><text x="654" y="202" class="tm">campaign · automation</text><text x="654" y="218" class="tm">import · domain</text>
+        <rect x="640" y="300" width="150" height="70" rx="10" class="bx"/><text x="654" y="324" class="tl">send Q →</text><text x="654" y="342" class="tm">SendGovernorDO</text><text x="654" y="358" class="tm">quota · pacing</text>
+        <rect x="820" y="300" width="145" height="70" rx="10" class="bn"/><text x="834" y="324" class="tl">Email Sending</text><text x="834" y="342" class="tm">DKIM · ARC</text><text x="834" y="358" class="tm">suppression</text>
+        <rect x="820" y="420" width="145" height="56" rx="10" class="bx"/><text x="834" y="444" class="tl">events Q</text><text x="834" y="462" class="tm">bounce · complaint</text>
+        <rect x="220" y="420" width="170" height="56" rx="10" class="bx"/><text x="234" y="444" class="tl">track Worker</text><text x="234" y="462" class="tm">pixel · click · AE</text>
+        <rect x="430" y="420" width="360" height="56" rx="10" class="bl"/><text x="444" y="444" class="tl">Swappable services (Effect Layers)</text><text x="444" y="462" class="tw">Workers AI | OpenAI-compat · Vectorize | FTS · R2 | S3</text>
+        <path d="M160 48H218" class="en" marker-end="url(#an)"/>
+        <path d="M60 76V230C60 300 120 440 218 455" class="bo" marker-end="url(#a)"/>
+        <path d="M390 80H428" class="e" marker-end="url(#a)"/>
+        <path d="M600 80H638" class="e" marker-end="url(#a)"/>
+        <path d="M790 80H818" class="e" marker-end="url(#a)"/>
+        <path d="M515 110V158" class="e" marker-end="url(#a)"/>
+        <path d="M160 440C190 440 190 335 218 335" class="e" marker-end="url(#a)"/>
+        <path d="M390 448C420 448 440 400 470 372" class="e" marker-end="url(#a)"/>
+        <path d="M390 335H428" class="e" marker-end="url(#a)"/>
+        <path d="M390 310L428 220" class="e" marker-end="url(#a)"/>
+        <path d="M600 335H638" class="e" marker-end="url(#a)"/>
+        <path d="M715 230V298" class="e" marker-end="url(#a)"/>
+        <path d="M790 335H818" class="en" marker-end="url(#an)"/>
+        <path d="M892 370V418" class="e" marker-end="url(#a)"/>
+        <path d="M820 448C700 448 640 400 600 360" class="e" marker-end="url(#a)"/>
+        <path d="M966 320H992V4H85V18" class="bo" marker-end="url(#a)"/>
+      </svg>
+    </div>
+    <div class="legend"><span><i class="sw n"></i>Cloudflare's own mail service</span><span><i class="sw x"></i>Our code and storage</span><span><i class="sw l"></i>Behind a swappable service</span><span><i class="sw o"></i>Outside the account</span></div>
+    <figcaption>Inbound runs left to right along the top. Outbound runs from the API Worker through the send Queue and the governor to Email Sending, with delivery events flowing back into D1. Every arrow into storage is written before any side effect.</figcaption>
+  </figure>
+  <div class="tbl"><table>
+    <thead><tr><th>Primitive</th><th>Name</th><th>Job</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td>Worker</td><td><code>api</code></td><td>Web app (static assets), REST API, Plunk-compatible API, MCP endpoint, unsubscribe pages</td><td>One deploy for the whole UI and API surface</td></tr>
+      <tr><td>Worker</td><td><code>inbound</code></td><td><code>email()</code> handler: store, parse, filter, file, fan out</td><td>Separate so a parsing bug can't take the UI down, with its own CPU budget</td></tr>
+      <tr><td>Worker</td><td><code>track</code></td><td>Open pixel and click redirect on its own hostname</td><td>Highest-volume path, kept tiny and cache-friendly</td></tr>
+      <tr><td>Durable Object</td><td><code>MailboxDO</code> (one per mailbox)</td><td>Thread index, full-text search, flags, labels, drafts, live push, snooze and scheduled-send alarms</td><td>Natural isolation; a single writer per mailbox; hibernating WebSockets cost nothing while idle</td></tr>
+      <tr><td>Durable Object</td><td><code>SendGovernorDO</code> (one per account)</td><td>Token bucket over the daily quota, per-recipient-domain pacing, pause switch</td><td>A global counter needs one writer</td></tr>
+      <tr><td>Durable Object</td><td><code>McpAgent</code></td><td>MCP sessions for agents</td><td>Agents SDK pattern, same as Hermes</td></tr>
+      <tr><td>Workflow</td><td><code>CampaignSend</code>, <code>AutomationRun</code>, <code>ContactImport</code>, <code>MailboxImport</code></td><td>Anything long, scheduled or resumable</td><td>Durable steps and sleeps that survive deploys</td></tr>
+      <tr><td>Queue</td><td><code>send</code>, <code>email-events</code> (subscription), <code>mail-events</code>, <code>webhooks</code> (+ DLQs)</td><td>Fan-out with retries</td><td>Back-pressure and retries come built in</td></tr>
+      <tr><td>D1</td><td><code>mail</code></td><td>Contacts, topics, segments, campaigns, templates, automations, API keys, domains, audit log, event rollups</td><td>Relational queries for segments; Drizzle migrations, as the manifest already specifies</td></tr>
+      <tr><td>R2</td><td><code>mail-store</code></td><td>Raw messages, attachments, template assets, CSV uploads, exports</td><td>Cheap bulk storage; content-addressed keys deduplicate</td></tr>
+      <tr><td>Analytics Engine</td><td><code>mail_hits</code></td><td>Raw opens and clicks</td><td>High-cardinality writes without D1 row costs</td></tr>
+      <tr><td>Secrets Store</td><td>master key</td><td>Wraps per-workspace keys for unsubscribe HMACs and registrar keys during import</td><td>The envelope design from hal-meetings and the platform</td></tr>
+      <tr><td>Workers AI, Vectorize</td><td>optional</td><td>Spam, summaries, drafts, semantic search</td><td>On celld's "can't run" list, so they sit behind Layers</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note"><b>The app holds no Cloudflare API token.</b> Anything that changes Cloudflare config (adding a sending domain, enabling routing, subscribing the events Queue) is declared in the manifest and applied by the platform's deploy Workflow with the user's OAuth token. Adding a mailbox or alias needs no Cloudflare call at all, because the catch-all already sends every address to <code>inbound</code>. Spike S2 checks which of these Alchemy covers today.</p>
+</section>
+
+<!-- DATA -->
+<section id="data">
+  <div class="head">
+    <span class="eyebrow">Where each row lives</span>
+    <h2>The data model</h2>
+  </div>
+  <div class="split">
+<pre class="code"><span class="c">-- D1: mail (account-wide)</span>
+<span class="k">domains</span>(id, name, zone_id, sending_ok, routing_ok, catch_all)
+<span class="k">mailboxes</span>(id, address, kind <span class="c">-- user|shared|group|alias</span>, owner, do_id)
+<span class="k">contacts</span>(id, email UNIQUE, fields JSON, status, created_at)
+<span class="k">topics</span>(id, name) · <span class="k">subscriptions</span>(contact_id, topic_id, state)
+<span class="k">events</span>(id, contact_id, name, data JSON, at)   <span class="c">-- track()</span>
+<span class="k">segments</span>(id, name, filter JSON, compiled_sql)
+<span class="k">templates</span>(id, name, kind, source, version)
+<span class="k">campaigns</span>(id, segment_id, template_id, status, send_at, stats JSON)
+<span class="k">messages_out</span>(id, cf_message_id, contact_id, campaign_id,
+               status, last_event, at)       <span class="c">-- from events Q</span>
+<span class="k">automations</span>(id, trigger JSON, graph JSON, version, enabled)
+<span class="k">automation_runs</span>(id, automation_id, contact_id, workflow_id, state)
+<span class="k">suppressions</span>(email, reason, source, at)
+<span class="k">api_keys</span>(id, hash, scopes, last_used) · <span class="k">audit</span>(id, actor, action, at)</pre>
+<pre class="code"><span class="c">-- MailboxDO: one SQLite per mailbox</span>
+<span class="k">threads</span>(id, subject, last_at, snippet, unread, labels)
+<span class="k">messages</span>(id, thread_id, message_id, in_reply_to,
+         from, to, cc, date, r2_key, size, flags,
+         spam_score, auth JSON)
+<span class="k">attachments</span>(id, message_id, name, type, size, r2_key)
+<span class="k">labels</span>(id, name, color) · <span class="k">rules</span>(id, match JSON, actions JSON)
+<span class="k">drafts</span>(id, thread_id, body, send_at)   <span class="c">-- alarm</span>
+<span class="k">snoozes</span>(thread_id, until)              <span class="c">-- alarm</span>
+<span class="k">search</span> USING fts5(subject, from, body_text)  <span class="c">-- spike S6</span>
+
+<span class="c">-- R2: mail-store</span>
+raw/&lt;sha256&gt;.eml
+att/&lt;sha256&gt;
+exports/&lt;id&gt;.zip · imports/&lt;id&gt;.csv</pre>
+  </div>
+</section>
+
+<!-- CODE -->
+<section id="code">
+  <div class="head">
+    <span class="eyebrow">How we write it</span>
+    <h2>The code: layout, layers and tests</h2>
+    <p class="prose">TypeScript throughout, exact-pinned dependencies, Effect for behaviour, Alchemy for infrastructure. Business logic is plain Effect services with no Cloudflare imports, so it's tested without bindings and runs on celld unchanged.</p>
+  </div>
+<pre class="code">apps/mail/
+  <span class="k">cloudflare-app.json</span>        <span class="c">// manifest: scopes, secrets, domain, health, cost</span>
+  <span class="k">alchemy.run.ts</span>             <span class="c">// Workers, DOs, D1, R2, Queues, Workflows, routing, events sub</span>
+  AGENTS.md · skills/        <span class="c">// how your coding agent reshapes this app</span>
+  src/
+    domain/                  <span class="c">// pure Effect services, no Cloudflare imports</span>
+      Contacts.ts Segments.ts Campaigns.ts Automations.ts
+      Mailbox.ts Threading.ts Rules.ts Templates.ts Unsubscribe.ts
+    services/                <span class="c">// Context.Tag + a Layer per backend</span>
+      Sender.ts        <span class="c">// Live: send_email binding · Alt: SMTP over connect()</span>
+      BlobStore.ts     <span class="c">// Live: R2 · Alt: S3-compatible</span>
+      Classifier.ts    <span class="c">// Live: Workers AI · Alt: OpenAI-compatible · Off</span>
+      Search.ts        <span class="c">// Live: SQLite FTS · Alt: Vectorize</span>
+      Clock.ts Ids.ts Crypto.ts
+    workers/api/       <span class="c">// HTTP API (schema-first, OpenAPI out) + static UI</span>
+    workers/inbound/   <span class="c">// email() handler</span>
+    workers/track/
+    objects/  MailboxDO.ts SendGovernorDO.ts Mcp.ts
+    workflows/ CampaignSend.ts AutomationRun.ts ContactImport.ts MailboxImport.ts
+    queues/   send.ts emailEvents.ts mailEvents.ts webhooks.ts
+  web/                       <span class="c">// React SPA on Flareyard tokens, served as assets</span>
+  migrations/                <span class="c">// Drizzle, D1</span>
+  test/                      <span class="c">// vitest + Workers pool (Miniflare), golden mails</span>
+
+packages/kit/       <span class="c">// shared across all apps: MBPrep's mailer and make() kit, envelope</span>
+                    <span class="c">// encryption, retry Schedules, webhook signing, binding Layers</span>
+packages/registrars/ <span class="c">// platform: Hostinger, Spaceship, Porkbun, GoDaddy connectors + guided</span>
+apps/platform/src/domains/ <span class="c">// DomainImport Workflow (RDAP, scan, diff, NS, activation)</span></pre>
+<pre class="code"><span class="c">// Inbound: store first, then everything else is retryable work.</span>
+<span class="k">export default</span> {
+  <span class="k">async</span> email(msg, env, ctx) {
+    <span class="k">await</span> Effect.runPromise(
+      Inbound.receive(msg).pipe(            <span class="c">// R2 put by content hash, then parse</span>
+        Effect.flatMap(Inbound.file),        <span class="c">// resolve → rules → spam → MailboxDO</span>
+        Effect.catchTag(<span class="s">"Unroutable"</span>, (e) =&gt; Effect.sync(() =&gt; msg.setReject(e.reason))),
+        Effect.catchAll((e) =&gt; Queue.retryLater(env.MAIL_EVENTS, e)), <span class="c">// raw is safe in R2</span>
+        Effect.provide(Live(env)),
+      ),
+    )
+  },
+}
+
+<span class="c">// Sending: the governor decides when; the Sender decides how.</span>
+<span class="k">const</span> sendOne = (m: Outgoing) =&gt;
+  Governor.acquire(m.recipientDomain).pipe(  <span class="c">// waits for quota + pacing</span>
+    Effect.zipRight(Sender.send(m)),
+    Effect.retry({ schedule: transient, <span class="k">while</span>: (e) =&gt; e._tag === <span class="s">"Deferred"</span> }),
+    Effect.tap((id) =&gt; Ledger.recordSent(m, id)), <span class="c">// events Q fills in the rest</span>
+  )</pre>
+  <div class="grid">
+    <div class="card"><span class="eyebrow">Verification</span><h3>Every phase ends in a check you can run</h3><p>Golden <code>.eml</code> fixtures (multipart, inline images, non-UTF-8 charsets, 24 MiB, broken MIME) go through <code>inbound</code> under Miniflare. Threading is property-tested. Auth results for real sends are read back from a Gmail inbox. A seed list of your own verified addresses tests campaigns for free, since those sends don't count toward quota.</p></div>
+    <div class="card"><span class="eyebrow">Cost discipline</span><h3>The bill follows the work</h3><p>Nothing polls. Waits are Workflow sleeps and DO alarms, and live pushes are hibernating WebSockets. Tracking writes go to Analytics Engine, not D1 rows. A usage page shows the real meter against the included 3,000 a month and the daily quota.</p></div>
+    <div class="card"><span class="eyebrow">Security</span><h3>Keys and content</h3><p>API keys are stored hashed. Registrar keys exist only for the lifetime of one Workflow. Raw mail never leaves the user's R2. HTML mail renders in a sandboxed iframe with remote images proxied and blocked until you allow them. Every send and setting change goes to the audit log.</p></div>
+  </div>
+</section>
+
+<!-- COST -->
+<section id="cost">
+  <div class="head">
+    <span class="eyebrow">Measured prices, 16 Oct 2026</span>
+    <h2>What it costs to run</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Line</th><th>Price</th><th>Basis</th></tr></thead>
+    <tbody>
+      <tr><td>Workers Paid plan</td><td>$5.00 / month</td><td>Required for sending to arbitrary recipients. Covers Workers, D1, DO and Queues allowances.</td></tr>
+      <tr><td>Inbound mail</td><td>$0</td><td>Email Routing is unlimited on both plans. The <code>inbound</code> Worker bills as normal Worker requests.</td></tr>
+      <tr><td>Outbound mail</td><td>3,000 / month included, then $0.35 per 1,000</td><td>Hard bounces count; sends blocked by suppression don't. Sends to your verified addresses are free.</td></tr>
+      <tr><td>R2, D1, DO storage</td><td>unmeasured for your volume</td><td>Priced from the meter after a month of real use, not estimated here.</td></tr>
+      <tr><td>Workers AI</td><td>optional</td><td>Off by default.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">What this replaces is for you to price. The Workspace seat, Hostinger mail, Spacemail and the Vercel relay are bills only you can read; I haven't checked any of them.</p>
+</section>
+
+<!-- LIMITS -->
+<section id="limits">
+  <div class="head">
+    <span class="eyebrow">Design around these</span>
+    <h2>Hard limits we build in from the start</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Limit</th><th>Value</th><th>What we do</th></tr></thead>
+    <tbody>
+      <tr><td>Outbound message size</td><td>5 MiB including attachments</td><td>Bigger attachments become expiring R2 links, and the composer says so before you hit send</td></tr>
+      <tr><td>Recipients per email</td><td>50 (to + cc + bcc)</td><td>Campaigns send one message per recipient anyway; the composer warns past 50</td></tr>
+      <tr><td>Daily quota (this account)</td><td>1,000 / day</td><td><code>SendGovernorDO</code> spreads campaigns across days and shows the ETA; quota-increase request flow</td></tr>
+      <tr><td>Custom headers</td><td>16 KB total, 20 allowlisted non-X headers</td><td>Our own headers stay minimal; unsubscribe headers are budgeted</td></tr>
+      <tr><td>Inbound message size</td><td>25 MiB</td><td>Rejected at the MX; the sender gets the bounce</td></tr>
+      <tr><td>Routing rules per domain</td><td>200</td><td>Irrelevant: one catch-all rule per domain, with addresses resolved in our code</td></tr>
+      <tr><td>Verified destination addresses</td><td>200 per account</td><td>Only Gmail mode uses them</td></tr>
+      <tr><td><code>reply()</code> References</td><td>100 entries</td><td>Replies go through the sender instead of <code>reply()</code> on long threads</td></tr>
+      <tr><td>SMTP submission token</td><td>Sends from every onboarded domain</td><td>Fine for one owner; multi-user desktop clients need spike S8 or the web app</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- SPIKES -->
+<section id="spikes">
+  <div class="head">
+    <span class="eyebrow">What I couldn't confirm yet</span>
+    <h2>Spikes before building</h2>
+    <p class="prose">Each one is a day against your own account, with a written answer and the request that proves it.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Question</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>S1</td><td>Which OAuth scopes cover zone create, DNS edit, Email Routing, Email Sending and Queues event subscriptions? (joins HAL-2816)</td><td>Import and email setup can't run through OAuth without them</td></tr>
+      <tr><td>S2</td><td>Which of routing enable, catch-all to Worker, sending subdomain and event subscription can Alchemy declare today?</td><td>Whatever it can't must become custom Alchemy resources in the kit</td></tr>
+      <tr><td>S3</td><td>Does Email Routing work on a subdomain (<code>in.mbprep.app</code>) while the apex MX stays on Google Workspace?</td><td>Decides whether MBPrep keeps Workspace</td></tr>
+      <tr><td>S4</td><td>Does Gmail's "Send mail as" accept <code>smtp.mx.cloudflare.net:465</code> with <code>api_token</code> auth?</td><td>The free Gmail mode</td></tr>
+      <tr><td>S5</td><td>IMAP import over Workers <code>connect()</code> from Hostinger and Spacemail: speed, and where the CPU limits bite</td><td>Moving existing mailboxes in</td></tr>
+      <tr><td>S6</td><td>Is FTS5 available in Durable Object SQLite?</td><td>Mailbox search without Vectorize</td></tr>
+      <tr><td>S7</td><td>Spaceship nameserver and DS update by API; Hostinger DNSSEC and DS by API</td><td>Whether DNSSEC can be one click too</td></tr>
+      <tr><td>S8</td><td>A JMAP server in a Worker: which real clients connect to it?</td><td>Desktop and mobile access without IMAP</td></tr>
+      <tr><td>S9</td><td>Bundle size and cold start of an <code>inbound</code> Worker built with Effect 4 and Schema, against the same handler in plain TypeScript</td><td>Confirms Effect earns its weight on the hot paths; if not, the edges go plain</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- PHASES -->
+<section id="phases">
+  <div class="head">
+    <span class="eyebrow">Order of work</span>
+    <h2>The phases</h2>
+    <p class="prose">Each phase is dogfooded on your own domains before anyone else touches it. Coursified is the first real customer, because it's the one with a real problem today.</p>
+  </div>
+  <div class="phases">
+    <div class="phase now"><div class="top"><span class="eyebrow">M0 · spikes</span><span class="mono muted">about a week</span></div><h3>Answer S1–S9</h3><ul><li>One page per answer with the proving request and response, dated.</li></ul><p class="done"><b>Done when</b> every spike row has a measured answer, and this plan is updated to match.</p></div>
+    <div class="phase"><div class="top"><span class="eyebrow">M1 · domain import</span><span class="st wait">platform</span></div><h3>Any registrar to Cloudflare, in one flow</h3><ul><li><code>DomainImport</code> Workflow: RDAP, zone create, three-source record collection, diff review, DNSSEC off, nameserver switch, activation, DNSSEC back on.</li><li><code>packages/registrars</code>: Hostinger and Spaceship first, then Porkbun and GoDaddy, plus the guided path for everyone else.</li></ul><p class="done"><b>Done when</b> <code>coursified.app</code> moves from Hostinger with the website and Hostinger mailbox both still working throughout, checked by a DoH probe every minute during the switch (HAL-3096 step 1).</p></div>
+    <div class="phase"><div class="top"><span class="eyebrow">M2 · sending core</span></div><h3>The kit, the API, events and suppression</h3><ul><li>Lift MBPrep's mailer and <code>make()</code> into <code>packages/kit</code>.</li><li>REST and Plunk-compatible send, templates, idempotency, the events-Queue consumer, suppression sync, signed webhooks.</li><li>Domain setup in the manifest, applied by the platform.</li><li>Every endpoint in the <a href="email-ui.html#contract">UI contract</a> for this phase, schema-first, with fixtures, plus the read models the screens need: daily stats rollups from the events Queue, the "needs you" query, and quota forecasts.</li></ul><p class="done"><b>Done when</b> MBPrep and Coursified both send through the kit, Coursified's Vercel relay is deleted, and a forced hard bounce suppresses the address within a minute.</p></div>
+    <div class="phase"><div class="top"><span class="eyebrow">M3 · inbox</span></div><h3>Real mailboxes</h3><ul><li><code>inbound</code> Worker, <code>MailboxDO</code>, threading, rules, spam, attachments, search.</li><li>Web app: read, compose, reply, labels, drafts, scheduled send, snooze; PWA and Web Push.</li><li>IMAP import Workflow, Gmail mode, export.</li></ul><p class="done"><b>Done when</b> <code>hello@coursified.app</code> runs on it for a week with Hostinger mail switched off, the full history imported, and no message lost (the R2 count equals the source count).</p></div>
+    <div class="phase"><div class="top"><span class="eyebrow">M4 · contacts and campaigns</span></div><h3>Plunk's broadcast layer</h3><ul><li>Contacts, topics, CSV import, segments, campaigns, governor, tracking, unsubscribe and preferences.</li></ul><p class="done"><b>Done when</b> an MBPrep class-wide mail goes out as a campaign to the real segment, spread over the daily quota, with one-click unsubscribe working in Gmail.</p></div>
+    <div class="phase"><div class="top"><span class="eyebrow">M5 · automations</span></div><h3>Event-driven sequences</h3><ul><li>Triggers, the visual builder, <code>AutomationRun</code> Workflows, run history.</li></ul><p class="done"><b>Done when</b> Coursified's lifecycle mails B1–B6 run as automations with their stated cadence caps and stop rules.</p></div>
+    <div class="phase"><div class="top"><span class="eyebrow">M6 · agents and AI</span></div><h3>MCP, skills, triage</h3><ul><li>MCP server, shipped skills, AI summaries and drafts behind services, Hermes's email lane on <code>mail-events</code>.</li></ul><p class="done"><b>Done when</b> your coding agent adds a new template and a new automation step using only the shipped skills, with tests passing.</p></div>
+    <div class="phase"><div class="top"><span class="eyebrow">M7 · catalog</span></div><h3>Deployable by anyone</h3><ul><li>Manifest with scopes, catalog page, settings form, health check, the move-in wizard.</li></ul><p class="done"><b>Done when</b> someone who isn't you imports a domain from another registrar and receives and sends mail on it, with nothing done by hand.</p></div>
+  </div>
+</section>
+
+<!-- DECIDE -->
+<section id="decide">
+  <div class="head">
+    <span class="eyebrow">Yours to call</span>
+    <h2>Four decisions</h2>
+  </div>
+  <div class="grid">
+    <div class="card"><span class="eyebrow">MBPrep</span><h3>Keep Google Workspace?</h3><p>My recommendation: keep it on the apex for now. Your own mailbox and Google sign-in verification depend on it. Put support and app inboxes on a subdomain once S3 confirms it works.</p></div>
+    <div class="card"><span class="eyebrow">Coursified</span><h3>Move it first</h3><p>My recommendation: yes. Moving its nameservers at Hostinger is the M1 acceptance test, and it unblocks HAL-3096.</p></div>
+    <div class="card"><span class="eyebrow">IMAP</span><h3>Skip it?</h3><p>My recommendation: ship the web app, Gmail mode and JMAP, and price a Container IMAP bridge only if someone actually needs Outlook or Apple Mail.</p></div>
+    <div class="card"><span class="eyebrow">Plunk</span><h3>Where does it run?</h3><p>I couldn't find Plunk in any of your repos. If it's live somewhere, that's what M2's Plunk-compatible API has to stay compatible with.</p></div>
+  </div>
+</section>
+
+<footer>
+  <span class="eyebrow">Sources · read 16 Oct 2026</span>
+  <ul>
+    <li><a href="https://developers.cloudflare.com/email-service/">Email Service</a> · <a href="https://developers.cloudflare.com/email-service/platform/limits/">Limits</a> · <a href="https://developers.cloudflare.com/email-service/platform/pricing/">Pricing</a> · <a href="https://developers.cloudflare.com/email-service/concepts/email-lifecycle/">Email lifecycle</a></li>
+    <li><a href="https://developers.cloudflare.com/email-service/api/route-emails/email-handler/">Email handler (Workers API)</a> · <a href="https://developers.cloudflare.com/email-service/configuration/email-routing-addresses/">Routing rules, catch-all, subaddressing</a> · <a href="https://developers.cloudflare.com/changelog/post/2026-09-04-email-routing-rules-wrangler/">Routing rules in Wrangler (4 Sep 2026)</a></li>
+    <li><a href="https://developers.cloudflare.com/email-service/reference/event-subscriptions/">Email Sending event subscriptions (15 Jul 2026)</a> · <a href="https://developers.cloudflare.com/email-service/api/send-emails/smtp/">SMTP submission (8 Jun 2026)</a></li>
+    <li><a href="https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/">Full zone setup and quick scan</a> · <a href="https://developers.cloudflare.com/registrar/registrar-api/">Registrar API beta and its limitations</a> · <a href="https://developers.cloudflare.com/containers/configuration/outbound-traffic/">Containers outbound traffic</a></li>
+    <li>Registrars: Hostinger API (operation listing, live) · <a href="https://porkbun.com/api/json/v3/documentation">Porkbun API</a> · <a href="https://www.namecheap.com/support/api/intro/">Namecheap API</a> · <a href="https://community.letsencrypt.org/t/godaddy-api-access-policy-update/246372">GoDaddy API access policy</a></li>
+    <li>Your account: Cloudflare API <code>/zones</code>, <code>/email/routing</code>, <code>/email/sending/subdomains</code>, <code>/limits</code>, <code>/reputation</code>; DNS over HTTPS for coursified.app; MBPrep <code>CLAUDE.md</code> and <code>services/mail.ts</code>; Coursified <code>packages/emails/FLOWS.md</code>.</li>
+  </ul>
+</footer>
+
+</div>
+</body></html>

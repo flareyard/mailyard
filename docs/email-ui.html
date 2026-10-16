@@ -1,0 +1,584 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email UI Spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Adamina&display=swap">
+<style>
+:root{
+  --paper:#ffffff; --ink:#000000; --near:#111111; --graphite:#595959; --soft:#919191;
+  --oat:#f7f4f1; --oat-line:#ebe5df; --ledger:#3b281d; --espresso:#211006;
+  --copper:#e07122; --terracotta:#d66733;
+  --green:#1e681d; --green-dot:#288a26; --ochre:#8b6900; --red:#99001c;
+  --green-bg:#e8f1e7; --ochre-bg:#f5eedb; --red-bg:#f6e3e6;
+  /* diagram panel (always espresso) */
+  --dg-bg:#211006; --dg-box:#2f1b0e; --dg-line:#5a4232; --dg-text:#ffffff; --dg-sub:#cbbcaf;
+  --dg-native:#6cc469; --dg-legacy:#e8853b; --dg-out:#9b8e85;
+  --sans:"Inter",Arial,"Helvetica Neue",sans-serif;
+  --mono:"IBM Plex Mono",SFMono-Regular,Consolas,monospace;
+  --serif:"Adamina",Georgia,serif;
+  font-feature-settings:"cv02","cv03","cv04","cv11";
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#140a04; --ink:#f7f4f1; --near:#ece6e0; --graphite:#bcaea2; --soft:#8f8178;
+    --oat:#22150c; --oat-line:#3a2a1f; --ledger:#f7f4f1; --espresso:#1b0d05;
+    --copper:#f08a40; --green:#7fd27c; --green-dot:#4fb34c; --ochre:#e0b84a; --red:#ff7d8f;
+    --green-bg:#16301a; --ochre-bg:#33290f; --red-bg:#3a1219;
+    --dg-bg:#1b0d05;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#140a04; --ink:#f7f4f1; --near:#ece6e0; --graphite:#bcaea2; --soft:#8f8178;
+  --oat:#22150c; --oat-line:#3a2a1f; --ledger:#f7f4f1; --espresso:#1b0d05;
+  --copper:#f08a40; --green:#7fd27c; --green-dot:#4fb34c; --ochre:#e0b84a; --red:#ff7d8f;
+  --green-bg:#16301a; --ochre-bg:#33290f; --red-bg:#3a1219;
+  --dg-bg:#1b0d05;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;letter-spacing:-.01em;padding-inline:20px;padding-block:0 80px}
+.wrap{max-width:1120px;margin:0 auto}
+h1,h2,h3{margin:0;font-weight:400;text-wrap:balance}
+h1{font-size:clamp(46px,8vw,82px);line-height:1;letter-spacing:-.029em}
+h2{font-size:clamp(30px,4.4vw,56px);line-height:1.05;letter-spacing:-.025em}
+h3{font-size:18px;font-weight:600;letter-spacing:-.022em;line-height:1.3}
+p{margin:0}
+a{color:var(--copper);text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--copper);outline-offset:3px;border-radius:4px}
+code{font-family:var(--mono);font-size:.86em;letter-spacing:0}
+p code,li code,td code,figcaption code{background:var(--oat);padding:.06em .35em;border-radius:6px}
+.eyebrow{font-family:var(--mono);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.03em;color:var(--ink)}
+.muted{color:var(--graphite)}
+.prose{max-width:66ch;color:var(--graphite);font-size:17px;line-height:1.5;letter-spacing:-.015em}
+.prose strong{color:var(--ink);font-weight:500}
+
+/* nav */
+.bar{height:54px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--oat-line)}
+.bar .mark{font-weight:600;font-size:15px;letter-spacing:-.03em}
+.bar .mark span{font-family:var(--mono);font-weight:400;font-size:11px;text-transform:uppercase;letter-spacing:.01em;color:var(--graphite);margin-left:8px}
+.pill{display:inline-flex;align-items:center;border-radius:9999px;padding:12px 20px;font-size:15px;font-weight:500;letter-spacing:-.012em;text-decoration:none;white-space:nowrap}
+.pill.dark{background:var(--ledger);color:var(--paper);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.pill.oat{background:var(--oat);color:var(--ink)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:32px 56px;align-items:end;padding-block:80px 40px}
+.hero .side{display:grid;gap:20px;padding-bottom:8px}
+.hero .side p{color:var(--graphite);font-size:17px;line-height:1.35}
+.stamp{display:flex;flex-wrap:wrap;gap:6px 16px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.01em;color:var(--graphite)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;padding-block:8px 24px}
+.toc a{font-size:14px;font-weight:500;letter-spacing:-.022em;color:var(--ink);text-decoration:none;background:var(--oat);border-radius:9999px;padding:8px 14px}
+.toc a:hover{background:var(--oat-line)}
+@media (max-width:820px){.hero{grid-template-columns:1fr;padding-block:48px 24px}}
+
+section{padding-block:72px 8px;display:grid;gap:24px}
+.head{display:grid;gap:14px}
+
+/* fact cells */
+.cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));border:1px solid var(--oat-line);border-radius:16px;overflow:hidden}
+.cells div{padding:22px;display:grid;gap:6px;align-content:start;border-right:1px solid var(--oat-line);border-bottom:1px solid var(--oat-line);margin:0 -1px -1px 0}
+.cells .n{font-size:36px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.cells .l{font-size:14px;color:var(--graphite);line-height:1.35}
+
+.quote{background:var(--oat);border-radius:16px;padding:32px 40px;display:grid;gap:12px;max-width:820px}
+.quote p{font-family:var(--serif);font-size:19px;line-height:1.4;letter-spacing:-.006em;color:var(--ink)}
+.quote p b{font-family:var(--sans);font-weight:600;letter-spacing:-.02em}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--oat-line);border-radius:16px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.4;min-width:640px}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--oat-line);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:.01em;color:var(--graphite);background:var(--oat)}
+tr:last-child td{border-bottom:0}
+td b{font-weight:600}
+td .ref{display:block;font-family:var(--mono);font-size:11px;color:var(--soft);margin-top:3px;letter-spacing:0}
+.mono{font-family:var(--mono);font-size:13px;letter-spacing:0}
+
+/* status labels */
+.st{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.01em;padding:3px 9px;border-radius:9999px;white-space:nowrap}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st.go{color:var(--green);background:var(--green-bg)}
+.st.wait{color:var(--ochre);background:var(--ochre-bg)}
+.st.no{color:var(--red);background:var(--red-bg)}
+
+/* diagrams on espresso */
+figure{margin:0;display:grid;gap:12px}
+.panel{background:var(--dg-bg);border-radius:24px;padding:24px;overflow-x:auto}
+.panel svg{display:block;min-width:760px;width:100%;height:auto}
+.panel .plabel{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.01em;color:var(--dg-sub);margin-bottom:12px}
+figcaption{font-size:14px;color:var(--graphite);max-width:80ch;line-height:1.45}
+svg text{font-family:var(--sans);letter-spacing:-.01em}
+svg .tl{fill:var(--dg-text);font-size:13px;font-weight:500}
+svg .ts{fill:var(--dg-sub);font-size:11px}
+svg .tm{fill:var(--dg-sub);font-family:var(--mono);font-size:10px;letter-spacing:0}
+svg .tk{fill:var(--dg-native);font-family:var(--mono);font-size:10px;letter-spacing:0}
+svg .tw{fill:var(--dg-legacy);font-family:var(--mono);font-size:10px;letter-spacing:0}
+svg .bx{fill:var(--dg-box);stroke:var(--dg-line)}
+svg .bn{fill:var(--dg-box);stroke:var(--dg-native);stroke-width:1.3}
+svg .bl{fill:var(--dg-box);stroke:var(--dg-legacy);stroke-width:1.3}
+svg .bo{fill:none;stroke:var(--dg-out);stroke-dasharray:4 4}
+svg .frame{fill:none;stroke:var(--dg-line);stroke-width:1.2}
+svg .fn{fill:none;stroke:var(--dg-native);stroke-width:1.2;stroke-dasharray:5 4}
+svg .e{stroke:var(--dg-sub);stroke-width:1.3;fill:none}
+svg .en{stroke:var(--dg-native);stroke-width:1.5;fill:none}
+svg .el{stroke:var(--dg-legacy);stroke-width:1.3;fill:none;stroke-dasharray:5 4}
+svg .ah{fill:var(--dg-sub)} svg .ahn{fill:var(--dg-native)} svg .ahl{fill:var(--dg-legacy)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--graphite)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:14px;height:10px;border-radius:3px;border:1.5px solid;background:var(--dg-box)}
+.sw.n{border-color:var(--dg-native)} .sw.l{border-color:var(--dg-legacy)} .sw.x{border-color:var(--dg-line)} .sw.o{border-color:var(--dg-out);border-style:dashed;background:none}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{background:var(--oat);border-radius:16px;padding:24px;display:grid;gap:8px;align-content:start}
+.card p{font-size:14px;color:var(--graphite);line-height:1.45}
+.card .eyebrow{font-size:11px;font-weight:400;color:var(--graphite)}
+.card code{background:var(--paper)}
+.card .who{font-family:var(--mono);font-size:11px;color:var(--soft);letter-spacing:0}
+
+/* pipeline */
+ol.pipe{list-style:none;margin:0;padding:0;counter-reset:s;border:1px solid var(--oat-line);border-radius:16px;overflow:hidden}
+ol.pipe li{counter-increment:s;display:grid;grid-template-columns:56px 1fr;gap:2px 16px;padding:18px 22px;border-bottom:1px solid var(--oat-line)}
+ol.pipe li:last-child{border-bottom:0}
+ol.pipe li::before{content:counter(s,decimal-leading-zero);grid-row:span 3;font-family:var(--mono);font-size:13px;color:var(--soft);padding-top:2px}
+ol.pipe p{font-size:14px;color:var(--graphite);line-height:1.45;max-width:78ch}
+ol.pipe .ref{font-family:var(--mono);font-size:11px;color:var(--soft);letter-spacing:0}
+
+/* phases */
+.phases{display:grid;gap:12px}
+.phase{border:1px solid var(--oat-line);border-radius:16px;padding:24px 28px;display:grid;gap:12px}
+.phase.now{background:var(--oat);border-color:var(--oat)}
+.phase .top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.phase .top .eyebrow{color:var(--copper)}
+.phase ul{margin:0;padding-left:1.1em;display:grid;gap:5px;font-size:14px;color:var(--graphite)}
+.phase ul b{color:var(--ink);font-weight:500}
+.phase .done{font-size:14px;border-top:1px dashed var(--oat-line);padding-top:12px;color:var(--graphite)}
+.phase .done b{color:var(--ink);font-weight:600}
+.phase.now .done{border-color:var(--oat-line)}
+
+/* code */
+pre.code{background:var(--espresso);color:#f3ece6;border-radius:16px;padding:22px 24px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.65;margin:0;letter-spacing:0}
+pre.code .c{color:#a8968a} pre.code .k{color:#8fd38c} pre.code .s{color:#f2a46a}
+.note{font-size:13px;color:var(--graphite);border-left:2px solid var(--copper);padding:4px 0 4px 14px;max-width:80ch}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+ul.tight{margin:0;padding-left:1.1em;display:grid;gap:6px;font-size:14px;color:var(--graphite)}
+ul.tight b{color:var(--ink);font-weight:500}
+
+footer{margin-top:72px;padding-top:32px;border-top:1px solid var(--oat-line);display:grid;gap:12px;font-size:13px;color:var(--graphite)}
+footer ul{margin:0;padding-left:1.1em;display:grid;gap:5px}
+@media (prefers-reduced-motion:no-preference){.toc a{transition:background .15s}}
+
+/* wireframes */
+.wf{border:1px solid var(--oat-line);border-radius:16px;padding:12px;display:grid;grid-template-columns:200px 1fr;gap:12px;background:var(--paper);font-size:13px}
+.wf .wf-b{background:var(--oat);border-radius:8px;padding:8px 10px;color:var(--ink);line-height:1.35}
+.wf .wf-b small{color:var(--graphite);font-size:12px}
+.wf .wf-b.sub{background:none;color:var(--graphite);padding:2px 10px}
+.wf .wf-b.strong{font-weight:600}
+.wf .wf-b.meter{font-family:var(--mono);font-size:11px;color:var(--graphite);margin-top:8px}
+.wf .wf-n{float:right;font-family:var(--mono);font-size:11px;color:var(--copper)}
+.wf-side,.wf-col{display:grid;gap:6px;align-content:start}
+.wf-main{display:grid;gap:8px;grid-template-rows:auto auto 1fr}
+.wf-top{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--graphite);border-bottom:1px solid var(--oat-line);padding:4px 4px 10px}
+.wf-banner{border:1px dashed var(--terracotta);border-radius:8px;padding:8px 10px;color:var(--graphite)}
+.wf-body{border:1px dashed var(--oat-line);border-radius:8px;min-height:160px;display:grid;place-items:center;color:var(--soft)}
+.wf.grid-wf{grid-template-columns:repeat(4,1fr)}
+.wf .span2{grid-column:span 2}.wf .span4{grid-column:span 4}
+.wf.three{grid-template-columns:180px 1fr 1.4fr}
+@media (max-width:820px){.wf,.wf.three{grid-template-columns:1fr}.wf.grid-wf{grid-template-columns:1fr 1fr}.wf .span4,.wf .span2{grid-column:span 2}}
+</style>
+
+</head><body>
+<div class="wrap">
+
+<div class="bar">
+  <span class="mark">Email on Cloudflare<span>UI specification · draft 1</span></span>
+  <a class="pill dark" href="#contract">The API contract</a>
+</div>
+
+<header class="hero">
+  <div style="display:grid;gap:20px">
+    <span class="eyebrow">Companion to the email platform plan</span>
+    <h1>Every screen, everything it shows, and the endpoint behind it.</h1>
+  </div>
+  <div class="side">
+    <p>The backend is built first, so this page is its specification. Each screen lists what it displays, what you can do there, what it looks like when it's empty or broken, and which endpoint and live channel feed it. The backend is done when every row in <a href="#contract">the contract</a> exists and passes its fixture tests, before a single screen is drawn.</p>
+    <div class="stamp"><span>16 Oct 2026</span><span>tokens: design/tokens</span><span>web first, phone for mail</span></div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#shell">The shell</a>
+  <a href="#first-run">First run</a>
+  <a href="#overview">Overview</a>
+  <a href="#mail">Mail</a>
+  <a href="#audience">Audience</a>
+  <a href="#campaigns">Campaigns</a>
+  <a href="#automations">Automations</a>
+  <a href="#transactional">Transactional</a>
+  <a href="#domains">Domains</a>
+  <a href="#analytics">Analytics</a>
+  <a href="#settings">Settings</a>
+  <a href="#public">Public pages</a>
+  <a href="#states">States and roles</a>
+  <a href="#contract">API contract</a>
+</nav>
+
+<!-- RULES -->
+<section id="rules">
+  <div class="head">
+    <span class="eyebrow">Rules for every screen</span>
+    <h2>What every screen does the same way</h2>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>Real numbers only</h3><p>Every figure comes from an endpoint. Where there isn't enough data yet (fewer than 100 sends, the minimum Cloudflare's reputation policy uses), the screen says "not enough data yet" instead of showing a rate.</p></div>
+    <div class="card"><h3>Live where it matters</h3><p>New mail, campaign progress, import progress and domain activation update without a refresh, through a WebSocket per mailbox and per workspace. Everything else refreshes on focus.</p></div>
+    <div class="card"><h3>Every list is a URL</h3><p>Filters, sort, search and the open item live in the query string, so any view can be bookmarked, shared with a teammate, or opened by an agent.</p></div>
+    <div class="card"><h3>Keyboard first, ⌘K everywhere</h3><p>A command palette reaches every screen, mailbox, contact, campaign and action. The mail screens carry the usual single-key shortcuts.</p></div>
+    <div class="card"><h3>Brand</h3><p>Flareyard tokens (Geist structure, ember accent). Colour carries meaning only: green delivered or passing, amber deferred or warning, red bounced, failing or at risk. Charts use the tokens' data palette, never Cloudflare orange.</p></div>
+    <div class="card"><h3>Phone</h3><p>Overview, mail (list, thread, compose) and contact lookup get full phone layouts and Web Push. The builders (segments, campaigns, automations) are desktop-first and read-only on a phone.</p></div>
+  </div>
+</section>
+
+<!-- SHELL -->
+<section id="shell">
+  <div class="head">
+    <span class="eyebrow">Present on every screen</span>
+    <h2>The shell</h2>
+  </div>
+  <div class="wf">
+    <div class="wf-side">
+      <div class="wf-b strong">Workspace ▾</div>
+      <div class="wf-b">Overview</div>
+      <div class="wf-b">Mail <span class="wf-n">12</span></div>
+      <div class="wf-b sub">hello@ · support@ · founder@</div>
+      <div class="wf-b">Audience</div>
+      <div class="wf-b">Campaigns</div>
+      <div class="wf-b">Automations</div>
+      <div class="wf-b">Transactional</div>
+      <div class="wf-b">Domains</div>
+      <div class="wf-b">Analytics</div>
+      <div class="wf-b">Settings</div>
+      <div class="wf-b meter">Today 412 / 1,000 sent<br>Month 2,140 / 3,000 included</div>
+    </div>
+    <div class="wf-main">
+      <div class="wf-top"><span>⌘K Search everything</span><span>● 2 alerts</span><span>Compose</span><span>Avatar ▾</span></div>
+      <div class="wf-banner">Reputation banner · quota banner · domain-drift banner (only when true)</div>
+      <div class="wf-body">Screen content</div>
+    </div>
+  </div>
+  <p class="note">Wireframe for layout only. Every name and number in it is a placeholder.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Element</th><th>Shows</th><th>Does</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Sidebar</b></td><td>The sections above; each mailbox you can see, with its unread count; your role</td><td>Navigate; collapse; reorder mailboxes</td><td><code>GET /v1/me</code> · <code>ws: workspace</code> for unread counts</td></tr>
+      <tr><td><b>Quota meter</b></td><td>Sent today against the daily quota and its reset time; sent this month against the 3,000 included; projected overage in dollars at the current rate</td><td>Click → usage page</td><td><code>GET /v1/usage</code> (from Cloudflare <code>/email/sending/limits</code> plus our ledger)</td></tr>
+      <tr><td><b>Command palette</b></td><td>Screens, actions ("new campaign", "compose as support@"), and results across mail, contacts, campaigns and templates</td><td>Jump, run an action</td><td><code>GET /v1/search?q=</code></td></tr>
+      <tr><td><b>Alerts bell</b></td><td>Open alerts: DNS record drift, reputation warning, bounce or complaint spike, quota at 80% and 100%, webhook dead letters, failed imports, a domain activated</td><td>Open the cause; acknowledge</td><td><code>GET /v1/alerts</code> · <code>ws: workspace</code></td></tr>
+      <tr><td><b>Global banners</b></td><td>Reputation <i>at risk</i> with the suspension countdown (Cloudflare suspends 168 hours after at-risk); quota exhausted with the next reset; a domain whose records stopped matching</td><td>Link to the fix</td><td><code>GET /v1/health</code></td></tr>
+      <tr><td><b>Compose button</b></td><td>Opens compose from any screen, defaulting to the last-used identity</td><td>—</td><td><code>GET /v1/identities</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- FIRST RUN -->
+<section id="first-run">
+  <div class="head">
+    <span class="eyebrow">An empty workspace</span>
+    <h2>First run</h2>
+    <p class="prose">A brand-new workspace doesn't show an empty dashboard. It shows a checklist that becomes the Overview once it's finished.</p>
+  </div>
+  <ol class="pipe">
+    <li><h3>Add a domain</h3><p>Pick a domain already on Cloudflare, or import one (the <a href="#domains">domain import flow</a>). Shows each domain's current state: active, pending nameservers, or not on Cloudflare.</p><span class="ref">GET /v1/domains/candidates · POST /v1/domains</span></li>
+    <li><h3>Turn on mail</h3><p>Shows the records that routing and sending will add (MX, SPF, DKIM, the <code>cf-bounce</code> return path, DMARC), then a live check of each, ticking green as it passes.</p><span class="ref">POST /v1/domains/:id/enable · GET /v1/domains/:id/checks</span></li>
+    <li><h3>Create your first mailbox</h3><p>Address, display name, who can read it, signature. Suggests <code>hello@</code>.</p><span class="ref">POST /v1/mailboxes</span></li>
+    <li><h3>Send yourself a test</h3><p>Sends to your verified address (free), then shows the result: delivered, with SPF, DKIM and DMARC as they were seen.</p><span class="ref">POST /v1/test-send · ws: workspace</span></li>
+    <li><h3>Bring your old mail (optional)</h3><p>IMAP host, username and password (app password for Gmail). Shows a folder list with message counts before anything copies.</p><span class="ref">POST /v1/imports/mailbox · GET /v1/imports/:id</span></li>
+    <li><h3>Bring your contacts (optional)</h3><p>CSV upload, or skip.</p><span class="ref">POST /v1/imports/contacts</span></li>
+  </ol>
+</section>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <div class="head">
+    <span class="eyebrow">The main page</span>
+    <h2>Overview</h2>
+    <p class="prose">One screen that answers "is my email healthy, is anything waiting on me, and what's going out". The range control (24 hours, 7 days, 30 days) applies to every panel.</p>
+  </div>
+  <div class="wf grid-wf">
+    <div class="wf-b span4 strong">Health strip · per domain: DNS ● Routing ● Sending ● SPF ● DKIM ● DMARC ● · Reputation: healthy · Quota 412/1,000</div>
+    <div class="wf-b span2">Needs you<br><small>unread · waiting for reply · snoozed back today · assigned to me</small></div>
+    <div class="wf-b span2">Delivery funnel<br><small>sent → delivered · deferred · bounced · complained · rejected</small></div>
+    <div class="wf-b span2">Rates against Cloudflare's thresholds<br><small>bounce · complaint · spam rejection</small></div>
+    <div class="wf-b span2">Going out now<br><small>campaigns sending · ETA · automations running</small></div>
+    <div class="wf-b">Volume by stream<br><small>per day</small></div>
+    <div class="wf-b">Inbound<br><small>received · spam caught</small></div>
+    <div class="wf-b">Audience<br><small>contacts · net growth · unsubscribes</small></div>
+    <div class="wf-b">Cost<br><small>month to date · projected</small></div>
+    <div class="wf-b span4">Activity feed · alerts</div>
+  </div>
+  <p class="note">Wireframe for layout only. Every name and number in it is a placeholder.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Panel</th><th>Displays</th><th>Click through to</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Health strip</b></td><td>For each domain: zone active, routing on, sending on, and SPF, DKIM, DMARC and return path each passing or failing against the expected value. Account reputation status, with the time it was evaluated. Today's quota.</td><td>Domain detail · Reputation</td><td><code>GET /v1/health</code></td></tr>
+      <tr><td><b>Needs you</b></td><td>Unread per mailbox; threads where the last message is inbound and older than your reply target (default 24 hours); snoozed threads returning today; shared threads assigned to you</td><td>Mail, pre-filtered</td><td><code>GET /v1/mail/attention</code> · <code>ws: workspace</code></td></tr>
+      <tr><td><b>Delivery funnel</b></td><td>Counts in the range: sent, delivered, deferred (still retrying), bounced hard, bounced soft, complained, rejected (suppressed or policy), failed</td><td>Message log, filtered by status</td><td><code>GET /v1/stats/delivery?range=</code></td></tr>
+      <tr><td><b>Rates against thresholds</b></td><td>Bounce, complaint and spam-rejection rates, each drawn against Cloudflare's own lines for this account. Measured today: bounce warning 2% and at risk 5%; complaint 0.1% and 0.2%; spam rejection 1% and 3%; minimum 100 sends. Shows "not enough data" under 100.</td><td>Reputation</td><td><code>GET /v1/reputation</code> (Cloudflare <code>/reputation</code> policy plus our counts)</td></tr>
+      <tr><td><b>Going out now</b></td><td>Each sending or scheduled campaign: progress (sent of audience), current pace, ETA at today's quota, paused flag. Automations: active runs, entries today, failures today.</td><td>Campaign report · Automation runs</td><td><code>GET /v1/campaigns?status=active</code> · <code>GET /v1/automations/summary</code> · <code>ws: workspace</code></td></tr>
+      <tr><td><b>Volume by stream</b></td><td>Stacked daily bars: transactional, campaign, automation, replies from mailboxes</td><td>Analytics</td><td><code>GET /v1/stats/volume?range=&amp;by=stream</code></td></tr>
+      <tr><td><b>Inbound</b></td><td>Messages received; rejected at the door (DMARC fail, RBL); filed as spam by us; per-mailbox split</td><td>Analytics · Spam folder</td><td><code>GET /v1/stats/inbound?range=</code></td></tr>
+      <tr><td><b>Audience</b></td><td>Total contacts by status; new; unsubscribed; suppressed (bounce or complaint)</td><td>Audience</td><td><code>GET /v1/stats/audience?range=</code></td></tr>
+      <tr><td><b>Cost</b></td><td>Emails billed this cycle against 3,000 included; projected month-end count and overage at $0.35 per 1,000</td><td>Usage</td><td><code>GET /v1/usage</code></td></tr>
+      <tr><td><b>Activity feed</b></td><td>The latest 50 notable events: campaign started or finished, domain activated, import finished, member joined, rule created, alert opened</td><td>The object</td><td><code>GET /v1/activity</code> · <code>ws: workspace</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- MAIL -->
+<section id="mail">
+  <div class="head">
+    <span class="eyebrow">The inbox</span>
+    <h2>Mail</h2>
+    <p class="prose">Three panes on desktop (folders, thread list, thread) and one at a time on a phone. Each mailbox is a Durable Object, so everything on these screens reads from and writes to that mailbox's own store and arrives live over its WebSocket.</p>
+  </div>
+  <div class="wf three">
+    <div class="wf-col"><div class="wf-b strong">support@ ▾</div><div class="wf-b">Inbox 12</div><div class="wf-b">Assigned to me 3</div><div class="wf-b">Starred</div><div class="wf-b">Snoozed 2</div><div class="wf-b">Scheduled 1</div><div class="wf-b">Drafts</div><div class="wf-b">Sent</div><div class="wf-b">Spam 4</div><div class="wf-b">Trash</div><div class="wf-b sub">Labels: billing · bugs · partners</div></div>
+    <div class="wf-col"><div class="wf-b">Search · Unread · Has attachment · Label ▾</div><div class="wf-b">● Ada O. · Payment didn't go through · 2m · 📎 billing</div><div class="wf-b">● Kemi A. · Re: MB3 timetable · 1h</div><div class="wf-b">Partner Co · Proposal · Tue · partners</div><div class="wf-b sub">…virtual scroll</div></div>
+    <div class="wf-col"><div class="wf-b strong">Payment didn't go through</div><div class="wf-b">Reply · Archive · Snooze · Label · Assign · ⋯</div><div class="wf-b">AI summary (if on)</div><div class="wf-b">Ada O. → support@ · 10:41 · SPF ✓ DKIM ✓ DMARC ✓</div><div class="wf-b">Message body (sandboxed) · Remote images blocked [Show]</div><div class="wf-b">Attachments: receipt.pdf 212 KB</div><div class="wf-b">Internal note (shared mailbox)</div><div class="wf-b">Reply box</div></div>
+  </div>
+  <p class="note">Wireframe for layout only. Every name and number in it is a placeholder.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Screen</th><th>Displays</th><th>Actions</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Folder pane</b></td><td>The mailbox switcher (every mailbox you can read); system folders with counts (Inbox, Assigned to me, Starred, Snoozed, Scheduled, Drafts, Sent, Spam, Trash, All mail); labels with colours and counts; import progress if one is running</td><td>Switch mailbox; create, rename and colour labels; drag a thread onto a label</td><td><code>GET /v1/mailboxes</code> · <code>GET /v1/mailboxes/:id/folders</code> · <code>ws: mailbox</code></td></tr>
+      <tr><td><b>Thread list</b></td><td>Per thread: sender names (all participants, collapsed), subject, snippet, latest time, message count, unread, starred, attachment icon, labels, assignee (shared mailboxes), a snoozed-until or scheduled-for chip, spam score (Spam folder only)</td><td>Open; multi-select; archive, delete, mark read or unread, star, label, move, snooze, assign, mark spam or not spam; keyboard (j/k, e, #, s, l, r, a, f)</td><td><code>GET /v1/mailboxes/:id/threads?folder=&amp;label=&amp;q=&amp;cursor=</code> · <code>POST /v1/mailboxes/:id/threads/bulk</code></td></tr>
+      <tr><td><b>Search</b></td><td>Results ranked by recency; matching terms highlighted. Operators: <code>from:</code> <code>to:</code> <code>subject:</code> <code>has:attachment</code> <code>label:</code> <code>is:unread</code> <code>before:</code> <code>after:</code> <code>in:</code>, plus a "search all mailboxes" toggle</td><td>Save a search as a smart folder; turn a search into a rule</td><td><code>GET /v1/mailboxes/:id/search?q=</code> · <code>GET /v1/search/mail?q=</code></td></tr>
+      <tr><td><b>Thread view</b></td><td>Every message in order, older ones collapsed. Per message: from, to, cc, date, and an authentication line (SPF, DKIM, DMARC, ARC as Cloudflare saw them). A "details" drawer with the full headers, spam score and reasons, and size. HTML in a sandboxed frame, with remote images blocked until you allow this sender. Attachments with type, size, preview (images, PDF) and download. Calendar invites as a card. Internal notes inline (shared). Our own sent replies with their delivery status (delivered, deferred, bounced).</td><td>Reply, reply all, forward, archive, delete, snooze, label, assign, star, mark unread, mark spam, block sender, "create rule from this", view original <code>.eml</code>, print, copy link</td><td><code>GET /v1/mailboxes/:id/threads/:tid</code> · <code>GET /v1/messages/:mid/raw</code> · <code>GET /v1/attachments/:aid</code></td></tr>
+      <tr><td><b>Compose</b> (also a full window)</td><td>From: the identities you may send as. To, Cc, Bcc with contact autocomplete and a 50-recipient warning. Subject. A rich editor with paste-clean, signature, template insert, and an AI draft (if on). Attachments with a <b>5 MiB budget bar</b>; anything that would exceed it becomes an R2 link, and the composer says so. Draft saved state. Schedule-send picker.</td><td>Send (with a 10-second undo), schedule, save draft, discard, pop out</td><td><code>POST /v1/mailboxes/:id/drafts</code> · <code>POST /v1/mailboxes/:id/send</code> · <code>POST /v1/uploads</code> · <code>DELETE /v1/sends/:id</code> (undo)</td></tr>
+      <tr><td><b>Drafts, Scheduled, Snoozed, Sent</b></td><td>The same list, with the send time, snooze-until or delivery status as the trailing column</td><td>Edit, send now, cancel schedule, unsnooze</td><td>Same thread endpoints with <code>folder=</code></td></tr>
+      <tr><td><b>Spam</b></td><td>Score, the reasons (authentication fail, classifier, rule, block list), sender</td><td>Not spam (teaches the classifier and allowlists the sender), delete forever, empty after 30 days</td><td><code>folder=spam</code></td></tr>
+      <tr><td><b>Mail import</b></td><td>Per folder: total, copied, skipped as duplicate, failed; throughput; ETA; the last error; a "catch-up after the MX switch" pass shown separately</td><td>Pause, resume, retry failed, cancel</td><td><code>GET /v1/imports/:id</code> · <code>ws: workspace</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- AUDIENCE -->
+<section id="audience">
+  <div class="head">
+    <span class="eyebrow">Contacts, topics, segments</span>
+    <h2>Audience</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Screen</th><th>Displays</th><th>Actions</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Contacts list</b></td><td>Email, name, status (subscribed, unconfirmed, unsubscribed, bounced, complained, suppressed), topics, created, last activity, last opened, engagement (active, cooling, dormant), and any custom field as a column you can pick. The total and the filtered count.</td><td>Filter by status, topic, field, segment or event; sort; select; add to topic; remove; export the filtered view to CSV; open</td><td><code>GET /v1/contacts?filter=&amp;sort=&amp;cursor=</code> · <code>POST /v1/contacts/bulk</code> · <code>POST /v1/exports</code></td></tr>
+      <tr><td><b>Contact detail</b></td><td>Profile (editable fields with their types), subscription state per topic with when and how it changed, suppression status with reason and source (Cloudflare list, our bounce handler, manual). A <b>timeline</b> of everything: tracked events, each email sent to them with its delivery events, opens and clicks, replies that landed in a mailbox (linked to the thread), automation runs and their current step, consent records.</td><td>Edit; subscribe or unsubscribe per topic; remove a suppression (with a warning); trigger an automation; send a one-off; export their data; delete them (GDPR)</td><td><code>GET /v1/contacts/:id</code> · <code>GET /v1/contacts/:id/timeline</code> · <code>PATCH</code> · <code>DELETE</code></td></tr>
+      <tr><td><b>Topics</b></td><td>Each topic with subscriber count, growth, unsubscribe rate, whether double opt-in is on, the public description shown on the preference page</td><td>Create, edit, archive</td><td><code>GET/POST/PATCH /v1/topics</code></td></tr>
+      <tr><td><b>Segments list</b></td><td>Name, rule summary, live count, used by (campaigns, automations), last computed</td><td>Create, duplicate, delete (blocked when in use)</td><td><code>GET /v1/segments</code></td></tr>
+      <tr><td><b>Segment builder</b></td><td>A rule tree: all/any groups over fields, topics, status, events ("did <i>signed-up</i> in the last 7 days"), engagement and email activity ("opened campaign X"). The live count updates as you edit, with a sample of 20 matching contacts and, for developers, the compiled SQL.</td><td>Save, test, natural-language entry (AI, if on)</td><td><code>POST /v1/segments/preview</code> · <code>POST/PATCH /v1/segments</code></td></tr>
+      <tr><td><b>Contact import</b></td><td>Upload; a preview of the first 20 rows; column mapping to fields (with type detection); dedupe policy (update, skip, overwrite); a topic to add them to; a <b>consent attestation</b> checkbox; then progress (rows read, created, updated, skipped, invalid) and a downloadable error report</td><td>Start, cancel, download errors</td><td><code>POST /v1/imports/contacts</code> · <code>GET /v1/imports/:id</code> · <code>ws: workspace</code></td></tr>
+      <tr><td><b>Suppressions</b></td><td>Address, reason (hard bounce, complaint, unsubscribe, manual), source, date, and whether it's in sync with Cloudflare's list</td><td>Add, remove (with a warning), bulk import, export</td><td><code>GET/POST/DELETE /v1/suppressions</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- CAMPAIGNS -->
+<section id="campaigns">
+  <div class="head">
+    <span class="eyebrow">Broadcasts</span>
+    <h2>Campaigns</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Screen</th><th>Displays</th><th>Actions</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Campaigns list</b></td><td>Name, status (draft, scheduled, sending, paused, sent, cancelled), audience and its size, send time, progress for sending ones, and delivered, opened, clicked and unsubscribed rates for sent ones</td><td>New, duplicate, open, filter by status</td><td><code>GET /v1/campaigns</code></td></tr>
+      <tr><td><b>Editor · Audience</b></td><td>Segment and topic pickers, exclusions (another segment, "received a campaign in the last N days"), the resulting count with how many are excluded by suppression</td><td>—</td><td><code>POST /v1/campaigns/:id/audience/preview</code></td></tr>
+      <tr><td><b>Editor · Content</b></td><td>From identity, reply-to, subject (with an optional B subject and split), preheader, the block editor or a code template, merge fields with fallback values, and the unsubscribe footer (locked on)</td><td>Insert block, merge field, template; save</td><td><code>PATCH /v1/campaigns/:id</code> · <code>GET /v1/templates</code></td></tr>
+      <tr><td><b>Editor · Preview</b></td><td>Desktop, phone and dark-mode renders, rendered <i>as</i> a contact you pick; plain-text version; size against 5 MiB; every link with its HTTP status</td><td>Send a test to your verified addresses (free)</td><td><code>POST /v1/campaigns/:id/render</code> · <code>POST /v1/campaigns/:id/test</code></td></tr>
+      <tr><td><b>Editor · Checks</b></td><td>A pre-flight list that must pass: sending domain healthy, unsubscribe header and link present, size under limit, no broken links, merge fields have fallbacks, audience non-empty, reputation not at risk</td><td>Fix links straight to the field</td><td><code>GET /v1/campaigns/:id/checks</code></td></tr>
+      <tr><td><b>Editor · Schedule</b></td><td>Now or a time (with time zone); the <b>ETA at today's quota</b>, for example "4,200 recipients at 1,000 a day finishes Monday 14:00", and what's already queued for that window</td><td>Schedule, send now, save as draft</td><td><code>POST /v1/campaigns/:id/schedule</code> · <code>GET /v1/usage/forecast</code></td></tr>
+      <tr><td><b>Report</b></td><td>Funnel: audience, sent, delivered, opened (with an "Apple Mail Privacy Protection inflates this" note and the machine-open share), clicked, replied, unsubscribed, bounced (hard and soft), complained. Delivery by mailbox provider (Gmail, Outlook and others, from the event's <code>provider</code> field). Clicks per link. Activity over time. A/B result with the winner. The recipient table: each person and their final status, filterable.</td><td>Pause, resume, cancel; resend to non-openers as a new campaign; export</td><td><code>GET /v1/campaigns/:id/report</code> · <code>GET /v1/campaigns/:id/recipients</code> · <code>ws: workspace</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- AUTOMATIONS -->
+<section id="automations">
+  <div class="head">
+    <span class="eyebrow">Sequences</span>
+    <h2>Automations</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Screen</th><th>Displays</th><th>Actions</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Automations list</b></td><td>Name, trigger, status (draft, live, paused), version, active runs, entered and completed in the range, failures, and the goal rate if a goal event is set</td><td>New (blank or from a recipe), duplicate, pause, open</td><td><code>GET /v1/automations</code></td></tr>
+      <tr><td><b>Builder</b></td><td>A canvas: the trigger node (event, contact created, entered segment, topic subscribed, date field), then step nodes (wait for a duration or until a time; wait for an event with a timeout; branch on field, event or engagement; send email; update contact; add or remove topic; call webhook; exit). Each node overlays its live count of contacts there now and passed through. Validation marks unreachable nodes and missing content.</td><td>Add, connect, edit nodes; test with one contact (a dry run that shows the path it would take); publish as a new version (running contacts finish on their old version)</td><td><code>GET/PATCH /v1/automations/:id</code> · <code>POST /v1/automations/:id/dry-run</code> · <code>POST /v1/automations/:id/publish</code></td></tr>
+      <tr><td><b>Runs</b></td><td>Each contact's run: the version, the step they're on, when they entered, when the next step fires, the history of steps taken with timestamps, and any error</td><td>Exit a contact, retry a failed step, jump to the contact</td><td><code>GET /v1/automations/:id/runs</code> · <code>POST /v1/runs/:rid/exit|retry</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- TRANSACTIONAL -->
+<section id="transactional">
+  <div class="head">
+    <span class="eyebrow">Mail your apps send</span>
+    <h2>Transactional</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Screen</th><th>Displays</th><th>Actions</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Message log</b></td><td>Every API, SMTP or automation send: time, recipient, subject, template, stream, status, the event trail (sent, deferred, delivered or bounced, with the SMTP response), the Cloudflare message id, idempotency key, and the API key that sent it. Searchable by recipient and message id.</td><td>Open a rendered copy, resend, copy as curl</td><td><code>GET /v1/messages?filter=</code> · <code>GET /v1/messages/:id</code></td></tr>
+      <tr><td><b>Templates</b></td><td>Name, kind (code or blocks), version, last edited, used by. The editor shows source, a variables schema, sample data, and a live preview in desktop, phone and dark mode.</td><td>Create, edit, publish a version, roll back, send a test</td><td><code>GET/POST/PATCH /v1/templates</code> · <code>POST /v1/templates/:id/render</code></td></tr>
+      <tr><td><b>API keys</b></td><td>Name, scopes, prefix, created by, last used, requests in 24 hours. The secret is shown once, at creation.</td><td>Create, rotate, revoke</td><td><code>GET/POST/DELETE /v1/api-keys</code></td></tr>
+      <tr><td><b>Webhooks</b></td><td>Endpoints and their subscribed events; the delivery log per endpoint (status code, latency, attempt number); dead letters</td><td>Add, edit, send a test event, replay a dead letter, rotate the signing secret</td><td><code>GET/POST /v1/webhooks</code> · <code>GET /v1/webhooks/:id/deliveries</code> · <code>POST .../replay</code></td></tr>
+      <tr><td><b>Developer quickstart</b></td><td>Copyable snippets for curl, TypeScript and the Plunk SDK (with the base URL swapped), plus SMTP settings guidance</td><td>—</td><td>static</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- DOMAINS -->
+<section id="domains">
+  <div class="head">
+    <span class="eyebrow">Domains and deliverability</span>
+    <h2>Domains</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Screen</th><th>Displays</th><th>Actions</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Domains list</b></td><td>Each domain: zone status, registrar, nameservers, DNSSEC, routing on or off, sending on or off, record checks passing (e.g. 6 of 6), mailboxes on it, reputation complaints in 30 days</td><td>Add or import, open</td><td><code>GET /v1/domains</code></td></tr>
+      <tr><td><b>Import wizard</b></td><td>The Workflow made visible, step by step: <b>detected</b> (registrar, nameservers, DNSSEC); <b>records found</b>, as a review table of each record with its source (scan, registrar export, probe), what it will be on Cloudflare, proxied or DNS-only, and flags for conflicts or unknowns; <b>DNSSEC off</b>; <b>nameservers</b> (connector progress, or the guided panel with both names, copy buttons, a link to the registrar's page and a live checker); <b>waiting</b> (a timeline of checks with the next one's time, plus a "we'll email you" note); <b>active</b> (website and MX still resolving the same, DNSSEC back on)</td><td>Edit or exclude a record before the switch; connect a registrar key; cancel before the switch; retry a step</td><td><code>POST /v1/domains/import</code> · <code>GET /v1/domains/imports/:id</code> · <code>PATCH /v1/domains/imports/:id/records</code> · <code>ws: workspace</code></td></tr>
+      <tr><td><b>Domain detail</b></td><td>Every mail record with expected value, actual value and pass or fail; when it was last checked; the catch-all policy (bounce or keep); addresses on this domain; sending domain and return path; the complaint count from Cloudflare</td><td>Re-check now, fix (re-apply records), change catch-all policy, turn routing or sending off</td><td><code>GET /v1/domains/:id</code> · <code>POST /v1/domains/:id/recheck</code></td></tr>
+      <tr><td><b>DMARC reports</b></td><td>From the aggregate reports receivers send: volume by sending source (IP, resolved provider name), SPF and DKIM pass rates per source, which sources are failing and why (for example a forwarder, or an old provider still sending as you), the current policy and a recommendation for when it's safe to move from <code>p=none</code> to <code>quarantine</code></td><td>Mark a source as known; change policy (with a preview of the DNS change)</td><td><code>GET /v1/domains/:id/dmarc?range=</code></td></tr>
+      <tr><td><b>Reputation</b></td><td>Status (healthy, warning, at risk, suspended) and since when; each rate against its warning and at-risk line; the minimum-volume rule; the grace countdown when at risk; the sends that drove a spike</td><td>Pause all campaigns; open the offending campaign</td><td><code>GET /v1/reputation</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ANALYTICS -->
+<section id="analytics">
+  <div class="head">
+    <span class="eyebrow">Across everything</span>
+    <h2>Analytics</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>View</th><th>Displays</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Sending</b></td><td>Daily volume by stream; delivery, bounce and complaint rates over time against thresholds; delivery time (median and 95th percentile from <code>deliveryTimeMs</code>); results by mailbox provider; deferral reasons</td><td><code>GET /v1/stats/delivery</code> · <code>/volume</code> · <code>/providers</code></td></tr>
+      <tr><td><b>Engagement</b></td><td>Opens and clicks by campaign, by automation step and by day of week and hour; unsubscribes by topic; the engagement mix of the audience over time</td><td><code>GET /v1/stats/engagement</code></td></tr>
+      <tr><td><b>Inbound</b></td><td>Received per mailbox per day; rejected at the door; spam caught; top senders; for shared mailboxes, first-response and resolution time per assignee</td><td><code>GET /v1/stats/inbound</code> · <code>/response-times</code></td></tr>
+      <tr><td><b>Usage and cost</b></td><td>Billed sends this cycle against the included 3,000; daily quota use; the projection and its dollar overage; storage held in R2 by mailbox</td><td><code>GET /v1/usage</code> · <code>/usage/storage</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Every chart carries its range, its source and an export to CSV. Opens are always labelled as an estimate.</p>
+</section>
+
+<!-- SETTINGS -->
+<section id="settings">
+  <div class="head">
+    <span class="eyebrow">Configuration</span>
+    <h2>Settings</h2>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Page</th><th>Displays and controls</th><th>Fed by</th></tr></thead>
+    <tbody>
+      <tr><td><b>Mailboxes and addresses</b></td><td>Every mailbox (personal, shared, group), its members and their access, aliases, display name, default signature, auto-reply with dates, forwarding to another address, and the catch-all destination per domain</td><td><code>/v1/mailboxes</code> · <code>/v1/aliases</code></td></tr>
+      <tr><td><b>Rules</b></td><td>Ordered rules per mailbox: conditions, actions, how many times each has matched, last match</td><td><code>/v1/mailboxes/:id/rules</code></td></tr>
+      <tr><td><b>Gmail mode</b></td><td>Step-by-step setup of forwarding to a verified address and Gmail's "Send mail as", with a live check of each step</td><td><code>/v1/gmail-mode</code></td></tr>
+      <tr><td><b>Members and roles</b></td><td>Members, role (owner, admin, sender, agent, viewer), mailboxes they can read, last active, pending invites</td><td><code>/v1/members</code> · <code>/v1/invites</code></td></tr>
+      <tr><td><b>Tracking and compliance</b></td><td>Open and click tracking defaults; the tracking hostname; the postal address required in bulk footers; double opt-in default; preference page branding</td><td><code>/v1/settings/compliance</code></td></tr>
+      <tr><td><b>AI</b></td><td>Each AI feature on or off; the provider (Workers AI, or any OpenAI-compatible endpoint and model); what data each feature sends</td><td><code>/v1/settings/ai</code></td></tr>
+      <tr><td><b>Integrations</b></td><td>The MCP endpoint and its tokens; Hermes's email lane; the support inbox app; outgoing webhooks</td><td><code>/v1/integrations</code></td></tr>
+      <tr><td><b>Import and export</b></td><td>Past imports with their results; export everything (mail as mbox and <code>.eml</code>, contacts, templates, settings) to a signed download</td><td><code>/v1/imports</code> · <code>/v1/exports</code></td></tr>
+      <tr><td><b>Audit log</b></td><td>Every change and every send action: who, what, when, from where, with before and after values; filter and export</td><td><code>/v1/audit</code></td></tr>
+      <tr><td><b>Danger zone</b></td><td>Turn off a domain's mail, delete a mailbox (with export first), delete the workspace</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- PUBLIC -->
+<section id="public">
+  <div class="head">
+    <span class="eyebrow">Pages your recipients see</span>
+    <h2>Public pages</h2>
+    <p class="prose">No login. Each opens from a signed link, carries your brand, and works on any phone without JavaScript.</p>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>Unsubscribe</h3><p>One click from the email confirms it. It shows what they left and offers "manage topics instead". RFC 8058 one-click POSTs land here without a page.</p><p class="who">POST /u/:token · GET /u/:token</p></div>
+    <div class="card"><h3>Preference centre</h3><p>Every topic with its description and a toggle, plus "unsubscribe from everything".</p><p class="who">GET/POST /p/:token</p></div>
+    <div class="card"><h3>Double opt-in confirmation</h3><p>Confirms, then redirects to your URL.</p><p class="who">GET /c/:token</p></div>
+    <div class="card"><h3>Hosted signup form</h3><p>Fields and topics you pick, Turnstile against bots, and an embed snippet.</p><p class="who">GET /f/:formId · POST /v1/forms/:id/submit</p></div>
+    <div class="card"><h3>View in browser</h3><p>The campaign as sent, with merge fields for that recipient.</p><p class="who">GET /v/:token</p></div>
+  </div>
+</section>
+
+<!-- STATES -->
+<section id="states">
+  <div class="head">
+    <span class="eyebrow">Designed, not left to chance</span>
+    <h2>States and roles</h2>
+  </div>
+  <div class="split">
+    <div class="tbl"><table>
+      <thead><tr><th>State</th><th>What every screen shows</th></tr></thead>
+      <tbody>
+        <tr><td><b>Empty</b></td><td>What the screen is for, plus the one action that fills it (e.g. "No campaigns yet · Create one"), never a blank table</td></tr>
+        <tr><td><b>Loading</b></td><td>Skeletons in the final layout; no spinners over 300 ms</td></tr>
+        <tr><td><b>Not enough data</b></td><td>Rates under 100 sends say so instead of showing a percentage</td></tr>
+        <tr><td><b>Error</b></td><td>What failed, in plain words, the retry, and the request id</td></tr>
+        <tr><td><b>Offline</b></td><td>Mail stays readable from cache; compose queues and sends when back</td></tr>
+        <tr><td><b>Blocked</b></td><td>Quota exhausted, reputation at risk, or a domain unhealthy: the send buttons explain why instead of failing</td></tr>
+        <tr><td><b>No permission</b></td><td>The control is visible but disabled, with who can do it</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Role</th><th>Can</th></tr></thead>
+      <tbody>
+        <tr><td><b>Owner</b></td><td>Everything, including members, domains, export and deleting the workspace</td></tr>
+        <tr><td><b>Admin</b></td><td>Everything except removing the owner and deleting the workspace</td></tr>
+        <tr><td><b>Sender</b></td><td>Audience, campaigns, automations, templates; their own mailboxes</td></tr>
+        <tr><td><b>Agent</b></td><td>The shared mailboxes they're given; read-only contacts</td></tr>
+        <tr><td><b>Viewer</b></td><td>Read-only Overview, Analytics and reports</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- CONTRACT -->
+<section id="contract">
+  <div class="head">
+    <span class="eyebrow">What the backend must ship first</span>
+    <h2>The API contract</h2>
+    <p class="prose">Every screen above reads from this list. The backend is built against it in the same phase order as the plan, schema-first: each endpoint's request and response are Effect Schemas, from which the OpenAPI document and the typed client the UI uses are generated. Each endpoint ships with fixtures, so the UI can be built later against recorded responses without a live account.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Group</th><th>Endpoints</th><th>Live channel</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td><b>Session and shell</b></td><td><code>GET /v1/me</code> · <code>/health</code> · <code>/usage</code> · <code>/usage/forecast</code> · <code>/alerts</code> · <code>/activity</code> · <code>/search</code></td><td><code>ws: workspace</code> (unread, alerts, activity, progress)</td><td>M2</td></tr>
+      <tr><td><b>Domains</b></td><td><code>/v1/domains</code> (list, create, detail, enable, recheck, checks) · <code>/domains/candidates</code> · <code>/domains/import</code> and <code>/domains/imports/:id</code> (+ records) · <code>/domains/:id/dmarc</code> · <code>/reputation</code></td><td>import progress on <code>ws: workspace</code></td><td>M1–M2</td></tr>
+      <tr><td><b>Sending</b></td><td><code>/v1/send</code> · <code>/v1/track</code> (Plunk-compatible) · <code>/messages</code> · <code>/templates</code> (+ render) · <code>/test-send</code> · <code>/suppressions</code> · <code>/api-keys</code> · <code>/webhooks</code> (+ deliveries, replay) · <code>/stats/delivery</code> · <code>/stats/volume</code> · <code>/stats/providers</code></td><td>message status on <code>ws: workspace</code></td><td>M2</td></tr>
+      <tr><td><b>Mail</b></td><td><code>/v1/mailboxes</code> (+ folders, threads, thread, bulk, search, drafts, send, rules) · <code>/messages/:id/raw</code> · <code>/attachments/:id</code> · <code>/uploads</code> · <code>/sends/:id</code> (undo) · <code>/aliases</code> · <code>/identities</code> · <code>/imports/mailbox</code> · <code>/mail/attention</code> · <code>/search/mail</code> · <code>/stats/inbound</code> · <code>/gmail-mode</code></td><td><code>ws: mailbox</code> (new, changed, removed thread; draft sync)</td><td>M3</td></tr>
+      <tr><td><b>Audience</b></td><td><code>/v1/contacts</code> (+ timeline, bulk) · <code>/topics</code> · <code>/segments</code> (+ preview) · <code>/imports/contacts</code> · <code>/exports</code> · <code>/stats/audience</code></td><td>import progress</td><td>M4</td></tr>
+      <tr><td><b>Campaigns</b></td><td><code>/v1/campaigns</code> (+ audience preview, render, test, checks, schedule, pause, resume, cancel, report, recipients) · <code>/stats/engagement</code></td><td>campaign progress</td><td>M4</td></tr>
+      <tr><td><b>Automations</b></td><td><code>/v1/automations</code> (+ dry-run, publish, runs, summary) · <code>/runs/:id/exit|retry</code></td><td>run counts per node</td><td>M5</td></tr>
+      <tr><td><b>Settings and admin</b></td><td><code>/v1/members</code> · <code>/invites</code> · <code>/settings/compliance</code> · <code>/settings/ai</code> · <code>/integrations</code> · <code>/audit</code> · <code>/forms</code></td><td>—</td><td>M2–M6</td></tr>
+      <tr><td><b>Public</b></td><td><code>/u/:token</code> · <code>/p/:token</code> · <code>/c/:token</code> · <code>/f/:formId</code> · <code>/v/:token</code></td><td>—</td><td>M4</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid">
+    <div class="card"><span class="eyebrow">Definition of done, backend</span><h3>Every row works without a UI</h3><p>Each endpoint has a contract test against its Schema, a fixture response checked into <code>test/fixtures/api/</code>, and a <code>curl</code> example in the generated docs. The MCP server exposes the same operations, so an agent can drive the whole product before any screen exists.</p></div>
+    <div class="card"><span class="eyebrow">Definition of done, UI</span><h3>Every screen against fixtures, then live</h3><p>Each screen renders its empty, loading, error and full states from fixtures first, then against your real account. Each passes the responsive audit at phone, tablet and desktop widths.</p></div>
+    <div class="card"><span class="eyebrow">What this changes in the plan</span><h3>Read models the backend owes</h3><p>Several screens need precomputed views, not raw tables: per-day stats rollups (from the events Queue), the "needs you" attention query, segment counts, per-node automation counts and campaign ETAs. These are built in the backend phases, not bolted on when the UI arrives.</p></div>
+  </div>
+</section>
+
+<footer>
+  <span class="eyebrow">Related</span>
+  <ul>
+    <li><a href="email-platform.html">Email on Cloudflare: the plan</a> · <a href="platform-plan.html">Own-account deploys: the platform plan</a></li>
+    <li>Reputation thresholds are this account's active policy from Cloudflare <code>/email/sending/reputation</code>, read 16 Oct 2026. The 5 MiB, 50-recipient and 25 MiB limits are from Email Service limits, last updated 25 Sep 2026.</li>
+  </ul>
+</footer>
+
+</div>
+
+</body></html>
