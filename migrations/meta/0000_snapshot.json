@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bb4c254d-d795-4828-87d0-4d3f2c34729a",
+  "id": "76b08db4-6194-4595-b151-8ff424041f27",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "api_keys": {
@@ -918,6 +918,154 @@
           "name": "idempotency_keys_api_key_id_key_pk"
         }
       },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "inbound_messages": {
+      "name": "inbound_messages",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "raw_key": {
+          "name": "raw_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "size": {
+          "name": "size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "envelope_from": {
+          "name": "envelope_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "envelope_to": {
+          "name": "envelope_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "message_id": {
+          "name": "message_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "subject": {
+          "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "from_address": {
+          "name": "from_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resolution": {
+          "name": "resolution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "delivered_to": {
+          "name": "delivered_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "filed_at": {
+          "name": "filed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "inbound_messages_recipient": {
+          "name": "inbound_messages_recipient",
+          "columns": [
+            "sha256",
+            "envelope_to"
+          ],
+          "isUnique": true
+        },
+        "inbound_messages_status": {
+          "name": "inbound_messages_status",
+          "columns": [
+            "status",
+            "received_at"
+          ],
+          "isUnique": false
+        },
+        "inbound_messages_received": {
+          "name": "inbound_messages_received",
+          "columns": [
+            "received_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },

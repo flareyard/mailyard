@@ -850,6 +850,804 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/inbound": {
+      "get": {
+        "operationId": "inbound.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "received",
+                "filed",
+                "rejected",
+                "held",
+                "failed",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "messages": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "attempts": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "deliveredTo": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "envelopeFrom": {
+                            "type": "string",
+                          },
+                          "envelopeTo": {
+                            "type": "string",
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "filedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "fromAddress": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "mailboxIds": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "messageId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "receivedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "sha256": {
+                            "type": "string",
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "status": {
+                            "enum": [
+                              "received",
+                              "filed",
+                              "rejected",
+                              "held",
+                              "failed",
+                            ],
+                            "type": "string",
+                          },
+                          "subject": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "tag": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "via": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "mailbox",
+                                  "alias",
+                                  "group",
+                                  "catch_all",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "envelopeFrom",
+                          "envelopeTo",
+                          "messageId",
+                          "subject",
+                          "fromAddress",
+                          "size",
+                          "sha256",
+                          "via",
+                          "tag",
+                          "mailboxIds",
+                          "deliveredTo",
+                          "attempts",
+                          "error",
+                          "receivedAt",
+                          "filedAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "messages",
+                    "nextCursor",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "inbound",
+        ],
+      },
+    },
+    "/v1/inbound/{id}": {
+      "get": {
+        "operationId": "inbound.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attempts": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "deliveredTo": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "envelopeFrom": {
+                      "type": "string",
+                    },
+                    "envelopeTo": {
+                      "type": "string",
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "filedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fromAddress": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "mailboxIds": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "messageId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "receivedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "sha256": {
+                      "type": "string",
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "received",
+                        "filed",
+                        "rejected",
+                        "held",
+                        "failed",
+                      ],
+                      "type": "string",
+                    },
+                    "subject": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "tag": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "via": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "mailbox",
+                            "alias",
+                            "group",
+                            "catch_all",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "envelopeFrom",
+                    "envelopeTo",
+                    "messageId",
+                    "subject",
+                    "fromAddress",
+                    "size",
+                    "sha256",
+                    "via",
+                    "tag",
+                    "mailboxIds",
+                    "deliveredTo",
+                    "attempts",
+                    "error",
+                    "receivedAt",
+                    "filedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "inbound",
+        ],
+      },
+    },
+    "/v1/inbound/{id}/reprocess": {
+      "post": {
+        "operationId": "inbound.reprocess",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attempts": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "deliveredTo": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "envelopeFrom": {
+                      "type": "string",
+                    },
+                    "envelopeTo": {
+                      "type": "string",
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "filedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fromAddress": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "mailboxIds": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "messageId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "receivedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "sha256": {
+                      "type": "string",
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "received",
+                        "filed",
+                        "rejected",
+                        "held",
+                        "failed",
+                      ],
+                      "type": "string",
+                    },
+                    "subject": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "tag": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "via": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "mailbox",
+                            "alias",
+                            "group",
+                            "catch_all",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "envelopeFrom",
+                    "envelopeTo",
+                    "messageId",
+                    "subject",
+                    "fromAddress",
+                    "size",
+                    "sha256",
+                    "via",
+                    "tag",
+                    "mailboxIds",
+                    "deliveredTo",
+                    "attempts",
+                    "error",
+                    "receivedAt",
+                    "filedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "inbound",
+        ],
+      },
+    },
     "/v1/messages": {
       "get": {
         "operationId": "messages.list",
@@ -8186,6 +8984,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "insights",
+    },
+    {
+      "name": "inbound",
     },
   ],
 }

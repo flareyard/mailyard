@@ -651,6 +651,61 @@ export class InsightsApi extends HttpApiGroup.make("insights")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Inbound ledger: every message Email Routing handed us, and whether it reached its mailboxes
+// ---------------------------------------------------------------------------------------------
+
+const InboundStatus = Schema.Literals(["received", "filed", "rejected", "held", "failed"])
+
+export const InboundMessage = Schema.Struct({
+  id: Schema.String,
+  status: InboundStatus,
+  envelopeFrom: Schema.String,
+  envelopeTo: Schema.String,
+  messageId: Schema.NullOr(Schema.String),
+  subject: Schema.NullOr(Schema.String),
+  fromAddress: Schema.NullOr(Schema.String),
+  size: Schema.Number,
+  sha256: Schema.String,
+  via: Schema.NullOr(Schema.Literals(["mailbox", "alias", "group", "catch_all"])),
+  tag: Schema.NullOr(Schema.String),
+  mailboxIds: Schema.Array(Schema.String),
+  deliveredTo: Schema.Array(Schema.String),
+  attempts: Schema.Number,
+  error: Schema.NullOr(Schema.String),
+  receivedAt: Schema.Number,
+  filedAt: Schema.NullOr(Schema.Number),
+})
+
+export class InboundApi extends HttpApiGroup.make("inbound")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/inbound", {
+      query: {
+        status: Schema.optionalKey(InboundStatus),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      },
+      success: Schema.Struct({
+        messages: Schema.Array(InboundMessage),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("get", "/v1/inbound/:id", {
+      params: { id: Schema.String },
+      success: InboundMessage,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("reprocess", "/v1/inbound/:id/reprocess", {
+      params: { id: Schema.String },
+      success: InboundMessage,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailyard's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
@@ -661,4 +716,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(SettingsApi)
   .add(WebhooksApi)
   .add(InsightsApi)
+  .add(InboundApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

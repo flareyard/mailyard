@@ -1,10 +1,12 @@
 import { Layer } from "effect"
 import { Bindings, type Env } from "./Bindings.ts"
 import { SecretBox, WebhookQueue } from "./domain/webhooks.ts"
+import { InboundQueue } from "./inbound/pipeline.ts"
 import { BlobStore, Ids, Sender, SenderCloudflareWithSmtpFallback } from "./kit/index.ts"
 import { workerSmtpTransport } from "./kit/smtp-worker.ts"
 import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { Database } from "./services/Database.ts"
+import { Mailboxes } from "./services/Mailboxes.ts"
 import { SendQueue } from "./services/SendQueue.ts"
 
 /** Email Service with optional SMTP fallback, or the in-memory sender when MAILYARD_SENDER=memory. */
@@ -34,6 +36,8 @@ export const appLayer = (env: Env) => {
     Database.layer,
     SendQueue.layer,
     WebhookQueue.layer,
+    InboundQueue.layer,
+    Mailboxes.layer,
     SecretBox.layer,
     CloudflareEmail.layer,
     BlobStore.layerR2(env.STORE),

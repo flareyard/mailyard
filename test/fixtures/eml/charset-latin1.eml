@@ -1,0 +1,10 @@
+From: =?iso-8859-1?Q?Ren=E9e?= <renee@example.fr>
+To: sam@acme.test
+Subject: =?windows-1252?Q?Fa=E7ade_=96_r=E9vision?=
+Date: Fri, 16 Oct 2026 08:00:00 +0200
+Message-ID: <latin1@example.fr>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: quoted-printable
+
+Le caf=E9 est pr=EAt =E0 8h.

@@ -1,0 +1,18 @@
+From: broken@example.net
+To: sam@acme.test
+Subject: Broken but readable
+this line is not a header
+Message-ID: broken-without-brackets@example.net
+Date: not a date
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="never-closed"
+
+--never-closed
+Content-Type: text/plain; charset=x-unknown-charset
+
+The body still reads.
+--never-closed
+Content-Type: application/octet-stream; name="data.bin"
+Content-Transfer-Encoding: base64
+
+SGVsbG8*IHdvcmxk!!

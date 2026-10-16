@@ -392,3 +392,49 @@ export const webhookDeliveries = sqliteTable(
     index("webhook_deliveries_status").on(t.status),
   ],
 )
+
+/**
+ * Every message Email Routing handed to `email()`, one row per envelope recipient. The raw `.eml` is in
+ * R2 under `rawKey` before this row exists, so a row that never reaches `filed` can always be reprocessed.
+ */
+export const inboundMessages = sqliteTable(
+  "inbound_messages",
+  {
+    id: text("id").primaryKey(),
+    /** SHA-256 of the raw bytes; the same message to two recipients shares one R2 object. */
+    sha256: text("sha256").notNull(),
+    rawKey: text("raw_key").notNull(),
+    size: integer("size").notNull(),
+    envelopeFrom: text("envelope_from").notNull(),
+    envelopeTo: text("envelope_to").notNull(),
+    messageId: text("message_id"),
+    subject: text("subject"),
+    fromAddress: text("from_address"),
+    /**
+     * `received`: stored, not yet filed. `filed`: in every target mailbox. `rejected`: bounced at the door.
+     * `held`: stored, but no mailbox takes it any more. `failed`: an attempt broke; a retry job is queued.
+     */
+    status: text("status", { enum: ["received", "filed", "rejected", "held", "failed"] }).notNull(),
+    /** Where the recipient resolved to, fixed at first resolution so a retry files into the same mailboxes. */
+    resolution: text("resolution", { mode: "json" }).$type<{
+      readonly via: "mailbox" | "alias" | "group" | "catch_all"
+      readonly matched: { readonly id: string; readonly address: string }
+      readonly tag: string | null
+      readonly mailboxIds: ReadonlyArray<string>
+    }>(),
+    /** The mailbox ids the message is already in; a retry skips them. */
+    deliveredTo: text("delivered_to", { mode: "json" })
+      .$type<ReadonlyArray<string>>()
+      .notNull()
+      .default(sql`'[]'`),
+    attempts: integer("attempts").notNull().default(0),
+    error: text("error"),
+    receivedAt: integer("received_at").notNull(),
+    filedAt: integer("filed_at"),
+  },
+  (t) => [
+    uniqueIndex("inbound_messages_recipient").on(t.sha256, t.envelopeTo),
+    index("inbound_messages_status").on(t.status, t.receivedAt),
+    index("inbound_messages_received").on(t.receivedAt),
+  ],
+)

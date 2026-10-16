@@ -410,7 +410,7 @@ footer ul{margin:0;padding-left:1.1em;display:grid;gap:5px}
     <thead><tr><th>Primitive</th><th>Name</th><th>Job</th><th>Why this one</th></tr></thead>
     <tbody>
       <tr><td>Worker</td><td><code>api</code></td><td>Web app (static assets), REST API, Plunk-compatible API, MCP endpoint, unsubscribe pages</td><td>One deploy for the whole UI and API surface</td></tr>
-      <tr><td>Worker</td><td><code>inbound</code></td><td><code>email()</code> handler: store, parse, filter, file, fan out</td><td>Separate so a parsing bug can't take the UI down, with its own CPU budget</td></tr>
+      <tr><td>Worker</td><td><code>inbound</code></td><td><code>email()</code> handler: store, parse, filter, file, fan out</td><td>Shipped as the <code>email</code> export of the API Worker (2026-10-17): each invocation already gets its own CPU budget and failure isolation, and one Worker keeps one binding set for the OAuth deploy. <code>src/workers/inbound.ts</code> stands alone if it is ever split out.</td></tr>
       <tr><td>Worker</td><td><code>track</code></td><td>Open pixel and click redirect on its own hostname</td><td>Highest-volume path, kept tiny and cache-friendly</td></tr>
       <tr><td>Durable Object</td><td><code>MailboxDO</code> (one per mailbox)</td><td>Thread index, full-text search, flags, labels, drafts, live push, snooze and scheduled-send alarms</td><td>Natural isolation; a single writer per mailbox; hibernating WebSockets cost nothing while idle</td></tr>
       <tr><td>Durable Object</td><td><code>SendGovernorDO</code> (one per account)</td><td>Token bucket over the daily quota, per-recipient-domain pacing, pause switch</td><td>A global counter needs one writer</td></tr>
