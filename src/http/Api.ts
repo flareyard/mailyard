@@ -1,5 +1,8 @@
 import { Schema } from "effect"
-import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/http-api"
+import * as HttpApi from "effect/http-api/HttpApi"
+import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
+import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
+import * as OpenApi from "effect/http-api/OpenApi"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 
 export const Health = Schema.Struct({
