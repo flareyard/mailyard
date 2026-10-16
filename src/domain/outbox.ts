@@ -19,6 +19,7 @@ import { getBrand } from "./brand.ts"
 import { upsertContact } from "./contacts.ts"
 import { bumpDailyStat } from "./deliveryEvents.ts"
 import { resolveForSend } from "./templates.ts"
+import { emitSafely } from "./webhooks.ts"
 
 export interface Party {
   readonly email: string
@@ -209,6 +210,12 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
           .where(eq(messagesOut.id, id))
           .run(),
       )
+      yield* emitSafely("message.rejected", {
+        messageId: id,
+        recipient: contact.email,
+        reason: "SendSuppressed: recipient is on the suppression list",
+        attempts: 0,
+      })
       results.push({ contact, email: id, status: "rejected" })
       continue
     }
@@ -262,6 +269,13 @@ const attempt = Effect.fn("outbox.attempt")(function* (
       provider: "",
       column: "sent",
     })
+    yield* emitSafely("message.sent", {
+      messageId: id,
+      cfMessageId: outcome.success.messageId,
+      recipient: message.to[0]?.email ?? null,
+      subject: message.subject,
+      stream: stream?.stream ?? "transactional",
+    })
     return "sent"
   }
 
@@ -282,6 +296,13 @@ const attempt = Effect.fn("outbox.attempt")(function* (
     // Quota resets daily; anything else backs off exponentially from a minute.
     const delay = error._tag === "QuotaExceeded" ? 3600 : 60 * 2 ** (attempts - 1)
     yield* queue.enqueue({ messageId: id }, delay)
+    yield* emitSafely("message.deferred", {
+      messageId: id,
+      recipient: message.to[0]?.email ?? null,
+      reason: describe(error),
+      attempts,
+      retryInSeconds: delay,
+    })
     return "deferred"
   }
 
@@ -307,6 +328,12 @@ const attempt = Effect.fn("outbox.attempt")(function* (
       )
     }
   }
+  yield* emitSafely(status === "rejected" ? "message.rejected" : "message.failed", {
+    messageId: id,
+    recipient: message.to[0]?.email ?? null,
+    reason: describe(error),
+    attempts,
+  })
   return status
 })
 

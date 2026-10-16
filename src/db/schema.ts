@@ -351,3 +351,44 @@ export const idempotencyKeys = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.apiKeyId, t.key] }), index("idempotency_keys_expires").on(t.expiresAt)],
 )
+
+/** Where webhooks go. The signing secret is stored AES-GCM-encrypted under WEBHOOK_SIGNING_KEY. */
+export const webhookEndpoints = sqliteTable("webhook_endpoints", {
+  id: text("id").primaryKey(),
+  url: text("url").notNull(),
+  description: text("description"),
+  /** Event types this endpoint receives, or ["*"] for all. */
+  events: text("events", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+  secretCiphertext: text("secret_ciphertext").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  lastSuccessAt: integer("last_success_at"),
+  lastFailureAt: integer("last_failure_at"),
+  createdAt: createdAt(),
+  updatedAt: integer("updated_at").notNull(),
+})
+
+/** One attempt-tracked delivery of one event to one endpoint: the delivery log and the dead-letter store. */
+export const webhookDeliveries = sqliteTable(
+  "webhook_deliveries",
+  {
+    id: text("id").primaryKey(),
+    endpointId: text("endpoint_id")
+      .notNull()
+      .references(() => webhookEndpoints.id, { onDelete: "cascade" }),
+    eventId: text("event_id").notNull(),
+    eventType: text("event_type").notNull(),
+    payload: text("payload").notNull(),
+    status: text("status", { enum: ["pending", "succeeded", "retrying", "dead"] }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    lastStatusCode: integer("last_status_code"),
+    lastError: text("last_error"),
+    lastDurationMs: integer("last_duration_ms"),
+    lastAttemptAt: integer("last_attempt_at"),
+    nextAttemptAt: integer("next_attempt_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("webhook_deliveries_endpoint").on(t.endpointId, t.createdAt),
+    index("webhook_deliveries_status").on(t.status),
+  ],
+)

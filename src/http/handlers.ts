@@ -8,6 +8,7 @@ import { authenticate, type Caller, createKey, listKeys, revokeKey, type Scope }
 import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
 import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
+import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import type { SendQueue } from "../services/SendQueue.ts"
@@ -47,7 +48,9 @@ export const provideTo =
   (...args: Args) =>
     handler(...args).pipe(Effect.provideContext(context))
 
-export const appContext = Effect.context<Database | Bindings | BlobStore | Ids | Sender | SendQueue>()
+export const appContext = Effect.context<
+  Database | Bindings | BlobStore | Ids | Sender | SendQueue | WebhookQueue | SecretBox
+>()
 
 export const requireScope = (scope: Scope) =>
   Effect.gen(function* () {

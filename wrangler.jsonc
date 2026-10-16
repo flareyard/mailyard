@@ -9,7 +9,10 @@
   "r2_buckets": [{ "binding": "STORE", "bucket_name": "mailflare-store" }],
   "send_email": [{ "name": "EMAIL" }],
   "queues": {
-    "producers": [{ "binding": "SEND_QUEUE", "queue": "mailflare-send" }],
+    "producers": [
+      { "binding": "SEND_QUEUE", "queue": "mailflare-send" },
+      { "binding": "WEBHOOK_QUEUE", "queue": "mailflare-webhooks" }
+    ],
     "consumers": [
       {
         "queue": "mailflare-send",

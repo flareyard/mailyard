@@ -42,6 +42,8 @@ describe("D1 schema", () => {
       "template_versions",
       "templates",
       "topics",
+      "webhook_deliveries",
+      "webhook_endpoints",
     ])
   })
 })
@@ -68,6 +70,12 @@ describe("GET /openapi.json", () => {
       "/v1/templates/{id}/render",
       "/v1/templates/{id}/rollback",
       "/v1/track",
+      "/v1/webhooks",
+      "/v1/webhooks/{id}",
+      "/v1/webhooks/{id}/deliveries",
+      "/v1/webhooks/{id}/deliveries/{deliveryId}/replay",
+      "/v1/webhooks/{id}/rotate-secret",
+      "/v1/webhooks/{id}/test",
     ])
   })
 

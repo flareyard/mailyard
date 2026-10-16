@@ -7,6 +7,9 @@ export interface Env {
   readonly DB: D1Database
   readonly STORE: R2Bucket
   readonly SEND_QUEUE: Queue<SendJob>
+  readonly WEBHOOK_QUEUE: Queue<{ readonly deliveryId: string }>
+  /** Deploy-time secret that encrypts webhook endpoint secrets at rest (manifest secret). */
+  readonly WEBHOOK_SIGNING_KEY?: string
   /** Cloudflare Email Service. Absent only when MAILFLARE_SENDER says otherwise (tests, local dev). */
   readonly EMAIL?: SendEmailBinding
   /** Root key generated at deploy time (manifest secret ADMIN_KEY). */

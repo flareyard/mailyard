@@ -3,6 +3,7 @@ import { events } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { upsertContact } from "./contacts.ts"
+import { emitSafely } from "./webhooks.ts"
 
 export class ReservedEvent extends Schema.TaggedError<ReservedEvent>()("ReservedEvent", {
   event: Schema.String,
@@ -37,5 +38,11 @@ export const track = Effect.fn("events.track")(function* (input: {
       .values({ id, contactId: contact.id, name: input.event, data: input.data ?? null, at })
       .run(),
   )
+  yield* emitSafely("event.tracked", {
+    contactId: contact.id,
+    email: contact.email,
+    event: input.event,
+    data: input.data ?? null,
+  })
   return { contact: contact.id, event: id, timestamp: new Date(at).toISOString() }
 })

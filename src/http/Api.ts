@@ -391,6 +391,117 @@ export class SettingsApi extends HttpApiGroup.make("settings")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Webhooks (Standard Webhooks signatures)
+// ---------------------------------------------------------------------------------------------
+
+export const WebhookEndpoint = Schema.Struct({
+  id: Schema.String,
+  url: Schema.String,
+  description: Schema.NullOr(Schema.String),
+  events: Schema.Array(Schema.String),
+  enabled: Schema.Boolean,
+  lastSuccessAt: Schema.NullOr(Schema.Number),
+  lastFailureAt: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+const DeliveryStatus = Schema.Literals(["pending", "succeeded", "retrying", "dead"])
+
+export const WebhookDelivery = Schema.Struct({
+  id: Schema.String,
+  eventId: Schema.String,
+  eventType: Schema.String,
+  status: DeliveryStatus,
+  attempts: Schema.Number,
+  lastStatusCode: Schema.NullOr(Schema.Number),
+  lastError: Schema.NullOr(Schema.String),
+  lastDurationMs: Schema.NullOr(Schema.Number),
+  lastAttemptAt: Schema.NullOr(Schema.Number),
+  nextAttemptAt: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+  payload: Schema.Unknown,
+})
+
+const WithSecret = Schema.Struct({
+  endpoint: WebhookEndpoint,
+  /** `whsec_…`, shown here once. Verify signatures with any Standard Webhooks library. */
+  secret: Schema.String,
+})
+
+export class WebhooksApi extends HttpApiGroup.make("webhooks")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/webhooks", {
+      success: Schema.Struct({
+        webhooks: Schema.Array(WebhookEndpoint),
+        events: Schema.Array(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/webhooks", {
+      payload: Schema.Struct({
+        url: Schema.String,
+        description: Schema.optionalKey(Schema.String),
+        events: Schema.NonEmptyArray(Schema.String),
+      }),
+      success: WithSecret,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("get", "/v1/webhooks/:id", {
+      params: { id: Schema.String },
+      success: WebhookEndpoint,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/webhooks/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        url: Schema.optionalKey(Schema.String),
+        description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        events: Schema.optionalKey(Schema.NonEmptyArray(Schema.String)),
+        enabled: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: WebhookEndpoint,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/webhooks/:id", {
+      params: { id: Schema.String },
+      success: WebhookEndpoint,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("rotateSecret", "/v1/webhooks/:id/rotate-secret", {
+      params: { id: Schema.String },
+      success: WithSecret,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("deliveries", "/v1/webhooks/:id/deliveries", {
+      params: { id: Schema.String },
+      query: {
+        status: Schema.optionalKey(DeliveryStatus),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+      },
+      success: Schema.Struct({
+        deliveries: Schema.Array(WebhookDelivery),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("replay", "/v1/webhooks/:id/deliveries/:deliveryId/replay", {
+      params: { id: Schema.String, deliveryId: Schema.String },
+      success: Schema.Struct({ id: Schema.String, status: DeliveryStatus }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("test", "/v1/webhooks/:id/test", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ deliveryId: Schema.String, eventId: Schema.String }),
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailflare's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailflare")
   .add(SystemApi)
@@ -399,4 +510,5 @@ export class MailApi extends HttpApi.make("mailflare")
   .add(MessagesApi)
   .add(TemplatesApi)
   .add(SettingsApi)
+  .add(WebhooksApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailflare API" })) {}
