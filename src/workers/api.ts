@@ -11,6 +11,7 @@ import {
   MessagesHandlers,
   SystemHandlers,
 } from "../http/handlers.ts"
+import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { appLayer } from "../layers.ts"
@@ -25,6 +26,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     TemplatesHandlers,
     SettingsHandlers,
     WebhooksHandlers,
+    InsightsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),

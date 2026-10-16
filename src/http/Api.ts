@@ -502,6 +502,152 @@ export class WebhooksApi extends HttpApiGroup.make("webhooks")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Insights: what the Overview screen shows (docs/email-ui.html#overview)
+// ---------------------------------------------------------------------------------------------
+
+const Range = Schema.Literals(["24h", "7d", "30d"])
+const Num = Schema.Number
+const NullableNum = Schema.NullOr(Schema.Number)
+
+export const Totals = Schema.Struct({
+  sent: Num,
+  delivered: Num,
+  deferred: Num,
+  bouncedHard: Num,
+  bouncedSoft: Num,
+  complained: Num,
+  rejected: Num,
+  failed: Num,
+})
+
+export const Rates = Schema.Struct({
+  /** True under the minimum volume; the rates are then null rather than misleading. */
+  insufficientData: Schema.Boolean,
+  minimumSends: Num,
+  bounceRate: NullableNum,
+  complaintRate: NullableNum,
+  rejectionRate: NullableNum,
+  deliveryRate: NullableNum,
+})
+
+const ThresholdSchema = Schema.Struct({ warning_at: Num, at_risk_at: Num, minimum_denominator: Num })
+const Level = Schema.Literals(["ok", "warning", "at-risk", "insufficient-data"])
+
+export class InsightsApi extends HttpApiGroup.make("insights")
+  .add(
+    HttpApiEndpoint.get("health", "/v1/health", {
+      success: Schema.Struct({
+        status: Schema.Literals(["ok", "warn", "fail"]),
+        checks: Schema.Array(
+          Schema.Struct({
+            name: Schema.String,
+            status: Schema.Literals(["ok", "warn", "fail", "unknown"]),
+            detail: Schema.String,
+          }),
+        ),
+        checkedAt: Schema.String,
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("usage", "/v1/usage", {
+      success: Schema.Struct({
+        today: Schema.Struct({
+          sent: Num,
+          quota: NullableNum,
+          remaining: NullableNum,
+          overQuota: Schema.NullOr(Schema.Boolean),
+          resetsAt: Schema.NullOr(Schema.String),
+          source: Schema.Literals(["cloudflare", "cloudflare-unreachable", "not-connected"]),
+        }),
+        month: Schema.Struct({
+          from: Schema.String,
+          billed: Num,
+          included: Num,
+          overage: Num,
+          costUsd: Num,
+          projectedBilled: Num,
+          projectedCostUsd: Num,
+        }),
+        pricing: Schema.Struct({ includedPerMonth: Num, usdPerThousand: Num, measuredAt: Schema.String }),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("forecast", "/v1/usage/forecast", {
+      query: {
+        recipients: Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 10_000_000 })),
+      },
+      success: Schema.Union([
+        Schema.Struct({ recipients: Num, possible: Schema.Literal(false), reason: Schema.String }),
+        Schema.Struct({
+          recipients: Num,
+          possible: Schema.Literal(true),
+          quota: Num,
+          sendableToday: Num,
+          additionalDays: Num,
+          finishesBy: Schema.NullOr(Schema.String),
+          cost: Schema.Struct({ billedAfter: Num, extraUsd: Num }),
+        }),
+      ]),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("delivery", "/v1/stats/delivery", {
+      query: { range: Schema.optionalKey(Range) },
+      success: Schema.Struct({ range: Range, from: Schema.String, totals: Totals, rates: Rates }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("volume", "/v1/stats/volume", {
+      query: { range: Schema.optionalKey(Range) },
+      success: Schema.Struct({
+        range: Range,
+        days: Schema.Array(
+          Schema.Struct({ day: Schema.String, byStream: Schema.Record(Schema.String, Num) }),
+        ),
+        streams: Schema.Array(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("providers", "/v1/stats/providers", {
+      query: { range: Schema.optionalKey(Range) },
+      success: Schema.Struct({
+        range: Range,
+        providers: Schema.Array(
+          Schema.Struct({
+            provider: Schema.String,
+            delivered: Num,
+            deferred: Num,
+            bounced: Num,
+            complained: Num,
+            total: Num,
+          }),
+        ),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("reputation", "/v1/reputation", {
+      success: Schema.Struct({
+        status: Schema.NullOr(Schema.String),
+        statusSince: Schema.NullOr(Schema.String),
+        graceStartedAt: Schema.NullOr(Schema.String),
+        evaluatedAt: Schema.NullOr(Schema.String),
+        source: Schema.Literals(["cloudflare", "not-connected"]),
+        policySource: Schema.Literals(["account", "measured-2026-10-16"]),
+        policy: Schema.Struct({
+          customer_bounce: ThresholdSchema,
+          complaint: ThresholdSchema,
+          spam_rejection: ThresholdSchema,
+          suspension_after_hours: Num,
+        }),
+        window: Schema.Literal("30d"),
+        totals: Totals,
+        rates: Rates,
+        levels: Schema.Struct({ bounce: Level, complaint: Level, spamRejection: Level }),
+      }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailflare's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailflare")
   .add(SystemApi)
@@ -511,4 +657,5 @@ export class MailApi extends HttpApi.make("mailflare")
   .add(TemplatesApi)
   .add(SettingsApi)
   .add(WebhooksApi)
+  .add(InsightsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailflare API" })) {}

@@ -756,6 +756,100 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/health": {
+      "get": {
+        "operationId": "insights.health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "checkedAt": {
+                      "type": "string",
+                    },
+                    "checks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "detail": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "status": {
+                            "enum": [
+                              "ok",
+                              "warn",
+                              "fail",
+                              "unknown",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "status",
+                          "detail",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "status": {
+                      "enum": [
+                        "ok",
+                        "warn",
+                        "fail",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "status",
+                    "checks",
+                    "checkedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "insights",
+        ],
+      },
+    },
     "/v1/messages": {
       "get": {
         "operationId": "messages.list",
@@ -1353,6 +1447,617 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/reputation": {
+      "get": {
+        "operationId": "insights.reputation",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "evaluatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "graceStartedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "levels": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bounce": {
+                          "enum": [
+                            "ok",
+                            "warning",
+                            "at-risk",
+                            "insufficient-data",
+                          ],
+                          "type": "string",
+                        },
+                        "complaint": {
+                          "enum": [
+                            "ok",
+                            "warning",
+                            "at-risk",
+                            "insufficient-data",
+                          ],
+                          "type": "string",
+                        },
+                        "spamRejection": {
+                          "enum": [
+                            "ok",
+                            "warning",
+                            "at-risk",
+                            "insufficient-data",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "bounce",
+                        "complaint",
+                        "spamRejection",
+                      ],
+                      "type": "object",
+                    },
+                    "policy": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "complaint": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "at_risk_at": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "minimum_denominator": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "warning_at": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "warning_at",
+                            "at_risk_at",
+                            "minimum_denominator",
+                          ],
+                          "type": "object",
+                        },
+                        "customer_bounce": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "at_risk_at": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "minimum_denominator": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "warning_at": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "warning_at",
+                            "at_risk_at",
+                            "minimum_denominator",
+                          ],
+                          "type": "object",
+                        },
+                        "spam_rejection": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "at_risk_at": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "minimum_denominator": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "warning_at": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "warning_at",
+                            "at_risk_at",
+                            "minimum_denominator",
+                          ],
+                          "type": "object",
+                        },
+                        "suspension_after_hours": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "customer_bounce",
+                        "complaint",
+                        "spam_rejection",
+                        "suspension_after_hours",
+                      ],
+                      "type": "object",
+                    },
+                    "policySource": {
+                      "enum": [
+                        "account",
+                        "measured-2026-10-16",
+                      ],
+                      "type": "string",
+                    },
+                    "rates": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bounceRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "complaintRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "deliveryRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "insufficientData": {
+                          "type": "boolean",
+                        },
+                        "minimumSends": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "rejectionRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "insufficientData",
+                        "minimumSends",
+                        "bounceRate",
+                        "complaintRate",
+                        "rejectionRate",
+                        "deliveryRate",
+                      ],
+                      "type": "object",
+                    },
+                    "source": {
+                      "enum": [
+                        "cloudflare",
+                        "not-connected",
+                      ],
+                      "type": "string",
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "statusSince": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "totals": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bouncedHard": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "bouncedSoft": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "complained": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "deferred": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "delivered": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "failed": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "rejected": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "sent": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "sent",
+                        "delivered",
+                        "deferred",
+                        "bouncedHard",
+                        "bouncedSoft",
+                        "complained",
+                        "rejected",
+                        "failed",
+                      ],
+                      "type": "object",
+                    },
+                    "window": {
+                      "enum": [
+                        "30d",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "status",
+                    "statusSince",
+                    "graceStartedAt",
+                    "evaluatedAt",
+                    "source",
+                    "policySource",
+                    "policy",
+                    "window",
+                    "totals",
+                    "rates",
+                    "levels",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "insights",
+        ],
+      },
+    },
     "/v1/send": {
       "post": {
         "operationId": "actions.send",
@@ -1854,6 +2559,628 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "tags": [
           "settings",
+        ],
+      },
+    },
+    "/v1/stats/delivery": {
+      "get": {
+        "operationId": "insights.delivery",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "enum": [
+                "24h",
+                "7d",
+                "30d",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                    },
+                    "range": {
+                      "enum": [
+                        "24h",
+                        "7d",
+                        "30d",
+                      ],
+                      "type": "string",
+                    },
+                    "rates": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bounceRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "complaintRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "deliveryRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "insufficientData": {
+                          "type": "boolean",
+                        },
+                        "minimumSends": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "rejectionRate": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "insufficientData",
+                        "minimumSends",
+                        "bounceRate",
+                        "complaintRate",
+                        "rejectionRate",
+                        "deliveryRate",
+                      ],
+                      "type": "object",
+                    },
+                    "totals": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bouncedHard": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "bouncedSoft": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "complained": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "deferred": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "delivered": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "failed": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "rejected": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "sent": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "sent",
+                        "delivered",
+                        "deferred",
+                        "bouncedHard",
+                        "bouncedSoft",
+                        "complained",
+                        "rejected",
+                        "failed",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "range",
+                    "from",
+                    "totals",
+                    "rates",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "insights",
+        ],
+      },
+    },
+    "/v1/stats/providers": {
+      "get": {
+        "operationId": "insights.providers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "enum": [
+                "24h",
+                "7d",
+                "30d",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "providers": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "bounced": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "complained": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "deferred": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "delivered": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "provider": {
+                            "type": "string",
+                          },
+                          "total": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "provider",
+                          "delivered",
+                          "deferred",
+                          "bounced",
+                          "complained",
+                          "total",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "range": {
+                      "enum": [
+                        "24h",
+                        "7d",
+                        "30d",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "range",
+                    "providers",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "insights",
+        ],
+      },
+    },
+    "/v1/stats/volume": {
+      "get": {
+        "operationId": "insights.volume",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "enum": [
+                "24h",
+                "7d",
+                "30d",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "days": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "byStream": {
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "type": "object",
+                          },
+                          "day": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "day",
+                          "byStream",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "range": {
+                      "enum": [
+                        "24h",
+                        "7d",
+                        "30d",
+                      ],
+                      "type": "string",
+                    },
+                    "streams": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "range",
+                    "days",
+                    "streams",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "insights",
         ],
       },
     },
@@ -4686,6 +6013,535 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/usage": {
+      "get": {
+        "operationId": "insights.usage",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "month": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "billed": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "costUsd": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "from": {
+                          "type": "string",
+                        },
+                        "included": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "overage": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "projectedBilled": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "projectedCostUsd": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "from",
+                        "billed",
+                        "included",
+                        "overage",
+                        "costUsd",
+                        "projectedBilled",
+                        "projectedCostUsd",
+                      ],
+                      "type": "object",
+                    },
+                    "pricing": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "includedPerMonth": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "measuredAt": {
+                          "type": "string",
+                        },
+                        "usdPerThousand": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "includedPerMonth",
+                        "usdPerThousand",
+                        "measuredAt",
+                      ],
+                      "type": "object",
+                    },
+                    "today": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "overQuota": {
+                          "anyOf": [
+                            {
+                              "type": "boolean",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "quota": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "remaining": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "resetsAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "sent": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "source": {
+                          "enum": [
+                            "cloudflare",
+                            "cloudflare-unreachable",
+                            "not-connected",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "sent",
+                        "quota",
+                        "remaining",
+                        "overQuota",
+                        "resetsAt",
+                        "source",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "today",
+                    "month",
+                    "pricing",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "insights",
+        ],
+      },
+    },
+    "/v1/usage/forecast": {
+      "get": {
+        "operationId": "insights.forecast",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "recipients",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "possible": {
+                          "enum": [
+                            false,
+                          ],
+                          "type": "boolean",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                        "recipients": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "recipients",
+                        "possible",
+                        "reason",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "additionalDays": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "cost": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "billedAfter": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "extraUsd": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "billedAfter",
+                            "extraUsd",
+                          ],
+                          "type": "object",
+                        },
+                        "finishesBy": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "possible": {
+                          "enum": [
+                            true,
+                          ],
+                          "type": "boolean",
+                        },
+                        "quota": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "recipients": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "sendableToday": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "recipients",
+                        "possible",
+                        "quota",
+                        "sendableToday",
+                        "additionalDays",
+                        "finishesBy",
+                        "cost",
+                      ],
+                      "type": "object",
+                    },
+                  ],
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "insights",
+        ],
+      },
+    },
     "/v1/webhooks": {
       "get": {
         "operationId": "webhooks.list",
@@ -6327,6 +8183,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "webhooks",
+    },
+    {
+      "name": "insights",
     },
   ],
 }

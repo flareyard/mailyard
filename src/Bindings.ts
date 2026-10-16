@@ -16,6 +16,9 @@ export interface Env {
   readonly ADMIN_KEY?: string
   /** `memory` swaps Email Service for the in-memory sender: tests and local development only. */
   readonly MAILFLARE_SENDER?: "cloudflare" | "memory"
+  /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
+  readonly CLOUDFLARE_ACCOUNT_ID?: string
+  readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string
   /** Used when a send names no sender and its template has none. */
   readonly DEFAULT_FROM?: string
   /** Optional SMTP fallback when Email Service can't take a message. */
