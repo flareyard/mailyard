@@ -1,0 +1,26 @@
+{
+  "name": "@flareyard/mail",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "flareyard-manifest cloudflare-app.json && vitest run",
+    "dev": "wrangler dev",
+    "db:generate": "drizzle-kit generate",
+    "manifest": "flareyard-manifest cloudflare-app.json"
+  },
+  "dependencies": {
+    "@flareyard/kit": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "effect": "4.0.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.4",
+    "@cloudflare/workers-types": "5.20261016.1",
+    "@flareyard/manifest": "workspace:*",
+    "drizzle-kit": "0.31.11",
+    "vitest": "5.0.5",
+    "wrangler": "4.151.1"
+  }
+}

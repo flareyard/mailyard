@@ -1,0 +1,39 @@
+{
+  "manifestVersion": 1,
+  "id": "mail",
+  "name": "Mail",
+  "description": "Inboxes, transactional email, contacts, campaigns and automations on your own Cloudflare account.",
+  "version": "0.1.0",
+  "stack": "alchemy.run.ts",
+  "plan": "workers-paid",
+  "scopes": {
+    "required": [
+      {
+        "scope": "workers-platform.write",
+        "why": "Deploy the app's Workers, Durable Objects, Workflows and Queues"
+      },
+      { "scope": "d1.write", "why": "Store contacts, campaigns, templates and the delivery ledger" },
+      { "scope": "r2.write", "why": "Store raw messages, attachments, uploads and exports" },
+      { "scope": "email-sending.write", "why": "Send mail from your domains" },
+      { "scope": "email-routing.write", "why": "Receive mail for your domains in your inboxes" }
+    ],
+    "optional": [
+      { "scope": "dns.write", "why": "Write SPF, DKIM, DMARC and MX records for you", "enables": "domain" }
+    ]
+  },
+  "secrets": [
+    { "name": "UNSUBSCRIBE_KEY", "generate": "random-32" },
+    { "name": "WEBHOOK_SIGNING_KEY", "generate": "random-32" },
+    {
+      "name": "SMTP_PASSWORD",
+      "ask": "Password for an SMTP mailbox used only as a fallback when Email Service is unavailable",
+      "optional": true
+    }
+  ],
+  "domain": { "supported": true, "suggest": "mail" },
+  "health": "/healthz",
+  "cost": {
+    "typicalMonthlyUsd": "$5 plan; 3,000 emails a month included, then $0.35 per 1,000 (Email Service pricing, 2026-10-16)"
+  },
+  "upgrade": { "migrations": "drizzle", "notes": "CHANGELOG.md" }
+}
