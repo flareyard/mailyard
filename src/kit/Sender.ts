@@ -12,6 +12,20 @@ export const Address = Schema.Struct({
 })
 export type Address = typeof Address.Type
 
+/** Cloudflare Email Service accepts at most 32 attachments per message. */
+export const MAX_ATTACHMENTS = 32
+
+export const Attachment = Schema.Struct({
+  filename: Schema.NonEmptyString,
+  /** MIME type, e.g. "application/pdf". */
+  type: Schema.NonEmptyString,
+  content: Schema.Uint8Array,
+  disposition: Schema.Literals(["attachment", "inline"]),
+  /** For inline images referenced as cid: in the HTML. */
+  contentId: Schema.optionalKey(Schema.String),
+})
+export type Attachment = typeof Attachment.Type
+
 export const Outgoing = Schema.Struct({
   from: Address,
   to: Schema.NonEmptyArray(Address),
@@ -22,6 +36,7 @@ export const Outgoing = Schema.Struct({
   html: Schema.optionalKey(Schema.String),
   text: Schema.optionalKey(Schema.String),
   headers: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  attachments: Schema.optionalKey(Schema.Array(Attachment)),
 })
 export type Outgoing = typeof Outgoing.Type
 
@@ -54,6 +69,12 @@ export class InvalidMessage extends Schema.TaggedError<InvalidMessage>()("Invali
 
 export type SendError = SendRejected | SendDeferred | SendSuppressed | QuotaExceeded | InvalidMessage
 
+/** Errors worth handing to another transport: the message is fine, this provider can't take it now. */
+export const isProviderProblem = (e: SendError): boolean =>
+  e._tag === "SendDeferred" ||
+  e._tag === "QuotaExceeded" ||
+  (e._tag === "SendRejected" && e.code.startsWith("E_SENDER_"))
+
 export interface SendResult {
   readonly messageId: string
 }
@@ -61,23 +82,37 @@ export interface SendResult {
 const recipientCount = (m: Outgoing) => m.to.length + (m.cc?.length ?? 0) + (m.bcc?.length ?? 0)
 
 const encoder = new TextEncoder()
+/**
+ * A lower bound on the MIME size: bodies, subject and attachments (base64 grows them by a third).
+ * Good enough to refuse a message that can't fit before it costs a provider call.
+ */
 const approximateSize = (m: Outgoing) =>
-  encoder.encode(m.html ?? "").length + encoder.encode(m.text ?? "").length + encoder.encode(m.subject).length
+  encoder.encode(m.html ?? "").length +
+  encoder.encode(m.text ?? "").length +
+  encoder.encode(m.subject).length +
+  (m.attachments ?? []).reduce((total, a) => total + Math.ceil(a.content.length / 3) * 4, 0)
+
+const HEADER_NAME = /^[!-9;-~]+$/
 
 /** Checks the limits Email Service enforces, so callers get a typed error instead of a provider rejection. */
 export const validate = (m: Outgoing): Effect.Effect<Outgoing, InvalidMessage> => {
-  if (!m.html && !m.text)
-    return Effect.fail(new InvalidMessage({ reason: "A message needs an html or text body." }))
+  const invalid = (reason: string) => Effect.fail(new InvalidMessage({ reason }))
+  if (!m.html && !m.text) return invalid("A message needs an html or text body.")
   const count = recipientCount(m)
-  if (count > MAX_RECIPIENTS) {
-    return Effect.fail(new InvalidMessage({ reason: `${count} recipients; the limit is ${MAX_RECIPIENTS}.` }))
+  if (count > MAX_RECIPIENTS) return invalid(`${count} recipients; the limit is ${MAX_RECIPIENTS}.`)
+  const attachments = m.attachments?.length ?? 0
+  if (attachments > MAX_ATTACHMENTS)
+    return invalid(`${attachments} attachments; the limit is ${MAX_ATTACHMENTS}.`)
+  for (const [name, value] of Object.entries(m.headers ?? {})) {
+    if (!HEADER_NAME.test(name))
+      return invalid(`Header name ${JSON.stringify(name)} is not a valid header name.`)
+    // A CR or LF in a value would let it inject extra headers into the message.
+    if (/[\r\n]/.test(value)) return invalid(`Header ${name} contains a line break.`)
   }
+  if (/[\r\n]/.test(m.subject)) return invalid("The subject contains a line break.")
   const size = approximateSize(m)
-  if (size > MAX_MESSAGE_BYTES) {
-    return Effect.fail(
-      new InvalidMessage({ reason: `Message is ${size} bytes; the limit is ${MAX_MESSAGE_BYTES}.` }),
-    )
-  }
+  if (size > MAX_MESSAGE_BYTES)
+    return invalid(`Message is about ${size} bytes; the limit is ${MAX_MESSAGE_BYTES}.`)
   return Effect.succeed(m)
 }
 
