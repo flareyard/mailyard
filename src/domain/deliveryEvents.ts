@@ -1,0 +1,239 @@
+import { Ids } from "@flareyard/kit"
+import { eq, sql } from "drizzle-orm"
+import { Effect, Schema } from "effect"
+import { contacts, dailyStats, events, messagesOut, processedEvents, suppressions } from "../db/schema.ts"
+import { Database } from "../services/Database.ts"
+
+/**
+ * Email Sending lifecycle events, as published to a Queue by an event subscription
+ * (developers.cloudflare.com/email-service/reference/event-subscriptions, read 2026-10-16).
+ * Unknown fields are ignored, so a schema version bump that only adds fields doesn't break us.
+ */
+const Delivery = Schema.Struct({
+  status: Schema.String,
+  provider: Schema.optionalKey(Schema.String),
+  deliveryTimeMs: Schema.optionalKey(Schema.Number),
+  smtpStatusCode: Schema.optionalKey(Schema.String),
+  smtpEnhancedStatusCode: Schema.optionalKey(Schema.String),
+  smtpResponse: Schema.optionalKey(Schema.String),
+})
+
+export const EmailSendingEvent = Schema.Struct({
+  type: Schema.Literals([
+    "cf.email.sending.message.delivered",
+    "cf.email.sending.message.deferred",
+    "cf.email.sending.message.bounced",
+    "cf.email.sending.message.failed",
+    "cf.email.sending.message.rejected",
+    "cf.email.sending.message.complained",
+  ]),
+  source: Schema.Struct({
+    type: Schema.String,
+    zoneId: Schema.optionalKey(Schema.String),
+    domain: Schema.String,
+  }),
+  payload: Schema.Struct({
+    eventId: Schema.String,
+    messageId: Schema.String,
+    sender: Schema.optionalKey(Schema.String),
+    recipient: Schema.String,
+    subject: Schema.optionalKey(Schema.String),
+    terminal: Schema.optionalKey(Schema.Boolean),
+    delivery: Delivery,
+    bounce: Schema.optionalKey(
+      Schema.Struct({
+        type: Schema.Literals(["hard", "soft"]),
+        classification: Schema.optionalKey(Schema.String),
+        reason: Schema.optionalKey(Schema.String),
+      }),
+    ),
+    failure: Schema.optionalKey(Schema.Struct({ reason: Schema.String })),
+    complaint: Schema.optionalKey(Schema.Struct({ type: Schema.String })),
+  }),
+  metadata: Schema.Struct({
+    eventTimestamp: Schema.String,
+    eventSchemaVersion: Schema.optionalKey(Schema.Number),
+  }),
+})
+export type EmailSendingEvent = typeof EmailSendingEvent.Type
+
+type Status = (typeof messagesOut.$inferSelect)["status"]
+
+const KIND = {
+  "cf.email.sending.message.delivered": "delivered",
+  "cf.email.sending.message.deferred": "deferred",
+  "cf.email.sending.message.bounced": "bounced",
+  "cf.email.sending.message.failed": "failed",
+  "cf.email.sending.message.rejected": "rejected",
+  "cf.email.sending.message.complained": "complained",
+} as const satisfies Record<EmailSendingEvent["type"], Status>
+
+/**
+ * Events can arrive out of order. A message only moves forward: a late `deferred` never overwrites
+ * `delivered`, and a complaint (which follows delivery) overrides everything.
+ */
+const RANK: Record<Status, number> = {
+  queued: 0,
+  sent: 1,
+  deferred: 2,
+  delivered: 3,
+  failed: 4,
+  rejected: 4,
+  bounced: 4,
+  complained: 5,
+}
+
+const STAT_COLUMN = {
+  delivered: dailyStats.delivered,
+  deferred: dailyStats.deferred,
+  failed: dailyStats.failed,
+  rejected: dailyStats.rejected,
+  complained: dailyStats.complained,
+} as const
+
+/** Adds one to a daily counter, creating the day's row for this stream and provider if needed. */
+export const bumpDailyStat = Effect.fn("stats.bump")(function* (input: {
+  readonly day: string
+  readonly stream: string
+  readonly provider: string
+  readonly column:
+    | "sent"
+    | "delivered"
+    | "deferred"
+    | "bouncedHard"
+    | "bouncedSoft"
+    | "complained"
+    | "rejected"
+    | "failed"
+}) {
+  const database = yield* Database
+  const column = {
+    sent: dailyStats.sent,
+    bouncedHard: dailyStats.bouncedHard,
+    bouncedSoft: dailyStats.bouncedSoft,
+    ...STAT_COLUMN,
+  }[input.column]
+  yield* database.query("stats.bump", (db) =>
+    db
+      .insert(dailyStats)
+      .values({ day: input.day, stream: input.stream, provider: input.provider, [input.column]: 1 })
+      .onConflictDoUpdate({
+        target: [dailyStats.day, dailyStats.stream, dailyStats.provider],
+        set: { [input.column]: sql`${column} + 1` },
+      })
+      .run(),
+  )
+})
+
+export type Outcome = "duplicate" | "applied" | "applied-unmatched"
+
+/**
+ * Applies one Email Sending event: the delivery ledger, the daily stats, the contact's timeline, and
+ * — for a hard bounce or a complaint — the suppression list and the contact's status. Each event id
+ * is applied once, however often the queue redelivers it.
+ */
+export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: EmailSendingEvent) {
+  const database = yield* Database
+  const { payload } = event
+  const at = Date.parse(event.metadata.eventTimestamp) || Date.now()
+  const first = yield* database.query("processedEvents.insert", (db) =>
+    db
+      .insert(processedEvents)
+      .values({ eventId: payload.eventId, at })
+      .onConflictDoNothing()
+      .returning()
+      .get(),
+  )
+  if (!first) return "duplicate" satisfies Outcome as Outcome
+
+  const kind = KIND[event.type]
+  const recipient = payload.recipient.toLowerCase()
+  const row = yield* database.query("messagesOut.byCf", (db) =>
+    db.select().from(messagesOut).where(eq(messagesOut.cfMessageId, payload.messageId)).get(),
+  )
+
+  if (row && RANK[kind] >= RANK[row.status] && !(kind === "deferred" && row.status === "deferred")) {
+    yield* database.query("messagesOut.event", (db) =>
+      db
+        .update(messagesOut)
+        .set({
+          status: kind,
+          bounceType: payload.bounce?.type ?? row.bounceType,
+          provider: payload.delivery.provider ?? row.provider,
+          smtpResponse: payload.delivery.smtpResponse ?? payload.failure?.reason ?? row.smtpResponse,
+          updatedAt: at,
+        })
+        .where(eq(messagesOut.id, row.id))
+        .run(),
+    )
+  }
+
+  yield* bumpDailyStat({
+    day: new Date(at).toISOString().slice(0, 10),
+    // Mail sent by something else on this domain (another app using the same Email Sending domain)
+    // still counts towards the domain's numbers.
+    stream: row?.stream ?? "external",
+    provider: payload.delivery.provider ?? "",
+    column: kind === "bounced" ? (payload.bounce?.type === "soft" ? "bouncedSoft" : "bouncedHard") : kind,
+  })
+
+  const contact = row?.contactId
+    ? yield* database.query("contacts.byId", (db) =>
+        db
+          .select()
+          .from(contacts)
+          .where(eq(contacts.id, row.contactId as string))
+          .get(),
+      )
+    : yield* database.query("contacts.byEmail", (db) =>
+        db.select().from(contacts).where(eq(contacts.email, recipient)).get(),
+      )
+
+  if (contact) {
+    const ids = yield* Ids
+    const id = yield* ids.next
+    yield* database.query("events.timeline", (db) =>
+      db
+        .insert(events)
+        .values({
+          id,
+          contactId: contact.id,
+          name: `email.${kind}`,
+          data: {
+            messageId: row?.id ?? null,
+            cfMessageId: payload.messageId,
+            subject: payload.subject ?? row?.subject ?? null,
+            provider: payload.delivery.provider ?? null,
+            smtp: payload.delivery.smtpResponse ?? null,
+            ...(payload.bounce ? { bounce: payload.bounce.type } : {}),
+          },
+          at,
+        })
+        .run(),
+    )
+  }
+
+  const hardBounce = kind === "bounced" && payload.bounce?.type !== "soft"
+  if (hardBounce || kind === "complained") {
+    const reason = kind === "complained" ? ("complaint" as const) : ("hard_bounce" as const)
+    yield* database.query("suppressions.fromEvent", (db) =>
+      db
+        .insert(suppressions)
+        // Cloudflare suppresses these itself, so its list already agrees with ours.
+        .values({ email: recipient, reason, source: "events", syncedToCloudflare: true, at })
+        .onConflictDoUpdate({ target: suppressions.email, set: { reason, source: "events", at } })
+        .run(),
+    )
+    if (contact) {
+      yield* database.query("contacts.status", (db) =>
+        db
+          .update(contacts)
+          .set({ status: kind === "complained" ? "complained" : "bounced" })
+          .where(eq(contacts.id, contact.id))
+          .run(),
+      )
+    }
+  }
+
+  return (row ? "applied" : "applied-unmatched") as Outcome
+})

@@ -12,7 +12,7 @@ import {
   SystemHandlers,
 } from "../http/handlers.ts"
 import { appLayer } from "../layers.ts"
-import { handleSendQueue } from "./queue.ts"
+import { handleQueue } from "./queue.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide([SystemHandlers, ActionsHandlers, ApiKeysHandlers, MessagesHandlers]),
@@ -26,5 +26,5 @@ const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 
 export default {
   fetch: (request) => handler(request),
-  queue: (batch, env) => handleSendQueue(batch, env),
+  queue: (batch, env) => handleQueue(batch, env),
 } satisfies ExportedHandler<Env>

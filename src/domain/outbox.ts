@@ -8,13 +8,14 @@ import {
   Sender,
   validate,
 } from "@flareyard/kit"
-import { eq, sql } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { Effect, Option, Schedule, Schema } from "effect"
 import { Bindings } from "../Bindings.ts"
 import { contacts, messagesOut, suppressions, templates } from "../db/schema.ts"
 import { Database } from "../services/Database.ts"
 import { SendQueue } from "../services/SendQueue.ts"
 import { upsertContact } from "./contacts.ts"
+import { bumpDailyStat } from "./deliveryEvents.ts"
 import { htmlToText, render } from "./render.ts"
 
 export interface Party {
@@ -126,6 +127,20 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
   // Render and validate every recipient's message before sending any, so one bad message fails the
   // request without half of it already sent.
   const prepared: Array<{ contact: { id: string; email: string }; message: Outgoing }> = []
+  const suppressed = new Set(
+    (yield* database.query("suppressions.forRecipients", (db) =>
+      db
+        .select({ email: suppressions.email })
+        .from(suppressions)
+        .where(
+          inArray(
+            suppressions.email,
+            request.recipients.map((r) => r.email.trim().toLowerCase()),
+          ),
+        )
+        .all(),
+    )).map((r) => r.email),
+  )
   for (const recipient of request.recipients) {
     const { contact, merged } = yield* upsertContact({
       email: recipient.email,
@@ -175,6 +190,22 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
         })
         .run(),
     )
+    if (suppressed.has(contact.email)) {
+      // Don't spend a send (or reputation) on an address that bounced or complained.
+      yield* database.query("messagesOut.suppressed", (db) =>
+        db
+          .update(messagesOut)
+          .set({
+            status: "rejected",
+            error: "SendSuppressed: recipient is on the suppression list",
+            updatedAt: Date.now(),
+          })
+          .where(eq(messagesOut.id, id))
+          .run(),
+      )
+      results.push({ contact, email: id, status: "rejected" })
+      continue
+    }
     const status = yield* attempt(id, message, 0)
     results.push({ contact, email: id, status })
   }
@@ -216,6 +247,15 @@ const attempt = Effect.fn("outbox.attempt")(function* (
         .where(eq(messagesOut.id, id))
         .run(),
     )
+    const stream = yield* database.query("messagesOut.stream", (db) =>
+      db.select({ stream: messagesOut.stream }).from(messagesOut).where(eq(messagesOut.id, id)).get(),
+    )
+    yield* bumpDailyStat({
+      day: new Date(now).toISOString().slice(0, 10),
+      stream: stream?.stream ?? "transactional",
+      provider: "",
+      column: "sent",
+    })
     return "sent"
   }
 
@@ -275,7 +315,9 @@ export const retryDeferred = Effect.fn("outbox.retryDeferred")(function* (id: st
     db.select().from(messagesOut).where(eq(messagesOut.id, id)).get(),
   )
   // Already sent, failed, or gone: the job is stale, nothing to do.
-  if (row?.status !== "deferred" || !row.renderedKey) return "skipped"
+  // A row with a Cloudflare message id was accepted; Cloudflare retries its own deferrals, and a
+  // resend from here would deliver twice.
+  if (row?.status !== "deferred" || !row.renderedKey || row.cfMessageId !== null) return "skipped"
   const blob = yield* store.get(row.renderedKey)
   if (Option.isNone(blob)) {
     return yield* new InvalidMessage({ reason: `Rendered copy ${row.renderedKey} is missing from storage.` })

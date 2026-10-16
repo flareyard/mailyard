@@ -1,34 +1,62 @@
-import { Effect, type Layer, ManagedRuntime, Schema } from "effect"
+import { Effect, type Layer, ManagedRuntime, Option, Schema } from "effect"
 import type { Env } from "../Bindings.ts"
+import { applyEvent, EmailSendingEvent } from "../domain/deliveryEvents.ts"
 import { retryDeferred } from "../domain/outbox.ts"
 import { appLayer } from "../layers.ts"
 import { SendJob } from "../services/SendQueue.ts"
 
-let runtime: ManagedRuntime.ManagedRuntime<Layer.Success<ReturnType<typeof appLayer>>, never> | undefined
+type AppServices = Layer.Success<ReturnType<typeof appLayer>>
+let runtime: ManagedRuntime.ManagedRuntime<AppServices, never> | undefined
+
+/** Queue names, as in wrangler.jsonc (and, later, alchemy.run.ts). */
+export const SEND_QUEUE = "mailflare-send"
+export const EMAIL_EVENTS_QUEUE = "mailflare-email-events"
+
+const handle = <T, A>(
+  message: Message<unknown>,
+  decoded: Option.Option<T>,
+  label: string,
+  run: (body: T) => Effect.Effect<A, unknown, AppServices>,
+) =>
+  Effect.gen(function* () {
+    if (Option.isNone(decoded)) {
+      yield* Effect.logError(`${label}: dropping a malformed message`, message.body)
+      return message.ack()
+    }
+    const exit = yield* Effect.exit(run(decoded.value))
+    if (exit._tag === "Success") {
+      yield* Effect.logInfo(`${label}: ${String(exit.value)}`)
+      return message.ack()
+    }
+    yield* Effect.logError(`${label}: failed, will retry`, exit.cause)
+    return message.retry({ delaySeconds: 60 })
+  })
 
 /**
- * The send queue's consumer: each message is a deferred `messages_out` row to try again. `attempt`
- * re-enqueues a still-deferred message itself (with its own delay), so a job is always acked here
- * unless something unexpected broke, in which case the queue retries it.
+ * One consumer for both queues. A message is acked when handled (or when it can never be handled:
+ * malformed), and retried after a minute when something unexpected broke.
  */
-export const handleSendQueue = async (batch: MessageBatch<unknown>, env: Env) => {
+export const handleQueue = async (batch: MessageBatch<unknown>, env: Env) => {
   runtime ??= ManagedRuntime.make(appLayer(env))
-  for (const message of batch.messages) {
-    const job = Schema.decodeUnknownOption(SendJob)(message.body)
-    if (job._tag === "None") {
-      console.error("send queue: dropping a malformed job", message.body)
-      message.ack()
-      continue
-    }
-    const exit = await runtime.runPromiseExit(
-      retryDeferred(job.value.messageId).pipe(
-        Effect.tap((outcome) => Effect.logInfo(`send queue: ${job.value.messageId} → ${outcome}`)),
-      ),
-    )
-    if (exit._tag === "Success") message.ack()
-    else {
-      console.error(`send queue: ${job.value.messageId} failed`, String(exit.cause))
-      message.retry({ delaySeconds: 60 })
-    }
-  }
+  const program = Effect.forEach(
+    batch.messages,
+    (message) => {
+      if (batch.queue === SEND_QUEUE || batch.queue.startsWith(`${SEND_QUEUE}-`)) {
+        return handle(message, Schema.decodeUnknownOption(SendJob)(message.body), "send queue", (job) =>
+          retryDeferred(job.messageId),
+        )
+      }
+      if (batch.queue === EMAIL_EVENTS_QUEUE || batch.queue.startsWith(`${EMAIL_EVENTS_QUEUE}-`)) {
+        return handle(
+          message,
+          Schema.decodeUnknownOption(EmailSendingEvent)(message.body),
+          "email events",
+          (event) => applyEvent(event),
+        )
+      }
+      return Effect.logError(`queue ${batch.queue} has no consumer here`).pipe(Effect.as(message.retry()))
+    },
+    { discard: true },
+  )
+  await runtime.runPromise(program)
 }
