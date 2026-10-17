@@ -187,6 +187,35 @@ export const checkDmarc = (name: string, result: Lookup): RecordCheck => {
   return { ...base, actual: records, status: "fail", detail: "DMARC record has no valid p= policy." }
 }
 
+/**
+ * The names at which Email Routing's DKIM key may sit for `name`, nearest first. Routing on a
+ * subdomain publishes the key once at the zone apex (measured 2026-10-17: enabling in.flareyard.dev
+ * left `cf2024-1._domainkey.flareyard.dev` as the only routing key), so each parent is tried up to
+ * the two-label apex.
+ */
+export const routingDkimNames = (name: string): ReadonlyArray<string> => {
+  const labels = name.split(".")
+  const names: Array<string> = []
+  for (let i = 0; labels.length - i >= 2; i++)
+    names.push(`${ROUTING_DKIM_SELECTOR}._domainkey.${labels.slice(i).join(".")}`)
+  return names
+}
+
+const hasKey = (result: Lookup) => answers(result).some((t) => /(^|;)\s*p=\s*[^;\s]/i.test(t))
+
+/** Looks up the routing DKIM key at the domain, then at each parent; the first published key wins. */
+const lookupRoutingDkim = (name: string) =>
+  Effect.gen(function* () {
+    const names = routingDkimNames(name)
+    let first: { readonly name: string; readonly result: Lookup } | null = null
+    for (const candidate of names) {
+      const result = yield* lookup(candidate, "TXT")
+      first ??= { name: candidate, result }
+      if (result._tag === "Success" && hasKey(result)) return { name: candidate, result }
+    }
+    return first ?? { name: names[0] ?? name, result: yield* lookup(name, "TXT") }
+  })
+
 /** Runs the checks that apply: receiving needs MX, SPF and routing DKIM; sending needs cf-bounce and DMARC. */
 export const checkDomain = Effect.fn("dns.checkDomain")(function* (
   domain: string,
@@ -199,9 +228,7 @@ export const checkDomain = Effect.fn("dns.checkDomain")(function* (
     {
       mx: purposes.receiving ? lookup(name, "MX") : Effect.succeed(null),
       spf: purposes.receiving ? lookup(name, "TXT") : Effect.succeed(null),
-      dkim: purposes.receiving
-        ? lookup(`${ROUTING_DKIM_SELECTOR}._domainkey.${name}`, "TXT")
-        : Effect.succeed(null),
+      dkim: purposes.receiving ? lookupRoutingDkim(name) : Effect.succeed(null),
       dmarc: purposes.sending || purposes.receiving ? lookup(`_dmarc.${name}`, "TXT") : Effect.succeed(null),
       bounceMx: purposes.sending ? lookup(bounce, "MX") : Effect.succeed(null),
       bounceSpf: purposes.sending ? lookup(bounce, "TXT") : Effect.succeed(null),
@@ -213,7 +240,7 @@ export const checkDomain = Effect.fn("dns.checkDomain")(function* (
   )
   if (all.mx) checks.push(checkMx("mx", name, all.mx))
   if (all.spf) checks.push(checkSpf("spf", name, all.spf))
-  if (all.dkim) checks.push(checkDkim("dkim", `${ROUTING_DKIM_SELECTOR}._domainkey.${name}`, all.dkim))
+  if (all.dkim) checks.push(checkDkim("dkim", all.dkim.name, all.dkim.result))
   if (all.bounceMx) checks.push(checkMx("bounce-mx", bounce, all.bounceMx))
   if (all.bounceSpf) checks.push(checkSpf("bounce-spf", bounce, all.bounceSpf))
   if (all.bounceDkim)
@@ -246,7 +273,7 @@ export const expectedRecords = (
       purpose: "receiving",
       type: "TXT",
       name: `${ROUTING_DKIM_SELECTOR}._domainkey.${name}`,
-      value: "v=DKIM1; … (from Email Routing)",
+      value: "v=DKIM1; … (from Email Routing; for a subdomain it sits at the zone apex)",
     })
   }
   if (purposes.sending) {

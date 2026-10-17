@@ -5,6 +5,20 @@ import { parseAuthenticationResults, readAuthResults } from "../../src/inbound/a
 const h = (key: string, value: string) => ({ key, value })
 
 describe("readAuthResults", () => {
+  it("takes the MAIL FROM SPF result when the receiver also reports HELO (Cloudflare, live 2026-10-17)", () => {
+    const auth = readAuthResults([
+      h(
+        "authentication-results",
+        'mx.cloudflare.net; dkim=pass header.d=gmail.com header.s=20251104 header.b=o9UnBDhd; dmarc=pass header.from=gmail.com policy.dmarc=none; spf=none (mx.cloudflare.net: no SPF records found for postmaster@mail-oo1-xc36.google.com) smtp.helo=mail-oo1-xc36.google.com; spf=pass (mx.cloudflare.net: domain of halleluyaholudele@gmail.com designates 2607:f8b0:4864:20::c36 as permitted sender) smtp.mailfrom=halleluyaholudele@gmail.com; arc=pass smtp.remote-ip="2607:f8b0:4864:20::c36"',
+      ),
+    ])
+    expect(auth).toMatchObject({ spf: "pass", spfDomain: "gmail.com", dmarc: "pass", arc: "pass" })
+    const heloOnly = readAuthResults([
+      h("authentication-results", "mx.example; spf=none smtp.helo=mta.example"),
+    ])
+    expect(heloOnly).toMatchObject({ spf: "none", spfDomain: "mta.example" })
+  })
+
   it("uses the newest Authentication-Results header, with every DKIM signature", () => {
     const auth = readAuthResults([
       h(

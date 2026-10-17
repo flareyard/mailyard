@@ -142,6 +142,8 @@ describe("IMAP import", () => {
     expect(server.log.some((c) => /^(SELECT|STORE|UID STORE|EXPUNGE|COPY|MOVE)/i.test(c))).toBe(false)
   })
 
+  // 62 messages in several batches through the fake IMAP server: under 1 s alone, past the 5 s default when
+  // the whole suite runs its isolates in parallel on a loaded machine.
   it("batches large folders and catches up later with only what's new", async () => {
     const domain = `catchup-${crypto.randomUUID().slice(0, 8)}.test`
     await call("/v1/domains", { method: "POST", key: ADMIN, json: { name: domain } })
@@ -200,7 +202,7 @@ describe("IMAP import", () => {
       duplicates: 5,
     })
     expect(await env.MAILBOX.get(env.MAILBOX.idFromName(target.id)).count()).toBe(62)
-  })
+  }, 30_000)
 
   it("fails with a clear message on a wrong password", async () => {
     const exec = withServer(fakeImap({ username: "u", password: "right", folders: [] }))

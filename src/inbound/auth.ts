@@ -148,7 +148,11 @@ const fromParsed = (
   parsed: ReturnType<typeof parseAuthenticationResults>,
 ): AuthResults => {
   const find = (method: string) => parsed.results.find((r) => r.method === method)
-  const spf = find("spf")
+  // A receiver may report SPF twice, once per identity: Cloudflare writes the HELO check
+  // (`spf=none smtp.helo=…`) before the MAIL FROM check (`spf=pass smtp.mailfrom=…`), measured on
+  // a Gmail message 2026-10-17. MAIL FROM is the identity DMARC aligns on, so it wins.
+  const spfs = parsed.results.filter((r) => r.method === "spf")
+  const spf = spfs.find((r) => r.props.has("smtp.mailfrom")) ?? spfs[0]
   const dmarc = find("dmarc")
   const arc = find("arc")
   return {

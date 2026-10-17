@@ -1,6 +1,13 @@
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { checkDkim, checkDmarc, checkDomain, checkMx, checkSpf } from "../../src/domain/dnsChecks.ts"
+import {
+  checkDkim,
+  checkDmarc,
+  checkDomain,
+  checkMx,
+  checkSpf,
+  routingDkimNames,
+} from "../../src/domain/dnsChecks.ts"
 import { Dns, DnsError, unquoteTxt } from "../../src/services/Dns.ts"
 import { goodDomain } from "../dns.ts"
 
@@ -84,6 +91,33 @@ describe("record checks (fixtures)", () => {
     expect(sendingOnly.checks.map((c) => c.id)).toEqual(["bounce-mx", "bounce-spf", "bounce-dkim", "dmarc"])
     const noDmarc = { ...goodDomain("good.test"), "TXT _dmarc.good.test": ["v=DMARC1; p=none"] }
     expect((await run({ receiving: true, sending: true }, noDmarc)).status).toBe("warn")
+  })
+
+  it("finds Email Routing's DKIM key at the zone apex when the domain is a subdomain", async () => {
+    const run = (records: Record<string, ReadonlyArray<string>>) =>
+      Effect.runPromise(
+        checkDomain("in.good.test", { receiving: true, sending: false }).pipe(
+          Effect.provide(Dns.layerFixture(records)),
+        ),
+      )
+    const sub = goodDomain("in.good.test")
+    const apexKey = sub["TXT cf2024-1._domainkey.in.good.test"]
+    const { ["TXT cf2024-1._domainkey.in.good.test"]: _moved, ...withoutSubKey } = sub
+    const atApex = await run({ ...withoutSubKey, "TXT cf2024-1._domainkey.good.test": apexKey ?? [] })
+    expect(atApex.checks.find((c) => c.id === "dkim")).toMatchObject({
+      status: "pass",
+      name: "cf2024-1._domainkey.good.test",
+    })
+    const nowhere = await run(withoutSubKey)
+    expect(nowhere.checks.find((c) => c.id === "dkim")).toMatchObject({
+      status: "fail",
+      name: "cf2024-1._domainkey.in.good.test",
+    })
+    expect(routingDkimNames("a.in.good.test")).toEqual([
+      "cf2024-1._domainkey.a.in.good.test",
+      "cf2024-1._domainkey.in.good.test",
+      "cf2024-1._domainkey.good.test",
+    ])
   })
 
   it("joins multi-string TXT answers the way DoH returns them", () => {
