@@ -15,7 +15,7 @@ describe("cloudflare-app.json against wrangler.jsonc", () => {
     const scopes = manifest.scopes.required.map((s) => s.scope)
     expect(scopes).toEqual(
       expect.arrayContaining([
-        "workers-scripts.write",
+        "workers-scripts.edit",
         "d1.write",
         "workers-r2.write",
         "queues.write",
@@ -39,7 +39,7 @@ describe("cloudflare-app.json against wrangler.jsonc", () => {
       },
     }
     expect(resourceProblems(without, broken)).toEqual([
-      expect.stringContaining("workers-scripts.write"),
+      expect.stringContaining("workers-scripts.edit"),
       expect.stringContaining("workers-kv-storage.write"),
       "Queue consumer q has no dead_letter_queue.",
       expect.stringContaining("database_id"),

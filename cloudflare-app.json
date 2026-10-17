@@ -9,7 +9,7 @@
   "scopes": {
     "required": [
       {
-        "scope": "workers-scripts.write",
+        "scope": "workers-scripts.edit",
         "why": "Deploy Mailyard's Worker, with its Durable Objects (mailboxes, send pacing) and Workflows (imports, exports, campaign sends)"
       },
       {
