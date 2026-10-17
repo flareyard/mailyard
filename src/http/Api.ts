@@ -2175,6 +2175,61 @@ const ComplianceSchema = Schema.Struct({
   trackingOrigin: Schema.optionalKey(Schema.NullOr(Schema.String)),
 })
 
+const ContactImportSchema = Schema.Struct({
+  id: Schema.String,
+  uploadId: Schema.String,
+  status: Schema.Literals(["queued", "running", "completed", "failed"]),
+  mapping: Schema.Record(Schema.String, Schema.String),
+  topicIds: Schema.Array(Schema.String),
+  onConflict: Schema.Literals(["update", "skip"]),
+  defaultStatus: Schema.Literals(["subscribed", "unsubscribed"]),
+  headers: Schema.NullOr(Schema.Array(Schema.String)),
+  rows: Schema.Number,
+  created: Schema.Number,
+  updated: Schema.Number,
+  skipped: Schema.Number,
+  invalid: Schema.Number,
+  duplicates: Schema.Number,
+  suppressed: Schema.Number,
+  errors: Schema.Array(Schema.Struct({ line: Schema.Number, message: Schema.String })),
+  error: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  finishedAt: Schema.NullOr(Schema.Number),
+})
+
+/** Contact CSV imports. The file goes up first, as the body of `POST /v1/uploads?filename=` (50 MiB). */
+export class ImportsApi extends HttpApiGroup.make("imports")
+  .add(
+    HttpApiEndpoint.post("contacts", "/v1/imports/contacts", {
+      payload: Schema.Struct({
+        uploadId: Schema.String,
+        /** Column header → `email`, `name`, `status`, `fields.<name>` or `ignore`. */
+        mapping: Schema.Record(Schema.String, Schema.String),
+        topicIds: Schema.optionalKey(Schema.Array(Schema.String)),
+        /** An address that's already a contact: merge the row into it, or leave it alone. */
+        onConflict: Schema.optionalKey(Schema.Literals(["update", "skip"])),
+        /** New contacts' status when the file has no status column (or the cell is empty). */
+        defaultStatus: Schema.optionalKey(Schema.Literals(["subscribed", "unsubscribed"])),
+      }),
+      success: ContactImportSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("list", "/v1/imports", {
+      query: { cursor: Schema.optionalKey(Schema.String), limit: Limit },
+      success: Schema.Struct({
+        imports: Schema.Array(ContactImportSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("get", "/v1/imports/:id", {
+      params: { id: Schema.String },
+      success: ContactImportSchema,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class CampaignsApi extends HttpApiGroup.make("campaigns")
   .add(
     HttpApiEndpoint.get("list", "/v1/campaigns", {
@@ -2370,4 +2425,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(SendingApi)
   .add(AlertsApi)
   .add(CampaignsApi)
+  .add(ImportsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

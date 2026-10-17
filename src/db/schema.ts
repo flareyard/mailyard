@@ -741,3 +741,59 @@ export const mailboxImports = sqliteTable(
   },
   (t) => [index("mailbox_imports_mailbox").on(t.mailboxId, t.createdAt)],
 )
+
+/** Files uploaded for an import (`POST /v1/uploads`), kept in R2 under `key`. */
+export const uploads = sqliteTable(
+  "uploads",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull(),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    sha256: text("sha256").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("uploads_created").on(t.createdAt)],
+)
+
+/** A contact CSV import, run by ContactImportWorkflow in 5,000-row steps from a byte offset. */
+export const contactImports = sqliteTable(
+  "contact_imports",
+  {
+    id: text("id").primaryKey(),
+    uploadId: text("upload_id")
+      .notNull()
+      .references(() => uploads.id),
+    /** Column header → `email`, `name`, `status`, `fields.<key>` or `ignore`. */
+    mapping: text("mapping", { mode: "json" }).$type<Record<string, string>>().notNull(),
+    topicIds: text("topic_ids", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    onConflict: text("on_conflict", { enum: ["update", "skip"] }).notNull(),
+    defaultStatus: text("default_status", { enum: ["subscribed", "unsubscribed"] }).notNull(),
+    status: text("status", { enum: ["queued", "running", "completed", "failed"] })
+      .notNull()
+      .default("queued"),
+    headers: text("headers", { mode: "json" }).$type<ReadonlyArray<string>>(),
+    /** Where the next step reads from: a byte offset into the file, and the line it starts on. */
+    offset: integer("offset").notNull().default(0),
+    line: integer("line").notNull().default(1),
+    rows: integer("rows").notNull().default(0),
+    created: integer("created").notNull().default(0),
+    updated: integer("updated").notNull().default(0),
+    skipped: integer("skipped").notNull().default(0),
+    invalid: integer("invalid").notNull().default(0),
+    duplicates: integer("duplicates").notNull().default(0),
+    suppressed: integer("suppressed").notNull().default(0),
+    /** The first 100 row errors, with their line numbers. */
+    errors: text("errors", { mode: "json" })
+      .$type<ReadonlyArray<{ readonly line: number; readonly message: string }>>()
+      .notNull()
+      .default(sql`'[]'`),
+    error: text("error"),
+    createdBy: text("created_by").notNull(),
+    createdAt: createdAt(),
+    finishedAt: integer("finished_at"),
+  },
+  (t) => [index("contact_imports_created").on(t.createdAt)],
+)

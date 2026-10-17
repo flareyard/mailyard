@@ -35,7 +35,16 @@
       "binding": "EXPORT_WORKFLOW",
       "class_name": "MailboxExportWorkflow"
     },
-    { "name": "mailyard-campaign-send", "binding": "CAMPAIGN_WORKFLOW", "class_name": "CampaignSendWorkflow" }
+    {
+      "name": "mailyard-campaign-send",
+      "binding": "CAMPAIGN_WORKFLOW",
+      "class_name": "CampaignSendWorkflow"
+    },
+    {
+      "name": "mailyard-contact-import",
+      "binding": "CONTACT_IMPORT_WORKFLOW",
+      "class_name": "ContactImportWorkflow"
+    }
   ],
   "queues": {
     "producers": [
