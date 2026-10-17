@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect"
 import { Bindings } from "../Bindings.ts"
-import type { InboundDelivery } from "../objects/MailboxDO.ts"
+import type { InboundDelivery } from "../mailbox/types.ts"
 
 export class MailboxUnavailable extends Schema.TaggedError<MailboxUnavailable>()("MailboxUnavailable", {
   mailboxId: Schema.String,
