@@ -15,6 +15,7 @@ import { BlobStore, type Outgoing } from "../kit/index.ts"
 import type { Draft, InboundDelivery } from "../mailbox/types.ts"
 import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
+import { planAttachments } from "./attachmentPlan.ts"
 import { fileUrl, LARGE_ATTACHMENT_LINK_TTL_SECONDS, signFileToken } from "./files.ts"
 import { buildMime } from "./mime.ts"
 import { callMailbox } from "./rpc.ts"
@@ -109,10 +110,7 @@ export const sendBlock = Effect.fn("mail.sendBlock")(function* (input: {
   return null
 })
 
-/** Email Service refuses a message over 5 MiB, MIME included (measured limit, 2026-10-16). */
-export const MAX_MESSAGE_BYTES = 5 * 1024 * 1024
-/** Room kept for headers, the body and multipart boundaries when deciding what fits. */
-const ENVELOPE_ALLOWANCE = 256 * 1024
+export { MAX_MESSAGE_BYTES } from "./attachmentPlan.ts"
 export const MAX_RECIPIENTS = 50
 
 export const MailboxSendJob = Schema.Struct({
@@ -236,22 +234,14 @@ const prepare = Effect.fn("mail.prepare")(function* (
       ),
     ),
   )
-  const bodyBytes =
-    new TextEncoder().encode(draft.bodyText).length +
-    new TextEncoder().encode(draft.bodyHtml ?? "").length * 2
-  const budget = MAX_MESSAGE_BYTES - ENVELOPE_ALLOWANCE - bodyBytes
-  // base64 costs 4/3 plus line breaks.
-  const encoded = (n: number) => Math.ceil((n * 4) / 3) + Math.ceil(n / 57) * 2
-  const bySize = [...files].sort((a, b) => a.bytes.byteLength - b.bytes.byteLength)
-  const inline: typeof files = []
-  const links: typeof files = []
-  let used = 0
-  for (const f of bySize) {
-    if (used + encoded(f.bytes.byteLength) <= budget) {
-      inline.push(f)
-      used += encoded(f.bytes.byteLength)
-    } else links.push(f)
-  }
+  // Same plan as the draft shows the composer (src/mail/attachmentPlan.ts).
+  const plan = planAttachments({
+    bodyText: draft.bodyText,
+    bodyHtml: draft.bodyHtml,
+    attachments: files.map((f) => ({ key: f.key, size: f.bytes.byteLength })),
+  })
+  const inline = files.filter((f) => plan.get(f.key) === "inline")
+  const links = files.filter((f) => plan.get(f.key) !== "inline")
   if (links.length > 0 && !origin) {
     return yield* new SendInvalid({
       field: "attachments",

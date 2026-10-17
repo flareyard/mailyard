@@ -243,6 +243,10 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.attention(input)
   }
 
+  correspondents(q: string, limit?: number) {
+    return this.store.correspondents(q, limit)
+  }
+
   responseTimes(input: { readonly from: number; readonly to: number }) {
     return this.store.responseTimes(input)
   }

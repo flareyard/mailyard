@@ -485,6 +485,8 @@ export interface Identity {
   readonly kind: MailboxKind
   /** Why the key may send as it: every address (admin), membership, or an alias of a mailbox it's a member of. */
   readonly via: "admin" | "member" | "alias"
+  /** The signature to start a message from this address with: its own, or, for an alias, its mailbox's. */
+  readonly signature: { readonly text: string; readonly html: string | null } | null
 }
 
 /**
@@ -497,6 +499,9 @@ export const identitiesFor = Effect.fn("mailboxes.identities")(function* (caller
   const all = yield* database.query("identities.all", (db) =>
     db.select().from(mailboxes).orderBy(asc(mailboxes.address)).all(),
   )
+  const byId = new Map(all.map((m) => [m.id, m]))
+  const signatureOf = (m: (typeof all)[number]) =>
+    m.signature ?? (m.targets ?? []).map((t) => byId.get(t)?.signature).find((x) => x) ?? null
   if (caller.keyId === "root" || caller.scopes.includes("admin")) {
     const sending = yield* database.query("identities.sendingDomains", (db) =>
       db
@@ -514,6 +519,7 @@ export const identitiesFor = Effect.fn("mailboxes.identities")(function* (caller
           mailboxId: m.id,
           kind: m.kind,
           via: "admin",
+          signature: signatureOf(m),
         }),
       ),
       anyAddressOn: sending.map((d) => d.name),
@@ -536,6 +542,7 @@ export const identitiesFor = Effect.fn("mailboxes.identities")(function* (caller
         mailboxId: m.id,
         kind: m.kind,
         via: "member",
+        signature: signatureOf(m),
       })
     else if (m.kind === "alias" && m.targets?.some((t) => sendable.has(t))) {
       identities.push({
@@ -544,6 +551,7 @@ export const identitiesFor = Effect.fn("mailboxes.identities")(function* (caller
         mailboxId: m.id,
         kind: m.kind,
         via: "alias",
+        signature: signatureOf(m),
       })
     }
   }

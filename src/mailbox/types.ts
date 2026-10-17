@@ -147,6 +147,8 @@ export interface DraftAttachment {
   readonly filename: string
   readonly mimeType: string
   readonly size: number
+  /** How it would go if sent now: in the message, or as an expiring link (too big to fit). */
+  readonly delivery?: "inline" | "link"
 }
 
 export type ReplyMode = "reply" | "replyAll" | "forward"

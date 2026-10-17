@@ -423,6 +423,16 @@ export const MailHandlers = HttpApiBuilder.group(
           }
         }).pipe(mailErrors),
       ),
+      correspondents: p(({ params, query }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "read")
+          return {
+            correspondents: yield* callMailbox(params.id, (s) =>
+              s.correspondents(query.q ?? "", query.limit ?? 10),
+            ),
+          }
+        }).pipe(mailErrors),
+      ),
       createDraft: p(({ params, payload, headers }) =>
         Effect.gen(function* () {
           const { caller, mailbox } = yield* access(params.id, "write")

@@ -1,3 +1,4 @@
+import { planAttachments } from "../mail/attachmentPlan.ts"
 import { type Rule, ruleMatches } from "../rules/engine.ts"
 import { FOLDER_COUNT_TABLES, MAILBOX_MIGRATIONS } from "./schema.ts"
 import { HIGHLIGHT_END, HIGHLIGHT_START, parseSearch, SEARCH_WEIGHTS } from "./search.ts"
@@ -6,6 +7,7 @@ import {
   BODY_TEXT_LIMIT,
   type DeliveredAttachment,
   type Draft,
+  type DraftAttachment,
   type DraftInput,
   type DraftTracking,
   type FilingOptions,
@@ -80,6 +82,7 @@ export class MailboxStore {
         for (const statement of migration.statements) this.sql.exec(statement)
         if (migration.after === "threadAndIndexExisting") this.threadAndIndexExisting()
         if (migration.after === "rebuildFolderCounts") this.rebuildFolderCounts()
+        if (migration.after === "rebuildCorrespondents") this.rebuildCorrespondents()
       }
       this.sql.exec("DELETE FROM _schema")
       this.sql.exec("INSERT INTO _schema (version) VALUES (?)", MAILBOX_MIGRATIONS.length)
@@ -212,6 +215,7 @@ export class MailboxStore {
         )
       }
       this.index(delivery.id)
+      this.noteCorrespondents(folder, delivery)
       const { threadId, merged } = this.assignThread(delivery.id)
       // New mail in a snoozed conversation brings it back, as every mail client does.
       const snoozed = this.threadRow(threadId)?.snoozed_until
@@ -433,6 +437,89 @@ export class MailboxStore {
       )
       .toArray()
       .map((r) => ({ seq: Number(r.seq), frame: String(r.frame) }))
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Correspondents
+  // ---------------------------------------------------------------------------------------------
+
+  /** Received mail counts its sender; a sent copy counts its recipients. Spam and trash count nobody. */
+  private noteCorrespondents(folder: Folder, delivery: InboundDelivery) {
+    if (folder === "spam" || folder === "trash") return
+    const parties =
+      folder === "sent"
+        ? [...delivery.to, ...delivery.cc]
+        : delivery.from && !delivery.automated
+          ? [delivery.from]
+          : []
+    const column = folder === "sent" ? "sent" : "received"
+    for (const p of parties) {
+      const address = p.address.trim().toLowerCase()
+      if (!address.includes("@")) continue
+      this.sql.exec(
+        `INSERT INTO correspondents (address, name, ${column}, last_at) VALUES (?, ?, 1, ?)
+         ON CONFLICT (address) DO UPDATE SET name = coalesce(excluded.name, correspondents.name),
+           ${column} = correspondents.${column} + 1, last_at = max(correspondents.last_at, excluded.last_at)`,
+        address,
+        p.name?.trim() || null,
+        delivery.receivedAt,
+      )
+    }
+  }
+
+  /** Builds the correspondents from the mail already stored: the migration's backfill. */
+  rebuildCorrespondents() {
+    this.sql.exec("DELETE FROM correspondents")
+    for (const row of this.sql
+      .exec(
+        "SELECT folder, from_name, from_address, to_list, cc_list, automated, received_at FROM messages ORDER BY received_at",
+      )
+      .toArray()) {
+      const folder = String(row.folder) as Folder
+      this.noteCorrespondents(folder, {
+        from: row.from_address ? { name: str(row.from_name), address: String(row.from_address) } : null,
+        to: parse<Array<Party>>(row.to_list),
+        cc: parse<Array<Party>>(row.cc_list),
+        automated: Number(row.automated) === 1,
+        receivedAt: Number(row.received_at),
+      } as unknown as InboundDelivery)
+    }
+  }
+
+  /**
+   * For the composer's To field: people whose address or name starts with `q` (or any word of the
+   * name does), most recent first; everyone recent when `q` is empty.
+   */
+  correspondents(q: string, limit = 10) {
+    const term = q
+      .trim()
+      .toLowerCase()
+      .replace(/[\\%_]/g, (c) => `\\${c}`)
+    const rows = term
+      ? this.sql
+          .exec(
+            `SELECT * FROM correspondents
+             WHERE address LIKE ? ESCAPE '\\' OR lower(name) LIKE ? ESCAPE '\\' OR lower(name) LIKE ? ESCAPE '\\'
+             ORDER BY last_at DESC LIMIT ?`,
+            `${term}%`,
+            `${term}%`,
+            `% ${term}%`,
+            Math.min(Math.max(limit, 1), 50),
+          )
+          .toArray()
+      : this.sql
+          .exec(
+            "SELECT * FROM correspondents ORDER BY last_at DESC LIMIT ?",
+            Math.min(Math.max(limit, 1), 50),
+          )
+          .toArray()
+    return rows.map((r) => ({
+      address: String(r.address),
+      name: str(r.name),
+      received: Number(r.received),
+      sent: Number(r.sent),
+      lastAt: Number(r.last_at),
+    }))
   }
 
   /** Recounts folder totals from the messages: the migration's backfill, and a repair path. */
@@ -1449,7 +1536,7 @@ export class MailboxStore {
       subject: String(row.subject),
       bodyText: String(row.body_text),
       bodyHtml: str(row.body_html),
-      attachments: parse(row.attachments),
+      attachments: withDelivery(String(row.body_text), str(row.body_html), parse(row.attachments)),
       status: String(row.status) as Draft["status"],
       sendAt: num(row.send_at),
       replyMode: str(row.reply_mode) as Draft["replyMode"],
@@ -1767,3 +1854,12 @@ const median = (values: ReadonlyArray<number>): number | null => {
 /** How much the live socket can replay to a client that reconnects. */
 export const LIVE_LOG_SIZE = 1000
 export const LIVE_LOG_MS = 24 * 3_600_000
+
+const withDelivery = (
+  bodyText: string,
+  bodyHtml: string | null,
+  attachments: ReadonlyArray<DraftAttachment>,
+): Array<DraftAttachment> => {
+  const plan = planAttachments({ bodyText, bodyHtml, attachments })
+  return attachments.map((a) => ({ ...a, delivery: plan.get(a.key) ?? "inline" }))
+}
