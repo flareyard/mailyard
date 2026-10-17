@@ -13,6 +13,7 @@ import {
   SegmentsHandlers,
   TopicsHandlers,
 } from "../http/audienceHandlers.ts"
+import { CampaignsHandlers } from "../http/campaignHandlers.ts"
 import {
   ActionsHandlers,
   ApiKeyAuthLive,
@@ -72,6 +73,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     SegmentsHandlers,
     SendingHandlers,
     AlertsHandlers,
+    CampaignsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),

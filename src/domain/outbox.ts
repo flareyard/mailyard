@@ -240,6 +240,95 @@ const counted = (stream: string) => (status: string) =>
     ? Governor.use((g) => g.consume(stream === "transactional" ? "transactional" : "mailbox", 1))
     : Effect.void
 
+/**
+ * Sends one already-rendered bulk message (a campaign, a test, an automation step): checked, recorded
+ * in `messages_out` and stored in R2, then tried. The idempotency key makes a retried step a no-op,
+ * returning the first attempt's row.
+ */
+export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
+  readonly stream: "campaign" | "automation" | "test"
+  readonly message: Outgoing
+  readonly contactId: string | null
+  readonly campaignId: string | null
+  readonly automationRunId?: string | null
+  readonly templateId?: string | null
+  readonly templateVersion?: number | null
+  readonly idempotencyKey: string
+}) {
+  const database = yield* Database
+  const existing = yield* database.query("messagesOut.byKey", (db) =>
+    db
+      .select({ id: messagesOut.id, status: messagesOut.status })
+      .from(messagesOut)
+      .where(eq(messagesOut.idempotencyKey, input.idempotencyKey))
+      .get(),
+  )
+  if (existing) return { id: existing.id, status: existing.status, duplicate: true }
+  const message = yield* validate(input.message)
+  const recipient = (message.to[0]?.email ?? "").toLowerCase()
+  const id = yield* (yield* Ids).next
+  yield* (yield* BlobStore).put(
+    renderedKey(id),
+    new TextEncoder().encode(encodeRendered(message)),
+    "application/json",
+  )
+  const inserted = yield* database.query("messagesOut.insertBulk", (db) =>
+    db
+      .insert(messagesOut)
+      .values({
+        id,
+        stream: input.stream,
+        contactId: input.contactId,
+        campaignId: input.campaignId,
+        automationRunId: input.automationRunId ?? null,
+        templateId: input.templateId ?? null,
+        templateVersion: input.templateVersion ?? null,
+        idempotencyKey: input.idempotencyKey,
+        recipient,
+        sender: message.from.email,
+        subject: message.subject,
+        renderedKey: renderedKey(id),
+      })
+      .onConflictDoNothing()
+      .returning({ id: messagesOut.id })
+      .get(),
+  )
+  // Lost a race with another attempt using the same key: that one sends.
+  if (!inserted) {
+    const winner = yield* database.query("messagesOut.byKey2", (db) =>
+      db
+        .select({ id: messagesOut.id, status: messagesOut.status })
+        .from(messagesOut)
+        .where(eq(messagesOut.idempotencyKey, input.idempotencyKey))
+        .get(),
+    )
+    return { id: winner?.id ?? id, status: winner?.status ?? "queued", duplicate: true }
+  }
+  const suppressed = yield* database.query("suppressions.one", (db) =>
+    db
+      .select({ email: suppressions.email })
+      .from(suppressions)
+      .where(eq(suppressions.email, recipient))
+      .get(),
+  )
+  if (suppressed) {
+    yield* database.query("messagesOut.suppressedBulk", (db) =>
+      db
+        .update(messagesOut)
+        .set({
+          status: "rejected",
+          error: "SendSuppressed: recipient is on the suppression list",
+          updatedAt: Date.now(),
+        })
+        .where(eq(messagesOut.id, id))
+        .run(),
+    )
+    return { id, status: "rejected" as const, duplicate: false }
+  }
+  const status = yield* attempt(id, message, 0)
+  return { id, status, duplicate: false }
+})
+
 /** One delivery attempt; records the outcome on the row and returns the new status. */
 export const attempt = Effect.fn("outbox.attempt")(function* (
   id: string,

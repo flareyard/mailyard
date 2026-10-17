@@ -267,13 +267,30 @@ export const campaigns = sqliteTable(
     segmentId: text("segment_id").references(() => segments.id),
     topicId: text("topic_id").references(() => topics.id),
     templateId: text("template_id").references(() => templates.id),
+    /** The template version a send uses, frozen when it's scheduled; null while a draft. */
+    templateVersion: integer("template_version"),
+    /** Inline content, for a campaign written without a template. */
+    bodyHtml: text("body_html"),
+    bodyText: text("body_text"),
     fromAddress: text("from_address").notNull(),
+    replyTo: text("reply_to"),
     subject: text("subject").notNull(),
     subjectB: text("subject_b"),
+    preheader: text("preheader"),
+    /** A/B subject test: the share of the audience that tests, and when the winner is picked. */
+    ab: text("ab", { mode: "json" }).$type<{
+      readonly percent: number
+      readonly waitHours: number
+      readonly metric: "clicks" | "opens"
+    } | null>(),
     sendAt: integer("send_at"),
     workflowId: text("workflow_id"),
     audienceSize: integer("audience_size"),
+    pausedReason: text("paused_reason"),
+    startedAt: integer("started_at"),
+    finishedAt: integer("finished_at"),
     createdAt: createdAt(),
+    updatedAt: integer("updated_at"),
   },
   (t) => [index("campaigns_status").on(t.status)],
 )
@@ -286,8 +303,9 @@ export const messagesOut = sqliteTable(
   "messages_out",
   {
     id: text("id").primaryKey(),
+    /** `test`: a campaign test send to the seed list, outside the quota and the campaign's numbers. */
     stream: text("stream", {
-      enum: ["transactional", "campaign", "automation", "reply", "mailbox"],
+      enum: ["transactional", "campaign", "automation", "reply", "mailbox", "test"],
     }).notNull(),
     cfMessageId: text("cf_message_id"),
     /** For mail sent from a mailbox: the mailbox, and the id of the sent copy filed in it. */
