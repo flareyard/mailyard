@@ -3605,6 +3605,88 @@ export class OverviewApi extends HttpApiGroup.make("overview")
   )
   .middleware(ApiKeyAuth) {}
 
+const SearchHitSchema = Schema.Struct({
+  messageId: Schema.String,
+  threadId: Schema.String,
+  folder: FolderSchema,
+  from: Schema.NullOr(PartySchema),
+  receivedAt: Schema.Number,
+  subject: Schema.String,
+  subjectHighlighted: Schema.String,
+  excerpt: Schema.String,
+  rank: Schema.Number,
+})
+const PartialSchema = Schema.Array(
+  Schema.Struct({ mailboxId: Schema.String, reason: Schema.Literals(["timeout", "error"]) }),
+).annotate({
+  description: "Mailboxes that didn't answer in time (2.5 s each) or failed: their results are missing.",
+})
+
+/** Search across the workspace: the command palette and "search all mail". Only what the caller can read. */
+export class SearchApi extends HttpApiGroup.make("search")
+  .add(
+    HttpApiEndpoint.get("workspace", "/v1/search", {
+      query: {
+        q: Schema.String,
+        types: Schema.optionalKey(
+          Schema.String.annotate({
+            description:
+              "Comma-separated: thread, contact, campaign, template, mailbox, domain. All of them by default.",
+          }),
+        ),
+        limit: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 20 })),
+        ),
+      },
+      success: Schema.Struct({
+        query: Schema.String,
+        results: Schema.Array(
+          Schema.Struct({
+            type: Schema.Literals(["thread", "contact", "campaign", "template", "mailbox", "domain"]),
+            id: Schema.String,
+            title: Schema.String,
+            subtitle: Schema.NullOr(Schema.String),
+            url: Schema.String.annotate({ description: "The web app's route for it." }),
+            mailboxId: Schema.optionalKey(Schema.String),
+          }),
+        ),
+        partial: PartialSchema,
+      }),
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("mail", "/v1/search/mail", {
+      query: {
+        q: Schema.String,
+        sort: Schema.optionalKey(Schema.Literals(["recent", "relevance"])),
+        limit: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 50 })),
+        ),
+      },
+      success: Schema.Struct({
+        query: Schema.String,
+        parsed: Schema.NullOr(
+          Schema.Struct({
+            operators: Schema.Array(Schema.Struct({ op: Schema.String, value: Schema.String })),
+            terms: Schema.Array(Schema.String),
+            unsupported: Schema.Array(Schema.Struct({ op: Schema.String, value: Schema.String })),
+          }),
+        ),
+        groups: Schema.Array(
+          Schema.Struct({
+            mailboxId: Schema.String,
+            address: Schema.String,
+            hits: Schema.Array(SearchHitSchema),
+            threads: Schema.Array(ThreadSchema),
+          }),
+        ),
+        searched: Schema.Number.annotate({ description: "Mailboxes that answered." }),
+        partial: PartialSchema,
+      }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -3631,6 +3713,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(ImportsApi)
   .add(SuppressionsApi)
   .add(OverviewApi)
+  .add(SearchApi)
   .add(ExportsApi)
   .add(AutomationsApi)
   .add(RunsApi)

@@ -29,6 +29,7 @@ import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { MailHandlers } from "../http/mailHandlers.ts"
 import { OverviewHandlers } from "../http/overviewHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
+import { SearchHandlers } from "../http/searchHandlers.ts"
 import { AlertsHandlers, SendingHandlers } from "../http/sendingHandlers.ts"
 import { SuppressionsHandlers } from "../http/suppressionHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
@@ -97,6 +98,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     ImportsHandlers,
     SuppressionsHandlers,
     OverviewHandlers,
+    SearchHandlers,
     ExportsHandlers,
     AutomationsHandlers,
     RunsHandlers,

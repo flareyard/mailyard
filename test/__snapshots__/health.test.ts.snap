@@ -59130,6 +59130,778 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/search": {
+      "get": {
+        "operationId": "search.workspace",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "types",
+            "required": false,
+            "schema": {
+              "description": "Comma-separated: thread, contact, campaign, template, mailbox, domain. All of them by default.",
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "partial": {
+                      "description": "Mailboxes that didn't answer in time (2.5 s each) or failed: their results are missing.",
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                          "reason": {
+                            "enum": [
+                              "timeout",
+                              "error",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "reason",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "query": {
+                      "type": "string",
+                    },
+                    "results": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                          "subtitle": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "title": {
+                            "type": "string",
+                          },
+                          "type": {
+                            "enum": [
+                              "thread",
+                              "contact",
+                              "campaign",
+                              "template",
+                              "mailbox",
+                              "domain",
+                            ],
+                            "type": "string",
+                          },
+                          "url": {
+                            "description": "The web app's route for it.",
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "type",
+                          "id",
+                          "title",
+                          "subtitle",
+                          "url",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "query",
+                    "results",
+                    "partial",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "search",
+        ],
+      },
+    },
+    "/v1/search/mail": {
+      "get": {
+        "operationId": "search.mail",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "enum": [
+                "recent",
+                "relevance",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "groups": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "address": {
+                            "type": "string",
+                          },
+                          "hits": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "excerpt": {
+                                  "type": "string",
+                                },
+                                "folder": {
+                                  "enum": [
+                                    "inbox",
+                                    "archive",
+                                    "sent",
+                                    "spam",
+                                    "trash",
+                                    "snoozed",
+                                  ],
+                                  "type": "string",
+                                },
+                                "from": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "address": {
+                                          "type": "string",
+                                        },
+                                        "name": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                            },
+                                            {
+                                              "type": "null",
+                                            },
+                                          ],
+                                        },
+                                      },
+                                      "required": [
+                                        "name",
+                                        "address",
+                                      ],
+                                      "type": "object",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "messageId": {
+                                  "type": "string",
+                                },
+                                "rank": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "receivedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "subject": {
+                                  "type": "string",
+                                },
+                                "subjectHighlighted": {
+                                  "type": "string",
+                                },
+                                "threadId": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "messageId",
+                                "threadId",
+                                "folder",
+                                "from",
+                                "receivedAt",
+                                "subject",
+                                "subjectHighlighted",
+                                "excerpt",
+                                "rank",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                          "threads": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "assignedTo": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "id": {
+                                          "type": "string",
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                        },
+                                      },
+                                      "required": [
+                                        "id",
+                                        "name",
+                                      ],
+                                      "type": "object",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                                },
+                                "assignee": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "description": "The API key id handling it; see assignedTo for the name.",
+                                },
+                                "firstAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "folders": {
+                                  "items": {
+                                    "enum": [
+                                      "inbox",
+                                      "archive",
+                                      "sent",
+                                      "spam",
+                                      "trash",
+                                      "snoozed",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "type": "array",
+                                },
+                                "hasAttachments": {
+                                  "type": "boolean",
+                                },
+                                "id": {
+                                  "type": "string",
+                                },
+                                "labelIds": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "type": "array",
+                                },
+                                "lastAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "latestMessageId": {
+                                  "type": "string",
+                                },
+                                "messageCount": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "participants": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "address": {
+                                        "type": "string",
+                                      },
+                                      "name": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                          },
+                                          {
+                                            "type": "null",
+                                          },
+                                        ],
+                                      },
+                                    },
+                                    "required": [
+                                      "name",
+                                      "address",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "type": "array",
+                                },
+                                "scheduledSendAt": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "description": "The earliest scheduled send of a reply in this conversation.",
+                                },
+                                "snippet": {
+                                  "type": "string",
+                                },
+                                "snoozedUntil": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "sortAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "spamScore": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "description": "The highest spam score of its messages in spam; only when listing spam.",
+                                },
+                                "starred": {
+                                  "type": "boolean",
+                                },
+                                "subject": {
+                                  "type": "string",
+                                },
+                                "unreadCount": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                              },
+                              "required": [
+                                "id",
+                                "subject",
+                                "snippet",
+                                "latestMessageId",
+                                "messageCount",
+                                "unreadCount",
+                                "starred",
+                                "hasAttachments",
+                                "participants",
+                                "folders",
+                                "labelIds",
+                                "firstAt",
+                                "lastAt",
+                                "sortAt",
+                                "snoozedUntil",
+                                "assignee",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "address",
+                          "hits",
+                          "threads",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "parsed": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "operators": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "op",
+                                  "value",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
+                            "terms": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                            "unsupported": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "op": {
+                                    "type": "string",
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "op",
+                                  "value",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "operators",
+                            "terms",
+                            "unsupported",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "partial": {
+                      "description": "Mailboxes that didn't answer in time (2.5 s each) or failed: their results are missing.",
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                          "reason": {
+                            "enum": [
+                              "timeout",
+                              "error",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "reason",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "query": {
+                      "type": "string",
+                    },
+                    "searched": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "query",
+                    "parsed",
+                    "groups",
+                    "searched",
+                    "partial",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "search",
+        ],
+      },
+    },
     "/v1/segments": {
       "get": {
         "operationId": "segments.list",
@@ -73503,6 +74275,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "overview",
+    },
+    {
+      "name": "search",
     },
     {
       "name": "exports",
