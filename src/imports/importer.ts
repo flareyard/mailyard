@@ -15,9 +15,14 @@ import { mapFolder } from "./folders.ts"
 import { mboxMessage } from "./mbox.ts"
 
 /**
- * Batch limits for one Workflow step: a step reconnects, fetches the batch and files it, so a batch
- * must fit comfortably in a step's 30 s of CPU and an isolate's memory. Spike S5 (HAL-3118) measures
- * these against Spacemail from a deployed Worker.
+ * Batch limits for one Workflow step: a step reconnects, fetches the batch and files it.
+ *
+ * Measured on 2026-10-17 (spike S5, HAL-3118) against mail.spacemail.com:993 from the deployed Worker,
+ * importing 51 messages (2 batches):
+ * - a 50-message batch took 17 s of wall time;
+ * - the whole run used 215 ms of CPU (Workers observability).
+ * The work is I/O-bound at about 4 ms of CPU a message, so CPU is nowhere near the 30 s step limit.
+ * What bounds a batch is the wall time a retry repeats, and memory (10 MiB per fetch).
  */
 export const IMPORT_BATCH = { maxMessages: 50, maxBytes: 10 * 1024 * 1024 } as const
 /** UIDs per size-only FETCH while planning, to keep each response small. */
