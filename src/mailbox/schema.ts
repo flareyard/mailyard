@@ -166,4 +166,10 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
       "ALTER TABLE messages ADD COLUMN rules_matched TEXT",
     ],
   },
+  {
+    statements: [
+      // Opens and clicks to track for this send, chosen when it's sent ({opens, clicks} JSON), else NULL.
+      "ALTER TABLE drafts ADD COLUMN track TEXT",
+    ],
+  },
 ]

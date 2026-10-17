@@ -539,6 +539,10 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
   readonly sentCopyId: string | null
   readonly apiKeyId: string | null
   readonly message: Outgoing
+  /** Opens and clicks to track on this message, as its sender chose; the sent copy is never instrumented. */
+  readonly track?:
+    | { readonly opens: boolean; readonly clicks: boolean; readonly origin: string | null }
+    | undefined
 }) {
   const database = yield* Database
   const all = [...input.message.to, ...(input.message.cc ?? []), ...(input.message.bcc ?? [])]
@@ -570,6 +574,10 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
         : { to: bcc.slice(0, 1), cc: [], bcc: bcc.slice(1) }
   const id = yield* (yield* Ids).next
   const recipient = (input.message.to[0] ?? all[0])?.email ?? ""
+  // Tracking needs an origin for its links: the configured tracking origin, else the API's own.
+  const wants = input.track && (input.track.opens || input.track.clicks) ? input.track : undefined
+  const trackOrigin = wants ? trackingOrigin(yield* getCompliance(), wants.origin ?? "") : ""
+  const tracked = Boolean(wants && trackOrigin)
   const insert = (status: "queued" | "rejected", error: string | null) =>
     database.query("messagesOut.insertMailbox", (db) =>
       db
@@ -586,6 +594,7 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
           mailboxMessageId: input.sentCopyId,
           status,
           error,
+          tracked: status === "queued" && tracked,
         })
         .run(),
     )
@@ -609,13 +618,24 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
     ...(envelope.cc.length > 0 ? { cc: envelope.cc } : {}),
     ...(envelope.bcc.length > 0 ? { bcc: envelope.bcc } : {}),
   })
+  // What goes out carries the pixel and the redirected links; `message`, filed as the sender's copy, doesn't,
+  // so reading your own sent mail never counts as an open.
+  const outgoing: Outgoing =
+    tracked && wants
+      ? yield* instrument(message, {
+          messageId: id,
+          origin: trackOrigin,
+          opens: wants.opens,
+          clicks: wants.clicks,
+        })
+      : message
   yield* (yield* BlobStore).put(
     renderedKey(id),
-    new TextEncoder().encode(encodeRendered(message)),
+    new TextEncoder().encode(encodeRendered(outgoing)),
     "application/json",
   )
   yield* insert("queued", null)
-  const status = yield* attempt(id, message, 0)
+  const status = yield* attempt(id, outgoing, 0)
   yield* counted("mailbox")(status)
   const row = yield* database.query("messagesOut.cfId", (db) =>
     db

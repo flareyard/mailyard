@@ -6,6 +6,7 @@ import {
   type DeliveredAttachment,
   type Draft,
   type DraftInput,
+  type DraftTracking,
   type FilingOptions,
   FOLDERS,
   type Folder,
@@ -1125,6 +1126,7 @@ export class MailboxStore {
       replyMode: str(row.reply_mode) as Draft["replyMode"],
       sourceMessageId: str(row.source_message_id),
       lastError: str(row.last_error),
+      track: row.track ? (JSON.parse(String(row.track)) as Draft["track"]) : null,
       createdAt: Number(row.created_at),
       updatedAt: Number(row.updated_at),
     }
@@ -1188,7 +1190,7 @@ export class MailboxStore {
            cc_list = excluded.cc_list, bcc_list = excluded.bcc_list, subject = excluded.subject,
            body_text = excluded.body_text, body_html = excluded.body_html, attachments = excluded.attachments,
            status = 'draft', send_at = NULL, updated_at = excluded.updated_at, reply_mode = excluded.reply_mode,
-           source_message_id = excluded.source_message_id, last_error = NULL`,
+           source_message_id = excluded.source_message_id, last_error = NULL, track = NULL`,
         id,
         merged.threadId,
         merged.inReplyTo,
@@ -1216,7 +1218,7 @@ export class MailboxStore {
   }
 
   /** Puts a draft on the schedule. At `sendAt` the alarm marks it `due` for the sender. */
-  scheduleDraft(id: string, sendAt: number) {
+  scheduleDraft(id: string, sendAt: number, track: DraftTracking | null = null) {
     return this.transaction(() => {
       const draft = this.draft(id)
       if (!draft) throw mailboxError("not_found", `No draft ${id}`)
@@ -1226,8 +1228,11 @@ export class MailboxStore {
         throw mailboxError("invalid", "A scheduled draft needs at least one recipient")
       }
       this.sql.exec(
-        "UPDATE drafts SET status = 'scheduled', send_at = ?, updated_at = ? WHERE id = ?",
+        "UPDATE drafts SET status = 'scheduled', send_at = ?, track = ?, updated_at = ? WHERE id = ?",
         sendAt,
+        track && (track.opens || track.clicks)
+          ? JSON.stringify({ opens: track.opens, clicks: track.clicks })
+          : null,
         this.now(),
         id,
       )
@@ -1250,7 +1255,7 @@ export class MailboxStore {
       if (!draft) throw mailboxError("not_found", `No draft ${id}`)
       if (draft.status === "due") throw mailboxError("draft_locked", `Draft ${id} is being sent`)
       this.sql.exec(
-        "UPDATE drafts SET status = 'draft', send_at = NULL, updated_at = ? WHERE id = ?",
+        "UPDATE drafts SET status = 'draft', send_at = NULL, track = NULL, updated_at = ? WHERE id = ?",
         this.now(),
         id,
       )
