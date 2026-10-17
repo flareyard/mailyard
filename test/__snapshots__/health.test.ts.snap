@@ -48078,6 +48078,89 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                               ],
                             },
+                            "recipients": {
+                              "description": "Each recipient's own delivery, moved by its delivery events and pushed as delivery.changed on the live socket. Empty for mail sent before it was recorded.",
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "at": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "attempts": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "to",
+                                      "cc",
+                                      "bcc",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "recipient": {
+                                    "type": "string",
+                                  },
+                                  "smtpResponse": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "queued",
+                                      "sent",
+                                      "delivered",
+                                      "deferred",
+                                      "bounced",
+                                      "failed",
+                                      "rejected",
+                                      "complained",
+                                      "suppressed",
+                                    ],
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "recipient",
+                                  "kind",
+                                  "status",
+                                  "at",
+                                  "attempts",
+                                  "smtpResponse",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
                             "status": {
                               "type": "string",
                             },
@@ -48095,6 +48178,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "machineClicks",
                             "firstOpenedAt",
                             "firstClickedAt",
+                            "recipients",
                           ],
                           "type": "object",
                         },

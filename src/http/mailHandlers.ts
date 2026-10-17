@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
+import { recipientsOf } from "../domain/deliveryEvents.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
 import { BlobStore } from "../kit/index.ts"
 import { type Access, type MailboxAccessDenied, type MailboxMissing, requireMailbox } from "../mail/access.ts"
@@ -503,6 +504,7 @@ export const MailHandlers = HttpApiBuilder.group(
                 machineClicks: sent.machineClicks,
                 firstOpenedAt: sent.firstOpenedAt,
                 firstClickedAt: sent.firstClickedAt,
+                recipients: yield* recipientsOf(sent.id),
               }
             : null
           return {

@@ -162,6 +162,13 @@
       "when": 1792278268926,
       "tag": "0022_mailbox_spam_threshold",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792279179817,
+      "tag": "0023_message_recipients",
+      "breakpoints": true
     }
   ]
 }

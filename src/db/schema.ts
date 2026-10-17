@@ -1070,3 +1070,34 @@ export const audienceDaily = sqliteTable("audience_daily", {
   suppressed: integer("suppressed").notNull(),
   at: integer("at").notNull(),
 })
+
+/**
+ * Each recipient of a mailbox send and how its delivery went (HAL-3408): one Email Sending message
+ * goes to everyone on it, but each recipient gets their own events. Seeded when the send goes out;
+ * delivery events move each row forward, the same way the message's own status moves.
+ */
+export const messageRecipients = sqliteTable(
+  "message_recipients",
+  {
+    messageId: text("message_id").notNull(),
+    recipient: text("recipient").notNull(),
+    kind: text("kind", { enum: ["to", "cc", "bcc"] }).notNull(),
+    status: text("status", {
+      enum: [
+        "queued",
+        "sent",
+        "delivered",
+        "deferred",
+        "bounced",
+        "failed",
+        "rejected",
+        "complained",
+        "suppressed",
+      ],
+    }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    smtpResponse: text("smtp_response"),
+    at: integer("at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.recipient] })],
+)

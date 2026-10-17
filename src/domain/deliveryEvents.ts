@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { stopRunsForEmail } from "../automations/runs.ts"
@@ -7,11 +7,13 @@ import {
   contacts,
   dailyStats,
   events,
+  messageRecipients,
   messagesOut,
   processedEvents,
   suppressions,
 } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
+import { callMailbox } from "../mail/rpc.ts"
 import { Database } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
 import { raiseAlert } from "./alerts.ts"
@@ -198,6 +200,96 @@ const feedGovernor = (
     Effect.catchCause((cause) => Effect.logError("governor: could not record a delivery outcome", cause)),
   )
 
+const recordRecipient = (
+  row: typeof messagesOut.$inferSelect,
+  recipient: string,
+  kind: Status,
+  payload: EmailSendingEvent["payload"],
+  at: number,
+) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const current = yield* database.query("messageRecipients.get", (db) =>
+      db
+        .select()
+        .from(messageRecipients)
+        .where(and(eq(messageRecipients.messageId, row.id), eq(messageRecipients.recipient, recipient)))
+        .get(),
+    )
+    const smtp = payload.delivery.smtpResponse ?? payload.failure?.reason ?? payload.bounce?.reason ?? null
+    const rank = (s: string) => RANK[s as Status] ?? 0
+    if (!current) {
+      // Sent before recipients were recorded, or an address the event names differently: keep it.
+      yield* database.query("messageRecipients.fromEvent", (db) =>
+        db
+          .insert(messageRecipients)
+          .values({
+            messageId: row.id,
+            recipient,
+            kind: "to",
+            status: kind,
+            attempts: kind === "deferred" ? 1 : 0,
+            smtpResponse: smtp,
+            at,
+          })
+          .onConflictDoNothing()
+          .run(),
+      )
+    } else if (kind === "deferred" && current.status === "deferred") {
+      yield* database.query("messageRecipients.deferredAgain", (db) =>
+        db
+          .update(messageRecipients)
+          .set({ attempts: current.attempts + 1, smtpResponse: smtp ?? current.smtpResponse, at })
+          .where(and(eq(messageRecipients.messageId, row.id), eq(messageRecipients.recipient, recipient)))
+          .run(),
+      )
+    } else if (rank(kind) >= rank(current.status)) {
+      yield* database.query("messageRecipients.event", (db) =>
+        db
+          .update(messageRecipients)
+          .set({
+            status: kind,
+            attempts: current.attempts + (kind === "deferred" ? 1 : 0),
+            smtpResponse: smtp ?? current.smtpResponse,
+            at,
+          })
+          .where(and(eq(messageRecipients.messageId, row.id), eq(messageRecipients.recipient, recipient)))
+          .run(),
+      )
+    } else return
+    if (!row.mailboxId || !row.mailboxMessageId) return
+    const recipients = yield* recipientsOf(row.id)
+    yield* callMailbox(row.mailboxId, (s) =>
+      s.notify({
+        type: "delivery.changed",
+        messageId: row.mailboxMessageId as string,
+        logId: row.id,
+        recipients,
+      }),
+    ).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logWarning("delivery: mailbox not told of a recipient update", cause),
+      ),
+    )
+  })
+
+/** A mailbox send's recipients and how each one's delivery went, in the order they were added. */
+export const recipientsOf = (messageId: string) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const rows = yield* database.query("messageRecipients.list", (db) =>
+      db.select().from(messageRecipients).where(eq(messageRecipients.messageId, messageId)).all(),
+    )
+    return rows.map((r) => ({
+      recipient: r.recipient,
+      kind: r.kind,
+      status: r.status,
+      at: r.at,
+      attempts: r.attempts,
+      smtpResponse: r.smtpResponse,
+    }))
+  })
+
 export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: EmailSendingEvent) {
   const database = yield* Database
   const { payload } = event
@@ -233,6 +325,9 @@ export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: Em
         .run(),
     )
   }
+
+  // A mailbox send: this recipient's own row moves forward too, and the mailbox is told (HAL-3408).
+  if (row?.stream === "mailbox") yield* recordRecipient(row, recipient, kind, payload, at)
 
   if (row && (row.stream === "campaign" || row.stream === "automation") && GOVERNED[kind]) {
     yield* feedGovernor(row, GOVERNED[kind], at)

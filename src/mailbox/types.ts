@@ -266,6 +266,13 @@ export type MailboxEvent =
       readonly removedDraftIds: ReadonlyArray<string>
     }
   | { readonly type: "draft.due"; readonly draft: Draft }
+  /** A sent message's per-recipient delivery moved (HAL-3408): who got it, who's deferred, who bounced. */
+  | {
+      readonly type: "delivery.changed"
+      readonly messageId: string
+      readonly logId: string
+      readonly recipients: ReadonlyArray<Readonly<Record<string, unknown>>>
+    }
   /** A conversation's internal notes changed (HAL-3407). */
   | {
       readonly type: "notes.changed"
