@@ -146,7 +146,7 @@ describe("email(): store, parse, file", () => {
       dmarc: "pass",
       dkim: [{ result: "pass", domain: "example.org" }],
     })
-    expect(await box(sam).schemaVersion()).toBe(1)
+    expect(await box(sam).schemaVersion()).toBe(2)
   })
 
   it("stores attachments content-addressed in R2 and lists them on the message", async () => {

@@ -18,6 +18,7 @@ import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { appLayer } from "../layers.ts"
 import { handleEmail } from "./inbound.ts"
+import { handleLive, LIVE_PATH } from "./live.ts"
 import { handleQueue } from "./queue.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
@@ -43,7 +44,11 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
 const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 
 export default {
-  fetch: (request) => handler(request),
+  fetch: (request, env) => {
+    const live = LIVE_PATH.exec(new URL(request.url).pathname)
+    if (live?.[1]) return handleLive(request, env, decodeURIComponent(live[1]))
+    return handler(request)
+  },
   queue: (batch, env) => handleQueue(batch, env),
   email: async (message, env) => {
     await handleEmail(message, env)

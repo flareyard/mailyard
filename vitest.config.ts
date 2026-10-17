@@ -1,9 +1,32 @@
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin"
 import { defineConfig } from "vitest/config"
 
 /** Pure functions (sender mapping, retry policy, email blocks) don't need the Workers runtime. */
 const UNIT = ["test/kit/**/*.test.ts", "test/templates/kit.test.ts"]
+
+/**
+ * wrangler.jsonc without its queue consumers. Tests drive consumers by hand with createMessageBatch;
+ * a bound consumer would also deliver queued jobs in the background and race them (HAL-3218). Miniflare
+ * merges consumer options additively, so they can only be left out of the config, not overridden.
+ * test/queues.test.ts checks the real file still binds every consumer.
+ */
+const testWranglerConfig = () => {
+  const root = import.meta.dirname
+  const source = readFileSync(path.join(root, "wrangler.jsonc"), "utf8")
+  const config = JSON.parse(
+    source.replace(/("(?:[^"\\]|\\.)*")|\/\/[^\n]*/g, (_, s: string | undefined) => s ?? ""),
+  )
+  delete config.queues.consumers
+  config.main = path.join(root, config.main)
+  for (const db of config.d1_databases ?? []) db.migrations_dir = path.join(root, db.migrations_dir)
+  const dir = path.join(root, ".wrangler", "vitest")
+  mkdirSync(dir, { recursive: true })
+  const file = path.join(dir, "wrangler.json")
+  writeFileSync(file, JSON.stringify(config, null, 2))
+  return file
+}
 
 export default defineConfig({
   test: {
@@ -12,7 +35,7 @@ export default defineConfig({
       {
         plugins: [
           cloudflareTest(async () => ({
-            wrangler: { configPath: "./wrangler.jsonc" },
+            wrangler: { configPath: testWranglerConfig() },
             miniflare: {
               bindings: {
                 TEST_MIGRATIONS: await readD1Migrations(path.join(import.meta.dirname, "migrations")),
