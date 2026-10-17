@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { contacts, events, messagesOut } from "../db/schema.ts"
+import { campaignLinks, contacts, events, messagesOut } from "../db/schema.ts"
 import { timingSafeEqual } from "../domain/crypto.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { Ids, type Outgoing } from "../kit/index.ts"
@@ -223,6 +223,26 @@ export const recordHit = Effect.fn("tracking.record")(function* (
       .where(eq(messagesOut.id, row.id))
       .run(),
   )
+  if (kind === "click" && row.campaignId && payload.u) {
+    const url = payload.u.slice(0, 2000)
+    yield* database.query("tracking.link", (db) =>
+      db
+        .insert(campaignLinks)
+        .values({
+          campaignId: row.campaignId as string,
+          url,
+          clicks: human ? 1 : 0,
+          machineClicks: human ? 0 : 1,
+        })
+        .onConflictDoUpdate({
+          target: [campaignLinks.campaignId, campaignLinks.url],
+          set: human
+            ? { clicks: sql`${campaignLinks.clicks} + 1` }
+            : { machineClicks: sql`${campaignLinks.machineClicks} + 1` },
+        })
+        .run(),
+    )
+  }
   const env = yield* Bindings
   env.TRACK_EVENTS?.writeDataPoint({
     indexes: [row.id],

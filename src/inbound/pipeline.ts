@@ -290,6 +290,7 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
   yield* storeParsedParts(row.sha256, parsed)
   yield* update(row.id, {
     messageId: parsed.messageId,
+    inReplyTo: parsed.inReplyTo,
     subject: parsed.subject.slice(0, 998),
     fromAddress: parsed.from?.address ?? null,
   })

@@ -3,6 +3,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Schema from "effect/Schema"
+import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 
@@ -2057,6 +2058,79 @@ export const CampaignSchema = Schema.Struct({
   updatedAt: Schema.NullOr(Schema.Number),
 })
 
+const CampaignReportSchema = Schema.Struct({
+  campaignId: Schema.String,
+  status: CampaignStatusSchema,
+  audience: Count,
+  sent: Count,
+  delivered: Count,
+  pending: Count,
+  tracked: Schema.Boolean,
+  opened: Count,
+  machineOnlyOpens: Count,
+  machineOpenShare: Schema.Number,
+  clicked: Count,
+  replied: Count,
+  unsubscribed: Count,
+  bounced: Schema.Struct({ hard: Count, soft: Count }),
+  complained: Count,
+  failed: Count,
+  rates: Schema.Struct({
+    delivery: Schema.Number,
+    open: Schema.Number,
+    click: Schema.Number,
+    clickToOpen: Schema.Number,
+    bounce: Schema.Number,
+    complaint: Schema.Number,
+    unsubscribe: Schema.Number,
+  }),
+  providers: Schema.Array(
+    Schema.Struct({
+      provider: Schema.String,
+      sent: Count,
+      delivered: Count,
+      bounced: Count,
+      complained: Count,
+      opened: Count,
+    }),
+  ),
+  links: Schema.Array(Schema.Struct({ url: Schema.String, clicks: Count, machineClicks: Count })),
+  activity: Schema.Array(Schema.Struct({ hour: Count, opens: Count, clicks: Count })),
+  ab: Schema.NullOr(
+    Schema.Struct({
+      metric: Schema.Literals(["clicks", "opens"]),
+      winner: Schema.NullOr(Schema.Literals(["a", "b"])),
+      variants: Schema.Array(
+        Schema.Struct({
+          variant: Schema.Literals(["a", "b"]),
+          subject: Schema.String,
+          sent: Count,
+          opened: Count,
+          clicked: Count,
+        }),
+      ),
+    }),
+  ),
+})
+
+const CampaignRecipientSchema = Schema.Struct({
+  messageId: Schema.String,
+  contactId: Schema.NullOr(Schema.String),
+  email: Schema.String,
+  name: Schema.NullOr(Schema.String),
+  status: Schema.String,
+  bounceType: Schema.NullOr(Schema.String),
+  provider: Schema.NullOr(Schema.String),
+  variant: Schema.NullOr(Schema.String),
+  openedAt: Schema.NullOr(Schema.Number),
+  clickedAt: Schema.NullOr(Schema.Number),
+  opens: Count,
+  clicks: Count,
+  machineOpens: Count,
+  unsubscribed: Schema.Boolean,
+  sentAt: Schema.Number,
+})
+
 const CampaignFields = {
   segmentId: Schema.optionalKey(Schema.NullOr(Schema.String)),
   topicId: Schema.optionalKey(Schema.NullOr(Schema.String)),
@@ -2211,6 +2285,30 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         eta: Schema.Struct({ days: Schema.NullOr(Schema.Number), at: Schema.NullOr(Schema.Number) }),
       }),
       error: [Forbidden, NotFound, GovernorUnreachable],
+    }),
+    HttpApiEndpoint.get("report", "/v1/campaigns/:id/report", {
+      params: { id: Schema.String },
+      success: CampaignReportSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("recipients", "/v1/campaigns/:id/recipients", {
+      params: { id: Schema.String },
+      query: {
+        status: Schema.optionalKey(Schema.Literals(RECIPIENT_FILTERS)),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+      },
+      success: Schema.Struct({
+        recipients: Schema.Array(CampaignRecipientSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    /** A draft for the people who received this campaign and didn't open it. */
+    HttpApiEndpoint.post("resendNonOpeners", "/v1/campaigns/:id/resend-non-openers", {
+      params: { id: Schema.String },
+      success: CampaignSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
     }),
     HttpApiEndpoint.get("getCompliance", "/v1/settings/compliance", {
       success: ComplianceSchema,
