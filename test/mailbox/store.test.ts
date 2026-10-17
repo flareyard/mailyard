@@ -8,6 +8,11 @@ import type { MailboxDO } from "../../src/objects/MailboxDO.ts"
 import { delivery, freshMailbox } from "./deliveries.ts"
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+/**
+ * How far ahead the alarm tests schedule. The store refuses a time already past when the RPC arrives,
+ * and a loaded CI machine can take well over 50 ms to get it there.
+ */
+const SOON_MS = 750
 const codeOf = async (promise: Promise<unknown>) => {
   try {
     await promise
@@ -343,8 +348,8 @@ describe("drafts and the schedule", () => {
       subject: "Later",
       to: [{ name: null, address: "x@example.org" }],
     })
-    await box.scheduleDraft(draft.id, Date.now() + 50)
-    await sleep(80)
+    await box.scheduleDraft(draft.id, Date.now() + SOON_MS)
+    await sleep(SOON_MS + 100)
     // Miniflare fires alarms in real time; this runs it now if it hasn't fired yet.
     await runDurableObjectAlarm(box)
     expect(await box.draft(draft.id)).toMatchObject({ status: "due" })
@@ -359,11 +364,11 @@ describe("drafts and the schedule", () => {
     await box.deliver(delivery({ id: "inb_new", subject: "New", receivedAt: 2000 }))
     await box.updateMessages(["inb_old"], { seen: true })
     const oldThread = (await box.message("inb_old"))?.threadId ?? ""
-    await box.snooze(oldThread, Date.now() + 50)
+    await box.snooze(oldThread, Date.now() + SOON_MS)
     expect((await box.threads({ folder: "inbox" })).threads.map((t) => t.subject)).toEqual(["New"])
     expect((await box.threads({ folder: "snoozed" })).threads[0]?.snoozedUntil).not.toBeNull()
 
-    await sleep(80)
+    await sleep(SOON_MS + 100)
     await runDurableObjectAlarm(box)
     const inbox = (await box.threads({ folder: "inbox" })).threads
     expect(inbox.map((t) => t.subject)).toEqual(["Old", "New"])
