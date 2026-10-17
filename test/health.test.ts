@@ -183,6 +183,8 @@ describe("GET /openapi.json", () => {
       "/v1/runs/{id}",
       "/v1/runs/{id}/exit",
       "/v1/runs/{id}/retry",
+      "/v1/search",
+      "/v1/search/mail",
       "/v1/segments",
       "/v1/segments/preview",
       "/v1/segments/{id}",
