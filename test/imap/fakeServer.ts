@@ -22,6 +22,8 @@ export interface FakeOptions {
   readonly folders: ReadonlyArray<FakeFolder>
   /** Break the connection after this many FETCH commands, to test checkpoints. */
   readonly dropAfterFetches?: number
+  /** UIDs whose FETCH comes back without a body (a broken message on the server), to test retries. */
+  readonly noBody?: ReadonlyArray<number>
 }
 
 const enc = new TextEncoder()
@@ -128,7 +130,9 @@ export const fakeImap = (options: FakeOptions) => {
           if (!wanted.has(m.uid)) return
           const bytes = enc.encode(m.raw)
           const flags = `FLAGS (${(m.flags ?? []).join(" ")})`
-          if (withBody) {
+          if (withBody && options.noBody?.includes(m.uid)) {
+            push(`* ${i + 1} FETCH (UID ${m.uid} ${flags} RFC822.SIZE ${bytes.length})\r\n`)
+          } else if (withBody) {
             push(
               `* ${i + 1} FETCH (UID ${m.uid} ${flags} INTERNALDATE "${m.date ?? "17-Oct-2026 09:00:00 +0000"}" RFC822.SIZE ${bytes.length} BODY[] {${bytes.length}}\r\n`,
             )

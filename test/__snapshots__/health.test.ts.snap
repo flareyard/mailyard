@@ -39706,6 +39706,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "object",
                           },
+                          "downloadsExpireAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "When these download links stop working (a week); every read of the export signs a fresh pair.",
+                          },
                           "error": {
                             "anyOf": [
                               {
@@ -39791,6 +39814,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "zipSize",
                           "error",
                           "downloads",
+                          "downloadsExpireAt",
                           "createdAt",
                           "completedAt",
                         ],
@@ -39964,6 +39988,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "object",
                     },
+                    "downloadsExpireAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When these download links stop working (a week); every read of the export signs a fresh pair.",
+                    },
                     "error": {
                       "anyOf": [
                         {
@@ -40049,6 +40096,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "zipSize",
                     "error",
                     "downloads",
+                    "downloadsExpireAt",
                     "createdAt",
                     "completedAt",
                   ],
@@ -40224,6 +40272,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "object",
                     },
+                    "downloadsExpireAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When these download links stop working (a week); every read of the export signs a fresh pair.",
+                    },
                     "error": {
                       "anyOf": [
                         {
@@ -40309,6 +40380,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "zipSize",
                     "error",
                     "downloads",
+                    "downloadsExpireAt",
                     "createdAt",
                     "completedAt",
                   ],
@@ -40780,6 +40852,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "accountedFor": {
                             "type": "boolean",
                           },
+                          "catchupOf": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "A catch-up: the import it continues from.",
+                          },
                           "createdAt": {
                             "anyOf": [
                               {
@@ -40807,6 +40890,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "null",
                               },
                             ],
+                          },
+                          "etaAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "When it should finish at that rate; null unless running.",
                           },
                           "finishedAt": {
                             "anyOf": [
@@ -40922,6 +41028,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                     },
                                   ],
                                 },
+                                "lastError": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "description": "Why the latest failure in this folder failed.",
+                                },
                                 "lastUid": {
                                   "anyOf": [
                                     {
@@ -40939,6 +41056,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                                 "name": {
                                   "type": "string",
+                                },
+                                "retryable": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
                                 },
                                 "skipped": {
                                   "anyOf": [
@@ -41005,6 +41137,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "lastUid",
                                 "batches",
                                 "batchesDone",
+                                "lastError",
+                                "retryable",
                               ],
                               "type": "object",
                             },
@@ -41030,6 +41164,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "string",
                           },
+                          "pausedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "port": {
                             "anyOf": [
                               {
@@ -41052,6 +41208,63 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "ratePerMinute": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Messages a minute since it started moving, paused time left out; null for its first minute.",
+                          },
+                          "retryOf": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "A retry: the import whose failed messages it fetches.",
+                          },
+                          "since": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "A catch-up: when that import finished, what it fetches after.",
+                          },
                           "source": {
                             "enum": [
                               "imap",
@@ -41059,10 +41272,33 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "string",
                           },
+                          "startedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "status": {
                             "enum": [
                               "pending",
                               "running",
+                              "paused",
                               "complete",
                               "failed",
                               "cancelled",
@@ -41180,6 +41416,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "folders",
                           "totals",
                           "accountedFor",
+                          "ratePerMinute",
+                          "etaAt",
+                          "startedAt",
+                          "pausedAt",
+                          "catchupOf",
+                          "since",
+                          "retryOf",
                           "credentialsHeld",
                           "createdAt",
                           "finishedAt",
@@ -41377,6 +41620,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "accountedFor": {
                       "type": "boolean",
                     },
+                    "catchupOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: the import it continues from.",
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -41404,6 +41658,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When it should finish at that rate; null unless running.",
                     },
                     "finishedAt": {
                       "anyOf": [
@@ -41519,6 +41796,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "lastError": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the latest failure in this folder failed.",
+                          },
                           "lastUid": {
                             "anyOf": [
                               {
@@ -41536,6 +41824,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "name": {
                             "type": "string",
+                          },
+                          "retryable": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "skipped": {
                             "anyOf": [
@@ -41602,6 +41905,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "lastUid",
                           "batches",
                           "batchesDone",
+                          "lastError",
+                          "retryable",
                         ],
                         "type": "object",
                       },
@@ -41627,6 +41932,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "pausedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "port": {
                       "anyOf": [
                         {
@@ -41649,6 +41976,63 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Messages a minute since it started moving, paused time left out; null for its first minute.",
+                    },
+                    "retryOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A retry: the import whose failed messages it fetches.",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: when that import finished, what it fetches after.",
+                    },
                     "source": {
                       "enum": [
                         "imap",
@@ -41656,10 +42040,33 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "status": {
                       "enum": [
                         "pending",
                         "running",
+                        "paused",
                         "complete",
                         "failed",
                         "cancelled",
@@ -41777,6 +42184,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "folders",
                     "totals",
                     "accountedFor",
+                    "ratePerMinute",
+                    "etaAt",
+                    "startedAt",
+                    "pausedAt",
+                    "catchupOf",
+                    "since",
+                    "retryOf",
                     "credentialsHeld",
                     "createdAt",
                     "finishedAt",
@@ -41786,6 +42200,246 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "transfers",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/imports/probe": {
+      "post": {
+        "operationId": "transfers.probeImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "host": {
+                    "type": "string",
+                  },
+                  "password": {
+                    "type": "string",
+                  },
+                  "port": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                      },
+                      {
+                        "enum": [
+                          "Infinity",
+                          "-Infinity",
+                          "NaN",
+                        ],
+                        "type": "string",
+                      },
+                    ],
+                  },
+                  "username": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "host",
+                  "username",
+                  "password",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "The account's folders before importing. The password is used for this connection only.",
+                  "properties": {
+                    "folders": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "folder": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Where it would land; null when skipped.",
+                          },
+                          "label": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "messages": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "skipReason": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "skipped": {
+                            "type": "boolean",
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "messages",
+                          "folder",
+                          "label",
+                          "skipped",
+                          "skipReason",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "host": {
+                      "type": "string",
+                    },
+                    "port": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "host",
+                    "port",
+                    "folders",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "The account's folders before importing. The password is used for this connection only.",
           },
           "400": {
             "content": {
@@ -41889,6 +42543,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "accountedFor": {
                       "type": "boolean",
                     },
+                    "catchupOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: the import it continues from.",
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -41916,6 +42581,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When it should finish at that rate; null unless running.",
                     },
                     "finishedAt": {
                       "anyOf": [
@@ -42031,6 +42719,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "lastError": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the latest failure in this folder failed.",
+                          },
                           "lastUid": {
                             "anyOf": [
                               {
@@ -42048,6 +42747,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "name": {
                             "type": "string",
+                          },
+                          "retryable": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "skipped": {
                             "anyOf": [
@@ -42114,6 +42828,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "lastUid",
                           "batches",
                           "batchesDone",
+                          "lastError",
+                          "retryable",
                         ],
                         "type": "object",
                       },
@@ -42139,6 +42855,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "pausedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "port": {
                       "anyOf": [
                         {
@@ -42161,6 +42899,63 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Messages a minute since it started moving, paused time left out; null for its first minute.",
+                    },
+                    "retryOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A retry: the import whose failed messages it fetches.",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: when that import finished, what it fetches after.",
+                    },
                     "source": {
                       "enum": [
                         "imap",
@@ -42168,10 +42963,33 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "status": {
                       "enum": [
                         "pending",
                         "running",
+                        "paused",
                         "complete",
                         "failed",
                         "cancelled",
@@ -42289,6 +43107,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "folders",
                     "totals",
                     "accountedFor",
+                    "ratePerMinute",
+                    "etaAt",
+                    "startedAt",
+                    "pausedAt",
+                    "catchupOf",
+                    "since",
+                    "retryOf",
                     "credentialsHeld",
                     "createdAt",
                     "finishedAt",
@@ -42401,6 +43226,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "accountedFor": {
                       "type": "boolean",
                     },
+                    "catchupOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: the import it continues from.",
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -42428,6 +43264,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When it should finish at that rate; null unless running.",
                     },
                     "finishedAt": {
                       "anyOf": [
@@ -42543,6 +43402,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "lastError": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the latest failure in this folder failed.",
+                          },
                           "lastUid": {
                             "anyOf": [
                               {
@@ -42560,6 +43430,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "name": {
                             "type": "string",
+                          },
+                          "retryable": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "skipped": {
                             "anyOf": [
@@ -42626,6 +43511,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "lastUid",
                           "batches",
                           "batchesDone",
+                          "lastError",
+                          "retryable",
                         ],
                         "type": "object",
                       },
@@ -42651,6 +43538,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "pausedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "port": {
                       "anyOf": [
                         {
@@ -42673,6 +43582,63 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Messages a minute since it started moving, paused time left out; null for its first minute.",
+                    },
+                    "retryOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A retry: the import whose failed messages it fetches.",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: when that import finished, what it fetches after.",
+                    },
                     "source": {
                       "enum": [
                         "imap",
@@ -42680,10 +43646,33 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "status": {
                       "enum": [
                         "pending",
                         "running",
+                        "paused",
                         "complete",
                         "failed",
                         "cancelled",
@@ -42801,6 +43790,2082 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "folders",
                     "totals",
                     "accountedFor",
+                    "ratePerMinute",
+                    "etaAt",
+                    "startedAt",
+                    "pausedAt",
+                    "catchupOf",
+                    "since",
+                    "retryOf",
+                    "credentialsHeld",
+                    "createdAt",
+                    "finishedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "transfers",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/imports/{importId}/pause": {
+      "post": {
+        "operationId": "transfers.pauseImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "importId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "accountedFor": {
+                      "type": "boolean",
+                    },
+                    "catchupOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: the import it continues from.",
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "credentialsHeld": {
+                      "type": "boolean",
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When it should finish at that rate; null unless running.",
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "folders": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "batches": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "batchesDone": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "duplicates": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "failed": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "folder": {
+                            "type": "string",
+                          },
+                          "imported": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "label": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "lastError": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the latest failure in this folder failed.",
+                          },
+                          "lastUid": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "retryable": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "skipped": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "source": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "uidValidity": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "folder",
+                          "label",
+                          "uidValidity",
+                          "source",
+                          "imported",
+                          "duplicates",
+                          "failed",
+                          "lastUid",
+                          "batches",
+                          "batchesDone",
+                          "lastError",
+                          "retryable",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "host": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "mode": {
+                      "enum": [
+                        "full",
+                        "catchup",
+                      ],
+                      "type": "string",
+                    },
+                    "pausedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "port": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Messages a minute since it started moving, paused time left out; null for its first minute.",
+                    },
+                    "retryOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A retry: the import whose failed messages it fetches.",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: when that import finished, what it fetches after.",
+                    },
+                    "source": {
+                      "enum": [
+                        "imap",
+                        "mbox",
+                      ],
+                      "type": "string",
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "running",
+                        "paused",
+                        "complete",
+                        "failed",
+                        "cancelled",
+                      ],
+                      "type": "string",
+                    },
+                    "totals": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "duplicates": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "failed": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "imported": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "skipped": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "source": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "source",
+                        "imported",
+                        "duplicates",
+                        "failed",
+                        "skipped",
+                      ],
+                      "type": "object",
+                    },
+                    "username": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "mode",
+                    "host",
+                    "port",
+                    "username",
+                    "status",
+                    "error",
+                    "folders",
+                    "totals",
+                    "accountedFor",
+                    "ratePerMinute",
+                    "etaAt",
+                    "startedAt",
+                    "pausedAt",
+                    "catchupOf",
+                    "since",
+                    "retryOf",
+                    "credentialsHeld",
+                    "createdAt",
+                    "finishedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "transfers",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/imports/{importId}/resume": {
+      "post": {
+        "operationId": "transfers.resumeImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "importId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "accountedFor": {
+                      "type": "boolean",
+                    },
+                    "catchupOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: the import it continues from.",
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "credentialsHeld": {
+                      "type": "boolean",
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When it should finish at that rate; null unless running.",
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "folders": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "batches": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "batchesDone": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "duplicates": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "failed": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "folder": {
+                            "type": "string",
+                          },
+                          "imported": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "label": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "lastError": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the latest failure in this folder failed.",
+                          },
+                          "lastUid": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "retryable": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "skipped": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "source": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "uidValidity": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "folder",
+                          "label",
+                          "uidValidity",
+                          "source",
+                          "imported",
+                          "duplicates",
+                          "failed",
+                          "lastUid",
+                          "batches",
+                          "batchesDone",
+                          "lastError",
+                          "retryable",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "host": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "mode": {
+                      "enum": [
+                        "full",
+                        "catchup",
+                      ],
+                      "type": "string",
+                    },
+                    "pausedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "port": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Messages a minute since it started moving, paused time left out; null for its first minute.",
+                    },
+                    "retryOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A retry: the import whose failed messages it fetches.",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: when that import finished, what it fetches after.",
+                    },
+                    "source": {
+                      "enum": [
+                        "imap",
+                        "mbox",
+                      ],
+                      "type": "string",
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "running",
+                        "paused",
+                        "complete",
+                        "failed",
+                        "cancelled",
+                      ],
+                      "type": "string",
+                    },
+                    "totals": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "duplicates": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "failed": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "imported": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "skipped": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "source": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "source",
+                        "imported",
+                        "duplicates",
+                        "failed",
+                        "skipped",
+                      ],
+                      "type": "object",
+                    },
+                    "username": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "mode",
+                    "host",
+                    "port",
+                    "username",
+                    "status",
+                    "error",
+                    "folders",
+                    "totals",
+                    "accountedFor",
+                    "ratePerMinute",
+                    "etaAt",
+                    "startedAt",
+                    "pausedAt",
+                    "catchupOf",
+                    "since",
+                    "retryOf",
+                    "credentialsHeld",
+                    "createdAt",
+                    "finishedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "transfers",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/imports/{importId}/retry-failed": {
+      "post": {
+        "operationId": "transfers.retryFailed",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "importId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "password": {
+                    "description": "The source password again: the first import's was wiped when it ended.",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "password",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "accountedFor": {
+                      "type": "boolean",
+                    },
+                    "catchupOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: the import it continues from.",
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "credentialsHeld": {
+                      "type": "boolean",
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "When it should finish at that rate; null unless running.",
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "folders": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "batches": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "batchesDone": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "duplicates": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "failed": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "folder": {
+                            "type": "string",
+                          },
+                          "imported": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "label": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "lastError": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the latest failure in this folder failed.",
+                          },
+                          "lastUid": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "retryable": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "skipped": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "source": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "uidValidity": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "folder",
+                          "label",
+                          "uidValidity",
+                          "source",
+                          "imported",
+                          "duplicates",
+                          "failed",
+                          "lastUid",
+                          "batches",
+                          "batchesDone",
+                          "lastError",
+                          "retryable",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "host": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "mode": {
+                      "enum": [
+                        "full",
+                        "catchup",
+                      ],
+                      "type": "string",
+                    },
+                    "pausedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "port": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Messages a minute since it started moving, paused time left out; null for its first minute.",
+                    },
+                    "retryOf": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A retry: the import whose failed messages it fetches.",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "A catch-up: when that import finished, what it fetches after.",
+                    },
+                    "source": {
+                      "enum": [
+                        "imap",
+                        "mbox",
+                      ],
+                      "type": "string",
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "running",
+                        "paused",
+                        "complete",
+                        "failed",
+                        "cancelled",
+                      ],
+                      "type": "string",
+                    },
+                    "totals": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "duplicates": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "failed": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "imported": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "skipped": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "source": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "source",
+                        "imported",
+                        "duplicates",
+                        "failed",
+                        "skipped",
+                      ],
+                      "type": "object",
+                    },
+                    "username": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "mode",
+                    "host",
+                    "port",
+                    "username",
+                    "status",
+                    "error",
+                    "folders",
+                    "totals",
+                    "accountedFor",
+                    "ratePerMinute",
+                    "etaAt",
+                    "startedAt",
+                    "pausedAt",
+                    "catchupOf",
+                    "since",
+                    "retryOf",
                     "credentialsHeld",
                     "createdAt",
                     "finishedAt",

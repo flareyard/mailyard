@@ -5,9 +5,13 @@ import { Bindings } from "../Bindings.ts"
 import { mailboxExports, mailboxImports } from "../db/schema.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { SecretBox } from "../domain/webhooks.ts"
+import { ImapClient } from "../imap/client.ts"
 import { Ids } from "../kit/index.ts"
 import { fileUrl, LARGE_ATTACHMENT_LINK_TTL_SECONDS, signFileToken } from "../mail/files.ts"
 import { Database } from "../services/Database.ts"
+import { mapFolder } from "./folders.ts"
+import { ImapConnector, notifyProgress } from "./importer.ts"
+import { importView } from "./view.ts"
 
 export class TransferInvalid extends Schema.TaggedError<TransferInvalid>()("TransferInvalid", {
   field: Schema.String,
@@ -28,37 +32,7 @@ const HOSTNAME = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]
 type ImportRow = typeof mailboxImports.$inferSelect
 type ExportRow = typeof mailboxExports.$inferSelect
 
-/** An import as the API shows it: never the password, and totals summed across folders. */
-const describeImport = (r: ImportRow) => {
-  const progress = r.progress ?? []
-  const sum = (key: "source" | "imported" | "duplicates" | "failed" | "skipped") =>
-    progress.reduce((n, p) => n + (p[key] ?? 0), 0)
-  return {
-    id: r.id,
-    source: r.source,
-    mode: r.mode,
-    host: r.host,
-    port: r.port,
-    username: r.username,
-    status: r.status,
-    error: r.error,
-    folders: progress.map(({ raw: _, ...p }) => p),
-    totals: {
-      source: sum("source"),
-      imported: sum("imported"),
-      duplicates: sum("duplicates"),
-      failed: sum("failed"),
-      skipped: sum("skipped"),
-    },
-    /** Every message the source listed was imported, was already here, or is accounted for as failed or skipped. */
-    accountedFor:
-      r.status === "complete" &&
-      sum("source") === sum("imported") + sum("duplicates") + sum("failed") + sum("skipped"),
-    credentialsHeld: r.secretCiphertext !== null,
-    createdAt: r.createdAt,
-    finishedAt: r.finishedAt,
-  }
-}
+const describeImport = (r: ImportRow) => importView(r)
 
 export type ImportSummary = ReturnType<typeof describeImport>
 
@@ -87,6 +61,7 @@ export const createImport = Effect.fn("imports.create")(function* (
   mailboxId: string,
   input: ImapImportInput | MboxImportInput,
   actor: string,
+  retry?: { readonly retryOf: string; readonly uids: Record<string, ReadonlyArray<number>> },
 ) {
   const database = yield* Database
   const id = `imx_${yield* (yield* Ids).next}`
@@ -123,6 +98,7 @@ export const createImport = Effect.fn("imports.create")(function* (
           folders: input.folders?.length ? [...input.folders] : null,
           status: "pending",
           createdBy: actor,
+          ...(retry ? { retryOf: retry.retryOf, uids: retry.uids } : {}),
         })
         .run(),
     )
@@ -257,9 +233,180 @@ export const cancelImport = Effect.fn("imports.cancel")(function* (
   return yield* getImport(mailboxId, id)
 })
 
+const workflowOf = (row: ImportRow) =>
+  Effect.gen(function* () {
+    const { IMPORT_WORKFLOW } = yield* Bindings
+    return { IMPORT_WORKFLOW, id: row.workflowId ?? row.id }
+  })
+
+/** Pauses a running import between batches; nothing is lost, and resume carries on from there. */
+export const pauseImport = Effect.fn("imports.pause")(function* (
+  mailboxId: string,
+  id: string,
+  actor: string,
+) {
+  const row = yield* findImport(mailboxId, id)
+  if (row.status !== "running" && row.status !== "pending")
+    return yield* new TransferInvalid({
+      field: "status",
+      message: `The import is ${row.status}; only a running one pauses.`,
+    })
+  const database = yield* Database
+  yield* database.query("imports.pause", (db) =>
+    db
+      .update(mailboxImports)
+      .set({ status: "paused", pausedAt: Date.now() })
+      .where(eq(mailboxImports.id, id))
+      .run(),
+  )
+  yield* recordAudit({ actor, action: "import.paused", target: id })
+  yield* notifyProgress(id)
+  return yield* getImport(mailboxId, id)
+})
+
+export const resumeImport = Effect.fn("imports.resume")(function* (
+  mailboxId: string,
+  id: string,
+  actor: string,
+) {
+  const row = yield* findImport(mailboxId, id)
+  if (row.status !== "paused")
+    return yield* new TransferInvalid({
+      field: "status",
+      message: `The import is ${row.status}, not paused.`,
+    })
+  const now = Date.now()
+  const database = yield* Database
+  yield* database.query("imports.resume", (db) =>
+    db
+      .update(mailboxImports)
+      .set({
+        status: row.startedAt ? "running" : "pending",
+        pausedAt: null,
+        pausedMs: row.pausedMs + (row.pausedAt ? now - row.pausedAt : 0),
+      })
+      .where(eq(mailboxImports.id, id))
+      .run(),
+  )
+  const { IMPORT_WORKFLOW, id: workflowId } = yield* workflowOf(row)
+  // A batch that saw the pause is waiting for this; one that hadn't reached it yet just carries on.
+  yield* Effect.tryPromise(async () => {
+    const instance = await IMPORT_WORKFLOW.get(workflowId)
+    try {
+      await instance.sendEvent({ type: "resume", payload: { by: actor } })
+    } finally {
+      dispose(instance)
+    }
+  }).pipe(
+    Effect.catchCause((cause) => Effect.logWarning(`imports: resume event for ${id} not delivered`, cause)),
+  )
+  yield* recordAudit({ actor, action: "import.resumed", target: id })
+  yield* notifyProgress(id)
+  return yield* getImport(mailboxId, id)
+})
+
+/**
+ * Starts a new import of just the messages another one failed on, by UID. The source password was
+ * wiped when that import ended, so it's given again; only IMAP imports keep their UIDs.
+ */
+export const retryFailed = Effect.fn("imports.retryFailed")(function* (
+  mailboxId: string,
+  id: string,
+  password: string,
+  actor: string,
+) {
+  const row = yield* findImport(mailboxId, id)
+  if (row.source !== "imap" || !row.host || !row.username)
+    return yield* new TransferInvalid({
+      field: "source",
+      message: "Only IMAP imports keep the failed messages' UIDs.",
+    })
+  if (row.status === "running" || row.status === "pending" || row.status === "paused")
+    return yield* new TransferInvalid({ field: "status", message: "Wait for the import to finish first." })
+  const uids = Object.fromEntries(
+    (row.progress ?? [])
+      .filter((p) => (p.failedUids ?? []).length > 0)
+      .map((p) => [p.raw, p.failedUids ?? []]),
+  )
+  if (Object.keys(uids).length === 0)
+    return yield* new TransferInvalid({
+      field: "id",
+      message: "Nothing in this import failed with a UID to retry.",
+    })
+  const created = yield* createImport(
+    mailboxId,
+    { source: "imap", host: row.host, port: row.port ?? 993, username: row.username, password, mode: "full" },
+    actor,
+    { retryOf: id, uids },
+  )
+  return created
+})
+
+/**
+ * Looks at an IMAP account before importing: each folder, how many messages it holds, and where it
+ * would land (or that it's skipped). The password is used for this one connection and kept nowhere.
+ */
+export const probeImap = Effect.fn("imports.probe")(function* (input: {
+  readonly host: string
+  readonly port?: number | undefined
+  readonly username: string
+  readonly password: string
+}) {
+  const host = input.host.trim().toLowerCase()
+  if (!HOSTNAME.test(host))
+    return yield* new TransferInvalid({ field: "host", message: `${input.host} is not a host name.` })
+  const port = input.port ?? 993
+  if (port === 143)
+    return yield* new TransferInvalid({
+      field: "port",
+      message: "Imports use implicit TLS (993); plain IMAP on 143 isn't offered.",
+    })
+  const transport = yield* (yield* ImapConnector)
+    .open(host, port)
+    .pipe(Effect.mapError((e) => new TransferInvalid({ field: "host", message: e.message })))
+  const client = new ImapClient(transport)
+  const folders = yield* Effect.tryPromise({
+    try: async () => {
+      {
+        await client.greet()
+        await client.login(input.username.trim(), input.password)
+        const listed = await client.list()
+        const out: Array<{
+          name: string
+          messages: number | null
+          folder: string | null
+          label: string | null
+          skipped: boolean
+          skipReason: string | null
+        }> = []
+        for (const f of listed) {
+          const mapping = mapFolder(f.name, f.flags)
+          const info = mapping.skip ? null : await client.examine(f)
+          out.push({
+            name: f.name,
+            messages: info ? info.exists : null,
+            folder: mapping.skip ? null : mapping.folder,
+            label: mapping.skip ? null : mapping.label,
+            skipped: mapping.skip !== null,
+            skipReason: mapping.skip,
+          })
+        }
+        await client.logout()
+        return out
+      }
+    },
+    catch: (e) =>
+      new TransferInvalid({
+        field: "username",
+        message: `IMAP: ${e instanceof Error ? e.message : String(e)}`,
+      }),
+  })
+  return { host, port, folders }
+})
+
 const describeExport = (
   r: ExportRow,
-  links: { readonly mbox: string | null; readonly zip: string | null },
+  links: { readonly mbox: string | null; readonly zip: string | null; readonly expiresAt: number | null },
 ) => ({
   id: r.id,
   status: r.status,
@@ -268,7 +415,9 @@ const describeExport = (
   size: r.size,
   zipSize: r.zipSize,
   error: r.error,
-  downloads: links,
+  downloads: { mbox: links.mbox, zip: links.zip },
+  /** When these download links stop working; a fresh pair comes with every read of the export. */
+  downloadsExpireAt: links.expiresAt,
   createdAt: r.createdAt,
   completedAt: r.completedAt,
 })
@@ -276,7 +425,7 @@ const describeExport = (
 /** Links that work for a week without a key; a fresh pair on every read. */
 const linksFor = (r: ExportRow, origin: string | null) =>
   Effect.gen(function* () {
-    if (r.status !== "complete" || !origin) return { mbox: null, zip: null }
+    if (r.status !== "complete" || !origin) return { mbox: null, zip: null, expiresAt: null }
     const sign = (key: string | null, name: string, type: string) =>
       key
         ? signFileToken(
@@ -287,6 +436,7 @@ const linksFor = (r: ExportRow, origin: string | null) =>
     return {
       mbox: yield* sign(r.r2Key, `${r.mailboxId}.mbox`, "application/mbox"),
       zip: yield* sign(r.zipKey, `${r.mailboxId}.zip`, "application/zip"),
+      expiresAt: Date.now() + LARGE_ATTACHMENT_LINK_TTL_SECONDS * 1000,
     }
   })
 
@@ -341,5 +491,5 @@ export const listExports = Effect.fn("exports.list")(function* (mailboxId: strin
       .limit(50)
       .all(),
   )
-  return rows.map((r) => describeExport(r, { mbox: null, zip: null }))
+  return rows.map((r) => describeExport(r, { mbox: null, zip: null, expiresAt: null }))
 })

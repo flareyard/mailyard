@@ -260,6 +260,16 @@ export type MailboxEvent =
       readonly removedDraftIds: ReadonlyArray<string>
     }
   | { readonly type: "draft.due"; readonly draft: Draft }
+  /** A mailbox import moved (HAL-3399): its totals, rate, ETA and folders. Pushed by the import Workflow. */
+  | {
+      readonly type: "import.progress"
+      readonly importId: string
+      readonly status: string
+      readonly totals: Readonly<Record<string, number>>
+      readonly ratePerMinute: number | null
+      readonly etaAt: number | null
+      readonly folders: ReadonlyArray<Readonly<Record<string, unknown>>>
+    }
 
 /**
  * A request the mailbox refuses. Thrown across RPC as an Error whose message starts with the code,

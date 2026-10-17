@@ -243,6 +243,11 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.attention(input)
   }
 
+  /** Sends a frame that didn't come from the store (an import's progress) to every live client. */
+  notify(event: MailboxEvent) {
+    this.broadcast([event])
+  }
+
   correspondents(q: string, limit?: number) {
     return this.store.correspondents(q, limit)
   }

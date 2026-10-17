@@ -257,3 +257,224 @@ describe("/v1/mailboxes/{id}/imports", () => {
     expect((await call(`${base}/imx_missing`, { key: ADMIN })).status).toBe(404)
   })
 })
+
+describe("import controls (HAL-3399)", () => {
+  it("records failed UIDs and the folder's last error, then a retry fetches only those", async () => {
+    const inbox: FakeFolder = {
+      name: "INBOX",
+      uidValidity: 3,
+      messages: [
+        { uid: 1, raw: raw(`ok1-${crypto.randomUUID()}`, "Fine") },
+        { uid: 2, raw: raw(`broken-${crypto.randomUUID()}`, "Broken") },
+      ],
+    }
+    const first = await newImport(mailboxId, { username: "u", password: "p" })
+    await run(withServer(fakeImap({ username: "u", password: "p", folders: [inbox], noBody: [2] })), first)
+    const view = await json<{
+      totals: { imported: number; failed: number }
+      folders: Array<{ name: string; failed: number; retryable: number; lastError: string | null }>
+      startedAt: number | null
+      ratePerMinute: number | null
+    }>(await call(`/v1/mailboxes/${mailboxId}/imports/${first}`, { key: ADMIN }))
+    expect(view.totals).toMatchObject({ imported: 1, failed: 1 })
+    expect(view.folders[0]).toMatchObject({ failed: 1, retryable: 1 })
+    expect(view.folders[0]?.lastError).toContain("no body")
+    expect(view.startedAt).not.toBeNull()
+
+    // The retry is a new import of just UID 2, credentials given again.
+    const retry = await call(`/v1/mailboxes/${mailboxId}/imports/${first}/retry-failed`, {
+      method: "POST",
+      key: ADMIN,
+      json: { password: "p" },
+    })
+    expect(retry.status).toBe(200)
+    const retried = await json<{ id: string; retryOf: string }>(retry)
+    expect(retried.retryOf).toBe(first)
+    const stored = await env.DB.prepare("select uids from mailbox_imports where id = ?")
+      .bind(retried.id)
+      .first<{ uids: string }>()
+    expect(JSON.parse(stored?.uids ?? "{}")).toEqual({ INBOX: [2] })
+    // Planned against a server where the message is readable now: only that UID moves.
+    await call(`/v1/mailboxes/${mailboxId}/imports/${retried.id}/cancel`, { method: "POST", key: ADMIN })
+    const again = await newImport(mailboxId, { username: "u", password: "p" })
+    await env.DB.prepare("update mailbox_imports set uids = ?, retry_of = ? where id = ?")
+      .bind(JSON.stringify({ INBOX: [2] }), first, again)
+      .run()
+    const plan = await run(withServer(fakeImap({ username: "u", password: "p", folders: [inbox] })), again)
+    expect(plan.folders).toEqual([expect.objectContaining({ name: "INBOX", source: 1 })])
+    const done = await json<{ totals: { imported: number; failed: number } }>(
+      await call(`/v1/mailboxes/${mailboxId}/imports/${again}`, { key: ADMIN }),
+    )
+    expect(done.totals).toMatchObject({ imported: 1, failed: 0 })
+  })
+
+  it("pauses between batches: a paused batch does nothing, and resume picks it up", async () => {
+    const inbox: FakeFolder = {
+      name: "INBOX",
+      uidValidity: 9,
+      messages: [{ uid: 1, raw: raw(`p1-${crypto.randomUUID()}`, "One") }],
+    }
+    const exec = withServer(fakeImap({ username: "u", password: "p", folders: [inbox] }))
+    const id = await newImport(mailboxId, { username: "u", password: "p" })
+    const plan = await exec(planImport(id))
+    expect(plan.batches).toBe(1)
+    const paused = await call(`/v1/mailboxes/${mailboxId}/imports/${id}/pause`, {
+      method: "POST",
+      key: ADMIN,
+    })
+    expect(paused.status).toBe(200)
+    expect(await json(paused)).toMatchObject({ status: "paused" })
+    expect(await exec(runBatch(id, 0, 0))).toMatchObject({ paused: true, imported: 0 })
+    expect(
+      (await call(`/v1/mailboxes/${mailboxId}/imports/${id}/pause`, { method: "POST", key: ADMIN })).status,
+    ).toBe(400)
+    const resumed = await call(`/v1/mailboxes/${mailboxId}/imports/${id}/resume`, {
+      method: "POST",
+      key: ADMIN,
+    })
+    expect(await json(resumed)).toMatchObject({ status: "running", pausedAt: null })
+    expect(await exec(runBatch(id, 0, 0))).toMatchObject({ paused: false, imported: 1 })
+    const r = await env.DB.prepare("select paused_ms from mailbox_imports where id = ?")
+      .bind(id)
+      .first<{ paused_ms: number }>()
+    expect(r?.paused_ms).toBeGreaterThanOrEqual(0)
+  })
+
+  it("links a catch-up to the import it continues and says since when", async () => {
+    const inbox: FakeFolder = {
+      name: "INBOX",
+      uidValidity: 11,
+      messages: [{ uid: 1, raw: raw(`c1-${crypto.randomUUID()}`, "C1") }],
+    }
+    const user = `catch-${crypto.randomUUID().slice(0, 6)}`
+    const firstId = await newImport(mailboxId, { username: user, password: "p" })
+    await run(withServer(fakeImap({ username: user, password: "p", folders: [inbox] })), firstId)
+    const catchup = await newImport(mailboxId, { username: user, password: "p", mode: "catchup" })
+    await run(withServer(fakeImap({ username: user, password: "p", folders: [inbox] })), catchup)
+    const first = await env.DB.prepare("select finished_at from mailbox_imports where id = ?")
+      .bind(firstId)
+      .first<{ finished_at: number }>()
+    expect(
+      await json(await call(`/v1/mailboxes/${mailboxId}/imports/${catchup}`, { key: ADMIN })),
+    ).toMatchObject({ mode: "catchup", catchupOf: firstId, since: first?.finished_at })
+  })
+
+  it("rates an import from its moving time and estimates when it ends", async () => {
+    const { importView } = await import("../../src/imports/view.ts")
+    const base = {
+      id: "imx_x",
+      mailboxId: "m",
+      source: "imap" as const,
+      mode: "full" as const,
+      host: "h",
+      port: 993,
+      username: "u",
+      secretCiphertext: null,
+      objectKey: null,
+      folders: null,
+      error: null,
+      workflowId: null,
+      createdBy: null,
+      createdAt: 0,
+      finishedAt: null,
+      catchupOf: null,
+      since: null,
+      retryOf: null,
+      uids: null,
+      pausedAt: null,
+    }
+    const progress = [
+      {
+        name: "INBOX",
+        raw: "INBOX",
+        folder: "inbox",
+        label: null,
+        uidValidity: 1,
+        source: 1000,
+        imported: 200,
+        duplicates: 0,
+        failed: 0,
+        skipped: 0,
+        lastUid: 0,
+        batches: 20,
+        batchesDone: 4,
+      },
+    ]
+    const now = 10 * 60_000
+    // Ten minutes since it started, two of them paused: 200 messages in 8 moving minutes.
+    const view = importView({ ...base, status: "running", progress, startedAt: 0, pausedMs: 2 * 60_000 }, now)
+    expect(view.ratePerMinute).toBe(25)
+    expect(view.etaAt).toBe(now + (800 / 25) * 60_000)
+    expect(
+      importView({ ...base, status: "running", progress, startedAt: now - 30_000, pausedMs: 0 }, now)
+        .ratePerMinute,
+    ).toBeNull()
+  })
+})
+
+describe("probe and live progress (HAL-3399)", () => {
+  it("probes an account's folders without keeping the password", async () => {
+    const { probeImap } = await import("../../src/imports/manage.ts")
+    const exec = withServer(
+      fakeImap({
+        username: "u",
+        password: "p",
+        folders: [
+          {
+            name: "INBOX",
+            messages: [
+              { uid: 1, raw: raw("pr1", "One") },
+              { uid: 2, raw: raw("pr2", "Two") },
+            ],
+          },
+          { name: "Drafts", flags: ["\\Drafts"], messages: [] },
+          { name: "Receipts", messages: [{ uid: 5, raw: raw("pr3", "Three") }] },
+        ],
+      }),
+    )
+    const probed = await exec(probeImap({ host: "imap.example.test", username: "u", password: "p" }))
+    expect(probed.folders).toEqual([
+      expect.objectContaining({ name: "INBOX", messages: 2, folder: "inbox", skipped: false }),
+      expect.objectContaining({ name: "Drafts", messages: null, skipped: true }),
+      expect.objectContaining({ name: "Receipts", messages: 1, label: "Receipts", skipped: false }),
+    ])
+    await expect(
+      exec(probeImap({ host: "imap.example.test", username: "u", password: "wrong" })),
+    ).rejects.toThrow()
+  })
+
+  it("pushes import.progress to the mailbox's live socket after each batch", async () => {
+    const res = await (await import("cloudflare:workers")).exports.default.fetch(
+      new Request(`https://mailyard.test/v1/mailboxes/${mailboxId}/live`, {
+        headers: { upgrade: "websocket", authorization: `Bearer ${ADMIN}` },
+      }),
+    )
+    const socket = res.webSocket as WebSocket
+    socket.accept()
+    const frames: Array<Record<string, unknown>> = []
+    socket.addEventListener("message", (e) =>
+      frames.push(JSON.parse(String(e.data)) as Record<string, unknown>),
+    )
+    const inbox: FakeFolder = {
+      name: "INBOX",
+      uidValidity: 21,
+      messages: [{ uid: 1, raw: raw(`lv-${crypto.randomUUID()}`, "Live") }],
+    }
+    const id = await newImport(mailboxId, { username: "u", password: "p" })
+    await run(withServer(fakeImap({ username: "u", password: "p", folders: [inbox] })), id)
+    const deadline = Date.now() + 3000
+    while (
+      !frames.some((f) => f.type === "import.progress" && f.status === "complete") &&
+      Date.now() < deadline
+    )
+      await new Promise((r) => setTimeout(r, 20))
+    const progress = frames.filter((f) => f.type === "import.progress" && f.importId === id)
+    expect(progress.length).toBeGreaterThanOrEqual(2)
+    expect(progress.at(-1)).toMatchObject({
+      status: "complete",
+      totals: expect.objectContaining({ imported: 1 }),
+    })
+    expect(typeof progress.at(-1)?.seq).toBe("number")
+    socket.close()
+  })
+})

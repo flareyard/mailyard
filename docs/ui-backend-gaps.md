@@ -162,7 +162,7 @@ The contract (§1) says no human sign-in is built. Every caller today is a Beare
 | 4.3 | Routing-rule conflict on mailbox create | **Proposal** | 3. First mailbox, failing | `409 { reason: "routing-rule-exists", ruleDestination }` and `replaceRoutingRule: true` on `POST /v1/mailboxes` (built). |
 | 4.4 | `POST /v1/test-send` | **Proposal** | 4. Send a test | `{ from, to }` → `{ messageId }`, then a polled result with `authentication: { spf, dkim, dmarc, dmarcPolicy }` and `deliveryTimeMs`. |
 | 4.5 | `GET /v1/verified-addresses` | **Proposal** | 4. Send a test | `{ addresses: [{ email, verifiedAt }] }`. |
-| 4.6 | `POST /v1/mailboxes/{id}/imports/probe` | **Proposal** | 5. Old mail, folder list | `{ host, folders: [{ name, messages, suggestedFolder }] }`. The import itself (`/v1/mailboxes/{id}/imports`) is **built**. |
+| 4.6 | `POST /v1/mailboxes/{id}/imports/probe` | **Built** (HAL-3399) | 5. Old mail, folder list | `POST /v1/mailboxes/{id}/imports/probe { host, port?, username, password }` → `{ host, port, folders: [{ name, messages, folder, label, skipped, skipReason }] }`; the password is used for that one connection only. |
 | 4.7 | IMAP import `ratePerMinute`, `etaAt` | **Proposal**, still absent at 9428241 | 5. Old mail, in progress | Not covered by the contact import below: this row is the mailbox (IMAP) import, `/v1/mailboxes/{id}/imports`. Without these fields the screen shows counts and no ETA. |
 | 4.8 | Contact CSV import | **Built**, HAL-3291 (PR #28): `POST /v1/imports/contacts`, `GET /v1/imports`, `GET /v1/imports/{id}` | 6. Contacts (`first-run/csv-empty`, `-map`, `-progress`, `-pass`, `-fail`) | The step now follows the built flow and field names exactly. The file is read in the browser for its header and row count, uploaded, then imported with `{ uploadId, mapping, topicIds, onConflict: "update"\|"skip", defaultStatus }`. Progress is polled from `{ status: queued\|running\|completed\|failed, headers, rows, created, updated, skipped, invalid, duplicates, suppressed, errors: [{ line, message }], error }`. What the schema still lacks is listed in 4.9–4.13. |
 | 4.9 | `POST /v1/uploads?filename=` in the OpenAPI | **Built and documented** (HAL-3398) | 6. Contacts | `/openapi.json` now describes the raw routes too: `POST /v1/uploads`, `POST /v1/mailboxes/{id}/uploads`, `GET …/live`, `…/raw`, `…/attachments/{id}`, `GET /v1/files/{token}`. A test checks each described route is served. |
@@ -308,13 +308,13 @@ The mailbox socket `ws /v1/mailboxes/:id/live` is **built**, with the events hel
 
 | # | Endpoint / field | Screens | Proposed shape |
 |---|---|---|---|
-| M7.1 | Speed and ETA | `import-running`, folder-pane card | Same as GAPS 4.7: `ratePerMinute`, `etaAt`. |
-| M7.2 | Pause and resume | `import-running` | Only `cancel` exists. `POST …/imports/{id}/pause` and `/resume`, plus `status: "paused"`. |
-| M7.3 | Retry the failed messages | `import-running`, `import-failed` | `POST …/imports/{id}/retry-failed` → a new import scoped to the failed UIDs. Needs `failedUids` or a reason per failure; today there are counts only. |
-| M7.4 | The last error per folder | “Last error: 3 messages over 25 MiB” | `error` is import-level. Add `folders[].lastError: string \| null`. |
-| M7.5 | Progress live | Card and page | `ws /v1/mailboxes/{id}/live` has no import event. Add `import.progress { importId, totals, folders }`. Until then, poll `GET …/imports/{id}`. |
-| M7.6 | Catch-up after the MX switch | `import-running` second panel | Not a gap: `mode: "catchup"`. Proposed: link the two with `catchupOf: importId`, and give `since` so the panel can say “arrived since 17:22 UTC”. |
-| M7.7 | Export link lifetime | `export` | `downloads.mbox\|zip` are signed URLs. Return `downloadsExpireAt` (the designs say 24 hours, which is a proposal). |
+| M7.1 | Speed and ETA | `import-running`, folder-pane card | **Built** (HAL-3399): `ratePerMinute` (over moving time, paused time out; null for the first minute) and `etaAt` (while running). |
+| M7.2 | Pause and resume | `import-running` | **Built** (HAL-3399): `POST …/imports/{id}/pause` and `/resume`, `status: "paused"`, `pausedAt`. Pausing stops between batches; resume carries on from the same batch. A pause longer than 7 days ends the import (credentials wiped). |
+| M7.3 | Retry the failed messages | `import-running`, `import-failed` | **Built** (HAL-3399): failed UIDs are kept per folder (first 1,000; `folders[].retryable`). `POST …/imports/{id}/retry-failed { password }` starts a new import of just those (`retryOf`). IMAP only; the password is given again because the first import's was wiped. |
+| M7.4 | The last error per folder | “Last error: 3 messages over 25 MiB” | **Built** (HAL-3399): `folders[].lastError`. |
+| M7.5 | Progress live | Card and page | **Built** (HAL-3399): `import.progress { importId, status, totals, ratePerMinute, etaAt, folders, seq }` on the mailbox's live socket after planning, each batch, pause, resume and the end. |
+| M7.6 | Catch-up after the MX switch | `import-running` second panel | **Built** (HAL-3399): a catch-up has `catchupOf` (the import it continues) and `since` (when that one finished). |
+| M7.7 | Export link lifetime | `export` | **Built** (HAL-3399): `downloadsExpireAt` on an export, with each read signing a fresh pair of links (a week). |
 
 ## M8. Live, offline, push
 

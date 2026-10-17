@@ -8,6 +8,10 @@ import {
   getImport,
   listExports,
   listImports,
+  pauseImport,
+  probeImap,
+  resumeImport,
+  retryFailed,
 } from "../imports/manage.ts"
 import { requireMailbox } from "../mail/access.ts"
 import { MailApi } from "./Api.ts"
@@ -50,6 +54,30 @@ export const TransfersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           yield* owner(params.id)
           return yield* getImport(params.id, params.importId)
+        }).pipe(mailErrors),
+      ),
+      pauseImport: p(({ params }) =>
+        Effect.gen(function* () {
+          const { caller } = yield* owner(params.id)
+          return yield* pauseImport(params.id, params.importId, caller.keyId)
+        }).pipe(mailErrors),
+      ),
+      resumeImport: p(({ params }) =>
+        Effect.gen(function* () {
+          const { caller } = yield* owner(params.id)
+          return yield* resumeImport(params.id, params.importId, caller.keyId)
+        }).pipe(mailErrors),
+      ),
+      retryFailed: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          const { caller } = yield* owner(params.id)
+          return yield* retryFailed(params.id, params.importId, payload.password, caller.keyId)
+        }).pipe(mailErrors),
+      ),
+      probeImport: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          yield* owner(params.id)
+          return yield* probeImap(payload)
         }).pipe(mailErrors),
       ),
       cancelImport: p(({ params }) =>
