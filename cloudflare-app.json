@@ -93,6 +93,11 @@
       "name": "CLOUDFLARE_EMAIL_READ_TOKEN",
       "ask": "A read-only API token with Email Sending: Read and Queues: Read, for the quota, reputation and delivery-events check",
       "optional": true
+    },
+    {
+      "name": "CLOUDFLARE_EMAIL_WRITE_TOKEN",
+      "ask": "An API token with Email Sending: Edit, so Mailyard can add to and remove from Cloudflare's suppression list",
+      "optional": true
     }
   ],
   "settings": [

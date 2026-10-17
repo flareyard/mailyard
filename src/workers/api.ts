@@ -29,6 +29,7 @@ import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { MailHandlers } from "../http/mailHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
 import { AlertsHandlers, SendingHandlers } from "../http/sendingHandlers.ts"
+import { SuppressionsHandlers } from "../http/suppressionHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
 import { TransfersHandlers } from "../http/transferHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
@@ -66,6 +67,7 @@ export { CampaignSendWorkflow } from "../workflows/campaign.ts"
 export { ContactExportWorkflow } from "../workflows/contactExport.ts"
 export { ContactImportWorkflow } from "../workflows/contactImport.ts"
 export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
+export { SuppressionImportWorkflow } from "../workflows/suppressionImport.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide([
@@ -92,6 +94,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     AlertsHandlers,
     CampaignsHandlers,
     ImportsHandlers,
+    SuppressionsHandlers,
     ExportsHandlers,
     AutomationsHandlers,
     RunsHandlers,
