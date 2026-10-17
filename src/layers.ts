@@ -6,6 +6,7 @@ import { BlobStore, Ids, Sender, SenderCloudflareWithSmtpFallback } from "./kit/
 import { workerSmtpTransport } from "./kit/smtp-worker.ts"
 import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { Database } from "./services/Database.ts"
+import { Dns } from "./services/Dns.ts"
 import { Mailboxes } from "./services/Mailboxes.ts"
 import { SendQueue } from "./services/SendQueue.ts"
 
@@ -38,6 +39,7 @@ export const appLayer = (env: Env) => {
     WebhookQueue.layer,
     InboundQueue.layer,
     Mailboxes.layer,
+    Dns.layerDoh(),
     SecretBox.layer,
     CloudflareEmail.layer,
     BlobStore.layerR2(env.STORE),

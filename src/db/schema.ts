@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import type { RecordCheck } from "../domain/dnsChecks.ts"
 
 /**
  * The account-wide D1 database. Per-mailbox data (threads, messages, search) lives in each
@@ -22,7 +23,10 @@ export const domains = sqliteTable(
       .notNull()
       .default("bounce"),
     lastCheckedAt: integer("last_checked_at"),
+    /** The last DNS record check (src/domain/dnsChecks.ts), as shown on the domain detail screen. */
+    checks: text("checks", { mode: "json" }).$type<ReadonlyArray<RecordCheck>>(),
     createdAt: createdAt(),
+    updatedAt: integer("updated_at").notNull().default(0),
   },
   (t) => [uniqueIndex("domains_name").on(t.name)],
 )
@@ -39,7 +43,26 @@ export const mailboxes = sqliteTable(
     kind: text("kind", { enum: ["user", "shared", "group", "alias", "catch_all"] }).notNull(),
     /** For aliases and groups: the mailbox ids this address delivers to, as JSON. */
     targets: text("targets", { mode: "json" }).$type<ReadonlyArray<string>>(),
+    signature: text("signature", { mode: "json" }).$type<{
+      readonly text: string
+      readonly html: string | null
+    }>(),
+    /** Out-of-office reply; sent by the rules engine (HAL-3153). */
+    autoReply: text("auto_reply", { mode: "json" }).$type<{
+      readonly enabled: boolean
+      readonly subject: string
+      readonly body: string
+      readonly startsAt: number | null
+      readonly endsAt: number | null
+    }>(),
+    /** Forward a copy of every message; carried out by the rules engine (HAL-3153). */
+    forwarding: text("forwarding", { mode: "json" }).$type<{
+      readonly enabled: boolean
+      readonly to: ReadonlyArray<string>
+      readonly keepCopy: boolean
+    }>(),
     createdAt: createdAt(),
+    updatedAt: integer("updated_at").notNull().default(0),
   },
   (t) => [uniqueIndex("mailboxes_address").on(t.address), index("mailboxes_domain").on(t.domainId)],
 )
@@ -437,4 +460,42 @@ export const inboundMessages = sqliteTable(
     index("inbound_messages_status").on(t.status, t.receivedAt),
     index("inbound_messages_received").on(t.receivedAt),
   ],
+)
+
+/** Which API keys may read a mailbox, and send as it. Root and admin keys need no row. */
+export const mailboxMembers = sqliteTable(
+  "mailbox_members",
+  {
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    apiKeyId: text("api_key_id")
+      .notNull()
+      .references(() => apiKeys.id, { onDelete: "cascade" }),
+    /** `owner` and `member` read and send; `viewer` only reads. */
+    role: text("role", { enum: ["owner", "member", "viewer"] }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.apiKeyId] }), index("mailbox_members_key").on(t.apiKeyId)],
+)
+
+/**
+ * Exports of a mailbox's mail to R2 (HAL-3154). A mailbox holding mail can only be removed once one
+ * of these is complete, so removing never destroys the only copy.
+ */
+export const mailboxExports = sqliteTable(
+  "mailbox_exports",
+  {
+    id: text("id").primaryKey(),
+    mailboxId: text("mailbox_id").notNull(),
+    status: text("status", { enum: ["pending", "running", "complete", "failed"] }).notNull(),
+    format: text("format", { enum: ["mbox", "eml-zip"] }).notNull(),
+    r2Key: text("r2_key"),
+    messageCount: integer("message_count").notNull().default(0),
+    size: integer("size").notNull().default(0),
+    error: text("error"),
+    createdAt: createdAt(),
+    completedAt: integer("completed_at"),
+  },
+  (t) => [index("mailbox_exports_mailbox").on(t.mailboxId, t.createdAt)],
 )

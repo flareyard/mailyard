@@ -5,6 +5,7 @@ import * as HttpServer from "effect/http/HttpServer"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import type { Env } from "../Bindings.ts"
 import { MailApi } from "../http/Api.ts"
+import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
 import {
   ActionsHandlers,
   ApiKeyAuthLive,
@@ -34,6 +35,9 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     WebhooksHandlers,
     InsightsHandlers,
     InboundHandlers,
+    DomainsHandlers,
+    MailboxesHandlers,
+    IdentitiesHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),

@@ -146,6 +146,17 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.schemaVersion()
   }
 
+  /**
+   * Deletes everything this mailbox stores and closes its live connections. The next call starts an
+   * empty mailbox at the current schema. Callers check an export exists first.
+   */
+  async erase() {
+    for (const ws of this.ctx.getWebSockets(LIVE)) ws.close(1001, "Mailbox removed")
+    await this.ctx.storage.deleteAlarm()
+    await this.ctx.storage.deleteAll()
+    this.store.migrate()
+  }
+
   /** Files one message. Idempotent on `delivery.id`: a retried delivery reports `stored: false`. */
   async deliver(delivery: InboundDelivery, folder?: Folder) {
     return await this.apply(this.store.deliver(delivery, folder))
