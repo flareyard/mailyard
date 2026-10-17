@@ -85,7 +85,7 @@
     },
     {
       "name": "CLOUDFLARE_EMAIL_READ_TOKEN",
-      "ask": "A read-only API token with Email Sending: Read, for the quota and reputation on the Overview",
+      "ask": "A read-only API token with Email Sending: Read and Queues: Read, for the quota, reputation and delivery-events check",
       "optional": true
     }
   ],

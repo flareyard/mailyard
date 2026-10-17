@@ -44,6 +44,7 @@ import { handleEmail } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
 import { CONFIRM_PATH, FORM_SUBMIT_PATH, handleConfirm, handleFormSubmit } from "./public.ts"
 import { handleQueue } from "./queue.ts"
+import { handleScheduled } from "./scheduled.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleUnsubscribe } from "./unsubscribe.ts"
 
@@ -115,6 +116,9 @@ export default {
     return handler(request)
   },
   queue: (batch, env) => handleQueue(batch, env),
+  scheduled: (_controller, env, ctx) => {
+    ctx.waitUntil(handleScheduled(env))
+  },
   email: async (message, env) => {
     await handleEmail(message, env)
   },

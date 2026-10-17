@@ -31264,6 +31264,129 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/sending/events": {
+      "get": {
+        "operationId": "sending.events",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "domains": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "detail": {
+                            "type": "string",
+                          },
+                          "domain": {
+                            "type": "string",
+                          },
+                          "silent": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "status": {
+                            "enum": [
+                              "ok",
+                              "warn",
+                              "unknown",
+                            ],
+                            "type": "string",
+                          },
+                          "subscribed": {
+                            "anyOf": [
+                              {
+                                "type": "boolean",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "withEvents": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "domain",
+                          "subscribed",
+                          "withEvents",
+                          "silent",
+                          "status",
+                          "detail",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "domains",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "sending",
+        ],
+      },
+    },
     "/v1/sending/governor": {
       "get": {
         "operationId": "sending.governor",
