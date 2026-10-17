@@ -196,6 +196,8 @@ export interface Draft {
   readonly sourceMessageId: string | null
   /** Why the last attempt to send it failed; cleared when the draft is edited. */
   readonly lastError: string | null
+  /** When the last send was refused before going out: quota, domain, or every recipient suppressed. */
+  readonly blockedReason: "quota_exhausted" | "domain_unhealthy" | "all_recipients_suppressed" | null
   /** Opens and clicks to track, chosen for this send; null (never tracked) unless the sender asked. */
   readonly track: DraftTracking | null
   readonly createdAt: number

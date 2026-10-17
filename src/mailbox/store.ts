@@ -375,6 +375,66 @@ export class MailboxStore {
     return [...after.keys()].sort()
   }
 
+  // ---------------------------------------------------------------------------------------------
+  // The live socket's catch-up log
+  // ---------------------------------------------------------------------------------------------
+
+  /** Numbers and keeps the frames the socket is about to send; the newest 1,000 or a day are kept. */
+  logEvents(frames: ReadonlyArray<string>): Array<{ seq: number; frame: string }> {
+    const now = this.now()
+    const logged = frames.map((frame) => {
+      const seq = Number(
+        this.sql
+          .exec<{ seq: number }>(
+            "INSERT INTO live_events (at, frame) VALUES (?, ?) RETURNING seq",
+            now,
+            frame,
+          )
+          .one().seq,
+      )
+      const numbered = this.sql
+        .exec<{ frame: string }>(
+          "UPDATE live_events SET frame = json_set(frame, '$.seq', seq) WHERE seq = ? RETURNING frame",
+          seq,
+        )
+        .one().frame
+      return { seq, frame: String(numbered) }
+    })
+    const last = logged.at(-1)?.seq
+    if (last !== undefined && last % 50 === 0)
+      this.sql.exec(
+        "DELETE FROM live_events WHERE seq <= ? OR at < ?",
+        last - LIVE_LOG_SIZE,
+        now - LIVE_LOG_MS,
+      )
+    return logged
+  }
+
+  latestSeq(): number {
+    return Number(
+      this.sql.exec<{ seq: number | null }>("SELECT max(seq) AS seq FROM live_events").one().seq ?? 0,
+    )
+  }
+
+  /**
+   * The frames after `since`, or null when they're no longer all kept: the client must refetch.
+   * At most LIVE_LOG_SIZE frames, read through the primary key.
+   */
+  eventsSince(since: number): Array<{ seq: number; frame: string }> | null {
+    const oldest = this.sql.exec<{ seq: number | null }>("SELECT min(seq) AS seq FROM live_events").one().seq
+    const latest = this.latestSeq()
+    if (since >= latest) return []
+    if (oldest === null || since < Number(oldest) - 1) return null
+    return this.sql
+      .exec<{ seq: number; frame: string }>(
+        "SELECT seq, frame FROM live_events WHERE seq > ? ORDER BY seq LIMIT ?",
+        since,
+        LIVE_LOG_SIZE,
+      )
+      .toArray()
+      .map((r) => ({ seq: Number(r.seq), frame: String(r.frame) }))
+  }
+
   /** Recounts folder totals from the messages: the migration's backfill, and a repair path. */
   rebuildFolderCounts() {
     this.sql.exec("DELETE FROM thread_folders")
@@ -1395,6 +1455,7 @@ export class MailboxStore {
       replyMode: str(row.reply_mode) as Draft["replyMode"],
       sourceMessageId: str(row.source_message_id),
       lastError: str(row.last_error),
+      blockedReason: str(row.blocked_reason) as Draft["blockedReason"],
       track: row.track ? (JSON.parse(String(row.track)) as Draft["track"]) : null,
       createdAt: Number(row.created_at),
       updatedAt: Number(row.updated_at),
@@ -1459,7 +1520,7 @@ export class MailboxStore {
            cc_list = excluded.cc_list, bcc_list = excluded.bcc_list, subject = excluded.subject,
            body_text = excluded.body_text, body_html = excluded.body_html, attachments = excluded.attachments,
            status = 'draft', send_at = NULL, updated_at = excluded.updated_at, reply_mode = excluded.reply_mode,
-           source_message_id = excluded.source_message_id, last_error = NULL, track = NULL`,
+           source_message_id = excluded.source_message_id, last_error = NULL, blocked_reason = NULL, track = NULL`,
         id,
         merged.threadId,
         merged.inReplyTo,
@@ -1622,12 +1683,13 @@ export class MailboxStore {
   }
 
   /** A send that failed for good: the draft returns to the drafts folder with the reason. */
-  failDraft(id: string, error: string) {
+  failDraft(id: string, error: string, blockedReason: string | null = null) {
     return this.transaction(() => {
       if (!this.draft(id)) return { events: [] as Array<MailboxEvent> }
       this.sql.exec(
-        "UPDATE drafts SET status = 'draft', send_at = NULL, last_error = ?, updated_at = ? WHERE id = ?",
+        "UPDATE drafts SET status = 'draft', send_at = NULL, last_error = ?, blocked_reason = ?, updated_at = ? WHERE id = ?",
         error.slice(0, 1000),
+        blockedReason,
         this.now(),
         id,
       )
@@ -1701,3 +1763,7 @@ const median = (values: ReadonlyArray<number>): number | null => {
   const mid = sorted.length >> 1
   return sorted.length % 2 ? (sorted[mid] ?? null) : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
 }
+
+/** How much the live socket can replay to a client that reconnects. */
+export const LIVE_LOG_SIZE = 1000
+export const LIVE_LOG_MS = 24 * 3_600_000

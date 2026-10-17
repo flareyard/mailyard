@@ -1,9 +1,9 @@
-import { eq } from "drizzle-orm"
+import { and, eq, inArray, isNull } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { mailboxes } from "../db/schema.ts"
+import { alerts, domains, mailboxes, suppressions } from "../db/schema.ts"
 import type { Caller } from "../domain/apiKeys.ts"
 import { canSendAs } from "../domain/mailboxes.ts"
 import { sendFromMailbox } from "../domain/outbox.ts"
@@ -13,6 +13,7 @@ import { sha256Hex, snippetOf } from "../inbound/parse.ts"
 import { attachmentKeyOf, bodyKeyOf, rawKeyOf } from "../inbound/pipeline.ts"
 import { BlobStore, type Outgoing } from "../kit/index.ts"
 import type { Draft, InboundDelivery } from "../mailbox/types.ts"
+import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
 import { fileUrl, LARGE_ATTACHMENT_LINK_TTL_SECONDS, signFileToken } from "./files.ts"
 import { buildMime } from "./mime.ts"
@@ -22,6 +23,91 @@ export class SendInvalid extends Schema.TaggedError<SendInvalid>()("SendInvalid"
   field: Schema.String,
   message: Schema.String,
 }) {}
+
+export const BLOCK_REASONS = ["quota_exhausted", "domain_unhealthy", "all_recipients_suppressed"] as const
+export type BlockReason = (typeof BLOCK_REASONS)[number]
+
+/**
+ * What really stops a mailbox send (HAL-3397), checked when it's asked for and again when it goes
+ * out. Reputation never does: person-to-person mail isn't held by the governor (decision M5.4, so the
+ * composer warns and keeps Send enabled).
+ */
+export class SendBlocked extends Schema.TaggedError<SendBlocked>()(
+  "SendBlocked",
+  {
+    reason: Schema.Literals(BLOCK_REASONS),
+    message: Schema.String,
+    resetsAt: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+    domainId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  },
+  { httpApiStatus: 409 },
+) {}
+
+const domainOf = (address: string) => address.slice(address.lastIndexOf("@") + 1).toLowerCase()
+
+/** Null when the message can go; otherwise why it can't, as a SendBlocked to fail with. */
+export const sendBlock = Effect.fn("mail.sendBlock")(function* (input: {
+  readonly from: string
+  readonly recipients: ReadonlyArray<string>
+}) {
+  const database = yield* Database
+  const name = domainOf(input.from)
+  const domain = yield* database.query("mail.blockDomain", (db) =>
+    db.select().from(domains).where(eq(domains.name, name)).get(),
+  )
+  if (!domain || !domain.sendingEnabled)
+    return new SendBlocked({
+      reason: "domain_unhealthy",
+      message: domain ? `Sending is off for ${name}.` : `${name} isn't a domain Mailyard sends from.`,
+      domainId: domain?.id ?? null,
+    })
+  // Broken DNS counts once the domain had fully worked and then drifted (a critical dns_drift alert):
+  // a domain still being set up, or one stored check gone stale, doesn't stop mail.
+  const drift = yield* database.query("mail.blockDrift", (db) =>
+    db
+      .select({ title: alerts.title })
+      .from(alerts)
+      .where(
+        and(
+          eq(alerts.key, `dns_drift:${domain.id}`),
+          isNull(alerts.resolvedAt),
+          eq(alerts.severity, "critical"),
+        ),
+      )
+      .get(),
+  )
+  if (drift)
+    return new SendBlocked({
+      reason: "domain_unhealthy",
+      message: `${drift.title}. Fix the records, then send again.`,
+      domainId: domain.id,
+    })
+  const limits = yield* (yield* CloudflareEmail).limits
+  if (Option.isSome(limits) && limits.value.usage.over_quota) {
+    const resetsAt = limits.value.usage.resets_at ? Date.parse(limits.value.usage.resets_at) : null
+    return new SendBlocked({
+      reason: "quota_exhausted",
+      message: "Today's sending quota is used up; mail goes again when it resets.",
+      resetsAt,
+    })
+  }
+  const recipients = [...new Set(input.recipients.map((r) => r.trim().toLowerCase()))]
+  if (recipients.length > 0) {
+    const blocked = yield* database.query("mail.blockRecipients", (db) =>
+      db
+        .select({ email: suppressions.email })
+        .from(suppressions)
+        .where(and(inArray(suppressions.email, recipients.slice(0, 90)), eq(suppressions.bulkOnly, false)))
+        .all(),
+    )
+    if (recipients.length <= 90 && blocked.length === recipients.length)
+      return new SendBlocked({
+        reason: "all_recipients_suppressed",
+        message: `Every recipient is on the suppression list (${recipients.join(", ")}).`,
+      })
+  }
+  return null
+})
 
 /** Email Service refuses a message over 5 MiB, MIME included (measured limit, 2026-10-16). */
 export const MAX_MESSAGE_BYTES = 5 * 1024 * 1024
@@ -77,10 +163,18 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
   if (!(yield* canSendAs(input.caller, from))) {
     return yield* new SendInvalid({ field: "from", message: `This key may not send as ${from}.` })
   }
+  const blocked = yield* sendBlock({
+    from,
+    recipients: [...draft.to, ...draft.cc, ...draft.bcc].map((p) => p.address),
+  })
+  if (blocked) return yield* blocked
   const now = Date.now()
   const undoable = input.sendAt === undefined
+  // An undo window of 0 means "at once": a quarter-second ahead, so the mailbox, which refuses a
+  // time already past, still accepts it when the call takes a moment to arrive.
   const at =
-    input.sendAt ?? now + (input.undoSeconds !== undefined ? input.undoSeconds * 1000 : undoWindowMs(env))
+    input.sendAt ??
+    now + Math.max(250, input.undoSeconds !== undefined ? input.undoSeconds * 1000 : undoWindowMs(env))
   if (!undoable && at <= now)
     return yield* new SendInvalid({ field: "sendAt", message: "A scheduled send is in the future." })
   const result = yield* callMailbox(input.mailboxId, (stub) =>
@@ -253,6 +347,15 @@ export const dispatchDraft = Effect.fn("mail.dispatchDraft")(function* (job: Mai
     return "failed" as const
   }
   const fromAddress = draft.from ?? mailbox.address
+  // Checked again as it goes: the quota or the domain may have changed while it waited.
+  const blocked = yield* sendBlock({
+    from: fromAddress,
+    recipients: [...draft.to, ...draft.cc, ...draft.bcc].map((p) => p.address),
+  })
+  if (blocked) {
+    yield* callMailbox(job.mailboxId, (stub) => stub.failDraft(job.draftId, blocked.message, blocked.reason))
+    return "failed" as const
+  }
   const from =
     mailbox.displayName && fromAddress === mailbox.address
       ? { email: fromAddress, name: mailbox.displayName }

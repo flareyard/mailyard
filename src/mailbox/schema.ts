@@ -197,4 +197,12 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
     ],
     after: "rebuildFolderCounts",
   },
+  {
+    statements: [
+      // Why the last send was refused before it went (SendBlocked's reason), shown on the draft (HAL-3397).
+      "ALTER TABLE drafts ADD COLUMN blocked_reason TEXT",
+      // What the live socket sent, numbered, so a client that reconnects can catch up from where it was.
+      "CREATE TABLE IF NOT EXISTS live_events (seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, frame TEXT NOT NULL)",
+    ],
+  },
 ]
