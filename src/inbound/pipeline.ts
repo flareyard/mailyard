@@ -136,16 +136,29 @@ const record = Effect.fn("inbound.record")(function* (job: InboundJob) {
   return row
 })
 
-const toDelivery = (row: InboundRow, resolution: Resolution, parsed: ParsedMessage): InboundDelivery => ({
-  id: row.id,
-  receivedAt: row.receivedAt,
-  envelopeFrom: row.envelopeFrom,
-  envelopeTo: row.envelopeTo,
-  via: resolution.via,
-  tag: resolution.tag,
-  rawKey: row.rawKey,
-  bodyKey: bodyKeyOf(row.sha256),
-  size: row.size,
+/** Where a parsed message came from: everything a delivery needs besides the parse itself. */
+export interface DeliveryMeta {
+  readonly id: string
+  readonly receivedAt: number
+  readonly envelopeFrom: string
+  readonly envelopeTo: string
+  readonly via: InboundDelivery["via"]
+  readonly tag: string | null
+  readonly sha256: string
+  readonly size: number
+}
+
+/** The InboundDelivery a mailbox stores, from a parsed message and where it came from. */
+export const deliveryFrom = (meta: DeliveryMeta, parsed: ParsedMessage): InboundDelivery => ({
+  id: meta.id,
+  receivedAt: meta.receivedAt,
+  envelopeFrom: meta.envelopeFrom,
+  envelopeTo: meta.envelopeTo,
+  via: meta.via,
+  tag: meta.tag,
+  rawKey: rawKeyOf(meta.sha256),
+  bodyKey: bodyKeyOf(meta.sha256),
+  size: meta.size,
   messageId: parsed.messageId,
   inReplyTo: parsed.inReplyTo,
   references: parsed.references,
@@ -164,7 +177,7 @@ const toDelivery = (row: InboundRow, resolution: Resolution, parsed: ParsedMessa
   listId: parsed.listId,
   listUnsubscribe: parsed.listUnsubscribe,
   attachments: parsed.attachments.map((a, i) => ({
-    id: `${row.id}_${i}`,
+    id: `${meta.id}_${i}`,
     filename: a.filename,
     mimeType: a.mimeType,
     disposition: a.disposition,
@@ -175,6 +188,37 @@ const toDelivery = (row: InboundRow, resolution: Resolution, parsed: ParsedMessa
     r2Key: attachmentKeyOf(a.sha256),
   })),
 })
+
+/** Writes a parsed message's attachments (content-addressed) and its body object to R2. */
+export const storeParsedParts = (sha256: string, parsed: ParsedMessage) =>
+  Effect.gen(function* () {
+    const blobs = yield* BlobStore
+    for (const attachment of parsed.attachments) {
+      yield* blobs.put(attachmentKeyOf(attachment.sha256), attachment.content, attachment.mimeType)
+    }
+    yield* blobs.put(
+      bodyKeyOf(sha256),
+      new TextEncoder().encode(
+        JSON.stringify({ text: parsed.text, html: parsed.html, headers: parsed.headers }),
+      ),
+      "application/json",
+    )
+  })
+
+const toDelivery = (row: InboundRow, resolution: Resolution, parsed: ParsedMessage): InboundDelivery =>
+  deliveryFrom(
+    {
+      id: row.id,
+      receivedAt: row.receivedAt,
+      envelopeFrom: row.envelopeFrom,
+      envelopeTo: row.envelopeTo,
+      via: resolution.via,
+      tag: resolution.tag,
+      sha256: row.sha256,
+      size: row.size,
+    },
+    parsed,
+  )
 
 /**
  * Files one ledger row: resolve (once), parse, store bodies and attachments, deliver to every target
@@ -205,16 +249,7 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
   if (Option.isNone(raw)) return yield* new RawMissing({ key: row.rawKey })
   const parsed = yield* parseMessage(raw.value.body)
 
-  for (const attachment of parsed.attachments) {
-    yield* blobs.put(attachmentKeyOf(attachment.sha256), attachment.content, attachment.mimeType)
-  }
-  yield* blobs.put(
-    bodyKeyOf(row.sha256),
-    new TextEncoder().encode(
-      JSON.stringify({ text: parsed.text, html: parsed.html, headers: parsed.headers }),
-    ),
-    "application/json",
-  )
+  yield* storeParsedParts(row.sha256, parsed)
   yield* update(row.id, {
     messageId: parsed.messageId,
     subject: parsed.subject.slice(0, 998),

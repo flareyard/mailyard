@@ -287,6 +287,18 @@ export class MailboxDO extends DurableObject<Env> {
     return await this.apply(this.store.failDraft(id, error))
   }
 
+  messageIdHolder(messageId: string) {
+    return this.store.messageIdHolder(messageId)
+  }
+
+  async ensureLabel(name: string) {
+    return await this.apply(this.store.ensureLabel(name))
+  }
+
+  async addLabelsToMessage(id: string, labelIds: ReadonlyArray<string>) {
+    return await this.apply(this.store.addLabelsToMessage(id, labelIds))
+  }
+
   hasAttachmentKey(key: string) {
     return this.store.hasAttachmentKey(key)
   }

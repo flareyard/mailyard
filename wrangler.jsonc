@@ -12,6 +12,14 @@
     "bindings": [{ "name": "MAILBOX", "class_name": "MailboxDO" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MailboxDO"] }],
+  "workflows": [
+    {
+      "name": "mailyard-mailbox-import",
+      "binding": "IMPORT_WORKFLOW",
+      "class_name": "MailboxImportWorkflow"
+    },
+    { "name": "mailyard-mailbox-export", "binding": "EXPORT_WORKFLOW", "class_name": "MailboxExportWorkflow" }
+  ],
   "queues": {
     "producers": [
       { "binding": "SEND_QUEUE", "queue": "mailyard-send" },

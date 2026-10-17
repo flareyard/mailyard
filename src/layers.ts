@@ -1,6 +1,7 @@
 import { Layer } from "effect"
 import { Bindings, type Env } from "./Bindings.ts"
 import { SecretBox, WebhookQueue } from "./domain/webhooks.ts"
+import { ImapConnector } from "./imports/importer.ts"
 import { InboundQueue } from "./inbound/pipeline.ts"
 import { BlobStore, Ids, Sender, SenderCloudflareWithSmtpFallback } from "./kit/index.ts"
 import { workerSmtpTransport } from "./kit/smtp-worker.ts"
@@ -42,6 +43,7 @@ export const appLayer = (env: Env) => {
     Mailboxes.layer,
     Dns.layerDoh(),
     Classifier.fromEnv(env),
+    ImapConnector.layer,
     SecretBox.layer,
     CloudflareEmail.layer,
     BlobStore.layerR2(env.STORE),

@@ -495,8 +495,14 @@ export const mailboxExports = sqliteTable(
     id: text("id").primaryKey(),
     mailboxId: text("mailbox_id").notNull(),
     status: text("status", { enum: ["pending", "running", "complete", "failed"] }).notNull(),
-    format: text("format", { enum: ["mbox", "eml-zip"] }).notNull(),
+    format: text("format", { enum: ["mbox", "eml-zip", "both"] }).notNull(),
+    /** The mbox file. */
     r2Key: text("r2_key"),
+    /** The zip of .eml files, when the export made one. */
+    zipKey: text("zip_key"),
+    zipSize: integer("zip_size").notNull().default(0),
+    /** Multipart upload state between Workflow steps. */
+    state: text("state", { mode: "json" }).$type<Record<string, unknown>>(),
     messageCount: integer("message_count").notNull().default(0),
     size: integer("size").notNull().default(0),
     error: text("error"),
@@ -560,4 +566,56 @@ export const autoReplies = sqliteTable(
     sentAt: integer("sent_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.mailboxId, t.address, t.source] })],
+)
+
+/** Per-folder import progress, kept so a later import catches up from where this one stopped. */
+export interface ImportFolderProgress {
+  readonly name: string
+  readonly raw: string
+  readonly folder: string
+  readonly label: string | null
+  readonly uidValidity: number | null
+  /** Messages the source reported for the part being imported. */
+  readonly source: number
+  readonly imported: number
+  readonly duplicates: number
+  readonly failed: number
+  /** Flagged \Deleted on the source, or expunged between planning and fetching. */
+  readonly skipped: number
+  readonly lastUid: number
+  readonly batches: number
+  readonly batchesDone: number
+}
+
+/**
+ * A mailbox import: from an IMAP server (MailboxImport Workflow) or an mbox file in R2. The source
+ * password is sealed while the import runs and wiped the moment it ends, whatever the outcome.
+ */
+export const mailboxImports = sqliteTable(
+  "mailbox_imports",
+  {
+    id: text("id").primaryKey(),
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    source: text("source", { enum: ["imap", "mbox"] }).notNull(),
+    /** `catchup` fetches only what arrived since the last import from the same account. */
+    mode: text("mode", { enum: ["full", "catchup"] }).notNull(),
+    host: text("host"),
+    port: integer("port"),
+    username: text("username"),
+    secretCiphertext: text("secret_ciphertext"),
+    /** For an mbox import: the R2 key of the file. */
+    objectKey: text("object_key"),
+    /** Folders asked for, or null for every importable one. */
+    folders: text("folders", { mode: "json" }).$type<ReadonlyArray<string>>(),
+    progress: text("progress", { mode: "json" }).$type<ReadonlyArray<ImportFolderProgress>>(),
+    status: text("status", { enum: ["pending", "running", "complete", "failed", "cancelled"] }).notNull(),
+    error: text("error"),
+    workflowId: text("workflow_id"),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+    finishedAt: integer("finished_at"),
+  },
+  (t) => [index("mailbox_imports_mailbox").on(t.mailboxId, t.createdAt)],
 )
