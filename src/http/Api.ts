@@ -1157,6 +1157,31 @@ export const MessageDetailSchema = Schema.Struct({
         machineClicks: Schema.Number,
         firstOpenedAt: Schema.NullOr(Schema.Number),
         firstClickedAt: Schema.NullOr(Schema.Number),
+        recipients: Schema.Array(
+          Schema.Struct({
+            recipient: Schema.String,
+            kind: Schema.Literals(["to", "cc", "bcc"]),
+            status: Schema.Literals([
+              "queued",
+              "sent",
+              "delivered",
+              "deferred",
+              "bounced",
+              "failed",
+              "rejected",
+              "complained",
+              "suppressed",
+            ]),
+            at: Schema.Number,
+            attempts: Schema.Number.annotate({
+              description: "Deferrals so far: each is Email Service trying again.",
+            }),
+            smtpResponse: Schema.NullOr(Schema.String),
+          }),
+        ).annotate({
+          description:
+            "Each recipient's own delivery, moved by its delivery events and pushed as delivery.changed on the live socket. Empty for mail sent before it was recorded.",
+        }),
       }),
     ),
   ),

@@ -52,6 +52,7 @@ describe("D1 schema", () => {
       "mailbox_rules",
       "mailbox_senders",
       "mailboxes",
+      "message_recipients",
       "messages_out",
       "processed_events",
       "segments",

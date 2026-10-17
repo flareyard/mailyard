@@ -5,7 +5,7 @@ import * as Schedule from "effect/Schedule"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { getCompliance, trackingOrigin } from "../campaigns/compliance.ts"
-import { contacts, messagesOut, suppressions } from "../db/schema.ts"
+import { contacts, messageRecipients, messagesOut, suppressions } from "../db/schema.ts"
 import {
   type Attachment,
   BlobStore,
@@ -625,10 +625,33 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
         })
         .run(),
     )
+  // Who it goes to, one row each, so each recipient's delivery can be shown (HAL-3408).
+  const seedRecipients = (status: "queued" | "suppressed") =>
+    Effect.gen(function* () {
+      const { DB } = yield* Bindings
+      const now = Date.now()
+      const rows = [
+        ...envelope.to.map((a) => ({ email: a.email, kind: "to" as const, status })),
+        ...envelope.cc.map((a) => ({ email: a.email, kind: "cc" as const, status })),
+        ...envelope.bcc.map((a) => ({ email: a.email, kind: "bcc" as const, status })),
+        ...[...suppressed].map((email) => ({ email, kind: "to" as const, status: "suppressed" as const })),
+      ]
+      if (rows.length === 0) return
+      yield* database.query("messageRecipients.seed", () =>
+        DB.prepare(
+          `insert into message_recipients (message_id, recipient, kind, status, at)
+           select ?, lower(json_extract(value, '$.email')), json_extract(value, '$.kind'), json_extract(value, '$.status'), ?
+           from json_each(?) where true on conflict(message_id, recipient) do nothing`,
+        )
+          .bind(id, now, JSON.stringify(rows))
+          .run(),
+      )
+    })
   const [first, ...restTo] = envelope.to
   if (!first) {
     const error = "SendSuppressed: every recipient is on the suppression list"
     yield* insert("rejected", error)
+    yield* seedRecipients("suppressed")
     return {
       id,
       status: "rejected" as const,
@@ -662,8 +685,20 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
     "application/json",
   )
   yield* insert("queued", null)
+  yield* seedRecipients("queued")
   const status = yield* attempt(id, outgoing, 0)
   yield* counted("mailbox")(status)
+  // Accepted (or refused) as a whole: every recipient still queued moves with it.
+  yield* database.query("messageRecipients.sent", (db) =>
+    db
+      .update(messageRecipients)
+      .set({
+        status: status === "sent" ? "sent" : status === "deferred" ? "deferred" : status,
+        at: Date.now(),
+      })
+      .where(and(eq(messageRecipients.messageId, id), eq(messageRecipients.status, "queued")))
+      .run(),
+  )
   const row = yield* database.query("messagesOut.cfId", (db) =>
     db
       .select({ cfMessageId: messagesOut.cfMessageId, error: messagesOut.error })
