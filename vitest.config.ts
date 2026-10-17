@@ -44,6 +44,8 @@ export default defineConfig({
                 WEBHOOK_SIGNING_KEY: "test-webhook-signing-key",
                 FILE_SIGNING_KEY: "test-file-signing-key",
                 UNSUBSCRIBE_KEY: "test-unsubscribe-key",
+                // BENCH=1 bun run test runs the timing benchmarks, which a loaded shared run can't time fairly.
+                BENCH: process.env.BENCH ?? "",
                 // The undo window, shortened so tests watch the alarm hand a send over.
                 MAILYARD_UNDO_SECONDS: "0.5",
               },

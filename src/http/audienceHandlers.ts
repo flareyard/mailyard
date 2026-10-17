@@ -22,6 +22,17 @@ import {
   updateForm,
 } from "../domain/forms.ts"
 import type { SendRequestInvalid } from "../domain/outbox.ts"
+import {
+  createSegment,
+  deleteSegment,
+  getSegment,
+  listSegments,
+  previewSegment,
+  type SegmentInUse,
+  type SegmentInvalid,
+  type SegmentNotFound,
+  updateSegment,
+} from "../domain/segments.ts"
 import { bulkContacts, subscribe, unsubscribe } from "../domain/subscriptions.ts"
 import {
   createTopic,
@@ -40,16 +51,17 @@ type Faults = {
 }
 
 /** Each audience error to its HTTP error; distributive, so a handler lists only what it can return. */
-type AudienceHttp<E> = E extends ContactNotFound | TopicNotFound | FormNotFound
+type AudienceHttp<E> = E extends ContactNotFound | TopicNotFound | FormNotFound | SegmentNotFound
   ? NotFound
   : E extends
         | ContactInvalid
         | TopicInvalid
         | FormInvalid
+        | SegmentInvalid
         | SendRequestInvalid
         | { readonly _tag: "InvalidMessage" }
     ? InvalidRequest
-    : E extends ContactConflict
+    : E extends ContactConflict | SegmentInUse
       ? Conflict
       : E extends Faults
         ? never
@@ -80,9 +92,12 @@ export const audienceErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
           return new NotFound({ message: `Topic ${err.id} not found.` })
         case "FormNotFound":
           return new NotFound({ message: `Form ${err.id} not found.` })
+        case "SegmentNotFound":
+          return new NotFound({ message: `Segment ${err.id} not found.` })
         case "ContactInvalid":
         case "TopicInvalid":
         case "FormInvalid":
+        case "SegmentInvalid":
         case "SendRequestInvalid":
         case "InvalidMessage":
           return new InvalidRequest({
@@ -90,6 +105,7 @@ export const audienceErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
             message: err.message ?? "Invalid request.",
           })
         case "ContactConflict":
+        case "SegmentInUse":
           return new Conflict({ message: err.message ?? "Conflict." })
         default:
           return e
@@ -222,6 +238,47 @@ export const FormsHandlers = HttpApiBuilder.group(
       update: p(({ params, payload }) =>
         requireScope("admin").pipe(
           Effect.flatMap((caller) => updateForm(params.id, payload, caller.keyId)),
+          audienceErrors,
+        ),
+      ),
+    })
+  }),
+)
+
+export const SegmentsHandlers = HttpApiBuilder.group(
+  MailApi,
+  "segments",
+  Effect.fn(function* (handlers) {
+    const p = provideTo(yield* appContext)
+    return handlers.handleAll({
+      list: p(() =>
+        requireScope("read").pipe(
+          Effect.andThen(listSegments()),
+          Effect.map((segments) => ({ segments })),
+          audienceErrors,
+        ),
+      ),
+      preview: p(({ payload }) =>
+        requireScope("read").pipe(Effect.andThen(previewSegment(payload.filter)), audienceErrors),
+      ),
+      create: p(({ payload }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => createSegment(payload, caller.keyId)),
+          audienceErrors,
+        ),
+      ),
+      get: p(({ params }) =>
+        requireScope("read").pipe(Effect.andThen(getSegment(params.id)), audienceErrors),
+      ),
+      update: p(({ params, payload }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => updateSegment(params.id, payload, caller.keyId)),
+          audienceErrors,
+        ),
+      ),
+      remove: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => deleteSegment(params.id, caller.keyId)),
           audienceErrors,
         ),
       ),

@@ -6,7 +6,12 @@ import * as Layer from "effect/Layer"
 import type { Env } from "../Bindings.ts"
 import { MailApi } from "../http/Api.ts"
 import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
-import { ContactsHandlers, FormsHandlers, TopicsHandlers } from "../http/audienceHandlers.ts"
+import {
+  ContactsHandlers,
+  FormsHandlers,
+  SegmentsHandlers,
+  TopicsHandlers,
+} from "../http/audienceHandlers.ts"
 import {
   ActionsHandlers,
   ApiKeyAuthLive,
@@ -60,6 +65,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     ContactsHandlers,
     TopicsHandlers,
     FormsHandlers,
+    SegmentsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
