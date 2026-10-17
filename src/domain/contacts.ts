@@ -171,7 +171,7 @@ export const upsertContact = Effect.fn("contacts.upsert")(function* (input: {
 
 type Membership = { readonly topicId: string; readonly name: string; readonly state: SubscriptionState }
 
-const membershipsOf = (contactIds: ReadonlyArray<string>) =>
+export const membershipsOf = (contactIds: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     if (contactIds.length === 0) return new Map<string, Array<Membership>>()
     const database = yield* Database
@@ -284,7 +284,7 @@ const decodeCursor = (cursor: string) =>
   })
 
 /** The filters a list applies, shared by the page query and the filtered count. */
-const filterOf = (query: ContactQuery, now: number): SQL | undefined => {
+export const filterOf = (query: ContactQuery, now: number): SQL | undefined => {
   const q = query.q?.trim().toLowerCase()
   return and(
     q ? or(like(contacts.email, `%${q}%`), like(sql`lower(${contacts.name})`, `%${q}%`)) : undefined,
@@ -297,14 +297,14 @@ const filterOf = (query: ContactQuery, now: number): SQL | undefined => {
 }
 
 /** A page of contacts plus the total and the count matching the filters, for the list's header. */
-export const listContacts = Effect.fn("contacts.list")(function* (query: ContactQuery) {
+export const listContacts = Effect.fn("contacts.list")(function* (query: ContactQuery, extra?: SQL) {
   const database = yield* Database
   const now = Date.now()
   const limit = Math.min(Math.max(query.limit ?? 50, 1), 200)
   const sort = query.sort ?? "-createdAt"
   const descending = sort.startsWith("-")
   const column = sortColumn(sort)
-  const filter = filterOf(query, now)
+  const filter = and(filterOf(query, now), extra)
   const cursor = query.cursor ? yield* decodeCursor(query.cursor) : undefined
   const after = cursor
     ? descending

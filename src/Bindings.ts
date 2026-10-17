@@ -39,6 +39,10 @@ export interface Env {
   readonly CAMPAIGN_WORKFLOW: Workflow<{ readonly campaignId: string; readonly origin: string }>
   /** Imports a contact CSV in 5,000-row steps (src/workflows/contactImport.ts). */
   readonly CONTACT_IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
+  /** Writes contact exports past 10,000 rows as a multipart CSV (src/workflows/contactExport.ts). */
+  readonly CONTACT_EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
+  /** Tests only: the multipart part size for contact exports (6 MiB unless set; R2 refuses under 5 MiB). */
+  readonly MAILYARD_EXPORT_PART_BYTES?: string
   /** Exports a mailbox to an mbox and a zip of .eml files. */
   readonly EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** One Durable Object per mailbox: its messages, threads and search. */

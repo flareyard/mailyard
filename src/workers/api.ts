@@ -14,6 +14,7 @@ import {
   TopicsHandlers,
 } from "../http/audienceHandlers.ts"
 import { CampaignsHandlers } from "../http/campaignHandlers.ts"
+import { ExportsHandlers } from "../http/exportHandlers.ts"
 import {
   ActionsHandlers,
   ApiKeyAuthLive,
@@ -53,6 +54,7 @@ import { handleUploads, UPLOADS_PATH } from "./uploads.ts"
 export { MailboxDO } from "../objects/MailboxDO.ts"
 export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
 export { CampaignSendWorkflow } from "../workflows/campaign.ts"
+export { ContactExportWorkflow } from "../workflows/contactExport.ts"
 export { ContactImportWorkflow } from "../workflows/contactImport.ts"
 export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
 
@@ -81,6 +83,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     AlertsHandlers,
     CampaignsHandlers,
     ImportsHandlers,
+    ExportsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
