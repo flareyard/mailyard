@@ -870,6 +870,10 @@ export interface ImportFolderProgress {
   readonly lastUid: number
   readonly batches: number
   readonly batchesDone: number
+  /** UIDs that couldn't be imported (the first 1,000), for `retry-failed`; IMAP only. */
+  readonly failedUids?: ReadonlyArray<number> | undefined
+  /** Why the latest failure in this folder failed. */
+  readonly lastError?: string | null | undefined
 }
 
 /**
@@ -895,9 +899,21 @@ export const mailboxImports = sqliteTable(
     /** Folders asked for, or null for every importable one. */
     folders: text("folders", { mode: "json" }).$type<ReadonlyArray<string>>(),
     progress: text("progress", { mode: "json" }).$type<ReadonlyArray<ImportFolderProgress>>(),
-    status: text("status", { enum: ["pending", "running", "complete", "failed", "cancelled"] }).notNull(),
+    status: text("status", {
+      enum: ["pending", "running", "paused", "complete", "failed", "cancelled"],
+    }).notNull(),
     error: text("error"),
     workflowId: text("workflow_id"),
+    /** When planning finished and messages started to move; with pausedMs, what the rate is over. */
+    startedAt: integer("started_at"),
+    pausedAt: integer("paused_at"),
+    pausedMs: integer("paused_ms").notNull().default(0),
+    /** A catch-up: the import it continues from, and when that one finished (what "since" means). */
+    catchupOf: text("catchup_of"),
+    since: integer("since"),
+    /** A retry of another import's failed messages, and those UIDs per folder (raw name). */
+    retryOf: text("retry_of"),
+    uids: text("uids", { mode: "json" }).$type<Record<string, ReadonlyArray<number>>>(),
     createdBy: text("created_by"),
     createdAt: createdAt(),
     finishedAt: integer("finished_at"),

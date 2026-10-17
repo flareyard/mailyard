@@ -18,6 +18,9 @@ const RETRY = {
 /** The most export steps one instance will take: each writes at least 8 MiB, so this is ~80 GB. */
 const MAX_EXPORT_STEPS = 10_000 - 3
 
+/** How long a paused import waits to be resumed before it ends as failed (credentials then wiped). */
+const RESUME_WAIT = "7 days"
+
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /**
@@ -45,11 +48,21 @@ export class MailboxImportWorkflow extends WorkflowEntrypoint<Env, { readonly im
       const plan = released(await step.do("plan", RETRY, () => run(planImport(importId))))
       for (const [folderIndex, folder] of plan.folders.entries()) {
         for (let batchIndex = 0; batchIndex < folder.batches; batchIndex++) {
-          released(
-            await step.do(`batch ${folderIndex}.${batchIndex}`, RETRY, () =>
-              run(runBatch(importId, folderIndex, batchIndex)),
-            ),
-          )
+          // Paused: the batch did nothing; wait for resume, then ask for the same batch again.
+          for (let attempt = 0; ; attempt++) {
+            const name =
+              attempt === 0
+                ? `batch ${folderIndex}.${batchIndex}`
+                : `batch ${folderIndex}.${batchIndex} r${attempt}`
+            const result = released(
+              await step.do(name, RETRY, () => run(runBatch(importId, folderIndex, batchIndex))),
+            )
+            if (!result.paused) break
+            await step.waitForEvent(`resume ${folderIndex}.${batchIndex}.${attempt}`, {
+              type: "resume",
+              timeout: RESUME_WAIT,
+            })
+          }
         }
       }
       return released(await step.do("finish", RETRY, () => run(finishImport(importId))))

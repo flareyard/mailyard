@@ -1599,6 +1599,12 @@ const ImportFolderSchema = Schema.Struct({
   lastUid: Schema.Number,
   batches: Schema.Number,
   batchesDone: Schema.Number,
+  lastError: Schema.NullOr(Schema.String).annotate({
+    description: "Why the latest failure in this folder failed.",
+  }),
+  retryable: Schema.Number.annotate({
+    description: "Failed messages POST …/retry-failed can fetch again (IMAP).",
+  }),
 })
 
 export const ImportSchema = Schema.Struct({
@@ -1608,7 +1614,7 @@ export const ImportSchema = Schema.Struct({
   host: Schema.NullOr(Schema.String),
   port: Schema.NullOr(Schema.Number),
   username: Schema.NullOr(Schema.String),
-  status: Schema.Literals(["pending", "running", "complete", "failed", "cancelled"]),
+  status: Schema.Literals(["pending", "running", "paused", "complete", "failed", "cancelled"]),
   error: Schema.NullOr(Schema.String),
   folders: Schema.Array(ImportFolderSchema),
   totals: Schema.Struct({
@@ -1619,6 +1625,24 @@ export const ImportSchema = Schema.Struct({
     skipped: Schema.Number,
   }),
   accountedFor: Schema.Boolean,
+  ratePerMinute: Schema.NullOr(Schema.Number).annotate({
+    description:
+      "Messages a minute since it started moving, paused time left out; null for its first minute.",
+  }),
+  etaAt: Schema.NullOr(Schema.Number).annotate({
+    description: "When it should finish at that rate; null unless running.",
+  }),
+  startedAt: Schema.NullOr(Schema.Number),
+  pausedAt: Schema.NullOr(Schema.Number),
+  catchupOf: Schema.NullOr(Schema.String).annotate({
+    description: "A catch-up: the import it continues from.",
+  }),
+  since: Schema.NullOr(Schema.Number).annotate({
+    description: "A catch-up: when that import finished, what it fetches after.",
+  }),
+  retryOf: Schema.NullOr(Schema.String).annotate({
+    description: "A retry: the import whose failed messages it fetches.",
+  }),
   credentialsHeld: Schema.Boolean,
   createdAt: Schema.Number,
   finishedAt: Schema.NullOr(Schema.Number),
@@ -1634,6 +1658,10 @@ export const ExportSchema = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   /** Signed links valid for a week; null until the export is complete. */
   downloads: Schema.Struct({ mbox: Schema.NullOr(Schema.String), zip: Schema.NullOr(Schema.String) }),
+  downloadsExpireAt: Schema.NullOr(Schema.Number).annotate({
+    description:
+      "When these download links stop working (a week); every read of the export signs a fresh pair.",
+  }),
   createdAt: Schema.Number,
   completedAt: Schema.NullOr(Schema.Number),
 })
@@ -1674,6 +1702,54 @@ export class TransfersApi extends HttpApiGroup.make("transfers")
     HttpApiEndpoint.post("cancelImport", "/v1/mailboxes/:id/imports/:importId/cancel", {
       params: { id: Schema.String, importId: Schema.String },
       success: ImportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("pauseImport", "/v1/mailboxes/:id/imports/:importId/pause", {
+      params: { id: Schema.String, importId: Schema.String },
+      success: ImportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("resumeImport", "/v1/mailboxes/:id/imports/:importId/resume", {
+      params: { id: Schema.String, importId: Schema.String },
+      success: ImportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("retryFailed", "/v1/mailboxes/:id/imports/:importId/retry-failed", {
+      params: { id: Schema.String, importId: Schema.String },
+      payload: Schema.Struct({
+        password: Schema.String.annotate({
+          description: "The source password again: the first import's was wiped when it ended.",
+        }),
+      }),
+      success: ImportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("probeImport", "/v1/mailboxes/:id/imports/probe", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        host: Schema.String,
+        port: Schema.optionalKey(Schema.Number),
+        username: Schema.String,
+        password: Schema.String,
+      }),
+      success: Schema.Struct({
+        host: Schema.String,
+        port: Schema.Number,
+        folders: Schema.Array(
+          Schema.Struct({
+            name: Schema.String,
+            messages: Schema.NullOr(Schema.Number),
+            folder: Schema.NullOr(Schema.String).annotate({
+              description: "Where it would land; null when skipped.",
+            }),
+            label: Schema.NullOr(Schema.String),
+            skipped: Schema.Boolean,
+            skipReason: Schema.NullOr(Schema.String),
+          }),
+        ),
+      }).annotate({
+        description: "The account's folders before importing. The password is used for this connection only.",
+      }),
       error: MailErrors,
     }),
     HttpApiEndpoint.post("createExport", "/v1/mailboxes/:id/exports", {

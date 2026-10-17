@@ -18,6 +18,7 @@ import type { Folder } from "../mailbox/types.ts"
 import { Database } from "../services/Database.ts"
 import { mapFolder } from "./folders.ts"
 import { mboxMessage } from "./mbox.ts"
+import { importView } from "./view.ts"
 
 /**
  * Batch limits for one Workflow step: a step reconnects, fetches the batch and files it.
@@ -148,7 +149,11 @@ const previousProgress = Effect.fn("imports.previous")(function* (row: ImportRow
   const database = yield* Database
   const last = yield* database.query("imports.previous", (db) =>
     db
-      .select({ progress: mailboxImports.progress })
+      .select({
+        id: mailboxImports.id,
+        finishedAt: mailboxImports.finishedAt,
+        progress: mailboxImports.progress,
+      })
       .from(mailboxImports)
       .where(
         and(
@@ -162,7 +167,11 @@ const previousProgress = Effect.fn("imports.previous")(function* (row: ImportRow
       .orderBy(desc(mailboxImports.createdAt))
       .get(),
   )
-  return new Map((last?.progress ?? []).map((p) => [p.raw, p]))
+  return {
+    id: last?.id ?? null,
+    finishedAt: last?.finishedAt ?? null,
+    folders: new Map((last?.progress ?? []).map((p) => [p.raw, p])),
+  }
 })
 
 /** Scans an mbox stream for message boundaries without holding the file in memory. */
@@ -219,17 +228,26 @@ export const planImport = Effect.fn("imports.plan")(function* (importId: string)
   const folders: Array<Plan["folders"][number]> = []
   if (row.source === "imap") {
     const client = yield* connect(row)
-    const previous =
-      row.mode === "catchup" ? yield* previousProgress(row) : new Map<string, ImportFolderProgress>()
+    const last = row.mode === "catchup" ? yield* previousProgress(row) : null
+    const previous = last?.folders ?? new Map<string, ImportFolderProgress>()
+    // A catch-up says what it continues from, so the screen can say "arrived since …".
+    if (last?.id) yield* saveImport(importId, { catchupOf: last.id, since: last.finishedAt })
     const listed = yield* imap("LIST", () => client.list())
     for (const f of listed) {
       const mapping = mapFolder(f.name, f.flags)
       if (mapping.skip) continue
       if (row.folders && !row.folders.some((name) => name === f.name || name === f.raw)) continue
+      // A retry of failed messages fetches exactly those UIDs, and only in folders that had some.
+      const retryUids = row.uids ? (row.uids[f.raw] ?? row.uids[f.name]) : undefined
+      if (row.uids && !retryUids?.length) continue
       const info = yield* imap(`EXAMINE ${f.name}`, () => client.examine(f))
       const before = previous.get(f.raw)
       const from = before && before.uidValidity === info.uidValidity ? before.lastUid + 1 : 1
-      const uids = info.exists === 0 ? [] : yield* imap(`UID SEARCH ${f.name}`, () => client.searchUids(from))
+      const uids = retryUids
+        ? [...retryUids]
+        : info.exists === 0
+          ? []
+          : yield* imap(`UID SEARCH ${f.name}`, () => client.searchUids(from))
       const sized: Array<{ uid: number; size: number }> = []
       for (let i = 0; i < uids.length; i += PLAN_FETCH_CHUNK) {
         const chunk = yield* imap(`UID FETCH sizes ${f.name}`, () =>
@@ -288,7 +306,8 @@ export const planImport = Effect.fn("imports.plan")(function* (importId: string)
     new TextEncoder().encode(JSON.stringify({ folders } satisfies Plan)),
     "application/json",
   )
-  yield* saveImport(importId, { progress: folders.map(({ batchList: _, ...p }) => p) })
+  yield* saveImport(importId, { progress: folders.map(({ batchList: _, ...p }) => p), startedAt: Date.now() })
+  yield* notifyProgress(importId)
   return {
     folders: folders.map((f) => ({ name: f.name, batches: f.batches, source: f.source })),
     batches: folders.reduce((n, f) => n + f.batches, 0),
@@ -362,7 +381,10 @@ export const runBatch = Effect.fn("imports.batch")(function* (
   batchIndex: number,
 ) {
   const row = yield* loadImport(importId)
-  if (row.status === "cancelled") return { imported: 0, duplicates: 0, failed: 0, skipped: true }
+  if (row.status === "cancelled")
+    return { imported: 0, duplicates: 0, failed: 0, skipped: true, paused: false }
+  // Paused: do nothing; the Workflow waits for the resume event and asks again.
+  if (row.status === "paused") return { imported: 0, duplicates: 0, failed: 0, skipped: false, paused: true }
   const blob = yield* (yield* BlobStore).get(planKey(importId))
   if (Option.isNone(blob)) return yield* new ImportFailed({ message: "The import plan is missing." })
   const plan = JSON.parse(new TextDecoder().decode(blob.value.body)) as Plan
@@ -379,6 +401,8 @@ export const runBatch = Effect.fn("imports.batch")(function* (
     ? [(yield* callMailbox(row.mailboxId, (s) => s.ensureLabel(folder.label as string))).id]
     : []
   const counts = { imported: 0, duplicates: 0, failed: 0, skipped: 0 }
+  const failedUids: Array<number> = []
+  let lastError: string | null = null
   let lastUid = folder.lastUid
   const file = (raw: Uint8Array, flags: ReadonlyArray<string>, receivedAt: number | null) =>
     fileImported({
@@ -389,7 +413,14 @@ export const runBatch = Effect.fn("imports.batch")(function* (
       labelIds,
       flags,
       receivedAt,
-    }).pipe(Effect.tap((r) => Effect.sync(() => counts[r.outcome]++)))
+    }).pipe(
+      Effect.tap((r) =>
+        Effect.sync(() => {
+          counts[r.outcome]++
+          if (r.outcome === "failed") lastError = r.reason ?? "The message couldn't be read."
+        }),
+      ),
+    )
   if ("uids" in batch) {
     const client = yield* connect(row)
     yield* imap(`EXAMINE ${folder.name}`, () =>
@@ -407,9 +438,13 @@ export const runBatch = Effect.fn("imports.batch")(function* (
       }
       if (!m.body) {
         counts.failed++
+        failedUids.push(m.uid)
+        lastError = "The server returned no body for this message."
         continue
       }
+      const before = counts.failed
       yield* file(m.body, m.flags, m.internalDate)
+      if (counts.failed > before) failedUids.push(m.uid)
       lastUid = Math.max(lastUid, m.uid)
     }
     yield* Effect.promise(() => client.logout())
@@ -427,6 +462,7 @@ export const runBatch = Effect.fn("imports.batch")(function* (
       })
       if (!part) {
         counts.failed++
+        lastError = "The mbox file ended before this message."
         continue
       }
       yield* file(mboxMessage(part), [], null)
@@ -444,12 +480,46 @@ export const runBatch = Effect.fn("imports.batch")(function* (
           skipped: p.skipped + counts.skipped,
           lastUid: Math.max(p.lastUid, lastUid),
           batchesDone: p.batchesDone + 1,
+          failedUids: [...(p.failedUids ?? []), ...failedUids].slice(0, 1000),
+          lastError: lastError ?? p.lastError ?? null,
         }
       : p,
   )
   yield* saveImport(importId, { progress })
-  return { ...counts, skipped: false }
+  yield* notifyProgress(importId)
+  return { ...counts, skipped: false, paused: false }
 })
+
+/**
+ * Pushes the import's progress to the mailbox's live socket (`import.progress`), so an open import
+ * screen moves without polling. A socket hiccup never fails the batch.
+ */
+export const notifyProgress = (importId: string) =>
+  Effect.gen(function* () {
+    const row = yield* loadImport(importId)
+    const view = importView(row)
+    yield* callMailbox(row.mailboxId, (s) =>
+      s.notify({
+        type: "import.progress",
+        importId,
+        status: view.status,
+        totals: view.totals,
+        ratePerMinute: view.ratePerMinute,
+        etaAt: view.etaAt,
+        folders: view.folders.map((f) => ({
+          name: f.name,
+          source: f.source,
+          imported: f.imported,
+          duplicates: f.duplicates,
+          failed: f.failed,
+          skipped: f.skipped,
+          lastError: f.lastError ?? null,
+        })),
+      }),
+    )
+  }).pipe(
+    Effect.catchCause((cause) => Effect.logWarning(`imports: no progress frame for ${importId}`, cause)),
+  )
 
 /** The last step: the import is complete and its credentials are wiped. */
 export const finishImport = Effect.fn("imports.finish")(function* (importId: string) {
@@ -465,6 +535,7 @@ export const finishImport = Effect.fn("imports.finish")(function* (importId: str
     error: null,
   })
   yield* (yield* BlobStore).delete(planKey(importId))
+  yield* notifyProgress(importId)
   return row.progress ?? []
 })
 
@@ -484,4 +555,5 @@ export const failImport = Effect.fn("imports.fail")(function* (importId: string,
     detail: message.slice(0, 500),
     subject: { type: "mailbox_import", id: importId },
   })
+  yield* notifyProgress(importId)
 })
