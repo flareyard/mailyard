@@ -74,6 +74,12 @@
       "optional": true
     },
     {
+      "name": "TURNSTILE_SECRET",
+      "ask": "Cloudflare Turnstile secret key, so signup forms with a site key turn bots away",
+      "help": "Cloudflare dashboard → Turnstile → your widget → Settings",
+      "optional": true
+    },
+    {
       "name": "CLASSIFIER_API_KEY",
       "ask": "API key for the OpenAI-compatible spam classifier, if you turn it on",
       "optional": true

@@ -165,6 +165,10 @@ export const forms = sqliteTable("forms", {
   /** Custom fields the form may set, beyond email and name. Anything else submitted is dropped. */
   fields: text("fields", { mode: "json" }).$type<ReadonlyArray<string>>().notNull().default(sql`'[]'`),
   redirectUrl: text("redirect_url"),
+  /** A line under the heading on the hosted page (GET /f/:id). */
+  description: text("description"),
+  /** Cloudflare Turnstile site key; with TURNSTILE_SECRET set, submissions must pass the challenge. */
+  turnstileSiteKey: text("turnstile_site_key"),
   archived: integer("archived", { mode: "boolean" }).notNull().default(false),
   createdAt: createdAt(),
 })

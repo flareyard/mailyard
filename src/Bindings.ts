@@ -43,6 +43,8 @@ export interface Env {
   readonly CONTACT_EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** Tests only: the multipart part size for contact exports (6 MiB unless set; R2 refuses under 5 MiB). */
   readonly MAILYARD_EXPORT_PART_BYTES?: string
+  /** Cloudflare Turnstile secret; forms with a site key require a passed challenge when it's set. */
+  readonly TURNSTILE_SECRET?: string
   /** Exports a mailbox to an mbox and a zip of .eml files. */
   readonly EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** One Durable Object per mailbox: its messages, threads and search. */

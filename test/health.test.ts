@@ -103,6 +103,7 @@ describe("GET /openapi.json", () => {
       "/v1/exports/{id}",
       "/v1/forms",
       "/v1/forms/{id}",
+      "/v1/forms/{id}/embed",
       "/v1/health",
       "/v1/identities",
       "/v1/imports",
