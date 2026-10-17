@@ -17,8 +17,16 @@ bun run build    # wrangler dry-run build
 | `src/domain/` | Sending, contacts, events, delivery events, API keys, idempotency |
 | `src/kit/` | Sender (Email Service + SMTP failover), BlobStore, Ids, retry policy |
 | `src/db/`, `migrations/` | D1 schema (Drizzle) and migrations |
-| `tools/manifest/` | Validator for `cloudflare-app.json` (copy of the platform's schema) |
+| `tools/manifest/` | Validator for `cloudflare-app.json` (copy of the platform's schema) and its check against `wrangler.jsonc` |
 | `docs/` | The plan (`email-platform.html`) and the UI spec with the API contract (`email-ui.html`) |
+
+## Releasing through Flareyard
+
+`bun run release` builds `flareyard-release.json` with the platform's CLI. That's `packages/manifest/src/release-cli.ts` in a checkout of flareyard/flareyard, at `../flareyard` unless `FLAREYARD_DIR` says otherwise. The release holds the manifest, the bindings mapped to named resources, and the module `wrangler deploy --dry-run` emits. The platform contract is `docs/apps-contract.md` in that repo.
+
+- `health` is `/healthz`. It answers without a key, reads the database and calls nothing outside, and the platform waits for its 200 after every deploy. `/v1/health` is the fuller status (sending, domains, quota). It needs the admin key, so the manifest offers it as `status` for the platform's dashboard.
+- `settings`, `status` and `cost.units` are Mailyard's proposal for contract v1.2. The platform drops them from a release until it adopts them. Each setting is a Worker var: `MAILYARD_UNDO_SECONDS`, `MAILYARD_TRACK_OPENS`, `MAILYARD_TRACK_CLICKS`, `MAILYARD_CLASSIFIER` with `CLASSIFIER_URL` and `CLASSIFIER_MODEL`, and the SMTP fallback's host, port and username.
+- `bun run manifest`, part of `bun run check`, checks that every binding's scope is required, that every queue consumer has a dead-letter queue, and that `wrangler.jsonc` names resources without ids.
 
 ## Deploying by hand
 

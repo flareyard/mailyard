@@ -4,39 +4,44 @@
   "name": "Mailyard",
   "description": "Inboxes, transactional email, contacts, campaigns and automations on your own Cloudflare account.",
   "version": "0.1.0",
-  "stack": "alchemy.run.ts",
+  "stack": "wrangler.jsonc",
   "plan": "workers-paid",
   "scopes": {
     "required": [
       {
-        "scope": "workers-platform.write",
-        "why": "Deploy the app's Workers, Durable Objects, Workflows and Queues"
+        "scope": "workers-scripts.write",
+        "why": "Deploy Mailyard's Worker, with its Durable Objects (mailboxes, send pacing) and Workflows (imports, exports, campaign sends)"
       },
       {
         "scope": "d1.write",
         "why": "Store contacts, campaigns, templates and the delivery ledger"
       },
       {
-        "scope": "r2.write",
+        "scope": "workers-r2.write",
         "why": "Store raw messages, attachments, uploads and exports"
+      },
+      {
+        "scope": "queues.write",
+        "why": "Create the send, inbound and webhook queues, and subscribe delivery events for your sending domains"
       },
       {
         "scope": "email-sending.write",
         "why": "Send mail from your domains"
       },
       {
-        "scope": "email-routing.write",
-        "why": "Receive mail for your domains in your inboxes"
-      },
-      {
-        "scope": "queues.write",
-        "why": "Retry messages Email Service deferred"
+        "scope": "email-routing-rule.write",
+        "why": "Route your domain's inbound mail to your Mailyard inboxes"
       }
     ],
     "optional": [
       {
+        "scope": "zone.read",
+        "why": "List your zones, so you can pick the domain to send and receive on",
+        "enables": "domain"
+      },
+      {
         "scope": "dns.write",
-        "why": "Write SPF, DKIM, DMARC and MX records for you",
+        "why": "Write SPF, DKIM, DMARC and MX records, and turn on Email Routing for a receiving subdomain",
         "enables": "domain"
       }
     ]
@@ -69,6 +74,11 @@
       "optional": true
     },
     {
+      "name": "CLASSIFIER_API_KEY",
+      "ask": "API key for the OpenAI-compatible spam classifier, if you turn it on",
+      "optional": true
+    },
+    {
       "name": "CLOUDFLARE_ACCOUNT_ID",
       "ask": "Your Cloudflare account ID, so the Overview can show your daily sending quota and reputation",
       "optional": true
@@ -79,13 +89,241 @@
       "optional": true
     }
   ],
+  "settings": [
+    {
+      "name": "MAILYARD_UNDO_SECONDS",
+      "label": "Undo send window",
+      "type": "integer",
+      "default": 10,
+      "min": 0,
+      "max": 30,
+      "help": "Seconds a mailbox send waits so it can be undone. 0 sends at once."
+    },
+    {
+      "name": "MAILYARD_TRACK_OPENS",
+      "label": "Track opens in new campaigns",
+      "type": "boolean",
+      "default": true,
+      "help": "A tracking pixel; Apple Mail's privacy proxy opens are counted apart. Each campaign can switch it off."
+    },
+    {
+      "name": "MAILYARD_TRACK_CLICKS",
+      "label": "Track clicks in new campaigns",
+      "type": "boolean",
+      "default": true,
+      "help": "Links go through a redirect on your domain. Each campaign can switch it off."
+    },
+    {
+      "name": "MAILYARD_CLASSIFIER",
+      "label": "Spam classifier for inbound mail",
+      "type": "enum",
+      "default": "off",
+      "options": [
+        {
+          "value": "off",
+          "label": "Off"
+        },
+        {
+          "value": "openai",
+          "label": "An OpenAI-compatible endpoint"
+        }
+      ],
+      "help": "Off keeps the rules-based checks (SPF, DKIM, DMARC and your rules)."
+    },
+    {
+      "name": "CLASSIFIER_URL",
+      "label": "Classifier endpoint",
+      "type": "url",
+      "optional": true,
+      "when": {
+        "setting": "MAILYARD_CLASSIFIER",
+        "equals": "openai"
+      },
+      "help": "The chat completions URL, e.g. https://api.openai.com/v1/chat/completions"
+    },
+    {
+      "name": "CLASSIFIER_MODEL",
+      "label": "Classifier model",
+      "type": "string",
+      "optional": true,
+      "when": {
+        "setting": "MAILYARD_CLASSIFIER",
+        "equals": "openai"
+      }
+    },
+    {
+      "name": "SMTP_HOST",
+      "label": "Fallback SMTP host",
+      "type": "string",
+      "optional": true,
+      "help": "Used only when Email Service is unavailable."
+    },
+    {
+      "name": "SMTP_PORT",
+      "label": "Fallback SMTP port",
+      "type": "integer",
+      "default": 465,
+      "min": 1,
+      "max": 65535
+    },
+    {
+      "name": "SMTP_USERNAME",
+      "label": "Fallback SMTP username",
+      "type": "string",
+      "optional": true
+    }
+  ],
   "domain": {
     "supported": true,
     "suggest": "mail"
   },
   "health": "/healthz",
+  "status": {
+    "path": "/v1/health",
+    "auth": {
+      "bearer": "ADMIN_KEY"
+    }
+  },
   "cost": {
-    "typicalMonthlyUsd": "$5 plan; 3,000 emails a month included, then $0.35 per 1,000 (Email Service pricing, 2026-10-16)"
+    "typicalMonthlyUsd": "$5 Workers Paid minimum; light use (under 3,000 emails a month) stays inside it. Beyond that, see cost.units (Cloudflare pricing pages, 2026-10-17).",
+    "units": [
+      {
+        "product": "Workers Paid",
+        "unit": "account per month",
+        "included": "Workers, KV, Hyperdrive and Durable Objects usage",
+        "price": "$5 minimum",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Email Sending",
+        "unit": "email",
+        "included": "3,000 per month",
+        "price": "$0.35 per 1,000",
+        "source": "https://developers.cloudflare.com/email-service/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Email Routing",
+        "unit": "inbound email",
+        "included": "unlimited",
+        "price": "free",
+        "source": "https://developers.cloudflare.com/email-service/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Workers",
+        "unit": "request",
+        "included": "10 million per month",
+        "price": "$0.30 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Workers",
+        "unit": "CPU millisecond",
+        "included": "30 million per month",
+        "price": "$0.02 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Durable Objects",
+        "unit": "request",
+        "included": "1 million per month",
+        "price": "$0.15 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Durable Objects",
+        "unit": "GB-second of duration",
+        "included": "400,000 per month",
+        "price": "$12.50 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Durable Objects SQLite",
+        "unit": "row written",
+        "included": "50 million per month",
+        "price": "$1.00 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Durable Objects SQLite",
+        "unit": "GB-month stored",
+        "included": "5 GB-month",
+        "price": "$0.20 per GB-month",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "D1",
+        "unit": "row read",
+        "included": "25 billion per month",
+        "price": "$0.001 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "D1",
+        "unit": "row written",
+        "included": "50 million per month",
+        "price": "$1.00 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "D1",
+        "unit": "GB-month stored",
+        "included": "5 GB",
+        "price": "$0.75 per GB-month",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Queues",
+        "unit": "operation",
+        "included": "1 million per month",
+        "price": "$0.40 per million",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "Workflows",
+        "unit": "step",
+        "included": "500,000 per month",
+        "price": "$0.80 per 100,000",
+        "source": "https://developers.cloudflare.com/workers/platform/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "R2",
+        "unit": "GB-month stored",
+        "included": "10 GB-month",
+        "price": "$0.015 per GB-month",
+        "source": "https://developers.cloudflare.com/r2/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "R2",
+        "unit": "Class A operation (write)",
+        "included": "1 million per month",
+        "price": "$4.50 per million",
+        "source": "https://developers.cloudflare.com/r2/pricing/",
+        "measuredAt": "2026-10-17"
+      },
+      {
+        "product": "R2",
+        "unit": "Class B operation (read)",
+        "included": "10 million per month",
+        "price": "$0.36 per million",
+        "source": "https://developers.cloudflare.com/r2/pricing/",
+        "measuredAt": "2026-10-17"
+      }
+    ]
   },
   "upgrade": {
     "migrations": "drizzle",
