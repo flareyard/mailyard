@@ -1,5 +1,5 @@
 import * as Exit from "effect/Exit"
-import { htmlToText, render } from "../domain/render.ts"
+import { htmlToText, placeholdersOf, render, TemplateSyntaxError } from "../domain/render.ts"
 import { type BlockSpec, decodeBlocksDocument } from "./document.ts"
 import { createKit, type Theme } from "./kit.ts"
 
@@ -28,19 +28,14 @@ export class TemplateInvalid extends Error {
   override readonly name = "TemplateInvalid"
 }
 
-const PLACEHOLDER = /\{\{\s*([A-Za-z_][\w.]*)\s*(?:\?\?\s*(?:"[^"]*"|'[^']*'))?\s*\}\}/g
-const HAS_FALLBACK = /\{\{\s*([A-Za-z_][\w.]*)\s*\?\?/
-
-/** Every placeholder a template uses, and which have no `??` fallback (those need data). */
+/** Every placeholder a template uses, and which are required (outside sections, with no `??` fallback). */
 export const variablesOf = (...sources: ReadonlyArray<string>) => {
   const used = new Set<string>()
   const required = new Set<string>()
   for (const source of sources) {
-    for (const match of source.matchAll(PLACEHOLDER)) {
-      const name = match[1] as string
-      used.add(name)
-      if (!HAS_FALLBACK.test(match[0])) required.add(name)
-    }
+    const found = placeholdersOf(source)
+    for (const name of found.used) used.add(name)
+    for (const name of found.required) required.add(name)
   }
   return { used: [...used].sort(), required: [...required].sort() }
 }
@@ -195,6 +190,15 @@ export const templateTexts = (template: TemplateSource): ReadonlyArray<string> =
 
 /** Checks a template can be rendered at all (valid blocks JSON), before it's saved. */
 export const validateTemplate = (template: TemplateSource): string | undefined => {
+  // Sections must open and close properly in every part: subject, body, text, and each block's strings.
+  for (const text of templateTexts(template)) {
+    try {
+      placeholdersOf(text)
+    } catch (e) {
+      if (e instanceof TemplateSyntaxError) return e.message
+      throw e
+    }
+  }
   if (template.kind === "html") return template.source.trim() ? undefined : "An html template needs a body."
   try {
     const exit = decodeBlocksDocument(JSON.parse(template.source))
