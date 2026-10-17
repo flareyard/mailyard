@@ -47,9 +47,9 @@ const coverageOf = async (domain: string) =>
   )
 
 const openAlert = async (domain: string) =>
-  env.DB.prepare("select id, severity, title from alerts where key = ? and resolved_at is null")
+  env.DB.prepare("select id, severity, title, subject from alerts where key = ? and resolved_at is null")
     .bind(`delivery-events:${domain}`)
-    .first<{ id: string; severity: string; title: string }>()
+    .first<{ id: string; severity: string; title: string; subject: string }>()
 
 const runCron = async () => {
   const ctx = createExecutionContext()
@@ -101,6 +101,10 @@ describe("delivery-events coverage from the ledger", () => {
     await runCron()
     const alert = await openAlert(silent)
     expect(alert).toMatchObject({ severity: "critical", title: `No delivery events for ${silent}` })
+    const domainRow = await env.DB.prepare("select id from domains where name = ?")
+      .bind(silent)
+      .first<{ id: string }>()
+    expect(JSON.parse(alert?.subject ?? "{}")).toEqual({ type: "domain", id: domainRow?.id })
     await runCron()
     const count = await env.DB.prepare("select count(*) as n from alerts where key = ?")
       .bind(`delivery-events:${silent}`)

@@ -138,7 +138,8 @@ export const describeEndpoint = (row: typeof webhookEndpoints.$inferSelect) => (
   id: row.id,
   url: row.url,
   description: row.description,
-  events: [...row.events],
+  // Every stored event was checked against WEBHOOK_EVENTS when the endpoint was saved.
+  events: [...row.events] as Array<WebhookEvent | "*">,
   enabled: row.enabled,
   lastSuccessAt: row.lastSuccessAt,
   lastFailureAt: row.lastFailureAt,
