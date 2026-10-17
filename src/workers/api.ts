@@ -6,6 +6,7 @@ import * as Layer from "effect/Layer"
 import type { Env } from "../Bindings.ts"
 import { MailApi } from "../http/Api.ts"
 import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
+import { ContactsHandlers, FormsHandlers, TopicsHandlers } from "../http/audienceHandlers.ts"
 import {
   ActionsHandlers,
   ApiKeyAuthLive,
@@ -33,6 +34,7 @@ import {
 } from "./files.ts"
 import { handleEmail } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
+import { CONFIRM_PATH, FORM_SUBMIT_PATH, handleConfirm, handleFormSubmit } from "./public.ts"
 import { handleQueue } from "./queue.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
@@ -55,6 +57,9 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     MailHandlers,
     RulesHandlers,
     TransfersHandlers,
+    ContactsHandlers,
+    TopicsHandlers,
+    FormsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
@@ -80,6 +85,10 @@ export default {
       return handleAttachment(request, env, d(attachment[1]), d(attachment[2]), d(attachment[3]))
     const file = FILE_PATH.exec(path)
     if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
+    const confirm = CONFIRM_PATH.exec(path)
+    if (confirm && request.method === "GET") return handleConfirm(env, d(confirm[1]))
+    const form = FORM_SUBMIT_PATH.exec(path)
+    if (form) return handleFormSubmit(request, env, d(form[1]))
     return handler(request)
   },
   queue: (batch, env) => handleQueue(batch, env),

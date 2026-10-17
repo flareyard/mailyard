@@ -81,9 +81,18 @@ export const contacts = sqliteTable(
       .notNull()
       .default("unconfirmed"),
     lastActivityAt: integer("last_activity_at"),
+    /** Latest tracked event, open and click: together they set the contact's engagement. */
+    lastEventAt: integer("last_event_at"),
+    lastOpenedAt: integer("last_opened_at"),
+    lastClickedAt: integer("last_clicked_at"),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("contacts_email").on(t.email), index("contacts_status").on(t.status)],
+  (t) => [
+    uniqueIndex("contacts_email").on(t.email),
+    index("contacts_status").on(t.status),
+    index("contacts_created").on(t.createdAt),
+    index("contacts_activity").on(t.lastActivityAt),
+  ],
 )
 
 export const topics = sqliteTable("topics", {
@@ -91,6 +100,8 @@ export const topics = sqliteTable("topics", {
   name: text("name").notNull(),
   description: text("description"),
   doubleOptIn: integer("double_opt_in", { mode: "boolean" }).notNull().default(true),
+  /** Who confirmation mail for this topic comes from ("Name <address>"); DEFAULT_FROM when unset. */
+  sender: text("sender"),
   archived: integer("archived", { mode: "boolean" }).notNull().default(false),
   createdAt: createdAt(),
 })
@@ -114,6 +125,37 @@ export const subscriptions = sqliteTable(
     index("subscriptions_topic").on(t.topicId, t.state),
   ],
 )
+
+/** Every change to a contact's subscription to a topic, for the timeline and for consent records. */
+export const subscriptionChanges = sqliteTable(
+  "subscription_changes",
+  {
+    id: text("id").primaryKey(),
+    contactId: text("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    topicId: text("topic_id")
+      .notNull()
+      .references(() => topics.id),
+    from: text("from", { enum: ["subscribed", "unconfirmed", "unsubscribed"] }),
+    to: text("to", { enum: ["subscribed", "unconfirmed", "unsubscribed"] }).notNull(),
+    source: text("source").notNull(),
+    at: integer("at").notNull(),
+  },
+  (t) => [index("subscription_changes_contact").on(t.contactId, t.at)],
+)
+
+/** A public signup form: whoever submits it is added to its topics, confirming by email where the topic asks. */
+export const forms = sqliteTable("forms", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  topicIds: text("topic_ids", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+  /** Custom fields the form may set, beyond email and name. Anything else submitted is dropped. */
+  fields: text("fields", { mode: "json" }).$type<ReadonlyArray<string>>().notNull().default(sql`'[]'`),
+  redirectUrl: text("redirect_url"),
+  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  createdAt: createdAt(),
+})
 
 /** Events a contact did, sent through `track()`, used by segments and automation triggers. */
 export const events = sqliteTable(

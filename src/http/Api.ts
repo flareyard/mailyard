@@ -1514,6 +1514,289 @@ export class TransfersApi extends HttpApiGroup.make("transfers")
   .middleware(ApiKeyAuth) {}
 
 /** Mailyard's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
+// Audience: contacts, topics and signup forms (docs/email-ui.html: Contacts list, Contact detail)
+
+const ContactStatusSchema = Schema.Literals([
+  "subscribed",
+  "unconfirmed",
+  "unsubscribed",
+  "bounced",
+  "complained",
+  "suppressed",
+])
+const SubscriptionStateSchema = Schema.Literals(["subscribed", "unconfirmed", "unsubscribed"])
+const EngagementSchema = Schema.Literals(["active", "cooling", "dormant"])
+const Fields = Schema.Record(Schema.String, Schema.Unknown)
+
+export const ContactSchema = Schema.Struct({
+  id: Schema.String,
+  email: Schema.String,
+  name: Schema.NullOr(Schema.String),
+  status: ContactStatusSchema,
+  fields: Fields,
+  topics: Schema.Array(
+    Schema.Struct({ topicId: Schema.String, name: Schema.String, state: SubscriptionStateSchema }),
+  ),
+  engagement: EngagementSchema,
+  lastActivityAt: Schema.NullOr(Schema.Number),
+  lastEventAt: Schema.NullOr(Schema.Number),
+  lastOpenedAt: Schema.NullOr(Schema.Number),
+  lastClickedAt: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+})
+
+const TimelineItemSchema = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("event"),
+    id: Schema.String,
+    at: Schema.Number,
+    name: Schema.String,
+    data: Schema.NullOr(Fields),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("message"),
+    id: Schema.String,
+    at: Schema.Number,
+    stream: Schema.String,
+    subject: Schema.String,
+    status: Schema.String,
+    bounceType: Schema.NullOr(Schema.String),
+    campaignId: Schema.NullOr(Schema.String),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("subscription"),
+    id: Schema.String,
+    at: Schema.Number,
+    topicId: Schema.String,
+    topic: Schema.String,
+    from: Schema.NullOr(SubscriptionStateSchema),
+    to: SubscriptionStateSchema,
+    source: Schema.String,
+  }),
+])
+
+export const TopicSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  description: Schema.NullOr(Schema.String),
+  doubleOptIn: Schema.Boolean,
+  sender: Schema.NullOr(Schema.String),
+  archived: Schema.Boolean,
+  subscribers: Schema.Number,
+  createdAt: Schema.Number,
+})
+
+export const FormSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  topicIds: Schema.Array(Schema.String),
+  fields: Schema.Array(Schema.String),
+  redirectUrl: Schema.NullOr(Schema.String),
+  archived: Schema.Boolean,
+  createdAt: Schema.Number,
+})
+
+export class ContactsApi extends HttpApiGroup.make("contacts")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/contacts", {
+      query: {
+        q: Schema.optionalKey(Schema.String),
+        status: Schema.optionalKey(ContactStatusSchema),
+        topicId: Schema.optionalKey(Schema.String),
+        engagement: Schema.optionalKey(EngagementSchema),
+        sort: Schema.optionalKey(
+          Schema.Literals([
+            "createdAt",
+            "-createdAt",
+            "email",
+            "-email",
+            "lastActivityAt",
+            "-lastActivityAt",
+          ]),
+        ),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+      },
+      success: Schema.Struct({
+        contacts: Schema.Array(ContactSchema),
+        /** Every contact in the account, and those matching the filters. */
+        total: Schema.Number,
+        count: Schema.Number,
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("create", "/v1/contacts", {
+      payload: Schema.Struct({
+        email: Schema.String,
+        name: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        fields: Schema.optionalKey(Fields),
+        status: Schema.optionalKey(Schema.Literals(["subscribed", "unsubscribed"])),
+      }),
+      success: ContactSchema,
+      error: [Forbidden, InvalidRequest, Conflict],
+    }),
+    HttpApiEndpoint.get("get", "/v1/contacts/:id", {
+      params: { id: Schema.String },
+      success: ContactSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/contacts/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        /** Merged into the contact's fields; a null value removes that field. */
+        fields: Schema.optionalKey(Fields),
+        status: Schema.optionalKey(Schema.Literals(["subscribed", "unsubscribed"])),
+      }),
+      success: ContactSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/contacts/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ id: Schema.String, deleted: Schema.Boolean }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("timeline", "/v1/contacts/:id/timeline", {
+      params: { id: Schema.String },
+      query: { cursor: Schema.optionalKey(Schema.String), limit: Limit },
+      success: Schema.Struct({
+        items: Schema.Array(TimelineItemSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.put("setTopic", "/v1/contacts/:id/topics/:topicId", {
+      params: { id: Schema.String, topicId: Schema.String },
+      payload: Schema.Struct({
+        state: Schema.Literals(["subscribed", "unsubscribed"]),
+        /** Consent was collected elsewhere: skip the topic's double opt-in mail. */
+        confirmed: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: Schema.Struct({
+        contact: ContactSchema,
+        state: SubscriptionStateSchema,
+        confirmationSent: Schema.Boolean,
+      }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("bulk", "/v1/contacts/bulk", {
+      payload: Schema.Struct({
+        ids: Schema.Array(Schema.String),
+        action: Schema.Union([
+          Schema.Struct({
+            action: Schema.Literal("addTopic"),
+            topicId: Schema.String,
+            confirmed: Schema.optionalKey(Schema.Boolean),
+          }),
+          Schema.Struct({ action: Schema.Literal("removeTopic"), topicId: Schema.String }),
+          Schema.Struct({
+            action: Schema.Literal("setStatus"),
+            status: Schema.Literals(["subscribed", "unsubscribed"]),
+          }),
+          Schema.Struct({ action: Schema.Literal("delete") }),
+        ]),
+      }),
+      success: Schema.Struct({
+        updated: Schema.Number,
+        skipped: Schema.Number,
+        errors: Schema.Array(Schema.Struct({ id: Schema.String, message: Schema.String })),
+      }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("export", "/v1/contacts/:id/export", {
+      params: { id: Schema.String },
+      success: Schema.Struct({
+        exportedAt: Schema.String,
+        contact: Fields,
+        subscriptions: Schema.Array(Fields),
+        subscriptionChanges: Schema.Array(Fields),
+        events: Schema.Array(Fields),
+        messages: Schema.Array(Fields),
+        suppression: Schema.NullOr(Fields),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("erase", "/v1/contacts/:id/erase", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ id: Schema.String, erased: Schema.Boolean, messagesScrubbed: Schema.Number }),
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+export class TopicsApi extends HttpApiGroup.make("topics")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/topics", {
+      success: Schema.Struct({ topics: Schema.Array(TopicSchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/topics", {
+      payload: Schema.Struct({
+        name: Schema.String,
+        description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        doubleOptIn: Schema.optionalKey(Schema.Boolean),
+        sender: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: TopicSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("get", "/v1/topics/:id", {
+      params: { id: Schema.String },
+      success: TopicSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/topics/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String),
+        description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        doubleOptIn: Schema.optionalKey(Schema.Boolean),
+        sender: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        archived: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: TopicSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+export class FormsApi extends HttpApiGroup.make("forms")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/forms", {
+      success: Schema.Struct({ forms: Schema.Array(FormSchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/forms", {
+      payload: Schema.Struct({
+        name: Schema.String,
+        topicIds: Schema.Array(Schema.String),
+        fields: Schema.optionalKey(Schema.Array(Schema.String)),
+        redirectUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: FormSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("get", "/v1/forms/:id", {
+      params: { id: Schema.String },
+      success: FormSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/forms/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String),
+        topicIds: Schema.optionalKey(Schema.Array(Schema.String)),
+        fields: Schema.optionalKey(Schema.Array(Schema.String)),
+        redirectUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        archived: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: FormSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -1530,4 +1813,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(MailApiGroup)
   .add(RulesApi)
   .add(TransfersApi)
+  .add(ContactsApi)
+  .add(TopicsApi)
+  .add(FormsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}
