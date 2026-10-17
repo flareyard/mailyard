@@ -1,4 +1,4 @@
-import { MAILBOX_MIGRATIONS } from "./schema.ts"
+import { FOLDER_COUNT_TABLES, MAILBOX_MIGRATIONS } from "./schema.ts"
 import { HIGHLIGHT_END, HIGHLIGHT_START, parseSearch, SEARCH_WEIGHTS } from "./search.ts"
 import { linkIds, SUBJECT_WINDOW_MS, subjectKey } from "./threading.ts"
 import {
@@ -74,9 +74,11 @@ export class MailboxStore {
     const current = this.schemaVersion()
     if (current >= MAILBOX_MIGRATIONS.length) return
     this.transaction(() => {
+      for (const statement of FOLDER_COUNT_TABLES) this.sql.exec(statement)
       for (const migration of MAILBOX_MIGRATIONS.slice(current)) {
         for (const statement of migration.statements) this.sql.exec(statement)
         if (migration.after === "threadAndIndexExisting") this.threadAndIndexExisting()
+        if (migration.after === "rebuildFolderCounts") this.rebuildFolderCounts()
       }
       this.sql.exec("DELETE FROM _schema")
       this.sql.exec("INSERT INTO _schema (version) VALUES (?)", MAILBOX_MIGRATIONS.length)
@@ -299,6 +301,8 @@ export class MailboxStore {
       this.sql.exec("UPDATE drafts SET thread_id = ? WHERE thread_id = ?", threadId, other)
       this.sql.exec("DELETE FROM schedule WHERE kind = 'snooze' AND target = ?", other)
       this.sql.exec("DELETE FROM threads WHERE id = ?", other)
+      // Its messages now belong to threadId, whose refresh counts them; the old thread counts no more.
+      this.syncFolders(other, false)
     }
     this.sql.exec("UPDATE messages SET thread_id = ? WHERE id = ?", threadId, id)
     for (const ref of ids) {
@@ -309,6 +313,85 @@ export class MailboxStore {
       )
     }
     return { threadId, merged }
+  }
+
+  /**
+   * Brings a conversation's folder rows, and the per-folder totals, in line with its messages. Called
+   * by every refresh, so each change to a message's folder or seen flag reaches the counts; reads only
+   * that conversation's messages (messages_thread). Returns the folders it's in, sorted.
+   */
+  private syncFolders(threadId: string, present: boolean): Array<string> {
+    const before = new Map(
+      this.sql
+        .exec<{ folder: string; unread: number }>(
+          "SELECT folder, unread FROM thread_folders WHERE thread_id = ?",
+          threadId,
+        )
+        .toArray()
+        .map((r) => [String(r.folder), Number(r.unread)]),
+    )
+    const after = new Map(
+      present
+        ? this.sql
+            .exec<{ folder: string; unread: number }>(
+              "SELECT folder, max(seen = 0) AS unread FROM messages WHERE thread_id = ? GROUP BY folder",
+              threadId,
+            )
+            .toArray()
+            .map((r) => [String(r.folder), Number(r.unread)])
+        : [],
+    )
+    let changed = before.size !== after.size
+    for (const folder of new Set([...before.keys(), ...after.keys()])) {
+      const was = before.get(folder)
+      const now = after.get(folder)
+      const dThreads = (now === undefined ? 0 : 1) - (was === undefined ? 0 : 1)
+      const dUnread = (now ?? 0) - (was ?? 0)
+      if (dThreads === 0 && dUnread === 0) continue
+      changed = true
+      this.sql.exec(
+        `INSERT INTO folder_counts (folder, threads, unread) VALUES (?, ?, ?)
+         ON CONFLICT (folder) DO UPDATE SET threads = threads + excluded.threads, unread = unread + excluded.unread`,
+        folder,
+        dThreads,
+        dUnread,
+      )
+    }
+    if (changed) {
+      this.sql.exec("DELETE FROM thread_folders WHERE thread_id = ?", threadId)
+      for (const [folder, unread] of after)
+        this.sql.exec(
+          "INSERT INTO thread_folders (thread_id, folder, unread) VALUES (?, ?, ?)",
+          threadId,
+          folder,
+          unread,
+        )
+    }
+    return [...after.keys()].sort()
+  }
+
+  /** Recounts folder totals from the messages: the migration's backfill, and a repair path. */
+  rebuildFolderCounts() {
+    this.sql.exec("DELETE FROM thread_folders")
+    this.sql.exec("DELETE FROM folder_counts")
+    this.sql.exec(
+      `INSERT INTO thread_folders (thread_id, folder, unread)
+       SELECT thread_id, folder, max(seen = 0) FROM messages WHERE thread_id IS NOT NULL GROUP BY thread_id, folder`,
+    )
+    this.sql.exec(
+      "INSERT INTO folder_counts (folder, threads, unread) SELECT folder, count(*), sum(unread) FROM thread_folders GROUP BY folder",
+    )
+  }
+
+  /** The counts recounted from the messages, for checking the kept ones. */
+  recountFolders(): Array<{ folder: string; threads: number; unread: number }> {
+    return this.sql
+      .exec(
+        `SELECT folder, count(DISTINCT thread_id) AS threads, count(DISTINCT CASE WHEN seen = 0 THEN thread_id END) AS unread
+         FROM messages GROUP BY folder ORDER BY folder`,
+      )
+      .toArray()
+      .map((r) => ({ folder: String(r.folder), threads: Number(r.threads), unread: Number(r.unread) }))
   }
 
   private threadRow(id: string) {
@@ -328,6 +411,7 @@ export class MailboxStore {
       )
       .one()
     if (Number(agg.n) === 0) {
+      this.syncFolders(threadId, false)
       this.sql.exec("DELETE FROM threads WHERE id = ?", threadId)
       this.sql.exec("DELETE FROM thread_refs WHERE thread_id = ?", threadId)
       this.sql.exec("DELETE FROM schedule WHERE kind = 'snooze' AND target = ?", threadId)
@@ -358,10 +442,7 @@ export class MailboxStore {
       seen.add(address)
       participants.push({ name: str(p.from_name), address })
     }
-    const folders = this.sql
-      .exec("SELECT DISTINCT folder FROM messages WHERE thread_id = ? ORDER BY folder", threadId)
-      .toArray()
-      .map((r) => String(r.folder))
+    const folders = this.syncFolders(threadId, true)
     const labelIds = this.sql
       .exec(
         `SELECT DISTINCT ml.label_id FROM message_labels ml JOIN messages m ON m.id = ml.message_id
@@ -604,13 +685,10 @@ export class MailboxStore {
 
   /** Threads and unread threads per folder, plus the number of drafts. */
   folderCounts(): Array<FolderCount> {
+    // Kept on write by syncFolders: one row per folder, whatever the mailbox's size (HAL-3394).
     const rows = new Map(
       this.sql
-        .exec(
-          `SELECT folder, count(DISTINCT thread_id) AS threads,
-             count(DISTINCT CASE WHEN seen = 0 THEN thread_id END) AS unread
-           FROM messages GROUP BY folder`,
-        )
+        .exec("SELECT folder, threads, unread FROM folder_counts")
         .toArray()
         .map((r) => [String(r.folder), r]),
     )
@@ -1383,12 +1461,17 @@ export class MailboxStore {
    */
   setMessageId(id: string, messageId: string) {
     return this.transaction(() => {
-      const row = this.sql.exec("SELECT message_id FROM messages WHERE id = ?", id).toArray()[0]
+      const row = this.sql.exec("SELECT message_id, thread_id FROM messages WHERE id = ?", id).toArray()[0]
       if (!row) throw mailboxError("not_found", `No message ${id}`)
       if (row.message_id === messageId) return { changed: false, events: [] as Array<MailboxEvent> }
       this.sql.exec("UPDATE messages SET message_id = ? WHERE id = ?", messageId, id)
       const { threadId, merged } = this.assignThread(id)
-      const event = this.changed([threadId])
+      // Rethreading can move the message out of its old conversation, which then needs refreshing too.
+      const left =
+        row.thread_id !== null &&
+        String(row.thread_id) !== threadId &&
+        !merged.includes(String(row.thread_id))
+      const event = this.changed(left ? [threadId, String(row.thread_id)] : [threadId])
       return {
         changed: true,
         events: [{ ...event, removedThreadIds: [...event.removedThreadIds, ...merged] }],

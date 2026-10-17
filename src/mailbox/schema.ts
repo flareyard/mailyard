@@ -5,8 +5,17 @@
  */
 export interface MailboxMigration {
   readonly statements: ReadonlyArray<string>
-  readonly after?: "threadAndIndexExisting"
+  readonly after?: "threadAndIndexExisting" | "rebuildFolderCounts"
 }
+
+/**
+ * The kept folder counts (HAL-3394). Created before any migration runs too, because earlier
+ * migrations' after-steps refresh threads, which keeps these counts; the last step rebuilds them.
+ */
+export const FOLDER_COUNT_TABLES = [
+  "CREATE TABLE IF NOT EXISTS thread_folders (thread_id TEXT NOT NULL, folder TEXT NOT NULL, unread INTEGER NOT NULL, PRIMARY KEY (thread_id, folder))",
+  "CREATE TABLE IF NOT EXISTS folder_counts (folder TEXT PRIMARY KEY, threads INTEGER NOT NULL, unread INTEGER NOT NULL)",
+] as const
 
 export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
   {
@@ -179,5 +188,13 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
       // Unread inbox counts read only unseen inbox messages.
       "CREATE INDEX messages_folder_seen ON messages (folder, seen, thread_id)",
     ],
+  },
+  {
+    statements: [
+      // Folder counts kept on write (HAL-3394): which folders each conversation is in, and whether it
+      // has unread mail there, and the totals per folder. folderCounts() reads the totals.
+      ...FOLDER_COUNT_TABLES,
+    ],
+    after: "rebuildFolderCounts",
   },
 ]
