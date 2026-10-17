@@ -20,6 +20,7 @@ import type { Classifier } from "../services/Classifier.ts"
 import type { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
 import type { Dns } from "../services/Dns.ts"
+import type { Governor } from "../services/Governor.ts"
 import type { Mailboxes } from "../services/Mailboxes.ts"
 import type { SendQueue } from "../services/SendQueue.ts"
 import {
@@ -69,6 +70,7 @@ export const appContext = Effect.context<
   | SecretBox
   | CloudflareEmail
   | Mailboxes
+  | Governor
   | InboundQueue
   | Dns
   | Classifier

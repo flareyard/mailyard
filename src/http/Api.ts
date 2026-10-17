@@ -1854,6 +1854,148 @@ export class SegmentsApi extends HttpApiGroup.make("segments")
   )
   .middleware(ApiKeyAuth) {}
 
+// Sending pace and alerts (docs/email-ui.html: Usage, Overview "needs you")
+
+const ProviderCounts = Schema.Struct({
+  gmail: Schema.Number,
+  microsoft: Schema.Number,
+  yahoo: Schema.Number,
+  apple: Schema.Number,
+  other: Schema.Number,
+})
+const Rate = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
+const Count = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))
+
+export const GovernorConfigSchema = Schema.Struct({
+  dailyQuota: Schema.NullOr(Count),
+  fallbackQuota: Count,
+  transactionalReserve: Rate,
+  providerPerMinute: ProviderCounts,
+  warmup: Schema.Struct({
+    enabled: Schema.Boolean,
+    start: Count,
+    factor: Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 10 })),
+    maxBounceRate: Rate,
+    maxComplaintRate: Rate,
+  }),
+  establishedDomains: Schema.Array(Schema.String),
+  pause: Schema.Struct({ bounceRate: Rate, minOutcomes: Count, complaintRate: Rate, minComplaints: Count }),
+})
+
+const GovernorPatchSchema = Schema.Struct({
+  dailyQuota: Schema.optionalKey(Schema.NullOr(Count)),
+  fallbackQuota: Schema.optionalKey(Count),
+  transactionalReserve: Schema.optionalKey(Rate),
+  providerPerMinute: Schema.optionalKey(
+    Schema.Struct({
+      gmail: Schema.optionalKey(Count),
+      microsoft: Schema.optionalKey(Count),
+      yahoo: Schema.optionalKey(Count),
+      apple: Schema.optionalKey(Count),
+      other: Schema.optionalKey(Count),
+    }),
+  ),
+  warmup: Schema.optionalKey(
+    Schema.Struct({
+      enabled: Schema.optionalKey(Schema.Boolean),
+      start: Schema.optionalKey(Count),
+      factor: Schema.optionalKey(Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 10 }))),
+      maxBounceRate: Schema.optionalKey(Rate),
+      maxComplaintRate: Schema.optionalKey(Rate),
+    }),
+  ),
+  establishedDomains: Schema.optionalKey(Schema.Array(Schema.String)),
+  pause: Schema.optionalKey(
+    Schema.Struct({
+      bounceRate: Schema.optionalKey(Rate),
+      minOutcomes: Schema.optionalKey(Count),
+      complaintRate: Schema.optionalKey(Rate),
+      minComplaints: Schema.optionalKey(Count),
+    }),
+  ),
+})
+
+export const GovernorOverviewSchema = Schema.Struct({
+  day: Schema.String,
+  quota: Schema.Number,
+  quotaSource: Schema.Literals(["configured", "cloudflare", "fallback"]),
+  sent: Schema.Struct({
+    transactional: Schema.Number,
+    campaign: Schema.Number,
+    automation: Schema.Number,
+    mailbox: Schema.Number,
+  }),
+  bulkRemaining: Schema.Number,
+  transactionalReserve: Schema.Number,
+  resetsAt: Schema.Number,
+  providerThisMinute: ProviderCounts,
+  warming: Schema.Array(
+    Schema.Struct({
+      domain: Schema.String,
+      warmingSince: Schema.String,
+      day: Schema.Number,
+      cap: Schema.Number,
+      sentToday: Schema.Number,
+    }),
+  ),
+  config: GovernorConfigSchema,
+})
+
+export class GovernorUnreachable extends Schema.TaggedError<GovernorUnreachable>()(
+  "GovernorUnreachable",
+  { message: Schema.String },
+  { httpApiStatus: 503 },
+) {}
+
+export class SendingApi extends HttpApiGroup.make("sending")
+  .add(
+    HttpApiEndpoint.get("governor", "/v1/sending/governor", {
+      success: GovernorOverviewSchema,
+      error: [Forbidden, GovernorUnreachable],
+    }),
+    HttpApiEndpoint.get("getSettings", "/v1/settings/sending", {
+      success: GovernorConfigSchema,
+      error: [Forbidden, GovernorUnreachable],
+    }),
+    HttpApiEndpoint.put("putSettings", "/v1/settings/sending", {
+      payload: GovernorPatchSchema,
+      success: GovernorConfigSchema,
+      error: [Forbidden, GovernorUnreachable],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+export const AlertSchema = Schema.Struct({
+  id: Schema.String,
+  kind: Schema.String,
+  severity: Schema.Literals(["info", "warning", "critical"]),
+  title: Schema.String,
+  detail: Schema.String,
+  subject: Schema.NullOr(Schema.Struct({ type: Schema.String, id: Schema.String })),
+  createdAt: Schema.Number,
+  resolvedAt: Schema.NullOr(Schema.Number),
+  resolvedBy: Schema.NullOr(Schema.String),
+})
+
+export class AlertsApi extends HttpApiGroup.make("alerts")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/alerts", {
+      query: {
+        status: Schema.optionalKey(Schema.Literals(["open", "resolved", "all"])),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+      },
+      success: Schema.Struct({ alerts: Schema.Array(AlertSchema), nextCursor: Schema.NullOr(Schema.String) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("resolve", "/v1/alerts/:id/resolve", {
+      params: { id: Schema.String },
+      success: AlertSchema,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -1874,4 +2016,6 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(TopicsApi)
   .add(FormsApi)
   .add(SegmentsApi)
+  .add(SendingApi)
+  .add(AlertsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

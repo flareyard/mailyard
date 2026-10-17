@@ -2,6 +2,7 @@ import * as Context from "effect/Context"
 import type { InboundJob } from "./inbound/pipeline.ts"
 import type { SendEmailBinding } from "./kit/index.ts"
 import type { MailboxDO } from "./objects/MailboxDO.ts"
+import type { SendGovernorDO } from "./objects/SendGovernorDO.ts"
 import type { SendJob } from "./services/SendQueue.ts"
 
 /** The Worker's bindings, as declared in wrangler.jsonc and, later, in alchemy.run.ts. */
@@ -35,6 +36,8 @@ export interface Env {
   readonly EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** One Durable Object per mailbox: its messages, threads and search. */
   readonly MAILBOX: DurableObjectNamespace<MailboxDO>
+  /** The account's bulk-send scheduler (src/objects/SendGovernorDO.ts): one instance, named "account". */
+  readonly SEND_GOVERNOR: DurableObjectNamespace<SendGovernorDO>
   /** Deploy-time secret that encrypts webhook endpoint secrets at rest (manifest secret). */
   readonly WEBHOOK_SIGNING_KEY?: string
   /** Cloudflare Email Service. Absent only when MAILYARD_SENDER says otherwise (tests, local dev). */
