@@ -46,6 +46,13 @@ export interface Env {
   /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
   readonly CLOUDFLARE_ACCOUNT_ID?: string
   readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string
+  /**
+   * Signs consent links: double opt-in confirmations now, unsubscribe and preference links with
+   * HAL-3297. Deploy-time secret; the links stop working if it changes.
+   */
+  readonly UNSUBSCRIBE_KEY?: string
+  /** Rate limit for public signup forms, per IP and form (wrangler `ratelimits`). */
+  readonly FORM_LIMITER?: RateLimit
   /** Used when a send names no sender and its template has none. */
   readonly DEFAULT_FROM?: string
   /** Optional SMTP fallback when Email Service can't take a message. */

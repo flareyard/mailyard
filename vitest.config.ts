@@ -43,6 +43,7 @@ export default defineConfig({
                 MAILYARD_SENDER: "memory",
                 WEBHOOK_SIGNING_KEY: "test-webhook-signing-key",
                 FILE_SIGNING_KEY: "test-file-signing-key",
+                UNSUBSCRIBE_KEY: "test-unsubscribe-key",
                 // The undo window, shortened so tests watch the alarm hand a send over.
                 MAILYARD_UNDO_SECONDS: "0.5",
               },

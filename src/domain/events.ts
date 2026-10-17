@@ -29,6 +29,7 @@ export const track = Effect.fn("events.track")(function* (input: {
     data: input.data,
     subscribed: input.subscribed,
     whenNew: "subscribed",
+    engaged: true,
   })
   const database = yield* Database
   const id = yield* (yield* Ids).next
