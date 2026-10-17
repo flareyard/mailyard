@@ -1797,6 +1797,63 @@ export class FormsApi extends HttpApiGroup.make("forms")
   )
   .middleware(ApiKeyAuth) {}
 
+// Segments: saved audiences as a rule tree (docs/email-ui.html: Segment builder)
+
+export const SegmentSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  /** The rule tree (src/segments/rules.ts); its shape is validated on save. */
+  filter: Schema.Unknown,
+  count: Schema.NullOr(Schema.Number),
+  countedAt: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+  updatedAt: Schema.NullOr(Schema.Number),
+})
+
+export class SegmentsApi extends HttpApiGroup.make("segments")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/segments", {
+      success: Schema.Struct({ segments: Schema.Array(SegmentSchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("preview", "/v1/segments/preview", {
+      payload: Schema.Struct({ filter: Schema.Unknown }),
+      success: Schema.Struct({
+        count: Schema.Number,
+        sample: Schema.Array(ContactSchema),
+        /** The condition it runs over `contacts`, with `?` for each of `params`. */
+        sql: Schema.String,
+        params: Schema.Array(Schema.Unknown),
+      }),
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("create", "/v1/segments", {
+      payload: Schema.Struct({ name: Schema.String, filter: Schema.Unknown }),
+      success: SegmentSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("get", "/v1/segments/:id", {
+      params: { id: Schema.String },
+      success: SegmentSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/segments/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String),
+        filter: Schema.optionalKey(Schema.Unknown),
+      }),
+      success: SegmentSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/segments/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ id: Schema.String, deleted: Schema.Boolean }),
+      error: [Forbidden, NotFound, Conflict],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -1816,4 +1873,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(ContactsApi)
   .add(TopicsApi)
   .add(FormsApi)
+  .add(SegmentsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

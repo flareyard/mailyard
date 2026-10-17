@@ -176,10 +176,16 @@ export const segments = sqliteTable("segments", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   filter: text("filter", { mode: "json" }).$type<unknown>().notNull(),
+  /** The filter as a condition over `contacts`, with `?` placeholders for `compiledParams`. */
   compiledSql: text("compiled_sql").notNull(),
+  compiledParams: text("compiled_params", { mode: "json" })
+    .$type<ReadonlyArray<unknown>>()
+    .notNull()
+    .default(sql`'[]'`),
   lastCount: integer("last_count"),
   lastComputedAt: integer("last_computed_at"),
   createdAt: createdAt(),
+  updatedAt: integer("updated_at"),
 })
 
 /**
@@ -288,6 +294,9 @@ export const messagesOut = sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     /** R2 key of the rendered message as sent, for the message log and for retries. */
     renderedKey: text("rendered_key"),
+    /** First open and first click, from tracking (HAL-3277); segments filter on them. */
+    firstOpenedAt: integer("first_opened_at"),
+    firstClickedAt: integer("first_clicked_at"),
     createdAt: createdAt(),
     updatedAt: integer("updated_at"),
   },
