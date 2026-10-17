@@ -57,6 +57,9 @@ export default defineConfig({
           include: ["test/**/*.test.ts"],
           exclude: UNIT,
           setupFiles: ["./test/apply-migrations.ts"],
+          // Worker tests make many requests each, across isolates running side by side; 5 s was set
+          // for a far smaller suite and now times out busy machines, not slow code.
+          testTimeout: 20_000,
         },
       },
     ],
