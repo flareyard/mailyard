@@ -3,6 +3,7 @@ import * as HttpApi from "effect/http-api/HttpApi"
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as OpenApi from "effect/http-api/OpenApi"
+import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 
 export const Health = Schema.Struct({
@@ -1029,6 +1030,10 @@ export const MessageSchema = Schema.Struct({
     ),
   }),
   attachments: Schema.Array(AttachmentSchema),
+  /** The spam check's score at delivery and its reasons; null for mail this mailbox sent. */
+  spamScore: Schema.NullOr(Schema.Number),
+  spamReasons: Schema.Array(Schema.Struct({ rule: Schema.String, points: Schema.Number })),
+  rulesMatched: Schema.Array(Schema.String),
 })
 
 export const MessageDetailSchema = Schema.Struct({
@@ -1292,6 +1297,110 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Inbox rules and sender lists (docs/email-ui.html: Rules)
+// ---------------------------------------------------------------------------------------------
+
+export const RuleSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  enabled: Schema.Boolean,
+  match: Schema.Literals(["all", "any"]),
+  conditions: Schema.Array(RuleCondition),
+  actions: Schema.Array(RuleAction),
+  stop: Schema.Boolean,
+  position: Schema.Number,
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+const SenderSchema = Schema.Struct({
+  value: Schema.String,
+  list: Schema.Literals(["allow", "block"]),
+  source: Schema.Literals(["user", "not_spam", "spam"]),
+  createdAt: Schema.optionalKey(Schema.Number),
+})
+
+const RuleFields = {
+  name: Schema.String,
+  enabled: Schema.optionalKey(Schema.Boolean),
+  match: Schema.optionalKey(Schema.Literals(["all", "any"])),
+  conditions: Schema.Array(RuleCondition),
+  actions: Schema.Array(RuleAction),
+  stop: Schema.optionalKey(Schema.Boolean),
+}
+
+export class RulesApi extends HttpApiGroup.make("rules")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/mailboxes/:id/rules", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ rules: Schema.Array(RuleSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("create", "/v1/mailboxes/:id/rules", {
+      params: { id: Schema.String },
+      payload: Schema.Struct(RuleFields),
+      success: RuleSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.patch("update", "/v1/mailboxes/:id/rules/:ruleId", {
+      params: { id: Schema.String, ruleId: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String),
+        enabled: Schema.optionalKey(Schema.Boolean),
+        match: Schema.optionalKey(Schema.Literals(["all", "any"])),
+        conditions: Schema.optionalKey(Schema.Array(RuleCondition)),
+        actions: Schema.optionalKey(Schema.Array(RuleAction)),
+        stop: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: RuleSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/mailboxes/:id/rules/:ruleId", {
+      params: { id: Schema.String, ruleId: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.put("reorder", "/v1/mailboxes/:id/rules/order", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ ruleIds: Schema.Array(Schema.String) }),
+      success: Schema.Struct({ rules: Schema.Array(RuleSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("test", "/v1/mailboxes/:id/rules/test", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ messageId: Schema.String }),
+      success: Schema.Struct({
+        matched: Schema.Array(Schema.Struct({ id: Schema.String, name: Schema.String })),
+        outcome: Schema.Unknown,
+        authScore: Schema.Struct({
+          score: Schema.Number,
+          reasons: Schema.Array(Schema.Struct({ rule: Schema.String, points: Schema.Number })),
+        }),
+        filedWith: Schema.Unknown,
+      }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("senders", "/v1/mailboxes/:id/senders", {
+      params: { id: Schema.String },
+      query: { list: Schema.optionalKey(Schema.Literals(["allow", "block"])) },
+      success: Schema.Struct({ senders: Schema.Array(SenderSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("addSender", "/v1/mailboxes/:id/senders", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ value: Schema.String, list: Schema.Literals(["allow", "block"]) }),
+      success: SenderSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("removeSender", "/v1/mailboxes/:id/senders/:value", {
+      params: { id: Schema.String, value: Schema.String },
+      success: Schema.Struct({ removed: Schema.String }),
+      error: MailErrors,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailyard's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
@@ -1307,4 +1416,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(MailboxesApi)
   .add(IdentitiesApi)
   .add(MailApiGroup)
+  .add(RulesApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

@@ -25,6 +25,7 @@ export const WEBHOOK_EVENTS = [
   "contact.suppressed",
   "event.tracked",
   "mail.received",
+  "mail.rule_matched",
 ] as const
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]
 
@@ -319,12 +320,19 @@ export const WebhookJob = Schema.Struct({ deliveryId: Schema.String })
  * Records a delivery for every enabled endpoint subscribed to `type` and queues them. The event id is
  * shared by all of an event's deliveries, so receivers can de-duplicate across retries.
  */
-export const emit = Effect.fn("webhooks.emit")(function* (type: WebhookEvent, data: Record<string, unknown>) {
+export const emit = Effect.fn("webhooks.emit")(function* (
+  type: WebhookEvent,
+  data: Record<string, unknown>,
+  /** Deliver to this endpoint only (an inbox rule's webhook action), whatever events it subscribes to. */
+  onlyEndpointId?: string,
+) {
   const database = yield* Database
   const endpoints = yield* database.query("webhooks.subscribers", (db) =>
     db.select().from(webhookEndpoints).where(eq(webhookEndpoints.enabled, true)).all(),
   )
-  const targets = endpoints.filter((e) => e.events.includes("*") || e.events.includes(type))
+  const targets = onlyEndpointId
+    ? endpoints.filter((e) => e.id === onlyEndpointId)
+    : endpoints.filter((e) => e.events.includes("*") || e.events.includes(type))
   if (targets.length === 0) return 0
   const ids = yield* Ids
   const eventId = `evt_${yield* ids.next}`
@@ -344,8 +352,8 @@ export const emit = Effect.fn("webhooks.emit")(function* (type: WebhookEvent, da
 })
 
 /** Never let a webhook fan-out fail the thing that triggered it. */
-export const emitSafely = (type: WebhookEvent, data: Record<string, unknown>) =>
-  emit(type, data).pipe(
+export const emitSafely = (type: WebhookEvent, data: Record<string, unknown>, onlyEndpointId?: string) =>
+  emit(type, data, onlyEndpointId).pipe(
     Effect.catchCause((cause) => Effect.logError(`webhooks: could not record ${type}`, cause)),
     Effect.asVoid,
   )

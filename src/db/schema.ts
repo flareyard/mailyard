@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm"
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import type { RecordCheck } from "../domain/dnsChecks.ts"
+import type { Action, Condition } from "../rules/engine.ts"
 
 /**
  * The account-wide D1 database. Per-mailbox data (threads, messages, search) lives in each
@@ -503,4 +504,60 @@ export const mailboxExports = sqliteTable(
     completedAt: integer("completed_at"),
   },
   (t) => [index("mailbox_exports_mailbox").on(t.mailboxId, t.createdAt)],
+)
+
+/** Inbox rules, run in `position` order on every message a mailbox receives (src/rules/engine.ts). */
+export const mailboxRules = sqliteTable(
+  "mailbox_rules",
+  {
+    id: text("id").primaryKey(),
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    name: text("name").notNull(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    match: text("match", { enum: ["all", "any"] })
+      .notNull()
+      .default("all"),
+    conditions: text("conditions", { mode: "json" }).$type<ReadonlyArray<Condition>>().notNull(),
+    actions: text("actions", { mode: "json" }).$type<ReadonlyArray<Action>>().notNull(),
+    stop: integer("stop", { mode: "boolean" }).notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [index("mailbox_rules_order").on(t.mailboxId, t.position)],
+)
+
+/**
+ * Senders a mailbox always accepts (`allow`: marking a message "not spam" adds its sender) or always
+ * files as spam (`block`). `value` is an address, or `@domain` for a whole domain.
+ */
+export const mailboxSenders = sqliteTable(
+  "mailbox_senders",
+  {
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    value: text("value").notNull(),
+    list: text("list", { enum: ["allow", "block"] }).notNull(),
+    source: text("source", { enum: ["user", "not_spam", "spam"] }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.value] })],
+)
+
+/** When a mailbox last auto-replied to an address: RFC 3834 asks for at most one reply per sender per period. */
+export const autoReplies = sqliteTable(
+  "auto_replies",
+  {
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    address: text("address").notNull(),
+    /** Which reply: the mailbox's out-of-office, or a rule's. */
+    source: text("source").notNull(),
+    sentAt: integer("sent_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.address, t.source] })],
 )

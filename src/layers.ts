@@ -4,6 +4,7 @@ import { SecretBox, WebhookQueue } from "./domain/webhooks.ts"
 import { InboundQueue } from "./inbound/pipeline.ts"
 import { BlobStore, Ids, Sender, SenderCloudflareWithSmtpFallback } from "./kit/index.ts"
 import { workerSmtpTransport } from "./kit/smtp-worker.ts"
+import { Classifier } from "./services/Classifier.ts"
 import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { Database } from "./services/Database.ts"
 import { Dns } from "./services/Dns.ts"
@@ -40,6 +41,7 @@ export const appLayer = (env: Env) => {
     InboundQueue.layer,
     Mailboxes.layer,
     Dns.layerDoh(),
+    Classifier.fromEnv(env),
     SecretBox.layer,
     CloudflareEmail.layer,
     BlobStore.layerR2(env.STORE),

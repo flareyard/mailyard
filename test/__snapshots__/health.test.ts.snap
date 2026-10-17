@@ -10559,6 +10559,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "rulesMatched": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
                     "seen": {
                       "type": "boolean",
                     },
@@ -10579,6 +10585,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "snippet": {
                       "type": "string",
+                    },
+                    "spamReasons": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "points": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "rule": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "rule",
+                          "points",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "spamScore": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "starred": {
                       "type": "boolean",
@@ -10659,6 +10718,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "listUnsubscribe",
                     "auth",
                     "attachments",
+                    "spamScore",
+                    "spamReasons",
+                    "rulesMatched",
                     "body",
                     "rawUrl",
                     "attachmentUrls",
@@ -11146,6 +11208,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "rulesMatched": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
                     "seen": {
                       "type": "boolean",
                     },
@@ -11166,6 +11234,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "snippet": {
                       "type": "string",
+                    },
+                    "spamReasons": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "points": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "rule": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "rule",
+                          "points",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "spamScore": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "starred": {
                       "type": "boolean",
@@ -11246,6 +11367,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "listUnsubscribe",
                     "auth",
                     "attachments",
+                    "spamScore",
+                    "spamReasons",
+                    "rulesMatched",
                   ],
                   "type": "object",
                 },
@@ -11311,6 +11435,2267 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "tags": [
           "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/rules": {
+      "get": {
+        "operationId": "rules.list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "rules": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actions": {
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "labelId": {
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "label",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "labelId",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "type": {
+                                      "enum": [
+                                        "archive",
+                                        "trash",
+                                        "spam",
+                                        "markRead",
+                                        "star",
+                                        "skipSpamCheck",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "to": {
+                                      "items": {
+                                        "type": "string",
+                                      },
+                                      "maxItems": 10,
+                                      "minItems": 1,
+                                      "type": "array",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "forward",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "to",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "body": {
+                                      "maxLength": 20000,
+                                      "minLength": 1,
+                                      "type": "string",
+                                    },
+                                    "subject": {
+                                      "maxLength": 998,
+                                      "minLength": 1,
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "autoReply",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "subject",
+                                    "body",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "endpointId": {
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "webhook",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "endpointId",
+                                  ],
+                                  "type": "object",
+                                },
+                              ],
+                            },
+                            "type": "array",
+                          },
+                          "conditions": {
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "field": {
+                                      "enum": [
+                                        "from",
+                                        "to",
+                                        "cc",
+                                        "recipients",
+                                        "subject",
+                                        "listId",
+                                        "tag",
+                                        "body",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "op": {
+                                      "enum": [
+                                        "contains",
+                                        "notContains",
+                                        "equals",
+                                        "startsWith",
+                                        "endsWith",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "value": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "field",
+                                    "op",
+                                    "value",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "field": {
+                                      "enum": [
+                                        "hasAttachment",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "value": {
+                                      "type": "boolean",
+                                    },
+                                  },
+                                  "required": [
+                                    "field",
+                                    "value",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "field": {
+                                      "enum": [
+                                        "automated",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "value": {
+                                      "type": "boolean",
+                                    },
+                                  },
+                                  "required": [
+                                    "field",
+                                    "value",
+                                  ],
+                                  "type": "object",
+                                },
+                              ],
+                            },
+                            "type": "array",
+                          },
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "enabled": {
+                            "type": "boolean",
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "match": {
+                            "enum": [
+                              "all",
+                              "any",
+                            ],
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "position": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "stop": {
+                            "type": "boolean",
+                          },
+                          "updatedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "enabled",
+                          "match",
+                          "conditions",
+                          "actions",
+                          "stop",
+                          "position",
+                          "createdAt",
+                          "updatedAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "rules",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+      "post": {
+        "operationId": "rules.create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "actions": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "labelId": {
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "label",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "labelId",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "type": {
+                              "enum": [
+                                "archive",
+                                "trash",
+                                "spam",
+                                "markRead",
+                                "star",
+                                "skipSpamCheck",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "to": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "maxItems": 10,
+                              "minItems": 1,
+                              "type": "array",
+                            },
+                            "type": {
+                              "enum": [
+                                "forward",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "to",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "body": {
+                              "maxLength": 20000,
+                              "minLength": 1,
+                              "type": "string",
+                            },
+                            "subject": {
+                              "maxLength": 998,
+                              "minLength": 1,
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "autoReply",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "subject",
+                            "body",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "endpointId": {
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "webhook",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "endpointId",
+                          ],
+                          "type": "object",
+                        },
+                      ],
+                    },
+                    "type": "array",
+                  },
+                  "conditions": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "field": {
+                              "enum": [
+                                "from",
+                                "to",
+                                "cc",
+                                "recipients",
+                                "subject",
+                                "listId",
+                                "tag",
+                                "body",
+                              ],
+                              "type": "string",
+                            },
+                            "op": {
+                              "enum": [
+                                "contains",
+                                "notContains",
+                                "equals",
+                                "startsWith",
+                                "endsWith",
+                              ],
+                              "type": "string",
+                            },
+                            "value": {
+                              "maxLength": 500,
+                              "minLength": 1,
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "field",
+                            "op",
+                            "value",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "field": {
+                              "enum": [
+                                "hasAttachment",
+                              ],
+                              "type": "string",
+                            },
+                            "value": {
+                              "type": "boolean",
+                            },
+                          },
+                          "required": [
+                            "field",
+                            "value",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "field": {
+                              "enum": [
+                                "automated",
+                              ],
+                              "type": "string",
+                            },
+                            "value": {
+                              "type": "boolean",
+                            },
+                          },
+                          "required": [
+                            "field",
+                            "value",
+                          ],
+                          "type": "object",
+                        },
+                      ],
+                    },
+                    "type": "array",
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                  },
+                  "match": {
+                    "enum": [
+                      "all",
+                      "any",
+                    ],
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "stop": {
+                    "type": "boolean",
+                  },
+                },
+                "required": [
+                  "name",
+                  "conditions",
+                  "actions",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "actions": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "labelId": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "label",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "labelId",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "archive",
+                                  "trash",
+                                  "spam",
+                                  "markRead",
+                                  "star",
+                                  "skipSpamCheck",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "to": {
+                                "items": {
+                                  "type": "string",
+                                },
+                                "maxItems": 10,
+                                "minItems": 1,
+                                "type": "array",
+                              },
+                              "type": {
+                                "enum": [
+                                  "forward",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "to",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "body": {
+                                "maxLength": 20000,
+                                "minLength": 1,
+                                "type": "string",
+                              },
+                              "subject": {
+                                "maxLength": 998,
+                                "minLength": 1,
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "autoReply",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "subject",
+                              "body",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "endpointId": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "webhook",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "endpointId",
+                            ],
+                            "type": "object",
+                          },
+                        ],
+                      },
+                      "type": "array",
+                    },
+                    "conditions": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "field": {
+                                "enum": [
+                                  "from",
+                                  "to",
+                                  "cc",
+                                  "recipients",
+                                  "subject",
+                                  "listId",
+                                  "tag",
+                                  "body",
+                                ],
+                                "type": "string",
+                              },
+                              "op": {
+                                "enum": [
+                                  "contains",
+                                  "notContains",
+                                  "equals",
+                                  "startsWith",
+                                  "endsWith",
+                                ],
+                                "type": "string",
+                              },
+                              "value": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "field",
+                              "op",
+                              "value",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "field": {
+                                "enum": [
+                                  "hasAttachment",
+                                ],
+                                "type": "string",
+                              },
+                              "value": {
+                                "type": "boolean",
+                              },
+                            },
+                            "required": [
+                              "field",
+                              "value",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "field": {
+                                "enum": [
+                                  "automated",
+                                ],
+                                "type": "string",
+                              },
+                              "value": {
+                                "type": "boolean",
+                              },
+                            },
+                            "required": [
+                              "field",
+                              "value",
+                            ],
+                            "type": "object",
+                          },
+                        ],
+                      },
+                      "type": "array",
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "match": {
+                      "enum": [
+                        "all",
+                        "any",
+                      ],
+                      "type": "string",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "position": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "stop": {
+                      "type": "boolean",
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "enabled",
+                    "match",
+                    "conditions",
+                    "actions",
+                    "stop",
+                    "position",
+                    "createdAt",
+                    "updatedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/rules/order": {
+      "put": {
+        "operationId": "rules.reorder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "ruleIds": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                },
+                "required": [
+                  "ruleIds",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "rules": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "actions": {
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "labelId": {
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "label",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "labelId",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "type": {
+                                      "enum": [
+                                        "archive",
+                                        "trash",
+                                        "spam",
+                                        "markRead",
+                                        "star",
+                                        "skipSpamCheck",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "to": {
+                                      "items": {
+                                        "type": "string",
+                                      },
+                                      "maxItems": 10,
+                                      "minItems": 1,
+                                      "type": "array",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "forward",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "to",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "body": {
+                                      "maxLength": 20000,
+                                      "minLength": 1,
+                                      "type": "string",
+                                    },
+                                    "subject": {
+                                      "maxLength": 998,
+                                      "minLength": 1,
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "autoReply",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "subject",
+                                    "body",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "endpointId": {
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "webhook",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "endpointId",
+                                  ],
+                                  "type": "object",
+                                },
+                              ],
+                            },
+                            "type": "array",
+                          },
+                          "conditions": {
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "field": {
+                                      "enum": [
+                                        "from",
+                                        "to",
+                                        "cc",
+                                        "recipients",
+                                        "subject",
+                                        "listId",
+                                        "tag",
+                                        "body",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "op": {
+                                      "enum": [
+                                        "contains",
+                                        "notContains",
+                                        "equals",
+                                        "startsWith",
+                                        "endsWith",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "value": {
+                                      "maxLength": 500,
+                                      "minLength": 1,
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "field",
+                                    "op",
+                                    "value",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "field": {
+                                      "enum": [
+                                        "hasAttachment",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "value": {
+                                      "type": "boolean",
+                                    },
+                                  },
+                                  "required": [
+                                    "field",
+                                    "value",
+                                  ],
+                                  "type": "object",
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "field": {
+                                      "enum": [
+                                        "automated",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "value": {
+                                      "type": "boolean",
+                                    },
+                                  },
+                                  "required": [
+                                    "field",
+                                    "value",
+                                  ],
+                                  "type": "object",
+                                },
+                              ],
+                            },
+                            "type": "array",
+                          },
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "enabled": {
+                            "type": "boolean",
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "match": {
+                            "enum": [
+                              "all",
+                              "any",
+                            ],
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "position": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "stop": {
+                            "type": "boolean",
+                          },
+                          "updatedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "enabled",
+                          "match",
+                          "conditions",
+                          "actions",
+                          "stop",
+                          "position",
+                          "createdAt",
+                          "updatedAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "rules",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/rules/test": {
+      "post": {
+        "operationId": "rules.test",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "messageId": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "messageId",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "authScore": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "reasons": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "points": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "rule": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "rule",
+                              "points",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "score": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "score",
+                        "reasons",
+                      ],
+                      "type": "object",
+                    },
+                    "filedWith": {},
+                    "matched": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "outcome": {},
+                  },
+                  "required": [
+                    "matched",
+                    "outcome",
+                    "authScore",
+                    "filedWith",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/rules/{ruleId}": {
+      "delete": {
+        "operationId": "rules.remove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "ruleId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "deleted": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "deleted",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+      "patch": {
+        "operationId": "rules.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "ruleId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "actions": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "labelId": {
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "label",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "labelId",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "type": {
+                              "enum": [
+                                "archive",
+                                "trash",
+                                "spam",
+                                "markRead",
+                                "star",
+                                "skipSpamCheck",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "to": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "maxItems": 10,
+                              "minItems": 1,
+                              "type": "array",
+                            },
+                            "type": {
+                              "enum": [
+                                "forward",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "to",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "body": {
+                              "maxLength": 20000,
+                              "minLength": 1,
+                              "type": "string",
+                            },
+                            "subject": {
+                              "maxLength": 998,
+                              "minLength": 1,
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "autoReply",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "subject",
+                            "body",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "endpointId": {
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "webhook",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "endpointId",
+                          ],
+                          "type": "object",
+                        },
+                      ],
+                    },
+                    "type": "array",
+                  },
+                  "conditions": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "field": {
+                              "enum": [
+                                "from",
+                                "to",
+                                "cc",
+                                "recipients",
+                                "subject",
+                                "listId",
+                                "tag",
+                                "body",
+                              ],
+                              "type": "string",
+                            },
+                            "op": {
+                              "enum": [
+                                "contains",
+                                "notContains",
+                                "equals",
+                                "startsWith",
+                                "endsWith",
+                              ],
+                              "type": "string",
+                            },
+                            "value": {
+                              "maxLength": 500,
+                              "minLength": 1,
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "field",
+                            "op",
+                            "value",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "field": {
+                              "enum": [
+                                "hasAttachment",
+                              ],
+                              "type": "string",
+                            },
+                            "value": {
+                              "type": "boolean",
+                            },
+                          },
+                          "required": [
+                            "field",
+                            "value",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "field": {
+                              "enum": [
+                                "automated",
+                              ],
+                              "type": "string",
+                            },
+                            "value": {
+                              "type": "boolean",
+                            },
+                          },
+                          "required": [
+                            "field",
+                            "value",
+                          ],
+                          "type": "object",
+                        },
+                      ],
+                    },
+                    "type": "array",
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                  },
+                  "match": {
+                    "enum": [
+                      "all",
+                      "any",
+                    ],
+                    "type": "string",
+                  },
+                  "name": {
+                    "type": "string",
+                  },
+                  "stop": {
+                    "type": "boolean",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "actions": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "labelId": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "label",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "labelId",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "type": {
+                                "enum": [
+                                  "archive",
+                                  "trash",
+                                  "spam",
+                                  "markRead",
+                                  "star",
+                                  "skipSpamCheck",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "to": {
+                                "items": {
+                                  "type": "string",
+                                },
+                                "maxItems": 10,
+                                "minItems": 1,
+                                "type": "array",
+                              },
+                              "type": {
+                                "enum": [
+                                  "forward",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "to",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "body": {
+                                "maxLength": 20000,
+                                "minLength": 1,
+                                "type": "string",
+                              },
+                              "subject": {
+                                "maxLength": 998,
+                                "minLength": 1,
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "autoReply",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "subject",
+                              "body",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "endpointId": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "webhook",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "endpointId",
+                            ],
+                            "type": "object",
+                          },
+                        ],
+                      },
+                      "type": "array",
+                    },
+                    "conditions": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "field": {
+                                "enum": [
+                                  "from",
+                                  "to",
+                                  "cc",
+                                  "recipients",
+                                  "subject",
+                                  "listId",
+                                  "tag",
+                                  "body",
+                                ],
+                                "type": "string",
+                              },
+                              "op": {
+                                "enum": [
+                                  "contains",
+                                  "notContains",
+                                  "equals",
+                                  "startsWith",
+                                  "endsWith",
+                                ],
+                                "type": "string",
+                              },
+                              "value": {
+                                "maxLength": 500,
+                                "minLength": 1,
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "field",
+                              "op",
+                              "value",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "field": {
+                                "enum": [
+                                  "hasAttachment",
+                                ],
+                                "type": "string",
+                              },
+                              "value": {
+                                "type": "boolean",
+                              },
+                            },
+                            "required": [
+                              "field",
+                              "value",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "field": {
+                                "enum": [
+                                  "automated",
+                                ],
+                                "type": "string",
+                              },
+                              "value": {
+                                "type": "boolean",
+                              },
+                            },
+                            "required": [
+                              "field",
+                              "value",
+                            ],
+                            "type": "object",
+                          },
+                        ],
+                      },
+                      "type": "array",
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "match": {
+                      "enum": [
+                        "all",
+                        "any",
+                      ],
+                      "type": "string",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "position": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "stop": {
+                      "type": "boolean",
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "enabled",
+                    "match",
+                    "conditions",
+                    "actions",
+                    "stop",
+                    "position",
+                    "createdAt",
+                    "updatedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
         ],
       },
     },
@@ -11719,6 +14104,409 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "tags": [
           "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/senders": {
+      "get": {
+        "operationId": "rules.senders",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "list",
+            "required": false,
+            "schema": {
+              "enum": [
+                "allow",
+                "block",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "senders": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "list": {
+                            "enum": [
+                              "allow",
+                              "block",
+                            ],
+                            "type": "string",
+                          },
+                          "source": {
+                            "enum": [
+                              "user",
+                              "not_spam",
+                              "spam",
+                            ],
+                            "type": "string",
+                          },
+                          "value": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "value",
+                          "list",
+                          "source",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "senders",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+      "post": {
+        "operationId": "rules.addSender",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "list": {
+                    "enum": [
+                      "allow",
+                      "block",
+                    ],
+                    "type": "string",
+                  },
+                  "value": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "value",
+                  "list",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "list": {
+                      "enum": [
+                        "allow",
+                        "block",
+                      ],
+                      "type": "string",
+                    },
+                    "source": {
+                      "enum": [
+                        "user",
+                        "not_spam",
+                        "spam",
+                      ],
+                      "type": "string",
+                    },
+                    "value": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "value",
+                    "list",
+                    "source",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/senders/{value}": {
+      "delete": {
+        "operationId": "rules.removeSender",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "value",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "removed": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "removed",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
         ],
       },
     },
@@ -12962,6 +15750,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                             "type": "array",
                           },
+                          "rulesMatched": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
                           "seen": {
                             "type": "boolean",
                           },
@@ -12982,6 +15776,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "snippet": {
                             "type": "string",
+                          },
+                          "spamReasons": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "points": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "rule": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "rule",
+                                "points",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                          "spamScore": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
                           },
                           "starred": {
                             "type": "boolean",
@@ -13062,6 +15909,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "listUnsubscribe",
                           "auth",
                           "attachments",
+                          "spamScore",
+                          "spamReasons",
+                          "rulesMatched",
                         ],
                         "type": "object",
                       },
@@ -20686,6 +23536,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "mail",
+    },
+    {
+      "name": "rules",
     },
   ],
 }

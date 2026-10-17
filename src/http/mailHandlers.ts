@@ -9,6 +9,7 @@ import { ATTACHMENT_LINK_TTL_SECONDS, fileUrl, signFileToken } from "../mail/fil
 import { callMailbox, type MailboxRefused } from "../mail/rpc.ts"
 import { cancelSend, type SendInvalid, sendDraft } from "../mail/send.ts"
 import type { MessagePatch, Party, StoredMessage } from "../mailbox/types.ts"
+import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.ts"
 import { Database } from "../services/Database.ts"
 import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"
@@ -16,13 +17,13 @@ import { appContext, provideTo } from "./handlers.ts"
 
 const tagOf = (e: unknown) => (typeof e === "object" && e !== null && "_tag" in e ? String(e._tag) : "")
 
-type MailHttp<E> = E extends MailboxMissing
+type MailHttp<E> = E extends MailboxMissing | RuleNotFound
   ? NotFound
   : E extends MailboxAccessDenied
     ? Forbidden
     : E extends MailboxRefused
       ? NotFound | InvalidRequest | Conflict
-      : E extends ComposeInvalid | SendInvalid
+      : E extends ComposeInvalid | SendInvalid | RuleInvalid
         ? InvalidRequest
         : E extends {
               readonly _tag: "DatabaseError" | "MailboxUnavailable" | "BlobStoreError" | "FileLinkInvalid"
@@ -35,7 +36,7 @@ type MailHttp<E> = E extends MailboxMissing
  * code (not_found 404, label_exists and draft_locked 409, the rest 400), bad compose or send input 400.
  * Storage and Durable Object failures are faults and surface as 500s.
  */
-const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
+export const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
   self.pipe(
     Effect.catchIf(
       (e): e is E =>
@@ -47,6 +48,8 @@ const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
       switch (err._tag) {
         case "MailboxMissing":
           return new NotFound({ message: `Mailbox ${err.id} not found.` })
+        case "RuleNotFound":
+          return new NotFound({ message: `Rule ${err.id} not found.` })
         case "MailboxAccessDenied":
           return new Forbidden({ message: err.message ?? "Forbidden" })
         case "MailboxRefused":
@@ -54,6 +57,7 @@ const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
           if (err.code === "label_exists" || err.code === "draft_locked")
             return new Conflict({ message: err.message ?? "Conflict." })
           return new InvalidRequest({ field: "request", message: err.message ?? "Invalid request." })
+        case "RuleInvalid":
         case "ComposeInvalid":
         case "SendInvalid":
           return new InvalidRequest({
@@ -130,6 +134,9 @@ const toMessage = (m: StoredMessage) => ({
   listUnsubscribe: m.listUnsubscribe,
   auth: { source: m.auth.source, spf: m.auth.spf, dmarc: m.auth.dmarc, dkim: m.auth.dkim },
   attachments: m.attachments.map(({ r2Key: _, ...a }) => a),
+  spamScore: m.spamScore,
+  spamReasons: m.spamReasons,
+  rulesMatched: m.rulesMatched,
 })
 
 const BULK: Record<
@@ -248,6 +255,21 @@ export const MailHandlers = HttpApiBuilder.group(
               field: "action",
               message: `${payload.action} needs ${payload.action === "move" ? "folder" : "labelId"}.`,
             })
+          }
+          if (payload.action === "notSpam" || payload.action === "spam") {
+            // "Not spam" trusts the senders from now on; "spam" blocks them. Your own sent copies don't count.
+            const list = payload.action === "notSpam" ? "allow" : "block"
+            for (const threadId of ids) {
+              const thread = yield* callMailbox(params.id, (s) => s.thread(threadId))
+              const senders = new Set(
+                (thread?.messages ?? []).flatMap((m) =>
+                  m.folder !== "sent" && m.from ? [m.from.address] : [],
+                ),
+              )
+              for (const sender of senders) {
+                yield* putSender(params.id, sender, list, payload.action === "notSpam" ? "not_spam" : "spam")
+              }
+            }
           }
           return yield* callMailbox(params.id, (s) => s.updateThreads(ids, patch))
         }).pipe(mailErrors),
