@@ -2007,6 +2007,176 @@ export class AlertsApi extends HttpApiGroup.make("alerts")
   )
   .middleware(ApiKeyAuth) {}
 
+// Campaigns (docs/email-ui.html: Campaigns list, Campaign editor)
+
+const CampaignStatusSchema = Schema.Literals(["draft", "scheduled", "sending", "paused", "sent", "cancelled"])
+const AbSchema = Schema.Struct({
+  percent: Schema.Number,
+  waitHours: Schema.Number,
+  metric: Schema.Literals(["clicks", "opens"]),
+})
+
+export const CampaignSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  status: CampaignStatusSchema,
+  segmentId: Schema.NullOr(Schema.String),
+  topicId: Schema.NullOr(Schema.String),
+  templateId: Schema.NullOr(Schema.String),
+  templateVersion: Schema.NullOr(Schema.Number),
+  bodyHtml: Schema.NullOr(Schema.String),
+  bodyText: Schema.NullOr(Schema.String),
+  fromAddress: Schema.String,
+  replyTo: Schema.NullOr(Schema.String),
+  subject: Schema.String,
+  subjectB: Schema.NullOr(Schema.String),
+  preheader: Schema.NullOr(Schema.String),
+  ab: Schema.NullOr(AbSchema),
+  sendAt: Schema.NullOr(Schema.Number),
+  audienceSize: Schema.NullOr(Schema.Number),
+  pausedReason: Schema.NullOr(Schema.String),
+  startedAt: Schema.NullOr(Schema.Number),
+  finishedAt: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+  updatedAt: Schema.NullOr(Schema.Number),
+})
+
+const CampaignFields = {
+  segmentId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  topicId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  templateId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  bodyHtml: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  bodyText: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  replyTo: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  subjectB: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  preheader: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(200)))),
+  ab: Schema.optionalKey(Schema.NullOr(AbSchema)),
+}
+
+const CheckSchema = Schema.Struct({
+  id: Schema.String,
+  status: Schema.Literals(["pass", "warn", "fail"]),
+  title: Schema.String,
+  detail: Schema.String,
+})
+
+export class CampaignsApi extends HttpApiGroup.make("campaigns")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/campaigns", {
+      query: {
+        status: Schema.optionalKey(Schema.Union([CampaignStatusSchema, Schema.Literal("active")])),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+      },
+      success: Schema.Struct({
+        campaigns: Schema.Array(CampaignSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/campaigns", {
+      payload: Schema.Struct({
+        name: Schema.String,
+        fromAddress: Schema.String,
+        subject: Schema.String,
+        ...CampaignFields,
+      }),
+      success: CampaignSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("get", "/v1/campaigns/:id", {
+      params: { id: Schema.String },
+      success: CampaignSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/campaigns/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String),
+        fromAddress: Schema.optionalKey(Schema.String),
+        subject: Schema.optionalKey(Schema.String),
+        ...CampaignFields,
+      }),
+      success: CampaignSchema,
+      error: [Forbidden, NotFound, InvalidRequest, Conflict],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/campaigns/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ id: Schema.String, deleted: Schema.Boolean }),
+      error: [Forbidden, NotFound, Conflict],
+    }),
+    HttpApiEndpoint.post("render", "/v1/campaigns/:id/render", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        contactId: Schema.optionalKey(Schema.String),
+        variant: Schema.optionalKey(Schema.Literals(["a", "b"])),
+      }),
+      success: Schema.Struct({
+        subject: Schema.String,
+        html: Schema.String,
+        text: Schema.String,
+        headers: Schema.Record(Schema.String, Schema.String),
+        size: Schema.Number,
+        /** Mailyard added the unsubscribe footer because the content had no such link. */
+        footerAdded: Schema.Boolean,
+      }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("test", "/v1/campaigns/:id/test", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ to: Schema.optionalKey(Schema.Array(Schema.String)) }),
+      success: Schema.Struct({
+        sent: Schema.Array(
+          Schema.Struct({ email: Schema.String, messageId: Schema.String, status: Schema.String }),
+        ),
+      }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("checks", "/v1/campaigns/:id/checks", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ ready: Schema.Boolean, checks: Schema.Array(CheckSchema) }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("audiencePreview", "/v1/campaigns/:id/audience/preview", {
+      params: { id: Schema.String },
+      success: Schema.Struct({
+        matching: Schema.Number,
+        sendable: Schema.Number,
+        excluded: Schema.Struct({
+          blocked: Schema.Number,
+          unsubscribed: Schema.Number,
+          unconfirmed: Schema.Number,
+          notOnTopic: Schema.Number,
+        }),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("getCompliance", "/v1/settings/compliance", {
+      success: Schema.Struct({
+        postalAddress: Schema.NullOr(Schema.String),
+        linkAllowlist: Schema.Array(Schema.String),
+        seedAddresses: Schema.Array(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.put("putCompliance", "/v1/settings/compliance", {
+      payload: Schema.Struct({
+        postalAddress: Schema.NullOr(Schema.String.check(Schema.isMaxLength(300))),
+        linkAllowlist: Schema.Array(Schema.String.check(Schema.isPattern(/^[a-z0-9.-]+\.[a-z]{2,}$/i))),
+        seedAddresses: Schema.Array(
+          Schema.String.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+        ).check(Schema.isMaxLength(5)),
+      }),
+      success: Schema.Struct({
+        postalAddress: Schema.NullOr(Schema.String),
+        linkAllowlist: Schema.Array(Schema.String),
+        seedAddresses: Schema.Array(Schema.String),
+      }),
+      error: [Forbidden, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -2029,4 +2199,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(SegmentsApi)
   .add(SendingApi)
   .add(AlertsApi)
+  .add(CampaignsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

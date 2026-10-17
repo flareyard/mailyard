@@ -13,6 +13,23 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
  * and a loaded CI machine can take well over 50 ms to get it there.
  */
 const SOON_MS = 750
+
+/**
+ * Schedules something SOON_MS ahead, asking again with a fresh time if the call itself took so long
+ * that the moment had already passed when it arrived. Returns the time that was accepted.
+ */
+const soon = async (schedule: (at: number) => Promise<unknown>) => {
+  for (let tries = 0; ; tries++) {
+    const at = Date.now() + SOON_MS
+    try {
+      await schedule(at)
+      return at
+    } catch (e) {
+      if (tries >= 4 || !String(e).includes("in the future")) throw e
+    }
+  }
+}
+const sleepUntil = (at: number) => sleep(Math.max(0, at - Date.now()) + 100)
 const codeOf = async (promise: Promise<unknown>) => {
   try {
     await promise
@@ -348,8 +365,7 @@ describe("drafts and the schedule", () => {
       subject: "Later",
       to: [{ name: null, address: "x@example.org" }],
     })
-    await box.scheduleDraft(draft.id, Date.now() + SOON_MS)
-    await sleep(SOON_MS + 100)
+    await sleepUntil(await soon((at) => box.scheduleDraft(draft.id, at)))
     // Miniflare fires alarms in real time; this runs it now if it hasn't fired yet.
     await runDurableObjectAlarm(box)
     expect(await box.draft(draft.id)).toMatchObject({ status: "due" })
@@ -364,11 +380,11 @@ describe("drafts and the schedule", () => {
     await box.deliver(delivery({ id: "inb_new", subject: "New", receivedAt: 2000 }))
     await box.updateMessages(["inb_old"], { seen: true })
     const oldThread = (await box.message("inb_old"))?.threadId ?? ""
-    await box.snooze(oldThread, Date.now() + SOON_MS)
+    const wakeAt = await soon((at) => box.snooze(oldThread, at))
     expect((await box.threads({ folder: "inbox" })).threads.map((t) => t.subject)).toEqual(["New"])
     expect((await box.threads({ folder: "snoozed" })).threads[0]?.snoozedUntil).not.toBeNull()
 
-    await sleep(SOON_MS + 100)
+    await sleepUntil(wakeAt)
     await runDurableObjectAlarm(box)
     const inbox = (await box.threads({ folder: "inbox" })).threads
     expect(inbox.map((t) => t.subject)).toEqual(["Old", "New"])
