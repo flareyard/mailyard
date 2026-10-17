@@ -23,6 +23,8 @@ export const SILENT_AFTER_MS = 6 * 3_600_000
 const WINDOW_MS = 7 * 86_400_000
 
 export type DomainCoverage = {
+  /** The domain's `dom_…` id, as every other domain reference uses. */
+  readonly domainId: string
   readonly domain: string
   /** From the account's subscriptions; null when they can't be read. */
   readonly subscribed: boolean | null
@@ -34,12 +36,13 @@ export type DomainCoverage = {
 }
 
 const judge = (
+  domainId: string,
   domain: string,
   subscribed: boolean | null,
   withEvents: number,
   silent: number,
 ): DomainCoverage => {
-  const base = { domain, subscribed, withEvents, silent }
+  const base = { domainId, domain, subscribed, withEvents, silent }
   if (subscribed === false)
     return {
       ...base,
@@ -67,10 +70,16 @@ export const eventCoverage = Effect.fn("events.coverage")(function* (only?: stri
   const database = yield* Database
   const cloudflare = yield* CloudflareEmail
   const sending = yield* database.query("events.domains", (db) =>
-    db.select({ name: domains.name }).from(domains).where(eq(domains.sendingEnabled, true)).all(),
+    db
+      .select({ id: domains.id, name: domains.name })
+      .from(domains)
+      .where(eq(domains.sendingEnabled, true))
+      .all(),
   )
-  const names = sending.map((d) => d.name.toLowerCase()).filter((d) => !only || d === only.toLowerCase())
-  if (names.length === 0) return []
+  const wanted = sending
+    .map((d) => ({ id: d.id, name: d.name.toLowerCase() }))
+    .filter((d) => !only || d.name === only.toLowerCase())
+  if (wanted.length === 0) return []
   const now = Date.now()
   // The sender's domain is everything after the last @ of `sender`, the bare From address.
   const rows = yield* database.query("events.ledger", (db) =>
@@ -84,8 +93,9 @@ export const eventCoverage = Effect.fn("events.coverage")(function* (only?: stri
   )
   const ledger = new Map(rows.map((r) => [r.domain, r]))
   const subscribed = yield* cloudflare.subscribedDomains
-  return names.map((name) =>
+  return wanted.map(({ id, name }) =>
     judge(
+      id,
       name,
       Option.match(subscribed, { onNone: () => null, onSome: (set) => set.has(name) }),
       Number(ledger.get(name)?.with_events ?? 0),
@@ -110,7 +120,7 @@ export const watchEventCoverage = Effect.fn("events.watch")(function* () {
         severity: "critical",
         title: `No delivery events for ${c.domain}`,
         detail: c.detail,
-        subject: { type: "domain", id: c.domain },
+        subject: { type: "domain", id: c.domainId },
       })
     else if (c.status === "ok") yield* clearAlert(alertKey(c.domain), "watchdog")
   }

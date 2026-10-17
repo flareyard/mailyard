@@ -4,6 +4,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Schema from "effect/Schema"
 import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
+import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 
@@ -419,11 +420,22 @@ export class SettingsApi extends HttpApiGroup.make("settings")
 // Webhooks (Standard Webhooks signatures)
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * What a webhook can subscribe to. Deliveries are signed per Standard Webhooks: headers `webhook-id`,
+ * `webhook-timestamp` and `webhook-signature: v1,<base64 HMAC-SHA256 of "id.timestamp.body">`, keyed
+ * by the endpoint's `whsec_` secret.
+ */
+export const WebhookEventSchema = Schema.Literals(WEBHOOK_EVENTS).annotate({
+  description:
+    'A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint\'s whsec_ secret).',
+})
+
 export const WebhookEndpoint = Schema.Struct({
   id: Schema.String,
   url: Schema.String,
   description: Schema.NullOr(Schema.String),
-  events: Schema.Array(Schema.String),
+  /** The events this endpoint receives; `*` means all of them. */
+  events: Schema.Array(Schema.Union([WebhookEventSchema, Schema.Literal("*")])),
   enabled: Schema.Boolean,
   lastSuccessAt: Schema.NullOr(Schema.Number),
   lastFailureAt: Schema.NullOr(Schema.Number),
@@ -459,7 +471,8 @@ export class WebhooksApi extends HttpApiGroup.make("webhooks")
     HttpApiEndpoint.get("list", "/v1/webhooks", {
       success: Schema.Struct({
         webhooks: Schema.Array(WebhookEndpoint),
-        events: Schema.Array(Schema.String),
+        /** Every event an endpoint can subscribe to. */
+        events: Schema.Array(WebhookEventSchema),
       }),
       error: Forbidden,
     }),
@@ -1655,9 +1668,15 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
         /** A saved segment's rules. */
         segmentId: Schema.optionalKey(Schema.String),
         /** `key:op:value`, as a segment field rule; repeat it to AND several. */
-        field: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+        field: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])).annotate({
+          description:
+            "key:op[:value], repeatable, ANDed. key is email, name or a custom field; op is one of eq, neq, contains, notContains, startsWith, endsWith, gt, gte, lt, lte, exists, missing. The value is everything after the second colon; gt/gte/lt/lte compare numbers when it is numeric. exists and missing take no value.",
+        }),
         /** `[!]name[:days]`: did (or with `!` didn't) the event, within the last `days`. */
-        event: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+        event: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])).annotate({
+          description:
+            "[!]name[:days], repeatable, ANDed: the contact did the event (within the last 1–3650 days), or with a leading ! didn't.",
+        }),
         sort: Schema.optionalKey(
           Schema.Literals([
             "createdAt",
@@ -2029,6 +2048,7 @@ export class SendingApi extends HttpApiGroup.make("sending")
       success: Schema.Struct({
         domains: Schema.Array(
           Schema.Struct({
+            domainId: Schema.String,
             domain: Schema.String,
             subscribed: Schema.NullOr(Schema.Boolean),
             withEvents: Schema.Number,
@@ -2157,7 +2177,16 @@ const CampaignReportSchema = Schema.Struct({
     }),
   ),
   links: Schema.Array(Schema.Struct({ url: Schema.String, clicks: Count, machineClicks: Count })),
-  activity: Schema.Array(Schema.Struct({ hour: Count, opens: Count, clicks: Count })),
+  activity: Schema.Array(
+    Schema.Struct({
+      hour: Count.check(Schema.isLessThanOrEqualTo(167)).annotate({
+        description:
+          "Whole hours from the campaign's startedAt to the first opens and clicks counted in this bucket; the first 7 days only (0–167). Not an hour of the day.",
+      }),
+      opens: Count,
+      clicks: Count,
+    }),
+  ),
   ab: Schema.NullOr(
     Schema.Struct({
       metric: Schema.Literals(["clicks", "opens"]),
@@ -2230,13 +2259,23 @@ const ContactImportSchema = Schema.Struct({
   onConflict: Schema.Literals(["update", "skip"]),
   defaultStatus: Schema.Literals(["subscribed", "unsubscribed"]),
   headers: Schema.NullOr(Schema.Array(Schema.String)),
-  rows: Schema.Number,
+  rows: Schema.Number.annotate({
+    description:
+      "Data rows read so far, the header excluded; it grows while the import runs. rows = created + updated + skipped + invalid + duplicates.",
+  }),
   created: Schema.Number,
   updated: Schema.Number,
   skipped: Schema.Number,
   invalid: Schema.Number,
-  duplicates: Schema.Number,
-  suppressed: Schema.Number,
+  /** Rows whose address appeared earlier in the same step of the file: merged into it, not counted elsewhere. */
+  duplicates: Schema.Number.annotate({
+    description:
+      "Rows repeating an address already read in the same step: merged into that row. Not part of skipped.",
+  }),
+  suppressed: Schema.Number.annotate({
+    description:
+      "New contacts that joined as suppressed because their address is on the suppression list. Part of created.",
+  }),
   errors: Schema.Array(Schema.Struct({ line: Schema.Number, message: Schema.String })),
   error: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,
@@ -2283,8 +2322,10 @@ const ContactExportSchema = Schema.Struct({
   rows: Schema.Number,
   fields: Schema.Array(Schema.String),
   filename: Schema.String,
-  /** A signed link to the CSV, good for a day; null until it's written. */
-  url: Schema.NullOr(Schema.String),
+  url: Schema.NullOr(Schema.String).annotate({
+    description:
+      "A signed link to the CSV, good for a day. Null until it's written, and always null in GET /v1/exports: fetch the export by id for a fresh link.",
+  }),
   error: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,
   finishedAt: Schema.NullOr(Schema.Number),

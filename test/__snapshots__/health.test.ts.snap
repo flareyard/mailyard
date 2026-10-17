@@ -5272,7 +5272,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "type": "integer",
                           },
                           "hour": {
-                            "maximum": 9007199254740991,
+                            "description": "Whole hours from the campaign's startedAt to the first opens and clicks counted in this bucket; the first 7 days only (0–167). Not an hour of the day.",
+                            "maximum": 167,
                             "minimum": 0,
                             "type": "integer",
                           },
@@ -7215,6 +7216,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "type": "array",
                 },
               ],
+              "description": "key:op[:value], repeatable, ANDed. key is email, name or a custom field; op is one of eq, neq, contains, notContains, startsWith, endsWith, gt, gte, lt, lte, exists, missing. The value is everything after the second colon; gt/gte/lt/lte compare numbers when it is numeric. exists and missing take no value.",
             },
           },
           {
@@ -7233,6 +7235,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "type": "array",
                 },
               ],
+              "description": "[!]name[:days], repeatable, ANDed: the contact did the event (within the last 1–3650 days), or with a leading ! didn't.",
             },
           },
           {
@@ -11591,6 +11594,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "null",
                               },
                             ],
+                            "description": "A signed link to the CSV, good for a day. Null until it's written, and always null in GET /v1/exports: fetch the export by id for a fresh link.",
                           },
                         },
                         "required": [
@@ -11855,6 +11859,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                      "description": "A signed link to the CSV, good for a day. Null until it's written, and always null in GET /v1/exports: fetch the export by id for a fresh link.",
                     },
                   },
                   "required": [
@@ -12043,6 +12048,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                      "description": "A signed link to the CSV, good for a day. Null until it's written, and always null in GET /v1/exports: fetch the export by id for a fresh link.",
                     },
                   },
                   "required": [
@@ -33550,6 +33556,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "domain": {
                             "type": "string",
                           },
+                          "domainId": {
+                            "type": "string",
+                          },
                           "silent": {
                             "anyOf": [
                               {
@@ -33600,6 +33609,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                         },
                         "required": [
+                          "domainId",
                           "domain",
                           "subscribed",
                           "withEvents",
@@ -40128,6 +40138,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "properties": {
                     "events": {
                       "items": {
+                        "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                        "enum": [
+                          "message.sent",
+                          "message.delivered",
+                          "message.deferred",
+                          "message.bounced",
+                          "message.failed",
+                          "message.rejected",
+                          "message.complained",
+                          "email.opened",
+                          "email.clicked",
+                          "contact.created",
+                          "contact.updated",
+                          "contact.subscribed",
+                          "contact.unsubscribed",
+                          "contact.deleted",
+                          "contact.suppressed",
+                          "event.tracked",
+                          "campaign.paused",
+                          "campaign.sent",
+                          "mail.received",
+                          "mail.rule_matched",
+                        ],
                         "type": "string",
                       },
                       "type": "array",
@@ -40166,7 +40199,40 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "events": {
                             "items": {
-                              "type": "string",
+                              "anyOf": [
+                                {
+                                  "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                                  "enum": [
+                                    "message.sent",
+                                    "message.delivered",
+                                    "message.deferred",
+                                    "message.bounced",
+                                    "message.failed",
+                                    "message.rejected",
+                                    "message.complained",
+                                    "email.opened",
+                                    "email.clicked",
+                                    "contact.created",
+                                    "contact.updated",
+                                    "contact.subscribed",
+                                    "contact.unsubscribed",
+                                    "contact.deleted",
+                                    "contact.suppressed",
+                                    "event.tracked",
+                                    "campaign.paused",
+                                    "campaign.sent",
+                                    "mail.received",
+                                    "mail.rule_matched",
+                                  ],
+                                  "type": "string",
+                                },
+                                {
+                                  "enum": [
+                                    "*",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
                             },
                             "type": "array",
                           },
@@ -40370,7 +40436,40 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                         "events": {
                           "items": {
-                            "type": "string",
+                            "anyOf": [
+                              {
+                                "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                                "enum": [
+                                  "message.sent",
+                                  "message.delivered",
+                                  "message.deferred",
+                                  "message.bounced",
+                                  "message.failed",
+                                  "message.rejected",
+                                  "message.complained",
+                                  "email.opened",
+                                  "email.clicked",
+                                  "contact.created",
+                                  "contact.updated",
+                                  "contact.subscribed",
+                                  "contact.unsubscribed",
+                                  "contact.deleted",
+                                  "contact.suppressed",
+                                  "event.tracked",
+                                  "campaign.paused",
+                                  "campaign.sent",
+                                  "mail.received",
+                                  "mail.rule_matched",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "enum": [
+                                  "*",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "type": "array",
                         },
@@ -40558,7 +40657,40 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "events": {
                       "items": {
-                        "type": "string",
+                        "anyOf": [
+                          {
+                            "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                            "enum": [
+                              "message.sent",
+                              "message.delivered",
+                              "message.deferred",
+                              "message.bounced",
+                              "message.failed",
+                              "message.rejected",
+                              "message.complained",
+                              "email.opened",
+                              "email.clicked",
+                              "contact.created",
+                              "contact.updated",
+                              "contact.subscribed",
+                              "contact.unsubscribed",
+                              "contact.deleted",
+                              "contact.suppressed",
+                              "event.tracked",
+                              "campaign.paused",
+                              "campaign.sent",
+                              "mail.received",
+                              "mail.rule_matched",
+                            ],
+                            "type": "string",
+                          },
+                          {
+                            "enum": [
+                              "*",
+                            ],
+                            "type": "string",
+                          },
+                        ],
                       },
                       "type": "array",
                     },
@@ -40734,7 +40866,40 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "events": {
                       "items": {
-                        "type": "string",
+                        "anyOf": [
+                          {
+                            "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                            "enum": [
+                              "message.sent",
+                              "message.delivered",
+                              "message.deferred",
+                              "message.bounced",
+                              "message.failed",
+                              "message.rejected",
+                              "message.complained",
+                              "email.opened",
+                              "email.clicked",
+                              "contact.created",
+                              "contact.updated",
+                              "contact.subscribed",
+                              "contact.unsubscribed",
+                              "contact.deleted",
+                              "contact.suppressed",
+                              "event.tracked",
+                              "campaign.paused",
+                              "campaign.sent",
+                              "mail.received",
+                              "mail.rule_matched",
+                            ],
+                            "type": "string",
+                          },
+                          {
+                            "enum": [
+                              "*",
+                            ],
+                            "type": "string",
+                          },
+                        ],
                       },
                       "type": "array",
                     },
@@ -40951,7 +41116,40 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "events": {
                       "items": {
-                        "type": "string",
+                        "anyOf": [
+                          {
+                            "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                            "enum": [
+                              "message.sent",
+                              "message.delivered",
+                              "message.deferred",
+                              "message.bounced",
+                              "message.failed",
+                              "message.rejected",
+                              "message.complained",
+                              "email.opened",
+                              "email.clicked",
+                              "contact.created",
+                              "contact.updated",
+                              "contact.subscribed",
+                              "contact.unsubscribed",
+                              "contact.deleted",
+                              "contact.suppressed",
+                              "event.tracked",
+                              "campaign.paused",
+                              "campaign.sent",
+                              "mail.received",
+                              "mail.rule_matched",
+                            ],
+                            "type": "string",
+                          },
+                          {
+                            "enum": [
+                              "*",
+                            ],
+                            "type": "string",
+                          },
+                        ],
                       },
                       "type": "array",
                     },
@@ -41516,7 +41714,40 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                         "events": {
                           "items": {
-                            "type": "string",
+                            "anyOf": [
+                              {
+                                "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                                "enum": [
+                                  "message.sent",
+                                  "message.delivered",
+                                  "message.deferred",
+                                  "message.bounced",
+                                  "message.failed",
+                                  "message.rejected",
+                                  "message.complained",
+                                  "email.opened",
+                                  "email.clicked",
+                                  "contact.created",
+                                  "contact.updated",
+                                  "contact.subscribed",
+                                  "contact.unsubscribed",
+                                  "contact.deleted",
+                                  "contact.suppressed",
+                                  "event.tracked",
+                                  "campaign.paused",
+                                  "campaign.sent",
+                                  "mail.received",
+                                  "mail.rule_matched",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "enum": [
+                                  "*",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "type": "array",
                         },
