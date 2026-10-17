@@ -12,11 +12,12 @@ const SecretName = Schema.String.check(Schema.isPattern(/^[A-Z][A-Z0-9_]*$/))
 const Reason = Schema.NonEmptyString.check(Schema.isMaxLength(200))
 
 /**
- * A Cloudflare OAuth scope. The real list comes from `GET /client/v4/oauth/scopes` (HAL-2816), so
- * this only checks the shape `<resource>.<access>` until that list is measured and pinned.
+ * A Cloudflare OAuth scope, shaped `<resource>.<access>` (14 of the measured IDs use `_`, e.g.
+ * `d1.metadata_read`). Whether the ID exists is checked against the measured list (HAL-2816,
+ * `src/scopes.ts`) in `crossFieldProblems`, so a typo is reported by name rather than as a shape error.
  */
 export const Scope = Schema.Struct({
-  scope: Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+$/)),
+  scope: Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9_-]*(?:\.[a-z0-9_-]+)+$/)),
   why: Reason,
   enables: Schema.optionalKey(Schema.String),
 })
@@ -33,6 +34,53 @@ export const Secret = Schema.Union([
     optional: Schema.optionalKey(Schema.Boolean),
   }),
 ])
+
+/**
+ * Mailyard's proposal for contract v1.2 (sent to the platform, 2026-10-17): the platform ignores
+ * these until it adopts them, since a manifest's unknown fields are dropped when decoded.
+ *
+ * A setting is a Worker `var` the platform sets at deploy and changes with an update; the install
+ * and settings forms render from this list. `when` shows a field only while another has that value.
+ */
+const SettingBase = {
+  name: SecretName,
+  label: Schema.NonEmptyString.check(Schema.isMaxLength(60)),
+  help: Schema.optionalKey(Reason),
+  when: Schema.optionalKey(Schema.Struct({ setting: SecretName, equals: Schema.String })),
+}
+export const Setting = Schema.Union([
+  Schema.Struct({
+    ...SettingBase,
+    type: Schema.Literal("integer"),
+    default: Schema.Number,
+    min: Schema.Number,
+    max: Schema.Number,
+  }),
+  Schema.Struct({ ...SettingBase, type: Schema.Literal("boolean"), default: Schema.Boolean }),
+  Schema.Struct({
+    ...SettingBase,
+    type: Schema.Literal("enum"),
+    default: Schema.String,
+    options: Schema.NonEmptyArray(Schema.Struct({ value: Schema.String, label: Schema.NonEmptyString })),
+  }),
+  Schema.Struct({
+    ...SettingBase,
+    type: Schema.Literals(["string", "url"]),
+    default: Schema.optionalKey(Schema.String),
+    optional: Schema.optionalKey(Schema.Boolean),
+  }),
+])
+export type Setting = typeof Setting.Type
+
+/** A Cloudflare price the app's bill is made of, as the pricing page states it, with the page and date. */
+export const CostUnit = Schema.Struct({
+  product: Schema.NonEmptyString,
+  unit: Schema.NonEmptyString,
+  included: Schema.NonEmptyString,
+  price: Schema.NonEmptyString,
+  source: Schema.String.check(Schema.isPattern(/^https:\/\//)),
+  measuredAt: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)),
+})
 
 export const Manifest = Schema.Struct({
   $schema: Schema.optionalKey(Schema.String),
@@ -53,9 +101,18 @@ export const Manifest = Schema.Struct({
     suggest: Schema.optionalKey(Slug),
   }),
   health: Schema.String.check(Schema.isPattern(/^\/[A-Za-z0-9/_-]*$/)),
+  /** Proposed v1.2: the authenticated status route the dashboard reads with the generated admin key. */
+  status: Schema.optionalKey(
+    Schema.Struct({
+      path: Schema.String.check(Schema.isPattern(/^\/[A-Za-z0-9/_-]*$/)),
+      auth: Schema.Struct({ bearer: SecretName }),
+    }),
+  ),
+  settings: Schema.optionalKey(Schema.Array(Setting)),
   cost: Schema.Struct({
     /** Plain words, not a number we invented: "0–1 above the $5 plan" or "unmeasured". */
     typicalMonthlyUsd: Schema.NonEmptyString,
+    units: Schema.optionalKey(Schema.Array(CostUnit)),
   }),
   upgrade: Schema.Struct({
     migrations: Schema.Literals(["drizzle", "none"]),

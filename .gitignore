@@ -9,3 +9,4 @@ dist/
 shots/
 *.log
 .sendtest/
+flareyard-release.json

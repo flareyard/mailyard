@@ -23,6 +23,9 @@ export interface Env {
   readonly FILE_SIGNING_KEY?: string
   /** Seconds a send waits so it can be undone. 10 unless set; tests shorten it. */
   readonly MAILYARD_UNDO_SECONDS?: string
+  /** New campaigns track opens and clicks unless these are "false" (manifest settings). */
+  readonly MAILYARD_TRACK_OPENS?: string
+  readonly MAILYARD_TRACK_CLICKS?: string
   /** Spam classifier: `off` (default), `workers-ai` (needs AI) or `openai` (CLASSIFIER_URL and _MODEL). */
   readonly MAILYARD_CLASSIFIER?: "off" | "workers-ai" | "openai"
   /** Workers AI, only bound when the classifier uses it. */

@@ -1,6 +1,7 @@
 import { and, desc, eq, lt, or } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { Bindings } from "../Bindings.ts"
 import { campaigns, contacts, domains, segments, templates, topics } from "../db/schema.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { parseParty, sendBulkMessage } from "../domain/outbox.ts"
@@ -151,11 +152,24 @@ const validate = (next: Omit<CampaignRow, "id" | "status" | "createdAt">) =>
     }
   })
 
+/**
+ * Whether a new campaign tracks opens and clicks when the request doesn't say: on, unless the
+ * deploy's settings (`MAILYARD_TRACK_OPENS`, `MAILYARD_TRACK_CLICKS`, "false") switch it off.
+ */
+export const trackingDefaults = (env: {
+  readonly MAILYARD_TRACK_OPENS?: string | undefined
+  readonly MAILYARD_TRACK_CLICKS?: string | undefined
+}) => ({
+  trackOpens: env.MAILYARD_TRACK_OPENS?.trim().toLowerCase() !== "false",
+  trackClicks: env.MAILYARD_TRACK_CLICKS?.trim().toLowerCase() !== "false",
+})
+
 export const createCampaign = Effect.fn("campaigns.create")(function* (
   input: CampaignInput & { readonly name: string; readonly fromAddress: string; readonly subject: string },
   actor: string,
 ) {
   const now = Date.now()
+  const defaults = trackingDefaults(yield* Bindings)
   const row = {
     name: input.name.trim(),
     segmentId: input.segmentId ?? null,
@@ -170,8 +184,8 @@ export const createCampaign = Effect.fn("campaigns.create")(function* (
     subjectB: input.subjectB ?? null,
     preheader: input.preheader ?? null,
     ab: input.ab ?? null,
-    trackOpens: input.trackOpens ?? true,
-    trackClicks: input.trackClicks ?? true,
+    trackOpens: input.trackOpens ?? defaults.trackOpens,
+    trackClicks: input.trackClicks ?? defaults.trackClicks,
     sendAt: null,
     workflowId: null,
     audienceSize: null,

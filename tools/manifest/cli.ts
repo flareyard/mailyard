@@ -1,9 +1,11 @@
 #!/usr/bin/env bun
-// A copy of the Flareyard platform's manifest validator (flareyard/flareyard packages/manifest), kept here so
-// Mailyard can check its own cloudflare-app.json without depending on the platform repo.
+// A copy of the Flareyard platform's manifest validator (flareyard/flareyard packages/manifest, synced
+// 2026-10-17 at 7224c11), kept here so Mailyard can check its own cloudflare-app.json without depending
+// on the platform repo. Mailyard adds its proposed v1.2 fields and the wrangler.jsonc check.
 import { Exit } from "effect"
 import { crossFieldProblems } from "./check.ts"
 import { decodeManifestExit } from "./Manifest.ts"
+import { parseJsonc, resourceProblems, type WranglerConfig } from "./resources.ts"
 
 const paths = process.argv.slice(2)
 if (paths.length === 0) {
@@ -19,7 +21,13 @@ for (const path of paths) {
     console.error(`✗ ${path}\n${String(exit.cause)}`)
     continue
   }
-  const problems = crossFieldProblems(exit.value)
+  // The wrangler config beside the manifest must agree with it (bindings, scopes, dead-letter queues).
+  const wrangler = Bun.file(path.replace(/[^/]*$/, "wrangler.jsonc"))
+  const config = (await wrangler.exists()) ? (parseJsonc(await wrangler.text()) as WranglerConfig) : undefined
+  const problems = [
+    ...crossFieldProblems(exit.value),
+    ...(config ? resourceProblems(exit.value, config) : []),
+  ]
   if (problems.length > 0) {
     failed = true
     console.error(`✗ ${path}\n${problems.map((p) => `  - ${p}`).join("\n")}`)
