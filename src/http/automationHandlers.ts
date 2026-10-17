@@ -12,6 +12,7 @@ import {
   setPaused,
   updateAutomation,
 } from "../automations/automations.ts"
+import { dryRun } from "../automations/dryRun.ts"
 import {
   automationWebhookSecret,
   enterAutomation,
@@ -125,6 +126,27 @@ export const AutomationsHandlers = HttpApiBuilder.group(
             AutomationInvalid: invalid,
             DatabaseError: Effect.die,
           }),
+        ),
+      ),
+      dryRun: p(({ params, payload }) =>
+        requireScope("read").pipe(
+          Effect.andThen(dryRun(params.id, payload)),
+          Effect.catchTags({
+            AutomationNotFound: notFound,
+            AutomationNotReady: (e) =>
+              Effect.fail(
+                new NotReady({ message: "Fix the graph's structure before a dry run.", issues: e.issues }),
+              ),
+            DatabaseError: Effect.die,
+          }),
+          Effect.catchDefect((defect) =>
+            Effect.fail(
+              new InvalidRequest({
+                field: "template",
+                message: defect instanceof Error ? defect.message : String(defect),
+              }),
+            ),
+          ),
         ),
       ),
       enter: p(({ params, payload }) =>

@@ -3,6 +3,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Schema from "effect/Schema"
+import { DryRunInput } from "../automations/dryRun.ts"
 import {
   Graph as AutomationGraph,
   Settings as AutomationSettings,
@@ -2576,6 +2577,49 @@ export class AutomationsApi extends HttpApiGroup.make("automations")
       params: { id: Schema.String },
       success: AutomationDetail,
       error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /**
+     * Walks one contact (real, or made up) through the draft or a version in simulated time, with the
+     * real step code: the path with times, every send rendered, where a cap or stop rule would end it.
+     * Nothing is sent or written.
+     */
+    HttpApiEndpoint.post("dryRun", "/v1/automations/:id/dry-run", {
+      params: { id: Schema.String },
+      payload: DryRunInput,
+      success: Schema.Struct({
+        version: Schema.Union([Schema.Literal("draft"), Schema.Number]),
+        contact: Schema.Struct({ id: Schema.NullOr(Schema.String), email: Schema.String }),
+        startedAt: Schema.Number,
+        endsAt: Schema.Number,
+        endedBy: Schema.Literals(["exit", "stop", "limit"]),
+        sends: Schema.Number,
+        path: Schema.Array(
+          Schema.Struct({
+            nodeId: Schema.String,
+            label: Schema.NullOr(Schema.String),
+            type: Schema.String,
+            at: Schema.Number,
+            outcome: Schema.Literals([
+              "would-run",
+              "would-wait",
+              "yes",
+              "no",
+              "event",
+              "timed-out",
+              "would-send",
+              "skipped",
+              "deferred",
+              "exited",
+              "stopped",
+            ]),
+            detail: Schema.String,
+            send: Schema.optionalKey(
+              Schema.Struct({ to: Schema.String, subject: Schema.String, preview: Schema.String }),
+            ),
+          }),
+        ),
+      }),
+      error: [Forbidden, NotFound, NotReady, InvalidRequest],
     }),
     /** Puts one contact into the live version now, with the same entry checks as a trigger. */
     HttpApiEndpoint.post("enter", "/v1/automations/:id/enter", {
