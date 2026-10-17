@@ -4,7 +4,7 @@ import { Bindings } from "../Bindings.ts"
 import { contacts } from "../db/schema.ts"
 import { Database } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
-import { signConsent, verifyConsent } from "./consent.ts"
+import { ConsentTokenInvalid, signConsent, verifyConsent } from "./consent.ts"
 import {
   BULK_LIMIT,
   ContactInvalid,
@@ -112,6 +112,7 @@ export const unsubscribe = Effect.fn("subscriptions.unsubscribe")(function* (
 /** Follows a confirmation link: the pending subscription becomes real. Safe to follow twice. */
 export const confirmSubscription = Effect.fn("subscriptions.confirm")(function* (token: string) {
   const payload = yield* verifyConsent(token)
+  if (payload.kind !== "confirm") return yield* new ConsentTokenInvalid({ reason: "kind" })
   const contact = yield* findContact(payload.contactId)
   const topic = yield* findTopic(payload.topicId)
   if (!isBlocked(contact.status))

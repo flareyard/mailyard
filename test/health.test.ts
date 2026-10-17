@@ -75,6 +75,7 @@ describe("GET /openapi.json", () => {
       "/v1/contacts/{id}",
       "/v1/contacts/{id}/erase",
       "/v1/contacts/{id}/export",
+      "/v1/contacts/{id}/preferences-link",
       "/v1/contacts/{id}/timeline",
       "/v1/contacts/{id}/topics/{topicId}",
       "/v1/domains",

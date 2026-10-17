@@ -42,6 +42,7 @@ import {
   type TopicNotFound,
   updateTopic,
 } from "../domain/topics.ts"
+import { unsubscribeToken, unsubscribeUrl } from "../domain/unsubscribe.ts"
 import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
@@ -174,6 +175,18 @@ export const ContactsHandlers = HttpApiBuilder.group(
       ),
       export: p(({ params }) =>
         requireScope("admin").pipe(Effect.andThen(exportContact(params.id)), audienceErrors),
+      ),
+      preferencesLink: p(({ params, query, request }) =>
+        Effect.gen(function* () {
+          yield* requireScope("admin")
+          yield* getContact(params.id)
+          const token = yield* unsubscribeToken({
+            contactId: params.id,
+            topicId: query.topicId ?? null,
+            campaignId: null,
+          })
+          return { url: unsubscribeUrl(originOf(request) ?? "", token) }
+        }).pipe(audienceErrors),
       ),
       erase: p(({ params }) =>
         requireScope("admin").pipe(

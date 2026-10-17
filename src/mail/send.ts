@@ -56,6 +56,8 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
   readonly mailboxAddress: string
   readonly draftId: string
   readonly sendAt?: number | undefined
+  /** Overrides the account's undo window for this send. */
+  readonly undoSeconds?: number | undefined
   readonly origin: string | null
 }) {
   const env = yield* Bindings
@@ -75,7 +77,8 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
   }
   const now = Date.now()
   const undoable = input.sendAt === undefined
-  const at = input.sendAt ?? now + undoWindowMs(env)
+  const at =
+    input.sendAt ?? now + (input.undoSeconds !== undefined ? input.undoSeconds * 1000 : undoWindowMs(env))
   if (!undoable && at <= now)
     return yield* new SendInvalid({ field: "sendAt", message: "A scheduled send is in the future." })
   const result = yield* callMailbox(input.mailboxId, (stub) =>

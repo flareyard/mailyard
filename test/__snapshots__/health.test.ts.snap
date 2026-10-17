@@ -2889,6 +2889,88 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/contacts/{id}/preferences-link": {
+      "get": {
+        "operationId": "contacts.preferencesLink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "topicId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "url",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "contacts",
+        ],
+      },
+    },
     "/v1/contacts/{id}/timeline": {
       "get": {
         "operationId": "contacts.timeline",
@@ -6133,6 +6215,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "rejected",
                 "held",
                 "failed",
+                "consumed",
               ],
               "type": "string",
             },
@@ -6293,6 +6376,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "rejected",
                               "held",
                               "failed",
+                              "consumed",
                             ],
                             "type": "string",
                           },
@@ -6556,6 +6640,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "rejected",
                         "held",
                         "failed",
+                        "consumed",
                       ],
                       "type": "string",
                     },
@@ -6810,6 +6895,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "rejected",
                         "held",
                         "failed",
+                        "consumed",
                       ],
                       "type": "string",
                     },
@@ -11491,6 +11577,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "additionalProperties": false,
                 "properties": {
                   "sendAt": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                      },
+                      {
+                        "enum": [
+                          "Infinity",
+                          "-Infinity",
+                          "NaN",
+                        ],
+                        "type": "string",
+                      },
+                    ],
+                  },
+                  "undoSeconds": {
                     "anyOf": [
                       {
                         "type": "number",
