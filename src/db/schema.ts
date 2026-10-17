@@ -197,7 +197,11 @@ export const alerts = sqliteTable(
     resolvedAt: integer("resolved_at"),
     resolvedBy: text("resolved_by"),
   },
-  (t) => [index("alerts_open").on(t.resolvedAt, t.createdAt), index("alerts_key").on(t.key, t.resolvedAt)],
+  (t) => [
+    index("alerts_open").on(t.resolvedAt, t.createdAt),
+    index("alerts_key").on(t.key, t.resolvedAt),
+    index("alerts_created").on(t.createdAt),
+  ],
 )
 
 /** Events a contact did, sent through `track()`, used by segments and automation triggers. */
@@ -987,3 +991,61 @@ export const exports = sqliteTable(
   },
   (t) => [index("exports_created").on(t.createdAt)],
 )
+
+/**
+ * Each mailbox an inbound message was filed into, and the folder it went to (HAL-3362): what the
+ * inbound stats count per mailbox and as spam. Written once per delivery; rows from before this
+ * table existed were backfilled with folder null (not recorded).
+ */
+export const inboundDeliveries = sqliteTable(
+  "inbound_deliveries",
+  {
+    inboundId: text("inbound_id").notNull(),
+    mailboxId: text("mailbox_id").notNull(),
+    folder: text("folder"),
+    at: integer("at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.inboundId, t.mailboxId] }), index("inbound_deliveries_at").on(t.at)],
+)
+
+/**
+ * Inbound counts for closed days (UTC), computed once and read by key: a closed day never changes.
+ * `mailbox_id` "" is the whole workspace (every message received, rejected and held); the other rows
+ * are per mailbox (deliveries, and those filed as spam).
+ */
+export const inboundDaily = sqliteTable(
+  "inbound_daily",
+  {
+    day: text("day").notNull(),
+    mailboxId: text("mailbox_id").notNull(),
+    received: integer("received").notNull().default(0),
+    spam: integer("spam").notNull().default(0),
+    rejected: integer("rejected").notNull().default(0),
+    held: integer("held").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.mailboxId] })],
+)
+
+/** The 50 busiest senders of each closed day, for top senders over a range. */
+export const inboundDailySenders = sqliteTable(
+  "inbound_daily_senders",
+  {
+    day: text("day").notNull(),
+    address: text("address").notNull(),
+    received: integer("received").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.address] })],
+)
+
+/** The audience by status, snapshotted by the hourly cron: the Overview reads it instead of counting contacts. */
+export const audienceDaily = sqliteTable("audience_daily", {
+  day: text("day").primaryKey(),
+  total: integer("total").notNull(),
+  subscribed: integer("subscribed").notNull(),
+  unconfirmed: integer("unconfirmed").notNull(),
+  unsubscribed: integer("unsubscribed").notNull(),
+  bounced: integer("bounced").notNull(),
+  complained: integer("complained").notNull(),
+  suppressed: integer("suppressed").notNull(),
+  at: integer("at").notNull(),
+})

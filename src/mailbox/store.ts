@@ -624,6 +624,87 @@ export class MailboxStore {
     return counts
   }
 
+  /**
+   * What needs a person in this mailbox (HAL-3362), each count read through an index:
+   * - unread conversations in the inbox (messages_folder);
+   * - conversations whose latest message is in the inbox and older than `olderThan`: waiting for a
+   *   reply, since anything answered has a newer sent copy;
+   * - snoozed conversations coming back between now and `until` (schedule_due);
+   * - inbox conversations assigned to `assignee` (threads_assignee).
+   */
+  attention(input: { readonly olderThan: number; readonly until: number; readonly assignee: string | null }) {
+    const now = this.now()
+    const unread = this.sql
+      .exec<{ n: number }>(
+        "SELECT count(DISTINCT thread_id) AS n FROM messages WHERE folder = 'inbox' AND seen = 0",
+      )
+      .one().n
+    const waiting = this.sql
+      .exec<{ n: number; oldest: number | null }>(
+        `SELECT count(*) AS n, min(t.last_at) AS oldest FROM messages m JOIN threads t ON t.latest_message_id = m.id
+         WHERE m.folder = 'inbox' AND t.last_at < ?`,
+        input.olderThan,
+      )
+      .one()
+    const snoozed = this.sql
+      .exec<{ n: number }>(
+        "SELECT count(*) AS n FROM schedule WHERE kind = 'snooze' AND due_at > ? AND due_at <= ?",
+        now,
+        input.until,
+      )
+      .one().n
+    const assigned = input.assignee
+      ? this.sql
+          .exec<{ n: number }>(
+            `SELECT count(*) AS n FROM threads t WHERE t.assignee = ?
+             AND EXISTS (SELECT 1 FROM messages m WHERE m.thread_id = t.id AND m.folder = 'inbox')`,
+            input.assignee,
+          )
+          .one().n
+      : 0
+    return {
+      unread,
+      waitingForReply: waiting.n,
+      oldestWaitingAt: waiting.oldest ?? null,
+      snoozedReturning: snoozed,
+      assignedToMe: assigned,
+    }
+  }
+
+  /**
+   * First-response times for conversations that started between `from` and `to`, by assignee: from
+   * the first message received to the first reply sent after it. Conversations still unanswered are
+   * counted, not timed. Reads the range's threads and their messages through messages_thread.
+   */
+  responseTimes(input: { readonly from: number; readonly to: number }) {
+    const rows = this.sql
+      .exec<{ assignee: string | null; first_in: number | null; first_reply: number | null }>(
+        `SELECT t.assignee AS assignee,
+           (SELECT min(m.received_at) FROM messages m WHERE m.thread_id = t.id AND m.folder != 'sent') AS first_in,
+           (SELECT min(r.received_at) FROM messages r WHERE r.thread_id = t.id AND r.folder = 'sent'
+              AND r.received_at > (SELECT min(m.received_at) FROM messages m WHERE m.thread_id = t.id AND m.folder != 'sent')) AS first_reply
+         FROM threads t WHERE t.first_at >= ? AND t.first_at < ?`,
+        input.from,
+        input.to,
+      )
+      .toArray()
+    const by = new Map<string | null, { threads: number; replied: Array<number> }>()
+    for (const r of rows) {
+      if (r.first_in === null) continue
+      const entry = by.get(r.assignee) ?? { threads: 0, replied: [] }
+      entry.threads++
+      if (r.first_reply !== null) entry.replied.push(r.first_reply - r.first_in)
+      by.set(r.assignee, entry)
+    }
+    return [...by.entries()].map(([assignee, e]) => ({
+      assignee,
+      threads: e.threads,
+      answered: e.replied.length,
+      firstResponseMedianMs: median(e.replied),
+      firstResponseP90Ms: percentile(e.replied, 0.9),
+    }))
+  }
+
   // ---------------------------------------------------------------------------------------------
   // Search
   // ---------------------------------------------------------------------------------------------
@@ -1414,4 +1495,16 @@ export class MailboxStore {
       return { events: [this.changed([String(row.thread_id)])] }
     })
   }
+}
+
+const percentile = (values: ReadonlyArray<number>, p: number): number | null => {
+  if (values.length === 0) return null
+  const sorted = [...values].sort((a, b) => a - b)
+  return sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))] ?? null
+}
+const median = (values: ReadonlyArray<number>): number | null => {
+  if (values.length === 0) return null
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = sorted.length >> 1
+  return sorted.length % 2 ? (sorted[mid] ?? null) : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
 }

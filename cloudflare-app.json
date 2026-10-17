@@ -111,6 +111,15 @@
       "help": "Seconds a mailbox send waits so it can be undone. 0 sends at once."
     },
     {
+      "name": "MAILYARD_REPLY_TARGET_HOURS",
+      "label": "Reply target",
+      "type": "integer",
+      "default": 24,
+      "min": 1,
+      "max": 720,
+      "help": "Hours a conversation may wait for a reply before the Overview lists it as waiting."
+    },
+    {
       "name": "MAILYARD_TRACK_OPENS",
       "label": "Track opens in new campaigns",
       "type": "boolean",

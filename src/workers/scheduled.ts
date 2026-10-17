@@ -3,6 +3,7 @@ import { sweepAutomations } from "../automations/runs.ts"
 import type { Env } from "../Bindings.ts"
 import { sweepAlerts } from "../domain/alertSweep.ts"
 import { watchEventCoverage } from "../domain/eventCoverage.ts"
+import { snapshotAudience } from "../domain/overview.ts"
 import { syncWithCloudflare } from "../domain/suppressions.ts"
 import { runtimeFor } from "./inbound.ts"
 
@@ -36,6 +37,8 @@ export const handleScheduled = (env: Env) =>
       Effect.andThen(sweepAlerts()),
       Effect.tap((report) => Effect.logInfo(`cron: alerts ${report.join(", ")}`)),
       Effect.catchCause((cause) => Effect.logError("cron: alert sweep failed", cause)),
+      Effect.andThen(snapshotAudience()),
+      Effect.catchCause((cause) => Effect.logError("cron: audience snapshot failed", cause)),
       Effect.asVoid,
     ),
   )
