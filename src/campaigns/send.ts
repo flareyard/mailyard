@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import { Bindings } from "../Bindings.ts"
-import { campaigns, contacts, messagesOut } from "../db/schema.ts"
+import { campaigns, messagesOut } from "../db/schema.ts"
 import { clearAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { parseParty, sendBulkMessage } from "../domain/outbox.ts"
