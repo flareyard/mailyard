@@ -54,6 +54,8 @@ export interface Env {
   /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
   readonly CLOUDFLARE_ACCOUNT_ID?: string
   readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string
+  /** The queue Email Sending's delivery events arrive on; `mailyard-email-events` unless renamed. */
+  readonly MAILYARD_EVENTS_QUEUE?: string
   /**
    * Signs consent links: double opt-in confirmations now, unsubscribe and preference links with
    * HAL-3297. Deploy-time secret; the links stop working if it changes.

@@ -6,6 +6,7 @@ import { Bindings } from "../Bindings.ts"
 import { dailyStats, domains, webhookDeliveries } from "../db/schema.ts"
 import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
+import { eventCoverage } from "./eventCoverage.ts"
 
 /**
  * Email Service pricing, measured 2026-10-16 (developers.cloudflare.com/email-service/platform/pricing):
@@ -302,6 +303,30 @@ export const health = Effect.fn("insights.health")(function* () {
           status: domainRows.every((d) => d.sending) ? "ok" : "warn",
           detail: `${domainRows.filter((d) => d.sending).length} of ${domainRows.length} domains can send.`,
         },
+  )
+
+  const coverage = yield* eventCoverage()
+  const silent = coverage.filter((c) => c.status === "warn")
+  checks.push(
+    coverage.length === 0
+      ? { name: "delivery_events", status: "unknown", detail: "No sending domain yet." }
+      : silent.length > 0
+        ? {
+            name: "delivery_events",
+            status: "fail",
+            detail: silent.map((c) => c.detail).join(" "),
+          }
+        : coverage.every((c) => c.status === "ok")
+          ? {
+              name: "delivery_events",
+              status: "ok",
+              detail: `Delivery events reach Mailyard for ${coverage.length === 1 ? coverage[0]?.domain : `all ${coverage.length} sending domains`}.`,
+            }
+          : {
+              name: "delivery_events",
+              status: "unknown",
+              detail: coverage.find((c) => c.status === "unknown")?.detail ?? "",
+            },
   )
 
   const rep = yield* reputation()

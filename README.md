@@ -46,7 +46,7 @@ Until the Flareyard platform deploys it with your OAuth token, Mailyard deploys 
    - The SMTP fallback and the read-only Cloudflare token are optional too (`cloudflare-app.json`).
 
    For example: `printf %s "$VALUE" | wrangler secret put ADMIN_KEY`.
-5. **Delivery events.** Subscribe the events queue to each sending domain:
+5. **Delivery events.** Subscribe the events queue to each sending domain, and to each sending subdomain on its own: a subscription for the exact domain the mail is sent from is what made in.flareyard.dev's events flow (measured 2026-10-17). A domain without one never leaves `sent`, so bounces and complaints don't reach suppression or the send governor. The hourly watchdog raises a critical alert for any sending domain whose mail is still silent after 6 hours. With the read-only token connected (it also needs Queues: Read), `/v1/health` and `GET /v1/sending/events` name a missing subscription before anything is sent.
    ```sh
    wrangler queues subscription create mailyard-email-events --source email.sending \
      --zone-id <zone id> --domain <sending domain> \

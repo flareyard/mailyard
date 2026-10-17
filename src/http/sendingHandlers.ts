@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { listAlerts, resolveAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
+import { eventCoverage } from "../domain/eventCoverage.ts"
 import { Governor } from "../services/Governor.ts"
 import { GovernorUnreachable, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
@@ -25,6 +26,13 @@ export const SendingHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       governor: p(() =>
         requireScope("read").pipe(Effect.andThen(Governor.use((g) => g.overview)), reachable),
+      ),
+      events: p(() =>
+        requireScope("read").pipe(
+          Effect.andThen(eventCoverage()),
+          Effect.map((domains) => ({ domains })),
+          Effect.catchTag("DatabaseError", Effect.die),
+        ),
       ),
       getSettings: p(() =>
         requireScope("read").pipe(

@@ -1978,6 +1978,22 @@ export class SendingApi extends HttpApiGroup.make("sending")
       success: GovernorOverviewSchema,
       error: [Forbidden, GovernorUnreachable],
     }),
+    /** Whether each sending domain's delivery events reach Mailyard (subscription and ledger). */
+    HttpApiEndpoint.get("events", "/v1/sending/events", {
+      success: Schema.Struct({
+        domains: Schema.Array(
+          Schema.Struct({
+            domain: Schema.String,
+            subscribed: Schema.NullOr(Schema.Boolean),
+            withEvents: Schema.Number,
+            silent: Schema.Number,
+            status: Schema.Literals(["ok", "warn", "unknown"]),
+            detail: Schema.String,
+          }),
+        ),
+      }),
+      error: Forbidden,
+    }),
     HttpApiEndpoint.get("getSettings", "/v1/settings/sending", {
       success: GovernorConfigSchema,
       error: [Forbidden, GovernorUnreachable],

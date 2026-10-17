@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import { type campaigns, domains } from "../db/schema.ts"
 import { getBrandSettings } from "../domain/brand.ts"
+import { eventCoverage } from "../domain/eventCoverage.ts"
 import { parseParty } from "../domain/outbox.ts"
 import { Database } from "../services/Database.ts"
 import { getCompliance } from "./compliance.ts"
@@ -287,6 +288,15 @@ export const checkCampaign = Effect.fn("campaigns.checks")(function* (campaign: 
             detail: `Tracked links go through ${trackingHost}, not your domain; filters trust links on the sender's own domain more. Point a subdomain of ${apexOf(sendingDomain)} at Mailyard and set it as the tracking origin.`,
           },
   )
+
+  const [events] = yield* eventCoverage(sendingDomain)
+  if (events)
+    checks.push({
+      id: "delivery_events",
+      status: events.status === "warn" ? "warn" : "pass",
+      title: "Delivery events",
+      detail: events.detail,
+    })
 
   const replyTo = (campaign.replyTo ? parseParty(campaign.replyTo).email : from.email).toLowerCase()
   checks.push(

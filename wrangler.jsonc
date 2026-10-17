@@ -82,5 +82,7 @@
       }
     ]
   },
+  // Hourly: the delivery-events watchdog (src/workers/scheduled.ts).
+  "triggers": { "crons": ["23 * * * *"] },
   "observability": { "enabled": true }
 }

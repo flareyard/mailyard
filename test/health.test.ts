@@ -137,6 +137,7 @@ describe("GET /openapi.json", () => {
       "/v1/segments/preview",
       "/v1/segments/{id}",
       "/v1/send",
+      "/v1/sending/events",
       "/v1/sending/governor",
       "/v1/settings/brand",
       "/v1/settings/compliance",
