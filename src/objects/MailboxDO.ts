@@ -264,6 +264,14 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.search(query, options)
   }
 
+  async addNote(threadId: string, author: string, body: string) {
+    return await this.apply(this.store.addNote(threadId, author, body))
+  }
+
+  async deleteNote(noteId: string, by: string, anyone: boolean) {
+    return await this.apply(this.store.deleteNote(noteId, by, anyone))
+  }
+
   smartFolders() {
     return this.store.smartFolders()
   }

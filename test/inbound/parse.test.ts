@@ -44,6 +44,8 @@ describe("parseMessage: golden fixtures", () => {
       dmarc: "pass",
       dmarcDomain: "example.org",
       arc: "none",
+      // No ARC-Seal in this message, so no chain (HAL-3407).
+      arcChain: null,
     })
   })
 

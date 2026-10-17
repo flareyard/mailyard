@@ -5,7 +5,11 @@
  */
 export interface MailboxMigration {
   readonly statements: ReadonlyArray<string>
-  readonly after?: "threadAndIndexExisting" | "rebuildFolderCounts" | "rebuildCorrespondents"
+  readonly after?:
+    | "threadAndIndexExisting"
+    | "rebuildFolderCounts"
+    | "rebuildCorrespondents"
+    | "paletteLabels"
 }
 
 /**
@@ -225,5 +229,14 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
       // Saved searches shown beside the folders (HAL-3406).
       "CREATE TABLE smart_folders (id TEXT PRIMARY KEY, name TEXT NOT NULL, q TEXT NOT NULL, position INTEGER NOT NULL, created_at INTEGER NOT NULL)",
     ],
+  },
+  {
+    statements: [
+      // Internal notes on a conversation (HAL-3407): for the team, never sent.
+      "CREATE TABLE thread_notes (id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, author TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL)",
+      "CREATE INDEX thread_notes_thread ON thread_notes (thread_id, created_at)",
+    ],
+    // Label colours become the palette's names.
+    after: "paletteLabels",
   },
 ]

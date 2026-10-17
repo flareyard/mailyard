@@ -219,10 +219,11 @@ describe("labels", () => {
   it("creates, applies, counts, renames and deletes labels", async () => {
     const box = freshMailbox()
     await box.deliver(delivery({ id: "inb_l" }))
-    const { label } = await box.createLabel({ name: "Receipts", color: "#00AA88" })
-    expect(label).toMatchObject({ name: "Receipts", color: "#00aa88", threads: 0 })
+    const { label } = await box.createLabel({ name: "Receipts", color: "Teal" })
+    expect(label).toMatchObject({ name: "Receipts", color: "teal", threads: 0 })
     expect(await codeOf(box.createLabel({ name: "receipts" }))).toBe("label_exists")
     expect(await codeOf(box.createLabel({ name: "Bad", color: "red" }))).toBe("invalid")
+    expect(await codeOf(box.createLabel({ name: "Hex", color: "#00aa88" }))).toBe("invalid")
 
     await box.updateMessages(["inb_l"], { addLabels: [label.id] })
     expect((await box.labels())[0]).toMatchObject({ threads: 1, unreadThreads: 1 })
@@ -457,6 +458,7 @@ describe("schema migrations", () => {
         "folder_counts",
         "correspondents",
         "smart_folders",
+        "thread_notes",
       ]) {
         sql.exec(`DROP TABLE IF EXISTS ${table}`)
       }

@@ -33,6 +33,16 @@ export interface AuthResults {
   /** `header.from`, the domain DMARC was evaluated for. */
   readonly dmarcDomain: string | null
   readonly arc: AuthVerdict | null
+  /**
+   * The ARC chain as the newest seal describes it (HAL-3407): its result (the receiver's arc= verdict,
+   * else the seal's cv=), its instance (i=) and who sealed it (d=). Null when the mail carried no
+   * ARC-Seal. Missing on messages stored before it was recorded.
+   */
+  readonly arcChain?: {
+    readonly result: string
+    readonly instance: number
+    readonly sealer: string | null
+  } | null
 }
 
 const VERDICTS = new Set<string>([
@@ -209,4 +219,32 @@ export const readAuthResults = (headers: ReadonlyArray<{ readonly key: string; r
     }
   }
   return NO_AUTH_RESULTS
+}
+
+/** The newest ARC-Seal: `i=2; a=rsa-sha256; t=…; cv=pass; d=google.com; s=arc-20240605; b=…`. */
+export const readArcChain = (
+  headers: ReadonlyArray<{ readonly key: string; readonly value: string }>,
+  verdict: AuthVerdict | null,
+): NonNullable<AuthResults["arcChain"]> | null => {
+  let best: { instance: number; cv: string | null; sealer: string | null } | null = null
+  for (const h of headers) {
+    if (h.key !== "arc-seal") continue
+    const tags = new Map(
+      stripComments(h.value)
+        .split(";")
+        .map((part) => part.trim().split("="))
+        .filter((kv) => kv.length >= 2)
+        .map(([k, ...v]) => [(k as string).trim().toLowerCase(), v.join("=").trim()]),
+    )
+    const instance = Number(tags.get("i"))
+    if (!Number.isInteger(instance) || instance < 1) continue
+    if (!best || instance > best.instance)
+      best = {
+        instance,
+        cv: tags.get("cv")?.toLowerCase() ?? null,
+        sealer: tags.get("d")?.toLowerCase() ?? null,
+      }
+  }
+  if (!best) return null
+  return { result: verdict ?? best.cv ?? "none", instance: best.instance, sealer: best.sealer }
 }

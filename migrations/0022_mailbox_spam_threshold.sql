@@ -1,0 +1,1 @@
+ALTER TABLE `mailboxes` ADD `spam_threshold` real;

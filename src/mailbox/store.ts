@@ -15,11 +15,13 @@ import {
   type Folder,
   type FolderCount,
   type InboundDelivery,
+  LABEL_COLORS,
   type Label,
   type MailboxEvent,
   type MessagePatch,
   type MessageSummary,
   mailboxError,
+  nearestLabelColor,
   type Party,
   type SearchHit,
   type StoredMessage,
@@ -83,6 +85,7 @@ export class MailboxStore {
         if (migration.after === "threadAndIndexExisting") this.threadAndIndexExisting()
         if (migration.after === "rebuildFolderCounts") this.rebuildFolderCounts()
         if (migration.after === "rebuildCorrespondents") this.rebuildCorrespondents()
+        if (migration.after === "paletteLabels") this.paletteLabels()
       }
       this.sql.exec("DELETE FROM _schema")
       this.sql.exec("INSERT INTO _schema (version) VALUES (?)", MAILBOX_MIGRATIONS.length)
@@ -308,6 +311,7 @@ export class MailboxStore {
       this.sql.exec("UPDATE messages SET thread_id = ? WHERE thread_id = ?", threadId, other)
       this.sql.exec("UPDATE thread_refs SET thread_id = ? WHERE thread_id = ?", threadId, other)
       this.sql.exec("UPDATE drafts SET thread_id = ? WHERE thread_id = ?", threadId, other)
+      this.sql.exec("UPDATE thread_notes SET thread_id = ? WHERE thread_id = ?", threadId, other)
       this.sql.exec("DELETE FROM schedule WHERE kind = 'snooze' AND target = ?", other)
       this.sql.exec("DELETE FROM threads WHERE id = ?", other)
       // Its messages now belong to threadId, whose refresh counts them; the old thread counts no more.
@@ -603,6 +607,7 @@ export class MailboxStore {
       .one()
     if (Number(agg.n) === 0) {
       this.syncFolders(threadId, false)
+      this.sql.exec("DELETE FROM thread_notes WHERE thread_id = ?", threadId)
       this.sql.exec("DELETE FROM threads WHERE id = ?", threadId)
       this.sql.exec("DELETE FROM thread_refs WHERE thread_id = ?", threadId)
       this.sql.exec("DELETE FROM schedule WHERE kind = 'snooze' AND target = ?", threadId)
@@ -897,7 +902,7 @@ export class MailboxStore {
       .exec("SELECT * FROM drafts WHERE thread_id = ? ORDER BY updated_at", id)
       .toArray()
       .map((r) => this.toDraft(r))
-    return { thread: this.toThread(row), messages, drafts }
+    return { thread: this.toThread(row), messages, drafts, notes: this.notes(id) }
   }
 
   /** Threads and unread threads per folder, plus the number of drafts. */
@@ -1098,6 +1103,61 @@ export class MailboxStore {
       return row ? [this.toThread(row)] : []
     })
     return { hits, threads, parsed, sort }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Internal notes: for the team, never sent
+  // ---------------------------------------------------------------------------------------------
+
+  notes(threadId: string) {
+    return this.sql
+      .exec("SELECT * FROM thread_notes WHERE thread_id = ? ORDER BY created_at, id", threadId)
+      .toArray()
+      .map((r) => ({
+        id: String(r.id),
+        threadId: String(r.thread_id),
+        author: String(r.author),
+        body: String(r.body),
+        createdAt: Number(r.created_at),
+      }))
+  }
+
+  addNote(threadId: string, author: string, body: string) {
+    return this.transaction(() => {
+      if (!this.threadRow(threadId)) throw mailboxError("not_found", `No thread ${threadId}`)
+      const text = body.trim()
+      if (!text || text.length > 10_000) throw mailboxError("invalid", "A note is 1 to 10,000 characters")
+      const id = newId("nte")
+      this.sql.exec(
+        "INSERT INTO thread_notes (id, thread_id, author, body, created_at) VALUES (?, ?, ?, ?, ?)",
+        id,
+        threadId,
+        author,
+        text,
+        this.now(),
+      )
+      const notes = this.notes(threadId)
+      return {
+        note: notes.find((n) => n.id === id),
+        events: [{ type: "notes.changed", threadId, notes } as MailboxEvent],
+      }
+    })
+  }
+
+  /** Removes a note: its author, or anyone the caller says may (admins and owners). */
+  deleteNote(noteId: string, by: string, anyone: boolean) {
+    return this.transaction(() => {
+      const row = this.sql.exec("SELECT * FROM thread_notes WHERE id = ?", noteId).toArray()[0]
+      if (!row) throw mailboxError("not_found", `No note ${noteId}`)
+      if (!anyone && String(row.author) !== by)
+        throw mailboxError("forbidden", "Only a note's author, the mailbox's owner or an admin can delete it")
+      this.sql.exec("DELETE FROM thread_notes WHERE id = ?", noteId)
+      const threadId = String(row.thread_id)
+      return {
+        deleted: noteId,
+        events: [{ type: "notes.changed", threadId, notes: this.notes(threadId) } as MailboxEvent],
+      }
+    })
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -1456,6 +1516,15 @@ export class MailboxStore {
     return this.purge(ids)
   }
 
+  /** Moves colours stored as hex onto the palette: the nearest of its six. */
+  private paletteLabels() {
+    for (const row of this.sql.exec("SELECT id, color FROM labels WHERE color IS NOT NULL").toArray()) {
+      const color = String(row.color)
+      if ((LABEL_COLORS as ReadonlyArray<string>).includes(color)) continue
+      this.sql.exec("UPDATE labels SET color = ? WHERE id = ?", nearestLabelColor(color), row.id)
+    }
+  }
+
   labels(): Array<Label> {
     return this.sql
       .exec(
@@ -1471,7 +1540,7 @@ export class MailboxStore {
       .map((r) => ({
         id: String(r.id),
         name: String(r.name),
-        color: str(r.color),
+        color: str(r.color) as Label["color"],
         threads: Number(r.threads),
         unreadThreads: Number(r.unread),
         createdAt: Number(r.created_at),
@@ -1492,8 +1561,10 @@ export class MailboxStore {
 
   private checkColor(color: string | null | undefined) {
     if (color === null || color === undefined) return null
-    if (!/^#[0-9a-f]{6}$/i.test(color)) throw mailboxError("invalid", "A label color is #rrggbb")
-    return color.toLowerCase()
+    const name = color.trim().toLowerCase()
+    if (!(LABEL_COLORS as ReadonlyArray<string>).includes(name))
+      throw mailboxError("invalid", `A label color is one of ${LABEL_COLORS.join(", ")}`)
+    return name
   }
 
   createLabel(input: { readonly name: string; readonly color?: string | null | undefined }) {

@@ -381,7 +381,7 @@ describe("changing mail", () => {
     const created = await call(`${base}/labels`, {
       method: "POST",
       key: member.key,
-      json: { name: "Work", color: "#3366ff" },
+      json: { name: "Work", color: "blue" },
     })
     const label = await json<{ id: string }>(created)
     expect(
