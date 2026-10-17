@@ -385,15 +385,51 @@ export const processedEvents = sqliteTable("processed_events", {
   at: integer("at").notNull(),
 })
 
-export const automations = sqliteTable("automations", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  trigger: text("trigger", { mode: "json" }).$type<unknown>().notNull(),
-  graph: text("graph", { mode: "json" }).$type<unknown>().notNull(),
-  version: integer("version").notNull().default(1),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
-  createdAt: createdAt(),
-})
+export const automations = sqliteTable(
+  "automations",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    /** The draft's trigger (a copy of the graph's trigger node config, for indexing which automations an event starts). */
+    trigger: text("trigger", { mode: "json" }).$type<unknown>().notNull(),
+    /** The draft graph (src/automations/graph.ts); published versions are frozen in automation_versions. */
+    graph: text("graph", { mode: "json" }).$type<unknown>().notNull(),
+    /** The draft's settings: sender, topic, re-entry, cadence cap, stop events. */
+    settings: text("settings", { mode: "json" }).$type<unknown>(),
+    /** The draft's version number: one more than the last published. */
+    version: integer("version").notNull().default(1),
+    /** The version new runs enter, or null before the first publish. */
+    publishedVersion: integer("published_version"),
+    /** What starts new runs, denormalised from the published version: `event:<name>`, `created`, `segment:<id>`, `topic:<id>`, `date`. */
+    triggerKey: text("trigger_key"),
+    status: text("status", { enum: ["draft", "live", "paused"] })
+      .notNull()
+      .default("draft"),
+    /** Kept for the first schema; `status` is what counts. */
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at"),
+    updatedBy: text("updated_by"),
+  },
+  (t) => [index("automations_trigger").on(t.triggerKey, t.status)],
+)
+
+/** A published version: frozen, so a run that entered on it finishes on it. */
+export const automationVersions = sqliteTable(
+  "automation_versions",
+  {
+    automationId: text("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    graph: text("graph", { mode: "json" }).$type<unknown>().notNull(),
+    settings: text("settings", { mode: "json" }).$type<unknown>().notNull(),
+    note: text("note"),
+    publishedBy: text("published_by").notNull(),
+    publishedAt: integer("published_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.automationId, t.version] })],
+)
 
 export const automationRuns = sqliteTable(
   "automation_runs",
@@ -410,13 +446,59 @@ export const automationRuns = sqliteTable(
     state: text("state", { enum: ["running", "waiting", "completed", "exited", "failed"] }).notNull(),
     currentStep: text("current_step"),
     error: text("error"),
+    /** When a waiting run next wakes (a wait's end, or a wait_event's timeout). */
+    nextAt: integer("next_at"),
+    /** What started it: the event's data, for templates and webhooks. */
+    triggerData: text("trigger_data", { mode: "json" }).$type<Record<string, unknown> | null>(),
+    exitedBy: text("exited_by"),
     startedAt: integer("started_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
+    finishedAt: integer("finished_at"),
   },
   (t) => [
     index("automation_runs_automation").on(t.automationId, t.state),
     index("automation_runs_contact").on(t.contactId),
+    index("automation_runs_started").on(t.automationId, t.startedAt),
   ],
+)
+
+/** Every step a run took: the history the run page shows, and the node counts on the builder. */
+export const automationRunSteps = sqliteTable(
+  "automation_run_steps",
+  {
+    runId: text("run_id")
+      .notNull()
+      .references(() => automationRuns.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    automationId: text("automation_id").notNull(),
+    nodeId: text("node_id").notNull(),
+    outcome: text("outcome", {
+      enum: ["passed", "waiting", "sent", "skipped", "exited", "failed"],
+    }).notNull(),
+    port: text("port"),
+    detail: text("detail").notNull(),
+    messageId: text("message_id"),
+    at: integer("at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.runId, t.seq] }),
+    index("automation_run_steps_node").on(t.automationId, t.nodeId),
+  ],
+)
+
+/** Automation sends per contact, across every automation: what the cadence cap counts. */
+export const automationSends = sqliteTable(
+  "automation_sends",
+  {
+    id: text("id").primaryKey(),
+    contactId: text("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    automationId: text("automation_id").notNull(),
+    runId: text("run_id").notNull(),
+    at: integer("at").notNull(),
+  },
+  (t) => [index("automation_sends_contact").on(t.contactId, t.at)],
 )
 
 export const suppressions = sqliteTable("suppressions", {
