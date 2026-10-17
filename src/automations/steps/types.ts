@@ -47,9 +47,11 @@ export type SendResult =
     }
   | {
       readonly status: "skipped"
-      readonly reason: "cadence" | "suppressed" | "unsubscribed" | "quota"
+      readonly reason: "cadence" | "suppressed" | "unsubscribed"
       readonly detail: string
     }
+  /** The governor can't send it yet (pacing or the daily quota): try this step again at `retryAt`. */
+  | { readonly status: "deferred"; readonly retryAt: number; readonly detail: string }
 
 /** Where a run goes after a step. */
 export type StepOutcome =
@@ -57,6 +59,8 @@ export type StepOutcome =
   | { readonly kind: "sleep"; readonly until: number; readonly detail: string }
   | { readonly kind: "wait_event"; readonly event: string; readonly until: number; readonly detail: string }
   | { readonly kind: "exit"; readonly detail: string }
+  /** Run this same step again at `until` (a send the governor deferred). */
+  | { readonly kind: "retry"; readonly until: number; readonly detail: string }
 
 export interface StepDefinition<T extends NodeType> {
   readonly type: T

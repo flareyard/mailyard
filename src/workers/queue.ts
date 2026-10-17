@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import type * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import { AutomationTriggerJob, handleTrigger } from "../automations/runs.ts"
 import type { Env } from "../Bindings.ts"
 import { applyEvent, EmailSendingEvent } from "../domain/deliveryEvents.ts"
 import { retryDeferred } from "../domain/outbox.ts"
@@ -20,6 +21,7 @@ export const EMAIL_EVENTS_QUEUE = "mailyard-email-events"
 export const WEBHOOK_QUEUE = "mailyard-webhooks"
 export const INBOUND_QUEUE = "mailyard-inbound"
 export const MAILBOX_SEND_QUEUE = "mailyard-mailbox-send"
+export const AUTOMATION_QUEUE = "mailyard-automation-triggers"
 
 /** Every queue this Worker consumes; test/queues.test.ts checks wrangler.jsonc binds a consumer for each. */
 export const CONSUMED_QUEUES = [
@@ -28,6 +30,7 @@ export const CONSUMED_QUEUES = [
   WEBHOOK_QUEUE,
   INBOUND_QUEUE,
   MAILBOX_SEND_QUEUE,
+  AUTOMATION_QUEUE,
 ] as const
 
 const handle = <T, A>(
@@ -88,6 +91,14 @@ export const handleQueue = async (batch: MessageBatch<unknown>, env: Env) => {
           Schema.decodeUnknownOption(MailboxSendJob)(message.body),
           "mailbox send",
           (job) => dispatchDraft(job).pipe(Effect.map((outcome) => `${outcome} ${job.draftId}`)),
+        )
+      }
+      if (batch.queue === AUTOMATION_QUEUE || batch.queue.startsWith(`${AUTOMATION_QUEUE}-`)) {
+        return handle(
+          message,
+          Schema.decodeUnknownOption(AutomationTriggerJob)(message.body),
+          "automations",
+          (job) => handleTrigger(job),
         )
       }
       return Effect.logError(`queue ${batch.queue} has no consumer here`).pipe(Effect.as(message.retry()))

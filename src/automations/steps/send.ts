@@ -22,8 +22,9 @@ export const send: StepDefinition<"send"> = {
       trackOpens: c.trackOpens ?? true,
       trackClicks: c.trackClicks ?? true,
     })
-    return result.status === "sent"
-      ? { kind: "next", detail: `Sent "${result.subject}".`, messageId: result.messageId }
-      : { kind: "next", detail: `Skipped: ${result.detail}` }
+    if (result.status === "sent")
+      return { kind: "next", detail: `Sent "${result.subject}".`, messageId: result.messageId }
+    if (result.status === "deferred") return { kind: "retry", until: result.retryAt, detail: result.detail }
+    return { kind: "next", detail: `Skipped: ${result.detail}` }
   },
 }

@@ -64,7 +64,7 @@ export const contentOf = Effect.fn("campaigns.content")(function* (campaign: Cam
 })
 
 /** The footer bulk mail must have, added when the content doesn't already link to unsubscribe. */
-const footer = (input: {
+export const footer = (input: {
   readonly reason: string
   readonly unsubscribeUrl: string
   readonly preferencesUrl: string
@@ -74,13 +74,13 @@ const footer = (input: {
   text: `\n\n--\n${input.reason}\nUnsubscribe: ${input.unsubscribeUrl}\nManage preferences: ${input.preferencesUrl}${input.postalAddress ? `\n${input.postalAddress}` : ""}\n`,
 })
 
-const withPreheader = (html: string, preheader: string | null) => {
+export const withPreheader = (html: string, preheader: string | null) => {
   if (!preheader) return html
   const hidden = `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preheader)}</div>`
   return /<body[^>]*>/i.test(html) ? html.replace(/<body[^>]*>/i, (m) => `${m}${hidden}`) : `${hidden}${html}`
 }
 
-const withFooter = (html: string, block: string) =>
+export const withFooter = (html: string, block: string) =>
   /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${block}</body>`) : `${html}${block}`
 
 /** Everything a campaign's messages share, loaded once per batch rather than once per recipient. */

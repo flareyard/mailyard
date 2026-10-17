@@ -12,8 +12,17 @@ import {
   setPaused,
   updateAutomation,
 } from "../automations/automations.ts"
+import {
+  automationWebhookSecret,
+  enterAutomation,
+  exitRun,
+  getRun,
+  listRuns,
+  retryRun,
+} from "../automations/runs.ts"
 import { Conflict, InvalidRequest, MailApi, NotFound, NotReady } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
+import { originOf } from "./mailHandlers.ts"
 
 const notFound = (e: { readonly id: string }) =>
   Effect.fail(new NotFound({ message: `Automation ${e.id} not found.` }))
@@ -74,9 +83,11 @@ export const AutomationsHandlers = HttpApiBuilder.group(
           }),
         ),
       ),
-      publish: p(({ params, payload }) =>
+      publish: p(({ params, payload, request }) =>
         requireScope("admin").pipe(
-          Effect.flatMap((caller) => publishAutomation(params.id, payload.note ?? null, caller.keyId)),
+          Effect.flatMap((caller) =>
+            publishAutomation(params.id, payload.note ?? null, caller.keyId, originOf(request)),
+          ),
           Effect.catchTags({
             AutomationNotFound: notFound,
             AutomationNotReady: (e) =>
@@ -116,12 +127,74 @@ export const AutomationsHandlers = HttpApiBuilder.group(
           }),
         ),
       ),
+      enter: p(({ params, payload }) =>
+        requireScope("admin").pipe(
+          Effect.andThen(getAutomation(params.id)),
+          Effect.andThen(enterAutomation(params.id, payload.contactId, payload.data ?? null)),
+          Effect.map((result) => ({ result })),
+          Effect.catchTags({ AutomationNotFound: notFound, DatabaseError: Effect.die }),
+        ),
+      ),
+      runs: p(({ params, query }) =>
+        requireScope("read").pipe(
+          Effect.andThen(getAutomation(params.id)),
+          Effect.andThen(listRuns(params.id, query)),
+          Effect.catchTags({ AutomationNotFound: notFound, DatabaseError: Effect.die }),
+        ),
+      ),
+      webhookSecret: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.andThen(getAutomation(params.id)),
+          Effect.andThen(automationWebhookSecret(params.id)),
+          Effect.map((secret) => ({ secret })),
+          Effect.catchTags({ AutomationNotFound: notFound, DatabaseError: Effect.die }),
+        ),
+      ),
       resume: p(({ params }) =>
         requireScope("admin").pipe(
           Effect.flatMap((caller) => setPaused(params.id, false, caller.keyId)),
           Effect.catchTags({
             AutomationNotFound: notFound,
             AutomationInvalid: invalid,
+            DatabaseError: Effect.die,
+          }),
+        ),
+      ),
+    })
+  }),
+)
+
+const runNotFound = (e: { readonly id: string }) =>
+  Effect.fail(new NotFound({ message: `Run ${e.id} not found.` }))
+
+export const RunsHandlers = HttpApiBuilder.group(
+  MailApi,
+  "runs",
+  Effect.fn(function* (handlers) {
+    const p = provideTo(yield* appContext)
+    return handlers.handleAll({
+      get: p(({ params }) =>
+        requireScope("read").pipe(
+          Effect.andThen(getRun(params.id)),
+          Effect.catchTags({ RunNotFound: runNotFound, DatabaseError: Effect.die }),
+        ),
+      ),
+      exit: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => exitRun(params.id, caller.keyId)),
+          Effect.catchTags({
+            RunNotFound: runNotFound,
+            RunInvalid: (e) => Effect.fail(new Conflict({ message: e.message })),
+            DatabaseError: Effect.die,
+          }),
+        ),
+      ),
+      retry: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => retryRun(params.id, caller.keyId)),
+          Effect.catchTags({
+            RunNotFound: runNotFound,
+            RunInvalid: (e) => Effect.fail(new Conflict({ message: e.message })),
             DatabaseError: Effect.die,
           }),
         ),
