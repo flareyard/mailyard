@@ -21,22 +21,56 @@ export const crossFieldProblems = (m: Manifest): ReadonlyArray<string> => {
     problems.push(`Secret ${name} is listed more than once.`)
   }
 
-  // Mailyard's proposed v1.2 settings (see Manifest.ts).
+  // v1.2 settings: one name each, no clash with secrets, `when` pointing back at an enum or boolean.
   const settings = m.settings ?? []
-  const names = settings.map((s) => s.name)
-  for (const name of new Set(names.filter((s, i) => names.indexOf(s) !== i))) {
+  const settingNames = settings.map((x) => x.name)
+  for (const name of new Set(settingNames.filter((s, i) => settingNames.indexOf(s) !== i))) {
     problems.push(`Setting ${name} is listed more than once.`)
   }
-  for (const s of settings) {
-    if (s.when && !names.includes(s.when.setting))
-      problems.push(`Setting ${s.name} depends on ${s.when.setting}, which isn't a setting.`)
-    if (s.type === "integer" && (s.default < s.min || s.default > s.max || s.min > s.max))
-      problems.push(`Setting ${s.name}: default ${s.default} isn't within ${s.min}–${s.max}.`)
-    if (s.type === "enum" && !s.options.some((o) => o.value === s.default))
-      problems.push(`Setting ${s.name}: default ${s.default} isn't one of its options.`)
+  for (const name of settingNames.filter((n) => secrets.includes(n))) {
+    problems.push(`${name} is both a setting and a secret; a Worker binding can only be one.`)
   }
-  if (m.status && !secrets.includes(m.status.auth.bearer))
-    problems.push(`status.auth.bearer names ${m.status.auth.bearer}, which isn't a secret.`)
+  settings.forEach((setting, index) => {
+    if (
+      setting.type === "integer" &&
+      (setting.default < setting.min || setting.default > setting.max || setting.min > setting.max)
+    ) {
+      problems.push(
+        `Setting ${setting.name}: default ${setting.default} isn't within ${setting.min}–${setting.max}.`,
+      )
+    }
+    if (setting.type === "enum" && !setting.options.some((o) => o.value === setting.default)) {
+      problems.push(`Setting ${setting.name}: default ${setting.default} isn't one of its options.`)
+    }
+    if (!setting.when) return
+    const target = settings.slice(0, index).find((x) => x.name === setting.when?.setting)
+    if (!target) {
+      problems.push(
+        `Setting ${setting.name}: when.setting ${setting.when.setting} must be a setting listed before it.`,
+      )
+    } else if (target.type !== "enum" && target.type !== "boolean") {
+      problems.push(`Setting ${setting.name}: when.setting ${target.name} must be an enum or a boolean.`)
+    } else if (target.type === "enum" && !target.options.some((o) => o.value === setting.when?.equals)) {
+      problems.push(`Setting ${setting.name}: ${setting.when.equals} isn't an option of ${target.name}.`)
+    } else if (
+      target.type === "boolean" &&
+      setting.when.equals !== "true" &&
+      setting.when.equals !== "false"
+    ) {
+      problems.push(`Setting ${setting.name}: when.equals for a boolean is "true" or "false".`)
+    }
+  })
+
+  // The status route is read with a value the platform generated, so it can hold it sealed.
+  if (m.status) {
+    const bearer = m.secrets.find((x) => x.name === m.status?.auth.bearer)
+    if (!bearer) problems.push(`status.auth.bearer ${m.status.auth.bearer} isn't a declared secret.`)
+    else if (!("generate" in bearer) || bearer.generate === "keypair-ed25519") {
+      problems.push(
+        `status.auth.bearer ${bearer.name} must be a generated random secret, so the platform holds its value.`,
+      )
+    }
+  }
 
   if (m.domain.suggest && !m.domain.supported)
     problems.push("domain.suggest is set but domain.supported is false.")

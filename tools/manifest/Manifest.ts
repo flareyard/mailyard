@@ -36,11 +36,9 @@ export const Secret = Schema.Union([
 ])
 
 /**
- * Mailyard's proposal for contract v1.2 (sent to the platform, 2026-10-17): the platform ignores
- * these until it adopts them, since a manifest's unknown fields are dropped when decoded.
- *
- * A setting is a Worker `var` the platform sets at deploy and changes with an update; the install
- * and settings forms render from this list. `when` shows a field only while another has that value.
+ * Contract v1.2 (proposed by Mailyard, adopted 2026-10-17). A setting is a Worker `var` the platform sets
+ * at deploy and changes with an update; the install and settings forms render from this list. `when`
+ * shows a field only while another setting has that value.
  */
 const SettingBase = {
   name: SecretName,
@@ -81,6 +79,7 @@ export const CostUnit = Schema.Struct({
   source: Schema.String.check(Schema.isPattern(/^https:\/\//)),
   measuredAt: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)),
 })
+export type CostUnit = typeof CostUnit.Type
 
 export const Manifest = Schema.Struct({
   $schema: Schema.optionalKey(Schema.String),
@@ -101,17 +100,19 @@ export const Manifest = Schema.Struct({
     suggest: Schema.optionalKey(Slug),
   }),
   health: Schema.String.check(Schema.isPattern(/^\/[A-Za-z0-9/_-]*$/)),
-  /** Proposed v1.2: the authenticated status route the dashboard reads with the generated admin key. */
+  /** v1.2: an authenticated route with more than health, read by the dashboard with a generated secret. */
   status: Schema.optionalKey(
     Schema.Struct({
       path: Schema.String.check(Schema.isPattern(/^\/[A-Za-z0-9/_-]*$/)),
       auth: Schema.Struct({ bearer: SecretName }),
     }),
   ),
+  /** v1.2: settings the user picks at install and can change later. */
   settings: Schema.optionalKey(Schema.Array(Setting)),
   cost: Schema.Struct({
     /** Plain words, not a number we invented: "0–1 above the $5 plan" or "unmeasured". */
     typicalMonthlyUsd: Schema.NonEmptyString,
+    /** v1.2: the unit prices behind the estimate, each with its pricing page and date. */
     units: Schema.optionalKey(Schema.Array(CostUnit)),
   }),
   upgrade: Schema.Struct({

@@ -25,7 +25,7 @@ bun run build    # wrangler dry-run build
 `bun run release` builds `flareyard-release.json` with the platform's CLI. That's `packages/manifest/src/release-cli.ts` in a checkout of flareyard/flareyard, at `../flareyard` unless `FLAREYARD_DIR` says otherwise. The release holds the manifest, the bindings mapped to named resources, and the module `wrangler deploy --dry-run` emits. The platform contract is `docs/apps-contract.md` in that repo.
 
 - `health` is `/healthz`. It answers without a key, reads the database and calls nothing outside, and the platform waits for its 200 after every deploy. `/v1/health` is the fuller status (sending, domains, quota). It needs the admin key, so the manifest offers it as `status` for the platform's dashboard.
-- `settings`, `status` and `cost.units` are Mailyard's proposal for contract v1.2. The platform drops them from a release until it adopts them. Each setting is a Worker var: `MAILYARD_UNDO_SECONDS`, `MAILYARD_TRACK_OPENS`, `MAILYARD_TRACK_CLICKS`, `MAILYARD_CLASSIFIER` with `CLASSIFIER_URL` and `CLASSIFIER_MODEL`, and the SMTP fallback's host, port and username.
+- `settings`, `status` and `cost.units` are contract v1.2 (flareyard/flareyard#15). Each setting is a Worker var the platform sets at install and changes with an update: `MAILYARD_UNDO_SECONDS`, `MAILYARD_TRACK_OPENS`, `MAILYARD_TRACK_CLICKS`, `MAILYARD_CLASSIFIER` with `CLASSIFIER_URL` and `CLASSIFIER_MODEL`, and the SMTP fallback's host, port and username. The platform reads `status` with the generated `ADMIN_KEY`.
 - `bun run manifest`, part of `bun run check`, checks that every binding's scope is required, that every queue consumer has a dead-letter queue, and that `wrangler.jsonc` names resources without ids.
 
 ## Deploying by hand
