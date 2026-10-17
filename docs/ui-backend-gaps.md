@@ -252,11 +252,11 @@ The mailbox socket `ws /v1/mailboxes/:id/live` is **built**, with the events hel
 
 | # | Endpoint / field | Screens | Proposed shape |
 |---|---|---|---|
-| M2.1 | **Operator support** in `q` | `search`, `search-operators`, `search-empty` | `GET …/search?q=` exists, but its description doesn't say which operators the backend parses. The designs use `from: to: subject: has:attachment label: is:unread is:starred before: after: in:`. Confirm each, or return `parsed: { operators: [{ key, value }], terms: string[] }` so the chips match what the server applied. |
-| M2.2 | Highlights | Results | Not a gap: the excerpt marks matches with `\u0002…\u0003`. The screens render those as `<mark class="hl">`. Subjects aren't highlighted; proposed: `subjectHighlighted` with the same marks. |
+| M2.1 | **Operator support** in `q` | `search`, `search-operators`, `search-empty` | **Built** (HAL-3406): the `q` description lists every operator (from:, to:, cc:, subject:, body:, in:, label:, is:unread, is:starred, has:attachment, before:, after:), and the response says what it understood: `parsed: { operators, terms, unsupported }`. Unknown operators are searched as words and listed in `unsupported`. |
+| M2.2 | Highlights | Results | **Built** (HAL-3406): hits have `subject` (plain) and `subjectHighlighted` (matches in `\u0002…\u0003`, as `excerpt`). |
 | M2.3 | `GET /v1/search/mail?q=` (all mailboxes) | `search-all` | Not built. `{ query, groups: [{ mailboxId, address, hits: SearchHit[], threads: Thread[] }] }`, limited to the mailboxes the caller can read. |
-| M2.4 | Smart folders | “Save as smart folder” | `POST /v1/mailboxes/{id}/smart-folders { name, q }` → `{ id, name, q, threads, unreadThreads }`, listed in `/folders` as `smartFolders`. |
-| M2.5 | Sort | “newest first” | The spec says results are ranked by recency, but `hits[].rank` is a text-match rank. Proposed: `sort=recent\|relevance`, defaulting to `recent`. |
+| M2.4 | Smart folders | “Save as smart folder” | **Built** (HAL-3406): `GET/POST …/smart-folders`, `PATCH/DELETE …/smart-folders/{id}`, `{ id, name, q, createdAt }`, listed in `GET …/folders` as `smartFolders`. Opening one is `GET …/search?q=<q>`. No counts per smart folder: a count would be a search on every folder pane load. |
+| M2.5 | Sort | “newest first” | **Built** (HAL-3406): `sort=recent\|relevance`, defaulting to recent; the response echoes `sort`. |
 
 ## M3. Labels
 

@@ -237,8 +237,9 @@ export interface SearchHit {
   readonly folder: Folder
   readonly from: Party | null
   readonly receivedAt: number
-  /** Subject and body excerpt with matches wrapped in HIGHLIGHT_START / HIGHLIGHT_END. */
   readonly subject: string
+  /** The subject and body excerpt with matches wrapped in HIGHLIGHT_START / HIGHLIGHT_END. */
+  readonly subjectHighlighted: string
   readonly excerpt: string
   readonly rank: number
 }

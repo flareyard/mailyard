@@ -235,7 +235,8 @@ export const MailHandlers = HttpApiBuilder.group(
           const folders = yield* callMailbox(params.id, (s) => s.folderCounts())
           const labels = yield* callMailbox(params.id, (s) => s.labels())
           const views = yield* callMailbox(params.id, (s) => s.views(caller.keyId))
-          return { folders, labels, views }
+          const smartFolders = yield* callMailbox(params.id, (s) => s.smartFolders())
+          return { folders, labels, smartFolders, views }
         }).pipe(mailErrors),
       ),
       emptyFolder: p(({ params }) =>
@@ -350,7 +351,39 @@ export const MailHandlers = HttpApiBuilder.group(
       search: p(({ params, query }) =>
         Effect.gen(function* () {
           yield* access(params.id, "read")
-          return yield* callMailbox(params.id, (s) => s.search(query.q, { limit: query.limit ?? 25 }))
+          return yield* callMailbox(params.id, (s) =>
+            s.search(query.q, { limit: query.limit ?? 25, sort: query.sort ?? "recent" }),
+          )
+        }).pipe(mailErrors),
+      ),
+      smartFolders: p(({ params }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "read")
+          return { smartFolders: yield* callMailbox(params.id, (s) => s.smartFolders()) }
+        }).pipe(mailErrors),
+      ),
+      createSmartFolder: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "write")
+          const saved = yield* callMailbox(params.id, (s) => s.saveSmartFolder(payload))
+          if (!saved) return yield* new NotFound({ message: "The smart folder vanished." })
+          return saved
+        }).pipe(mailErrors),
+      ),
+      updateSmartFolder: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "write")
+          const saved = yield* callMailbox(params.id, (s) =>
+            s.saveSmartFolder({ ...payload, id: params.folderId }),
+          )
+          if (!saved) return yield* new NotFound({ message: `Smart folder ${params.folderId} not found.` })
+          return saved
+        }).pipe(mailErrors),
+      ),
+      deleteSmartFolder: p(({ params }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "write")
+          return yield* callMailbox(params.id, (s) => s.deleteSmartFolder(params.folderId))
         }).pipe(mailErrors),
       ),
       message: p(({ params, request }) =>

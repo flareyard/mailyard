@@ -1246,6 +1246,13 @@ export const CreateDraftPayload = Schema.Struct({
 })
 export type CreateDraftPayload = typeof CreateDraftPayload.Type
 
+const SmartFolderSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  q: Schema.String.annotate({ description: "The search it saves; open it with GET …/search?q=." }),
+  createdAt: Schema.Number,
+})
+
 export class MailApiGroup extends HttpApiGroup.make("mail")
   .add(
     HttpApiEndpoint.get("folders", "/v1/mailboxes/:id/folders", {
@@ -1253,6 +1260,7 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
       success: Schema.Struct({
         folders: Schema.Array(FolderCountSchema),
         labels: Schema.Array(LabelSchema),
+        smartFolders: Schema.Array(SmartFolderSchema),
         views: Schema.Struct({
           starred: Schema.Number,
           assignedToMe: Schema.Number.annotate({ description: "Conversations assigned to the calling key." }),
@@ -1318,7 +1326,14 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
     }),
     HttpApiEndpoint.get("search", "/v1/mailboxes/:id/search", {
       params: MailboxParam,
-      query: { q: Schema.String, limit: Limit },
+      query: {
+        q: Schema.String.annotate({
+          description:
+            'Words (prefix matches), "phrases", and operators: from:, to:, cc:, subject:, body:, in:<folder>, label:, is:unread, is:starred, has:attachment, before:YYYY-MM-DD, after:YYYY-MM-DD (inclusive). Unknown operators are searched as words and listed in parsed.unsupported.',
+        }),
+        sort: Schema.optionalKey(Schema.Literals(["recent", "relevance"])),
+        limit: Limit,
+      },
       success: Schema.Struct({
         hits: Schema.Array(
           Schema.Struct({
@@ -1328,12 +1343,45 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
             from: Schema.NullOr(PartySchema),
             receivedAt: Schema.Number,
             subject: Schema.String,
+            subjectHighlighted: Schema.String.annotate({
+              description: "The subject with matches wrapped in U+0002 … U+0003, as excerpt is.",
+            }),
             excerpt: Schema.String,
             rank: Schema.Number,
           }),
         ),
         threads: Schema.Array(ThreadSchema),
+        parsed: Schema.Struct({
+          operators: Schema.Array(Schema.Struct({ op: Schema.String, value: Schema.String })),
+          terms: Schema.Array(Schema.String),
+          unsupported: Schema.Array(Schema.Struct({ op: Schema.String, value: Schema.String })),
+        }).annotate({
+          description: "What the query was understood as, for the search bar to show as chips.",
+        }),
+        sort: Schema.Literals(["recent", "relevance"]),
       }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("smartFolders", "/v1/mailboxes/:id/smart-folders", {
+      params: MailboxParam,
+      success: Schema.Struct({ smartFolders: Schema.Array(SmartFolderSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("createSmartFolder", "/v1/mailboxes/:id/smart-folders", {
+      params: MailboxParam,
+      payload: Schema.Struct({ name: Schema.String, q: Schema.String }),
+      success: SmartFolderSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.patch("updateSmartFolder", "/v1/mailboxes/:id/smart-folders/:folderId", {
+      params: { id: Schema.String, folderId: Schema.String },
+      payload: Schema.Struct({ name: Schema.String, q: Schema.String }),
+      success: SmartFolderSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("deleteSmartFolder", "/v1/mailboxes/:id/smart-folders/:folderId", {
+      params: { id: Schema.String, folderId: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
       error: MailErrors,
     }),
     HttpApiEndpoint.get("message", "/v1/mailboxes/:id/messages/:messageId", {

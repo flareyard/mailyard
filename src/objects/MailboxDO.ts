@@ -260,8 +260,20 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.responseTimes(input)
   }
 
-  search(query: string, options: { readonly limit?: number } = {}) {
+  search(query: string, options: { readonly limit?: number; readonly sort?: "recent" | "relevance" } = {}) {
     return this.store.search(query, options)
+  }
+
+  smartFolders() {
+    return this.store.smartFolders()
+  }
+
+  async saveSmartFolder(input: { readonly id?: string; readonly name: string; readonly q: string }) {
+    return this.store.saveSmartFolder(input)
+  }
+
+  async deleteSmartFolder(id: string) {
+    return this.store.deleteSmartFolder(id)
   }
 
   async updateMessages(ids: ReadonlyArray<string>, patch: MessagePatch) {

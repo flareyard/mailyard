@@ -1008,18 +1008,21 @@ export class MailboxStore {
    * Full-text search over subject, sender, recipients and body, best match first. Trash and spam are
    * left out unless the query names them with `in:`. Matches are wrapped in HIGHLIGHT_START/END.
    */
-  search(query: string, options: { readonly limit?: number } = {}) {
+  search(query: string, options: { readonly limit?: number; readonly sort?: "recent" | "relevance" } = {}) {
     const limit = clampLimit(options.limit, 25)
-    const { match, filters } = parseSearch(query)
+    const sort = options.sort ?? "recent"
+    const { match, filters, parsed } = parseSearch(query)
     if (
       !match &&
       !filters.folder &&
       !filters.labelName &&
       !filters.unread &&
       !filters.starred &&
-      !filters.hasAttachment
+      !filters.hasAttachment &&
+      filters.before === null &&
+      filters.after === null
     ) {
-      return { hits: [] as Array<SearchHit>, threads: [] as Array<ThreadSummary> }
+      return { hits: [] as Array<SearchHit>, threads: [] as Array<ThreadSummary>, parsed, sort }
     }
     const where: Array<string> = []
     const args: Array<SqlStorageValue> = []
@@ -1038,7 +1041,15 @@ export class MailboxStore {
     if (filters.unread) where.push("m.seen = 0")
     if (filters.starred) where.push("m.starred = 1")
     if (filters.hasAttachment) where.push("m.has_attachments = 1")
-    const select = `m.id, m.thread_id, m.folder, m.from_name, m.from_address, m.received_at`
+    if (filters.before !== null) {
+      where.push("m.received_at < ?")
+      args.push(filters.before)
+    }
+    if (filters.after !== null) {
+      where.push("m.received_at >= ?")
+      args.push(filters.after)
+    }
+    const select = `m.id, m.thread_id, m.folder, m.from_name, m.from_address, m.received_at, m.subject`
     const rows = match
       ? this.sql
           .exec(
@@ -1048,7 +1059,7 @@ export class MailboxStore {
                bm25(search, ${SEARCH_WEIGHTS.join(", ")}) AS rank
              FROM search JOIN messages m ON m.rowid = search.rowid
              WHERE search MATCH ? AND ${where.join(" AND ")}
-             ORDER BY rank, m.received_at DESC LIMIT ?`,
+             ORDER BY ${sort === "relevance" ? "rank, m.received_at DESC" : "m.received_at DESC, rank"} LIMIT ?`,
             HIGHLIGHT_START,
             HIGHLIGHT_END,
             HIGHLIGHT_START,
@@ -1075,7 +1086,8 @@ export class MailboxStore {
         folder: String(r.folder) as Folder,
         from: address ? { name: str(r.from_name), address } : null,
         receivedAt: Number(r.received_at),
-        subject: String(r.subject_hl),
+        subject: String(r.subject),
+        subjectHighlighted: String(r.subject_hl),
         excerpt: String(r.excerpt),
         rank: Number(r.rank),
       }
@@ -1085,7 +1097,69 @@ export class MailboxStore {
       const row = this.threadRow(id)
       return row ? [this.toThread(row)] : []
     })
-    return { hits, threads }
+    return { hits, threads, parsed, sort }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Smart folders: saved searches
+  // ---------------------------------------------------------------------------------------------
+
+  smartFolders() {
+    return this.sql
+      .exec("SELECT * FROM smart_folders ORDER BY position, created_at")
+      .toArray()
+      .map((r) => ({
+        id: String(r.id),
+        name: String(r.name),
+        q: String(r.q),
+        createdAt: Number(r.created_at),
+      }))
+  }
+
+  /** Creates or renames a saved search. The query must be one search understands, at most 50 a mailbox. */
+  saveSmartFolder(input: { readonly id?: string | undefined; readonly name: string; readonly q: string }) {
+    return this.transaction(() => {
+      const name = input.name.trim()
+      const q = input.q.trim()
+      if (!name || name.length > 60)
+        throw mailboxError("invalid", "A smart folder's name is 1 to 60 characters")
+      if (!q || q.length > 500)
+        throw mailboxError("invalid", "A smart folder needs a search, at most 500 characters")
+      const parsed = parseSearch(q)
+      if (!parsed.match && Object.values(parsed.filters).every((v) => v === null || v === false))
+        throw mailboxError("invalid", "That search has nothing to look for")
+      const clash = this.sql
+        .exec("SELECT id FROM smart_folders WHERE name = ? COLLATE NOCASE AND id != ?", name, input.id ?? "")
+        .toArray()[0]
+      if (clash) throw mailboxError("label_exists", `A smart folder named "${name}" already exists`)
+      if (input.id) {
+        const updated = this.sql
+          .exec("UPDATE smart_folders SET name = ?, q = ? WHERE id = ? RETURNING id", name, q, input.id)
+          .toArray()
+        if (updated.length === 0) throw mailboxError("not_found", `No smart folder ${input.id}`)
+        return this.smartFolders().find((f) => f.id === input.id)
+      }
+      const count = Number(this.sql.exec<{ n: number }>("SELECT count(*) AS n FROM smart_folders").one().n)
+      if (count >= 50) throw mailboxError("invalid", "A mailbox has at most 50 smart folders")
+      const id = newId("sf")
+      this.sql.exec(
+        "INSERT INTO smart_folders (id, name, q, position, created_at) VALUES (?, ?, ?, ?, ?)",
+        id,
+        name,
+        q,
+        count,
+        this.now(),
+      )
+      return this.smartFolders().find((f) => f.id === id)
+    })
+  }
+
+  deleteSmartFolder(id: string) {
+    return this.transaction(() => {
+      const gone = this.sql.exec("DELETE FROM smart_folders WHERE id = ? RETURNING id", id).toArray()
+      if (gone.length === 0) throw mailboxError("not_found", `No smart folder ${id}`)
+      return { deleted: id }
+    })
   }
 
   // ---------------------------------------------------------------------------------------------

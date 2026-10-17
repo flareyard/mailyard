@@ -212,11 +212,70 @@ describe("reading mail", () => {
   it("searches the mailbox", async () => {
     const { sam, base } = await setup()
     await receive(alternative, sam.address)
-    const result = await json<{ hits: Array<{ subject: string }>; threads: unknown[] }>(
-      await call(`${base}/search?q=${encodeURIComponent("from:ada engine")}`, { key: viewer.key }),
-    )
+    const result = await json<{
+      hits: Array<{ subject: string; subjectHighlighted: string }>
+      threads: unknown[]
+      parsed: { operators: Array<{ op: string; value: string }>; terms: Array<string> }
+    }>(await call(`${base}/search?q=${encodeURIComponent("from:ada engine")}`, { key: viewer.key }))
     expect(result.hits).toHaveLength(1)
-    expect(result.hits[0]?.subject).toBe(`Re: ${HIGHLIGHT_START}Engine${HIGHLIGHT_END} design notes`)
+    expect(result.hits[0]?.subjectHighlighted).toBe(
+      `Re: ${HIGHLIGHT_START}Engine${HIGHLIGHT_END} design notes`,
+    )
+    expect(result.hits[0]?.subject).toBe("Re: Engine design notes")
+    expect(result.parsed).toEqual({
+      operators: [{ op: "from", value: "ada" }],
+      terms: ["engine"],
+      unsupported: [],
+    })
+
+    // Smart folders: saved searches beside the folders.
+    const saved = await call(`${base}/smart-folders`, {
+      method: "POST",
+      key: member.key,
+      json: { name: "From Ada", q: "from:ada" },
+    })
+    expect(saved.status).toBe(200)
+    const folder = await json<{ id: string; name: string; q: string }>(saved)
+    expect(
+      (
+        await call(`${base}/smart-folders`, {
+          method: "POST",
+          key: member.key,
+          json: { name: "from ada", q: "x" },
+        })
+      ).status,
+    ).toBe(409)
+    expect(
+      (
+        await call(`${base}/smart-folders`, {
+          method: "POST",
+          key: member.key,
+          json: { name: "Empty", q: "   " },
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (await call(`${base}/smart-folders`, { method: "POST", key: viewer.key, json: { name: "V", q: "x" } }))
+        .status,
+    ).toBe(403)
+    const listed = await json<{ smartFolders: Array<{ id: string }> }>(
+      await call(`${base}/folders`, { key: viewer.key }),
+    )
+    expect(listed.smartFolders.map((f) => f.id)).toEqual([folder.id])
+    const renamed = await json<{ name: string }>(
+      await call(`${base}/smart-folders/${folder.id}`, {
+        method: "PATCH",
+        key: member.key,
+        json: { name: "Ada", q: "from:ada is:unread" },
+      }),
+    )
+    expect(renamed.name).toBe("Ada")
+    expect(
+      (await call(`${base}/smart-folders/${folder.id}`, { method: "DELETE", key: member.key })).status,
+    ).toBe(200)
+    expect(
+      (await call(`${base}/smart-folders/${folder.id}`, { method: "DELETE", key: member.key })).status,
+    ).toBe(404)
   })
 
   it("keeps out keys that aren't members, and viewers out of anything that changes the mailbox", async () => {
