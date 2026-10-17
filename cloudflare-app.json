@@ -55,6 +55,10 @@
       "generate": "random-32"
     },
     {
+      "name": "FILE_SIGNING_KEY",
+      "generate": "random-32"
+    },
+    {
       "name": "DEFAULT_FROM",
       "ask": "Sender used when a send names none, e.g. \"Acme <hello@acme.com>\"",
       "optional": true

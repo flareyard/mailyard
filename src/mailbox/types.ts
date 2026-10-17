@@ -99,6 +99,8 @@ export interface ThreadSummary {
   /** What lists sort by: the last arrival, or the moment a snooze ended if later. */
   readonly sortAt: number
   readonly snoozedUntil: number | null
+  /** The API key handling this conversation in a shared inbox, or null. */
+  readonly assignee: string | null
 }
 
 export interface Label {
@@ -124,8 +126,13 @@ export interface DraftAttachment {
   readonly size: number
 }
 
+export type ReplyMode = "reply" | "replyAll" | "forward"
+
 export interface DraftInput {
   readonly id?: string | undefined
+  readonly replyMode?: ReplyMode | null | undefined
+  /** The message this draft answers or forwards. */
+  readonly sourceMessageId?: string | null | undefined
   readonly threadId?: string | null | undefined
   readonly inReplyTo?: string | null | undefined
   readonly references?: ReadonlyArray<string> | undefined
@@ -157,6 +164,10 @@ export interface Draft {
   readonly attachments: ReadonlyArray<DraftAttachment>
   readonly status: DraftStatus
   readonly sendAt: number | null
+  readonly replyMode: ReplyMode | null
+  readonly sourceMessageId: string | null
+  /** Why the last attempt to send it failed; cleared when the draft is edited. */
+  readonly lastError: string | null
   readonly createdAt: number
   readonly updatedAt: number
 }
@@ -175,6 +186,8 @@ export interface ThreadFilter {
   readonly labelId?: string | undefined
   readonly unread?: boolean | undefined
   readonly starred?: boolean | undefined
+  /** An API key id, or "none" for unassigned conversations. */
+  readonly assignee?: string | undefined
   readonly limit?: number | undefined
   readonly cursor?: string | null | undefined
 }

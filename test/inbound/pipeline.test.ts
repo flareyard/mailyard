@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 import type { Env } from "../../src/Bindings.ts"
 import { type InboundJob, rawKeyOf } from "../../src/inbound/pipeline.ts"
+import { MAILBOX_MIGRATIONS } from "../../src/mailbox/schema.ts"
 import worker from "../../src/workers/api.ts"
 import { handleEmail } from "../../src/workers/inbound.ts"
 import attachments from "../fixtures/eml/attachments.eml?raw"
@@ -146,7 +147,7 @@ describe("email(): store, parse, file", () => {
       dmarc: "pass",
       dkim: [{ result: "pass", domain: "example.org" }],
     })
-    expect(await box(sam).schemaVersion()).toBe(2)
+    expect(await box(sam).schemaVersion()).toBe(MAILBOX_MIGRATIONS.length)
   })
 
   it("stores attachments content-addressed in R2 and lists them on the message", async () => {

@@ -42,6 +42,9 @@ export default defineConfig({
                 ADMIN_KEY: "test-admin-key",
                 MAILYARD_SENDER: "memory",
                 WEBHOOK_SIGNING_KEY: "test-webhook-signing-key",
+                FILE_SIGNING_KEY: "test-file-signing-key",
+                // The undo window, shortened so tests watch the alarm hand a send over.
+                MAILYARD_UNDO_SECONDS: "0.5",
               },
             },
           })),

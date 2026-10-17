@@ -228,7 +228,7 @@ export class MailboxStore {
   private assignThread(id: string) {
     const m = this.sql
       .exec(
-        "SELECT message_id, in_reply_to, refs, subject_key, reply_subject, headerless, sent_at FROM messages WHERE id = ?",
+        "SELECT thread_id, message_id, in_reply_to, refs, subject_key, reply_subject, headerless, sent_at FROM messages WHERE id = ?",
         id,
       )
       .one()
@@ -238,6 +238,8 @@ export class MailboxStore {
       references: parse<Array<string>>(m.refs),
     })
     const candidates = new Set<string>()
+    // Rethreading a message already in a thread (its Message-ID arrived late) merges that thread too.
+    if (m.thread_id !== null) candidates.add(String(m.thread_id))
     if (ids.length > 0) {
       for (const r of this.sql
         .exec(
@@ -398,6 +400,7 @@ export class MailboxStore {
       lastAt: Number(row.last_at),
       sortAt: Number(row.sort_at),
       snoozedUntil: num(row.snoozed_until),
+      assignee: str(row.assignee),
     }
   }
 
@@ -537,6 +540,11 @@ export class MailboxStore {
     }
     if (filter.unread) where.push("t.unread_count > 0")
     if (filter.starred) where.push("t.starred = 1")
+    if (filter.assignee === "none") where.push("t.assignee IS NULL")
+    else if (filter.assignee) {
+      where.push("t.assignee = ?")
+      args.push(filter.assignee)
+    }
     const [at, id] = filter.cursor ? filter.cursor.split(":") : []
     if (at && id) {
       where.push("(t.sort_at < ? OR (t.sort_at = ? AND t.id < ?))")
@@ -740,7 +748,7 @@ export class MailboxStore {
     this.sql.exec("DELETE FROM schedule WHERE kind = 'snooze' AND target = ?", threadId)
   }
 
-  private changed(threadIds: Iterable<string>): MailboxEvent {
+  private changed(threadIds: Iterable<string>): Extract<MailboxEvent, { type: "threads.changed" }> {
     const threads: Array<ThreadSummary> = []
     const removed: Array<string> = []
     for (const id of new Set(threadIds)) {
@@ -1042,6 +1050,7 @@ export class MailboxStore {
         .toArray()
       const events: Array<MailboxEvent> = []
       const woken: Array<string> = []
+      const dueDrafts: Array<string> = []
       for (const item of due) {
         const target = String(item.target)
         if (item.kind === "snooze") {
@@ -1059,11 +1068,14 @@ export class MailboxStore {
             target,
           )
           const draft = this.draft(target)
-          if (draft?.status === "due") events.push({ type: "draft.due", draft })
+          if (draft?.status === "due") {
+            events.push({ type: "draft.due", draft })
+            dueDrafts.push(draft.id)
+          }
         }
       }
       if (woken.length > 0) events.unshift(this.changed(woken))
-      return { ran: due.length, events }
+      return { ran: due.length, dueDrafts, events }
     })
   }
 
@@ -1087,6 +1099,9 @@ export class MailboxStore {
       attachments: parse(row.attachments),
       status: String(row.status) as Draft["status"],
       sendAt: num(row.send_at),
+      replyMode: str(row.reply_mode) as Draft["replyMode"],
+      sourceMessageId: str(row.source_message_id),
+      lastError: str(row.last_error),
       createdAt: Number(row.created_at),
       updatedAt: Number(row.updated_at),
     }
@@ -1137,16 +1152,20 @@ export class MailboxStore {
         bodyText: input.bodyText ?? existing?.bodyText ?? "",
         bodyHtml: input.bodyHtml === undefined ? (existing?.bodyHtml ?? null) : input.bodyHtml,
         attachments: input.attachments ?? existing?.attachments ?? [],
+        replyMode: input.replyMode === undefined ? (existing?.replyMode ?? null) : input.replyMode,
+        sourceMessageId:
+          input.sourceMessageId === undefined ? (existing?.sourceMessageId ?? null) : input.sourceMessageId,
       }
       this.sql.exec(
         `INSERT INTO drafts (id, thread_id, in_reply_to, refs, from_address, to_list, cc_list, bcc_list, subject,
-           body_text, body_html, attachments, status, send_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NULL, ?, ?)
+           body_text, body_html, attachments, status, send_at, created_at, updated_at, reply_mode, source_message_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NULL, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET thread_id = excluded.thread_id, in_reply_to = excluded.in_reply_to,
            refs = excluded.refs, from_address = excluded.from_address, to_list = excluded.to_list,
            cc_list = excluded.cc_list, bcc_list = excluded.bcc_list, subject = excluded.subject,
            body_text = excluded.body_text, body_html = excluded.body_html, attachments = excluded.attachments,
-           status = 'draft', send_at = NULL, updated_at = excluded.updated_at`,
+           status = 'draft', send_at = NULL, updated_at = excluded.updated_at, reply_mode = excluded.reply_mode,
+           source_message_id = excluded.source_message_id, last_error = NULL`,
         id,
         merged.threadId,
         merged.inReplyTo,
@@ -1161,6 +1180,8 @@ export class MailboxStore {
         json(merged.attachments),
         existing?.createdAt ?? now,
         now,
+        merged.replyMode,
+        merged.sourceMessageId,
       )
       this.sql.exec("DELETE FROM schedule WHERE kind = 'send' AND target = ?", id)
       const draft = this.draft(id) as Draft
@@ -1231,5 +1252,91 @@ export class MailboxStore {
         events: [{ type: "drafts.changed", drafts: [], removedDraftIds: [id] } as MailboxEvent],
       }
     })
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Shared inboxes, sending, and the mailbox's own facts
+  // ---------------------------------------------------------------------------------------------
+
+  /** Assigns conversations to an API key, or unassigns them with null. */
+  assign(threadIds: ReadonlyArray<string>, assignee: string | null) {
+    return this.transaction(() => {
+      const threads = threadIds.filter((id) => this.threadRow(id))
+      for (const id of threads) this.sql.exec("UPDATE threads SET assignee = ? WHERE id = ?", assignee, id)
+      return { updated: threads.length, events: [this.changed(threads)] }
+    })
+  }
+
+  /**
+   * Records the Message-ID a sent copy finally got. Email Service assigns it (a custom one is refused),
+   * and a send deferred on its first attempt only learns it on the retry. Rethreads, because replies
+   * will name this id.
+   */
+  setMessageId(id: string, messageId: string) {
+    return this.transaction(() => {
+      const row = this.sql.exec("SELECT message_id FROM messages WHERE id = ?", id).toArray()[0]
+      if (!row) throw mailboxError("not_found", `No message ${id}`)
+      if (row.message_id === messageId) return { changed: false, events: [] as Array<MailboxEvent> }
+      this.sql.exec("UPDATE messages SET message_id = ? WHERE id = ?", messageId, id)
+      const { threadId, merged } = this.assignThread(id)
+      const event = this.changed([threadId])
+      return {
+        changed: true,
+        events: [{ ...event, removedThreadIds: [...event.removedThreadIds, ...merged] }],
+      }
+    })
+  }
+
+  /** Puts a due draft back on the schedule, for when handing it to the sender failed. */
+  requeueDraft(id: string, at: number) {
+    return this.transaction(() => {
+      const draft = this.draft(id)
+      if (draft?.status !== "due") return { requeued: false, events: [] as Array<MailboxEvent> }
+      this.sql.exec(
+        "UPDATE drafts SET status = 'scheduled', send_at = ?, updated_at = ? WHERE id = ?",
+        at,
+        this.now(),
+        id,
+      )
+      this.sql.exec(
+        "INSERT INTO schedule (kind, target, due_at) VALUES ('send', ?, ?) ON CONFLICT (kind, target) DO UPDATE SET due_at = excluded.due_at",
+        id,
+        at,
+      )
+      return { requeued: true, events: [] as Array<MailboxEvent> }
+    })
+  }
+
+  getMeta(key: string): string | null {
+    return str(this.sql.exec("SELECT value FROM meta WHERE key = ?", key).toArray()[0]?.value)
+  }
+
+  setMeta(key: string, value: string) {
+    this.sql.exec(
+      "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+      key,
+      value,
+    )
+  }
+
+  /** A send that failed for good: the draft returns to the drafts folder with the reason. */
+  failDraft(id: string, error: string) {
+    return this.transaction(() => {
+      if (!this.draft(id)) return { events: [] as Array<MailboxEvent> }
+      this.sql.exec(
+        "UPDATE drafts SET status = 'draft', send_at = NULL, last_error = ?, updated_at = ? WHERE id = ?",
+        error.slice(0, 1000),
+        this.now(),
+        id,
+      )
+      this.sql.exec("DELETE FROM schedule WHERE kind = 'send' AND target = ?", id)
+      const draft = this.draft(id) as Draft
+      return { events: [{ type: "drafts.changed", drafts: [draft], removedDraftIds: [] } as MailboxEvent] }
+    })
+  }
+
+  /** Whether an R2 attachment key belongs to a message in this mailbox, so a draft may reuse it. */
+  hasAttachmentKey(key: string): boolean {
+    return this.sql.exec("SELECT 1 FROM attachments WHERE r2_key = ? LIMIT 1", key).toArray().length > 0
   }
 }

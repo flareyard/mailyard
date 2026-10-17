@@ -13,6 +13,7 @@ import {
   validate,
 } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { Mailboxes } from "../services/Mailboxes.ts"
 import { SendQueue } from "../services/SendQueue.ts"
 import { renderTemplate, type TemplateSource } from "../templates/render.ts"
 import { getBrand } from "./brand.ts"
@@ -65,7 +66,7 @@ const toBase64 = (bytes: Uint8Array) => {
 }
 
 /** The rendered message as stored in R2: attachments base64-encoded so it round-trips through JSON. */
-const encodeRendered = (m: Outgoing) =>
+export const encodeRendered = (m: Outgoing) =>
   JSON.stringify({ ...m, attachments: m.attachments?.map((a) => ({ ...a, content: toBase64(a.content) })) })
 
 type StoredAttachment = Omit<Attachment, "content"> & { readonly content: string }
@@ -79,7 +80,7 @@ export const decodeRendered = (json: string): Outgoing => {
     : rest
 }
 
-const renderedKey = (id: string) => `out/${id}.json`
+export const renderedKey = (id: string) => `out/${id}.json`
 
 const party = (p: Party) => (p.name ? { email: p.email, name: p.name } : { email: p.email })
 
@@ -226,7 +227,7 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
 })
 
 /** One delivery attempt; records the outcome on the row and returns the new status. */
-const attempt = Effect.fn("outbox.attempt")(function* (
+export const attempt = Effect.fn("outbox.attempt")(function* (
   id: string,
   message: Outgoing,
   previousAttempts: number,
@@ -261,8 +262,27 @@ const attempt = Effect.fn("outbox.attempt")(function* (
         .run(),
     )
     const stream = yield* database.query("messagesOut.stream", (db) =>
-      db.select({ stream: messagesOut.stream }).from(messagesOut).where(eq(messagesOut.id, id)).get(),
+      db
+        .select({
+          stream: messagesOut.stream,
+          mailboxId: messagesOut.mailboxId,
+          mailboxMessageId: messagesOut.mailboxMessageId,
+        })
+        .from(messagesOut)
+        .where(eq(messagesOut.id, id))
+        .get(),
     )
+    // A mailbox's sent copy learns its Message-ID now (a deferred first attempt filed it without one),
+    // so replies naming that id thread. Best effort: the send itself already succeeded.
+    if (stream?.mailboxId && stream.mailboxMessageId && previousAttempts > 0) {
+      yield* (yield* Mailboxes)
+        .setMessageId(stream.mailboxId, stream.mailboxMessageId, outcome.success.messageId)
+        .pipe(
+          Effect.catchCause((cause) =>
+            Effect.logError("outbox: could not update the sent copy's Message-ID", cause),
+          ),
+        )
+    }
     yield* bumpDailyStat({
       day: new Date(now).toISOString().slice(0, 10),
       stream: stream?.stream ?? "transactional",
@@ -369,4 +389,109 @@ export const countByStatus = Effect.fn("outbox.countByStatus")(function* () {
       .groupBy(messagesOut.status)
       .all(),
   )
+})
+
+/**
+ * Sends one message from a mailbox: To, Cc and Bcc together, recorded in `messages_out` under the
+ * `mailbox` stream with the sent copy's id, so delivery events and retries work as for any send.
+ * Suppressed recipients are dropped from the message rather than failing it; if none are left it is
+ * rejected. Returns the ledger id, the status, and the Message-ID Email Service assigned when sent.
+ */
+export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (input: {
+  readonly mailboxId: string
+  readonly sentCopyId: string
+  readonly apiKeyId: string | null
+  readonly message: Outgoing
+}) {
+  const database = yield* Database
+  const all = [...input.message.to, ...(input.message.cc ?? []), ...(input.message.bcc ?? [])]
+  const suppressed = new Set(
+    (yield* database.query("suppressions.forMailboxSend", (db) =>
+      db
+        .select({ email: suppressions.email })
+        .from(suppressions)
+        .where(
+          inArray(
+            suppressions.email,
+            all.map((a) => a.email.trim().toLowerCase()),
+          ),
+        )
+        .all(),
+    )).map((r) => r.email),
+  )
+  const keep = (list: ReadonlyArray<Outgoing["to"][number]> | undefined) =>
+    (list ?? []).filter((a) => !suppressed.has(a.email.trim().toLowerCase()))
+  const to = keep(input.message.to)
+  const cc = keep(input.message.cc)
+  const bcc = keep(input.message.bcc)
+  // Whoever is left keeps their field. If To emptied out, the first remaining Cc (or Bcc) moves up.
+  const envelope =
+    to.length > 0
+      ? { to, cc, bcc }
+      : cc.length > 0
+        ? { to: cc.slice(0, 1), cc: cc.slice(1), bcc }
+        : { to: bcc.slice(0, 1), cc: [], bcc: bcc.slice(1) }
+  const id = yield* (yield* Ids).next
+  const recipient = (input.message.to[0] ?? all[0])?.email ?? ""
+  const insert = (status: "queued" | "rejected", error: string | null) =>
+    database.query("messagesOut.insertMailbox", (db) =>
+      db
+        .insert(messagesOut)
+        .values({
+          id,
+          stream: "mailbox",
+          apiKeyId: input.apiKeyId,
+          recipient,
+          sender: input.message.from.email,
+          subject: input.message.subject,
+          renderedKey: renderedKey(id),
+          mailboxId: input.mailboxId,
+          mailboxMessageId: input.sentCopyId,
+          status,
+          error,
+        })
+        .run(),
+    )
+  const [first, ...restTo] = envelope.to
+  if (!first) {
+    const error = "SendSuppressed: every recipient is on the suppression list"
+    yield* insert("rejected", error)
+    return {
+      id,
+      status: "rejected" as const,
+      cfMessageId: null,
+      error,
+      suppressed: [...suppressed],
+      message: input.message,
+    }
+  }
+  const { cc: _cc, bcc: _bcc, ...base } = input.message
+  const message: Outgoing = yield* validate({
+    ...base,
+    to: [first, ...restTo],
+    ...(envelope.cc.length > 0 ? { cc: envelope.cc } : {}),
+    ...(envelope.bcc.length > 0 ? { bcc: envelope.bcc } : {}),
+  })
+  yield* (yield* BlobStore).put(
+    renderedKey(id),
+    new TextEncoder().encode(encodeRendered(message)),
+    "application/json",
+  )
+  yield* insert("queued", null)
+  const status = yield* attempt(id, message, 0)
+  const row = yield* database.query("messagesOut.cfId", (db) =>
+    db
+      .select({ cfMessageId: messagesOut.cfMessageId, error: messagesOut.error })
+      .from(messagesOut)
+      .where(eq(messagesOut.id, id))
+      .get(),
+  )
+  return {
+    id,
+    status,
+    cfMessageId: row?.cfMessageId ?? null,
+    error: row?.error ?? null,
+    suppressed: [...suppressed],
+    message,
+  }
 })

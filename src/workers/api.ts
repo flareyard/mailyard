@@ -15,9 +15,20 @@ import {
 } from "../http/handlers.ts"
 import { InboundHandlers } from "../http/inboundHandlers.ts"
 import { InsightsHandlers } from "../http/insightHandlers.ts"
+import { MailHandlers } from "../http/mailHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { appLayer } from "../layers.ts"
+import {
+  ATTACHMENT_PATH,
+  FILE_PATH,
+  handleAttachment,
+  handleFile,
+  handleRaw,
+  handleUpload,
+  RAW_PATH,
+  UPLOAD_PATH,
+} from "./files.ts"
 import { handleEmail } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
 import { handleQueue } from "./queue.ts"
@@ -38,6 +49,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     DomainsHandlers,
     MailboxesHandlers,
     IdentitiesHandlers,
+    MailHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
@@ -49,8 +61,20 @@ const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 
 export default {
   fetch: (request, env) => {
-    const live = LIVE_PATH.exec(new URL(request.url).pathname)
-    if (live?.[1]) return handleLive(request, env, decodeURIComponent(live[1]))
+    // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
+    const path = new URL(request.url).pathname
+    const d = (s: string | undefined) => decodeURIComponent(s ?? "")
+    const live = LIVE_PATH.exec(path)
+    if (live) return handleLive(request, env, d(live[1]))
+    const upload = UPLOAD_PATH.exec(path)
+    if (upload) return handleUpload(request, env, d(upload[1]))
+    const raw = RAW_PATH.exec(path)
+    if (raw && request.method === "GET") return handleRaw(request, env, d(raw[1]), d(raw[2]))
+    const attachment = ATTACHMENT_PATH.exec(path)
+    if (attachment && request.method === "GET")
+      return handleAttachment(request, env, d(attachment[1]), d(attachment[2]), d(attachment[3]))
+    const file = FILE_PATH.exec(path)
+    if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
     return handler(request)
   },
   queue: (batch, env) => handleQueue(batch, env),

@@ -1,6 +1,7 @@
 import { evictDurableObject } from "cloudflare:test"
 import { env, exports } from "cloudflare:workers"
 import { beforeAll, describe, expect, it } from "vitest"
+import { MAILBOX_MIGRATIONS } from "../../src/mailbox/schema.ts"
 import { LIVE_PROTOCOL } from "../../src/workers/live.ts"
 import { ADMIN, createKey } from "../helpers.ts"
 import { delivery } from "./deliveries.ts"
@@ -33,7 +34,7 @@ const open = (mailboxId: string, headers: Record<string, string>) =>
 /** A connected client that collects frames, so a test can wait for the next one or check none came. */
 const connect = async (
   mailboxId: string,
-  headers: Record<string, string> = { authorization: `Bearer ${reader}` },
+  headers: Record<string, string> = { authorization: `Bearer ${ADMIN}` },
 ) => {
   const response = await open(mailboxId, headers)
   expect(response.status).toBe(101)
@@ -80,9 +81,11 @@ describe("GET /v1/mailboxes/{id}/live", () => {
     expect((await open(id, {})).status).toBe(401)
     expect((await open(id, { authorization: "Bearer sk_wrong" })).status).toBe(401)
     expect((await open(id, { authorization: `Bearer ${publicKey}` })).status).toBe(403)
-    expect((await open("mbx_missing", { authorization: `Bearer ${reader}` })).status).toBe(404)
+    // A read key that isn't a member of the mailbox sees nothing.
+    expect((await open(id, { authorization: `Bearer ${reader}` })).status).toBe(403)
+    expect((await open("mbx_missing", { authorization: `Bearer ${ADMIN}` })).status).toBe(404)
     const alias = await mailbox("alias")
-    expect((await open(alias.id, { authorization: `Bearer ${reader}` })).status).toBe(404)
+    expect((await open(alias.id, { authorization: `Bearer ${ADMIN}` })).status).toBe(404)
   })
 
   it("greets with counts, then pushes each new message as exactly one frame", async () => {
@@ -93,7 +96,7 @@ describe("GET /v1/mailboxes/{id}/live", () => {
       counts: Array<{ folder: string }>
       schemaVersion: number
     }
-    expect(hello).toMatchObject({ type: "hello", schemaVersion: 2 })
+    expect(hello).toMatchObject({ type: "hello", schemaVersion: MAILBOX_MIGRATIONS.length })
     expect(hello.counts.map((c) => c.folder)).toContain("inbox")
     expect(await stub.liveConnections()).toBe(1)
 
