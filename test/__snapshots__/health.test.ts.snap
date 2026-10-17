@@ -32,8 +32,34 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "keyName": {
+            "anyOf": [
+              {
+                "type": "string",
+              },
+              {
+                "type": "null",
+              },
+            ],
+          },
           "message": {
             "type": "string",
+          },
+          "reason": {
+            "enum": [
+              "public-key",
+              "insufficient-scope",
+            ],
+            "type": "string",
+          },
+          "required": {
+            "type": "string",
+          },
+          "scopes": {
+            "items": {
+              "type": "string",
+            },
+            "type": "array",
           },
         },
         "required": [
@@ -436,6 +462,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "type": "object",
       },
+      "RateLimitedEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "RateLimited",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+          "retryAfter": {
+            "anyOf": [
+              {
+                "type": "number",
+              },
+              {
+                "enum": [
+                  "Infinity",
+                  "-Infinity",
+                  "NaN",
+                ],
+                "type": "string",
+              },
+            ],
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+          "retryAfter",
+        ],
+        "type": "object",
+      },
       "UnauthorizedEncoded": {
         "additionalProperties": false,
         "properties": {
@@ -447,6 +508,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           },
           "message": {
             "type": "string",
+          },
+          "reason": {
+            "enum": [
+              "missing",
+              "format",
+              "unknown",
+              "revoked",
+              "session-expired",
+            ],
+            "type": "string",
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "number",
+              },
+              {
+                "enum": [
+                  "Infinity",
+                  "-Infinity",
+                  "NaN",
+                ],
+                "type": "string",
+              },
+            ],
           },
         },
         "required": [
@@ -764,6 +850,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -933,6 +1029,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -1095,6 +1201,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -1299,6 +1415,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -1468,6 +1594,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -2196,6 +2332,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -5509,6 +5655,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -5608,6 +5764,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -5695,6 +5861,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -7703,6 +7879,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -11032,6 +11218,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -11440,6 +11636,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotReady",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -11535,6 +11741,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -13556,6 +13772,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -13719,6 +13945,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotReady",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -15740,6 +15976,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -16044,6 +16290,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -16257,6 +16513,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -18286,6 +18552,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -18359,6 +18635,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -18827,6 +19113,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -19416,6 +19712,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -19503,6 +19809,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -19931,6 +20247,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -20544,6 +20870,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -20718,6 +21054,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -21159,6 +21505,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -21265,6 +21621,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -21485,6 +21851,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
           "503": {
             "content": {
@@ -21936,6 +22312,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -22214,6 +22600,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -22355,6 +22751,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -22856,6 +23262,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -23296,6 +23712,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -23735,6 +24161,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -24214,6 +24650,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -24336,6 +24782,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -24768,6 +25224,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -25057,6 +25523,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -25286,6 +25762,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -25363,6 +25849,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -25612,6 +26108,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -25905,6 +26411,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -25998,6 +26514,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -26116,6 +26642,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -26197,6 +26733,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -26503,6 +27049,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -26821,6 +27377,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -27006,6 +27572,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -27397,6 +27973,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -27599,6 +28185,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -27936,6 +28532,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -28320,6 +28926,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -28659,6 +29275,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -28858,6 +29484,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -29125,6 +29761,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -29304,6 +29950,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -29441,6 +30097,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -29638,6 +30304,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -29782,6 +30458,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -29997,6 +30683,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -30074,6 +30770,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -30168,6 +30874,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -30277,6 +30993,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -30624,6 +31350,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -30998,6 +31734,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -31324,6 +32070,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -31616,6 +32372,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -31870,6 +32636,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -32126,6 +32902,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -32289,6 +33075,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -32977,6 +33773,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -33133,6 +33939,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -33627,6 +34443,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -34297,6 +35123,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -34729,6 +35565,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -35315,6 +36161,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -35416,6 +36272,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -35822,6 +36688,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -36385,6 +37261,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -36792,6 +37678,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -37304,6 +38200,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -37558,6 +38464,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -37797,6 +38713,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -38048,6 +38974,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -38274,6 +39210,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -38391,6 +39337,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -38897,6 +39853,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -39477,6 +40443,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -39978,6 +40954,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -40481,6 +41467,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -40649,6 +41645,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -40834,6 +41840,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -40935,6 +41951,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -41124,6 +42150,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -41670,6 +42706,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -42449,6 +43495,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -43095,6 +44151,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -43470,6 +44536,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -44067,6 +45143,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -44465,6 +45551,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -44655,6 +45751,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -44756,6 +45862,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -45356,6 +46472,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -45764,6 +46890,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -45913,6 +47049,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -46065,6 +47211,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -46166,6 +47322,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -46539,6 +47705,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -46729,6 +47905,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -47866,6 +49052,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -48262,6 +49458,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -48712,6 +49918,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -49324,6 +50540,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -49635,6 +50861,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -49958,6 +51194,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -50280,6 +51526,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Conflict",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -50437,6 +51693,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -50612,6 +51878,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -50908,6 +52184,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -50995,6 +52281,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -51158,6 +52454,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -51348,6 +52654,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -51685,6 +53001,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Unprocessable",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -51811,6 +53137,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -52430,6 +53766,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
           "503": {
             "content": {
               "application/json": {
@@ -52521,6 +53867,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -52620,6 +53976,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -52705,6 +54071,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -52851,6 +54227,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -53153,6 +54539,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
           "503": {
             "content": {
@@ -53651,6 +55047,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
           "503": {
             "content": {
               "application/json": {
@@ -53997,6 +55403,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -54167,6 +55583,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -54282,6 +55708,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -54453,6 +55889,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -54848,6 +56294,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -55015,6 +56471,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -55360,6 +56826,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -55701,6 +57177,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -56090,6 +57576,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -56434,6 +57930,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -56607,6 +58113,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -56973,6 +58489,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -57105,6 +58631,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -57277,6 +58813,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -57416,6 +58962,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -57607,6 +59163,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -57745,6 +59311,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "IdempotencyConflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -58053,6 +59629,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -58274,6 +59860,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -58508,6 +60104,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -58757,6 +60363,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Forbidden",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -58968,6 +60584,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -59176,6 +60802,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -59436,6 +61072,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -59719,6 +61365,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -59810,6 +61466,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [
@@ -60035,6 +61701,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "NotFound",
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
         },
         "security": [
           {
@@ -60112,6 +61788,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
           },
         },
         "security": [

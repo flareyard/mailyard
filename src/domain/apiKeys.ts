@@ -24,20 +24,36 @@ const DEFAULT_SCOPES: Record<Caller["kind"], ReadonlyArray<Scope>> = {
   public: ["track"],
 }
 
-export class InvalidKey extends Schema.TaggedError<InvalidKey>()("InvalidKey", { reason: Schema.String }) {}
+export class InvalidKey extends Schema.TaggedError<InvalidKey>()("InvalidKey", {
+  reason: Schema.String,
+  code: Schema.Literals(["missing", "format", "unknown", "revoked"]),
+  revokedAt: Schema.optionalKey(Schema.Number),
+}) {}
 
 /** Resolves a bearer token to the caller, or fails. The key itself is never stored, only its hash. */
 export const authenticate = Effect.fn("apiKeys.authenticate")(function* (token: string) {
   const { ADMIN_KEY } = yield* Bindings
   if (ADMIN_KEY && timingSafeEqual(token, ADMIN_KEY)) return ROOT
+  if (!token.trim())
+    return yield* new InvalidKey({
+      code: "missing",
+      reason: "Send your API key as Authorization: Bearer <key>.",
+    })
   const kind = token.startsWith("sk_") ? "secret" : token.startsWith("pk_") ? "public" : undefined
-  if (!kind) return yield* new InvalidKey({ reason: "Keys start with sk_ (secret) or pk_ (public)." })
+  if (!kind)
+    return yield* new InvalidKey({ code: "format", reason: "Keys start with sk_ (secret) or pk_ (public)." })
   const database = yield* Database
   const hash = yield* Effect.promise(() => sha256(token))
   const row = yield* database
     .query("apiKeys.find", (db) => db.select().from(apiKeys).where(eq(apiKeys.hash, hash)).get())
     .pipe(Effect.orDie)
-  if (!row || row.revokedAt !== null) return yield* new InvalidKey({ reason: "Unknown or revoked key." })
+  if (!row) return yield* new InvalidKey({ code: "unknown", reason: "No such key." })
+  if (row.revokedAt !== null)
+    return yield* new InvalidKey({
+      code: "revoked",
+      reason: "This key was revoked.",
+      revokedAt: row.revokedAt,
+    })
   yield* database
     .query("apiKeys.touch", (db) =>
       db.update(apiKeys).set({ lastUsedAt: Date.now() }).where(eq(apiKeys.id, row.id)).run(),

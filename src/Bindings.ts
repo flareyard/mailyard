@@ -79,6 +79,8 @@ export interface Env {
   readonly TRACK_EVENTS?: AnalyticsEngineDataset
   /** Rate limit for public signup forms, per IP and form (wrangler `ratelimits`). */
   readonly FORM_LIMITER?: RateLimit
+  /** Failed authentications per address: 20 a minute, then 429 (src/http/handlers.ts). */
+  readonly AUTH_LIMITER?: RateLimit
   /** Used when a send names no sender and its template has none. */
   readonly DEFAULT_FROM?: string
   /** Optional SMTP fallback when Email Service can't take a message. */

@@ -104,38 +104,72 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
 // Built once per isolate; Workers reuse an isolate across requests.
 const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 
+/** The Worker's routes: bytes and sockets beside the schema-first API. */
+const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> => {
+  // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
+  const path = new URL(request.url).pathname
+  const d = (s: string | undefined) => decodeURIComponent(s ?? "")
+  const live = LIVE_PATH.exec(path)
+  if (live) return handleLive(request, env, d(live[1]))
+  if (UPLOADS_PATH.test(path)) return handleUploads(request, env)
+  const upload = UPLOAD_PATH.exec(path)
+  if (upload) return handleUpload(request, env, d(upload[1]))
+  const raw = RAW_PATH.exec(path)
+  if (raw && request.method === "GET") return handleRaw(request, env, d(raw[1]), d(raw[2]))
+  const attachment = ATTACHMENT_PATH.exec(path)
+  if (attachment && request.method === "GET")
+    return handleAttachment(request, env, d(attachment[1]), d(attachment[2]), d(attachment[3]))
+  const file = FILE_PATH.exec(path)
+  if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
+  const confirm = CONFIRM_PATH.exec(path)
+  if (confirm && request.method === "GET") return handleConfirm(env, d(confirm[1]))
+  const open = OPEN_PATH.exec(path)
+  if (open && request.method === "GET") return handleOpen(request, env, d(open[1]), ctx)
+  const click = CLICK_PATH.exec(path)
+  if (click && (request.method === "GET" || request.method === "HEAD"))
+    return handleClick(request, env, d(click[1]))
+  const unsubscribe = UNSUBSCRIBE_PATH.exec(path)
+  if (unsubscribe) return handleUnsubscribe(request, env, d(unsubscribe[1]))
+  const formPage = FORM_PAGE_PATH.exec(path)
+  if (formPage) return handleFormPage(request, env, d(formPage[1]))
+  const form = FORM_SUBMIT_PATH.exec(path)
+  if (form) return handleFormSubmit(request, env, d(form[1]))
+  return handler(request)
+}
+
+/**
+ * Every response carries `x-request-id` (Cloudflare's ray id when there is one), and every error
+ * body (`{ _tag, … }` from the API, `{ error }` from the raw routes) the same `requestId`, so a
+ * person can quote it and the logs can find it.
+ */
+const withRequestId = async (request: Request, respond: () => Response | Promise<Response>) => {
+  const requestId = request.headers.get("cf-ray") ?? crypto.randomUUID()
+  const response = await respond()
+  // A WebSocket upgrade's response can't be rebuilt.
+  if (response.status === 101 || response.webSocket) return response
+  const headers = new Headers(response.headers)
+  headers.set("x-request-id", requestId)
+  if (response.status >= 400 && (headers.get("content-type") ?? "").includes("application/json")) {
+    const body = (await response.json().catch(() => null)) as Record<string, unknown> | null
+    if (body && typeof body === "object") {
+      if (response.status >= 500)
+        console.error(
+          `request ${requestId} failed with ${response.status}`,
+          JSON.stringify(body).slice(0, 500),
+        )
+      headers.delete("content-length")
+      return new Response(JSON.stringify({ ...body, requestId }), {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      })
+    }
+  }
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
+}
+
 export default {
-  fetch: (request, env, ctx) => {
-    // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
-    const path = new URL(request.url).pathname
-    const d = (s: string | undefined) => decodeURIComponent(s ?? "")
-    const live = LIVE_PATH.exec(path)
-    if (live) return handleLive(request, env, d(live[1]))
-    if (UPLOADS_PATH.test(path)) return handleUploads(request, env)
-    const upload = UPLOAD_PATH.exec(path)
-    if (upload) return handleUpload(request, env, d(upload[1]))
-    const raw = RAW_PATH.exec(path)
-    if (raw && request.method === "GET") return handleRaw(request, env, d(raw[1]), d(raw[2]))
-    const attachment = ATTACHMENT_PATH.exec(path)
-    if (attachment && request.method === "GET")
-      return handleAttachment(request, env, d(attachment[1]), d(attachment[2]), d(attachment[3]))
-    const file = FILE_PATH.exec(path)
-    if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
-    const confirm = CONFIRM_PATH.exec(path)
-    if (confirm && request.method === "GET") return handleConfirm(env, d(confirm[1]))
-    const open = OPEN_PATH.exec(path)
-    if (open && request.method === "GET") return handleOpen(request, env, d(open[1]), ctx)
-    const click = CLICK_PATH.exec(path)
-    if (click && (request.method === "GET" || request.method === "HEAD"))
-      return handleClick(request, env, d(click[1]))
-    const unsubscribe = UNSUBSCRIBE_PATH.exec(path)
-    if (unsubscribe) return handleUnsubscribe(request, env, d(unsubscribe[1]))
-    const formPage = FORM_PAGE_PATH.exec(path)
-    if (formPage) return handleFormPage(request, env, d(formPage[1]))
-    const form = FORM_SUBMIT_PATH.exec(path)
-    if (form) return handleFormSubmit(request, env, d(form[1]))
-    return handler(request)
-  },
+  fetch: (request, env, ctx) => withRequestId(request, () => route(request, env, ctx)),
   queue: (batch, env) => handleQueue(batch, env),
   scheduled: (_controller, env, ctx) => {
     ctx.waitUntil(handleScheduled(env))
