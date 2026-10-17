@@ -167,7 +167,13 @@ export const searchWorkspace = Effect.fn("search.workspace")(function* (
         .all(),
     )
     for (const t of rows)
-      results.push({ type: "template", id: t.id, title: t.name, subtitle: null, url: `/templates/${t.id}` })
+      results.push({
+        type: "template",
+        id: t.id,
+        title: t.name,
+        subtitle: null,
+        url: `/transactional/templates/${t.id}`,
+      })
   }
   if (canReadWorkspace && want.has("domain")) {
     const rows = yield* database.query("search.domains", (db) =>
