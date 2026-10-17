@@ -240,12 +240,12 @@ The mailbox socket `ws /v1/mailboxes/:id/live` is **built**, with the events hel
 
 | # | Endpoint / field | Screens | Proposed shape |
 |---|---|---|---|
-| M1.1 | A **folder enum** with Starred, Assigned to me, Scheduled and All mail | `folders`, `assigned`, `starred`, `scheduled`, `all-mail` | The `folder` query takes `inbox\|archive\|sent\|spam\|trash\|snoozed` only, and `drafts` appears in `/folders` but not in `/threads`. The designs map them like this: Starred is `?starred=true`, Assigned to me is `?assignee=<me>`, Scheduled is `GET …/drafts?status=scheduled`, and Drafts is `…/drafts?status=draft`. **All mail has no mapping.** Proposed: no `folder` means every folder except spam and trash. Confirm or add `folder=all`. |
-| M1.2 | Counts for the virtual folders | Folder pane on every screen | `/folders` counts only real folders. Proposed: add `views: { starred, assignedToMe, scheduled, all }` (threads) to `GET …/folders`. `assignedToMe` needs to know who “me” is (GAPS 1.1 `/v1/me`). |
-| M1.3 | Who an assignee is | Rows, reader, assign picker | `thread.assignee` is a free `string`, and mailbox members are API keys (`apiKeyId`, `name`). Proposed: `assignee: { id, name } \| null`, where `id` is a user id once people exist (GAPS 1.13), and `bulk { action: "assign", assignee: userId }`. Until then the screens show the name string. |
-| M1.4 | Spam score on the list | `spam` rows (“Score 9.8”) | `spamScore` lives on messages, not threads, so the list would need one call per row. Proposed: `thread.spamScore: number \| null` (the latest message's) when `folder=spam`. |
-| M1.5 | A thread's scheduled reply | Inbox row chip “Reply sends Sun 08:00 UTC” | Proposed: `thread.scheduledSendAt: number \| null` (the earliest scheduled draft on the thread), so the list doesn't need `…/drafts` too. |
-| M1.6 | Total for “1–14 of 312” | List toolbar | `nextCursor` only. The total comes from `/folders` `threads`, which works for real folders; labels and filters have no total. Proposed: `total?: number` on `/threads` when cheap, otherwise the toolbar shows “14 shown”. |
+| M1.1 | A **folder enum** with Starred, Assigned to me, Scheduled and All mail | `folders`, `assigned`, `starred`, `scheduled`, `all-mail` | **Built** (HAL-3405): `folder=all` on `GET …/threads` (every folder but spam and trash). Starred and Assigned to me are the `starred=true` and `assignee=<keyId>` filters; Scheduled is `GET …/drafts?status=scheduled`. |
+| M1.2 | Counts for the virtual folders | Folder pane on every screen | **Built** (HAL-3405): `GET …/folders` → `views: { starred, assignedToMe, scheduled, all: { threads, unreadThreads } }`, read through an index or a kept count. |
+| M1.3 | Who an assignee is | Rows, reader, assign picker | **Built** (HAL-3405): `assignedTo: { id, name } \| null` beside `assignee` (the key id, unchanged): the key's name until people exist (HAL-3361). |
+| M1.4 | Spam score on the list | `spam` rows (“Score 9.8”) | **Built** (HAL-3405): `thread.spamScore` (the highest of its spam messages) when listing `folder=spam`. |
+| M1.5 | A thread's scheduled reply | Inbox row chip “Reply sends Sun 08:00 UTC” | **Built** (HAL-3405): `thread.scheduledSendAt`, the earliest scheduled draft in the conversation. |
+| M1.6 | Total for “1–14 of 312” | List toolbar | **Built** (HAL-3405): `total` on `GET …/threads` for a plain folder (no other filter), from the kept counts; null otherwise. |
 | M1.7 | Drag a thread onto a label | Folder pane `.is-drop` | Not a gap: `bulk { action: "label", labelId }`. |
 
 ## M2. Search

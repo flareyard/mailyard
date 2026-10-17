@@ -40615,10 +40615,109 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "views": {
+                      "additionalProperties": false,
+                      "description": "The views beside the folders: Starred, Assigned to me, Scheduled, All mail.",
+                      "properties": {
+                        "all": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "threads": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "unreadThreads": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "threads",
+                            "unreadThreads",
+                          ],
+                          "type": "object",
+                        },
+                        "assignedToMe": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "scheduled": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "starred": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "starred",
+                        "assignedToMe",
+                        "scheduled",
+                        "all",
+                      ],
+                      "type": "object",
+                    },
                   },
                   "required": [
                     "folders",
                     "labels",
+                    "views",
                   ],
                   "type": "object",
                 },
@@ -52170,6 +52269,30 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "assignedTo": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                          },
                           "assignee": {
                             "anyOf": [
                               {
@@ -52179,6 +52302,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "null",
                               },
                             ],
+                            "description": "The API key id handling it; see assignedTo for the name.",
                           },
                           "firstAt": {
                             "anyOf": [
@@ -52280,6 +52404,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                             "type": "array",
                           },
+                          "scheduledSendAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "The earliest scheduled send of a reply in this conversation.",
+                          },
                           "snippet": {
                             "type": "string",
                           },
@@ -52319,6 +52466,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "string",
                               },
                             ],
+                          },
+                          "spamScore": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "The highest spam score of its messages in spam; only when listing spam.",
                           },
                           "starred": {
                             "type": "boolean",
@@ -52896,6 +53066,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "name": "folder",
             "required": false,
             "schema": {
+              "description": "A folder, or all: every folder but spam and trash (All mail).",
               "enum": [
                 "inbox",
                 "archive",
@@ -52903,6 +53074,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "spam",
                 "trash",
                 "snoozed",
+                "all",
               ],
               "type": "string",
             },
@@ -52985,6 +53157,30 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "assignedTo": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                          },
                           "assignee": {
                             "anyOf": [
                               {
@@ -52994,6 +53190,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "null",
                               },
                             ],
+                            "description": "The API key id handling it; see assignedTo for the name.",
                           },
                           "firstAt": {
                             "anyOf": [
@@ -53095,6 +53292,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                             "type": "array",
                           },
+                          "scheduledSendAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "The earliest scheduled send of a reply in this conversation.",
+                          },
                           "snippet": {
                             "type": "string",
                           },
@@ -53134,6 +53354,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "string",
                               },
                             ],
+                          },
+                          "spamScore": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "The highest spam score of its messages in spam; only when listing spam.",
                           },
                           "starred": {
                             "type": "boolean",
@@ -53179,9 +53422,33 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Conversations in the whole list, when it's a plain folder (no other filter); null otherwise.",
+                    },
                   },
                   "required": [
                     "threads",
+                    "total",
                     "nextCursor",
                   ],
                   "type": "object",
@@ -54359,6 +54626,30 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "thread": {
                       "additionalProperties": false,
                       "properties": {
+                        "assignedTo": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                },
+                                "name": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                        },
                         "assignee": {
                           "anyOf": [
                             {
@@ -54368,6 +54659,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "null",
                             },
                           ],
+                          "description": "The API key id handling it; see assignedTo for the name.",
                         },
                         "firstAt": {
                           "anyOf": [
@@ -54469,6 +54761,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "type": "array",
                         },
+                        "scheduledSendAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The earliest scheduled send of a reply in this conversation.",
+                        },
                         "snippet": {
                           "type": "string",
                         },
@@ -54508,6 +54823,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "string",
                             },
                           ],
+                        },
+                        "spamScore": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The highest spam score of its messages in spam; only when listing spam.",
                         },
                         "starred": {
                           "type": "boolean",
