@@ -274,10 +274,16 @@ describe("search (FTS5)", () => {
 
   it("finds by subject, sender and body, best match first, with highlights", async () => {
     const box = await seeded()
-    const { hits, threads } = await box.search("invoice")
-    // The subject match outranks the body-only match.
+    const { hits, threads } = await box.search("invoice", { sort: "relevance" })
+    // By relevance, the subject match outranks the body-only match.
     expect(hits.map((h) => h.messageId)).toEqual(["inb_inv", "inb_body"])
-    expect(hits[0]?.subject).toBe(`${HIGHLIGHT_START}Invoice${HIGHLIGHT_END} for October`)
+    expect(hits[0]?.subjectHighlighted).toBe(`${HIGHLIGHT_START}Invoice${HIGHLIGHT_END} for October`)
+    expect(hits[0]?.subject).toBe("Invoice for October")
+    // By default, newest first.
+    const recent = await box.search("invoice")
+    expect(recent.sort).toBe("recent")
+    const times = recent.hits.map((h) => h.receivedAt)
+    expect([...times].sort((a, b) => b - a)).toEqual(times)
     expect(hits[1]?.excerpt).toContain(`${HIGHLIGHT_START}invoice${HIGHLIGHT_END}`)
     expect(threads).toHaveLength(2)
     expect((await box.search("from:billing")).hits.map((h) => h.messageId)).toEqual(["inb_inv"])
@@ -324,8 +330,26 @@ describe("parseSearch", () => {
         unread: true,
         starred: false,
         hasAttachment: true,
+        before: null,
+        after: null,
+      },
+      parsed: {
+        operators: [
+          { op: "from", value: "ada" },
+          { op: "in", value: "archive" },
+          { op: "is", value: "unread" },
+          { op: "has", value: "attachment" },
+          { op: "label", value: "Big Deals" },
+        ],
+        terms: ["due friday", "budget"],
+        unsupported: [],
       },
     })
+    // Dates, as Gmail reads them; an unknown operator is searched as words and reported.
+    const dated = parseSearch("after:2026-10-16 before:2026/10/17 re:budget")
+    expect(dated.filters).toMatchObject({ after: Date.UTC(2026, 9, 16), before: Date.UTC(2026, 9, 17) })
+    expect(dated.parsed.unsupported).toEqual([{ op: "re", value: "budget" }])
+    expect(parseSearch("before:someday").parsed.unsupported).toEqual([{ op: "before", value: "someday" }])
     expect(parseSearch('a"b').match).toBe('"a"* AND "b"*')
     expect(parseSearch("re:budget").match).toBe('"re"* AND "budget"*')
     expect(parseSearch("   ").match).toBeNull()
@@ -432,6 +456,7 @@ describe("schema migrations", () => {
         "thread_folders",
         "folder_counts",
         "correspondents",
+        "smart_folders",
       ]) {
         sql.exec(`DROP TABLE IF EXISTS ${table}`)
       }

@@ -168,6 +168,8 @@ describe("GET /openapi.json", () => {
       "/v1/mailboxes/{id}/search",
       "/v1/mailboxes/{id}/senders",
       "/v1/mailboxes/{id}/senders/{value}",
+      "/v1/mailboxes/{id}/smart-folders",
+      "/v1/mailboxes/{id}/smart-folders/{folderId}",
       "/v1/mailboxes/{id}/threads",
       "/v1/mailboxes/{id}/threads/bulk",
       "/v1/mailboxes/{id}/threads/{threadId}",

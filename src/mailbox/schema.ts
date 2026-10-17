@@ -220,4 +220,10 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
     ],
     after: "rebuildFolderCounts",
   },
+  {
+    statements: [
+      // Saved searches shown beside the folders (HAL-3406).
+      "CREATE TABLE smart_folders (id TEXT PRIMARY KEY, name TEXT NOT NULL, q TEXT NOT NULL, position INTEGER NOT NULL, created_at INTEGER NOT NULL)",
+    ],
+  },
 ]
