@@ -1610,6 +1610,8 @@ export const FormSchema = Schema.Struct({
   topicIds: Schema.Array(Schema.String),
   fields: Schema.Array(Schema.String),
   redirectUrl: Schema.NullOr(Schema.String),
+  description: Schema.NullOr(Schema.String),
+  turnstileSiteKey: Schema.NullOr(Schema.String),
   archived: Schema.Boolean,
   createdAt: Schema.Number,
 })
@@ -1804,6 +1806,8 @@ export class FormsApi extends HttpApiGroup.make("forms")
         topicIds: Schema.Array(Schema.String),
         fields: Schema.optionalKey(Schema.Array(Schema.String)),
         redirectUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        turnstileSiteKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
       }),
       success: FormSchema,
       error: [Forbidden, InvalidRequest],
@@ -1820,10 +1824,18 @@ export class FormsApi extends HttpApiGroup.make("forms")
         topicIds: Schema.optionalKey(Schema.Array(Schema.String)),
         fields: Schema.optionalKey(Schema.Array(Schema.String)),
         redirectUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        description: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        turnstileSiteKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
         archived: Schema.optionalKey(Schema.Boolean),
       }),
       success: FormSchema,
       error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /** The hosted page's address and a snippet to paste into another site, which posts to submit. */
+    HttpApiEndpoint.get("embed", "/v1/forms/:id/embed", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ pageUrl: Schema.String, html: Schema.String }),
+      error: [Forbidden, NotFound],
     }),
   )
   .middleware(ApiKeyAuth) {}

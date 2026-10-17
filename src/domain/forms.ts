@@ -5,6 +5,7 @@ import { forms, topics } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
+import { getBrand } from "./brand.ts"
 import { ContactInvalid, normalizeEmail, upsertContact } from "./contacts.ts"
 import { subscribe } from "./subscriptions.ts"
 
@@ -22,6 +23,8 @@ const describe = (f: FormRow) => ({
   topicIds: f.topicIds,
   fields: f.fields,
   redirectUrl: f.redirectUrl,
+  description: f.description,
+  turnstileSiteKey: f.turnstileSiteKey,
   archived: f.archived,
   createdAt: f.createdAt,
 })
@@ -34,8 +37,20 @@ const checkInput = (input: {
   readonly topicIds?: ReadonlyArray<string> | undefined
   readonly fields?: ReadonlyArray<string> | undefined
   readonly redirectUrl?: string | null | undefined
+  readonly description?: string | null | undefined
+  readonly turnstileSiteKey?: string | null | undefined
 }) =>
   Effect.gen(function* () {
+    if (input.description && input.description.length > 500)
+      return yield* new FormInvalid({
+        field: "description",
+        message: "A description is at most 500 characters.",
+      })
+    if (input.turnstileSiteKey && !/^[0-9A-Za-z_-]{8,100}$/.test(input.turnstileSiteKey))
+      return yield* new FormInvalid({
+        field: "turnstileSiteKey",
+        message: "That isn't a Turnstile site key.",
+      })
     if (input.name !== undefined && (input.name.trim().length === 0 || input.name.length > 100)) {
       return yield* new FormInvalid({ field: "name", message: "A form name is 1 to 100 characters." })
     }
@@ -108,6 +123,8 @@ export const createForm = Effect.fn("forms.create")(function* (
     readonly topicIds: ReadonlyArray<string>
     readonly fields?: ReadonlyArray<string> | undefined
     readonly redirectUrl?: string | null | undefined
+    readonly description?: string | null | undefined
+    readonly turnstileSiteKey?: string | null | undefined
   },
   actor: string,
 ) {
@@ -123,6 +140,8 @@ export const createForm = Effect.fn("forms.create")(function* (
         topicIds: [...input.topicIds],
         fields: [...(input.fields ?? [])],
         redirectUrl: input.redirectUrl ?? null,
+        description: input.description?.trim() || null,
+        turnstileSiteKey: input.turnstileSiteKey || null,
       })
       .returning()
       .get(),
@@ -138,6 +157,8 @@ export const updateForm = Effect.fn("forms.update")(function* (
     readonly topicIds?: ReadonlyArray<string> | undefined
     readonly fields?: ReadonlyArray<string> | undefined
     readonly redirectUrl?: string | null | undefined
+    readonly description?: string | null | undefined
+    readonly turnstileSiteKey?: string | null | undefined
     readonly archived?: boolean | undefined
   },
   actor: string,
@@ -153,6 +174,8 @@ export const updateForm = Effect.fn("forms.update")(function* (
         ...(input.topicIds !== undefined ? { topicIds: [...input.topicIds] } : {}),
         ...(input.fields !== undefined ? { fields: [...input.fields] } : {}),
         ...(input.redirectUrl !== undefined ? { redirectUrl: input.redirectUrl } : {}),
+        ...(input.description !== undefined ? { description: input.description?.trim() || null } : {}),
+        ...(input.turnstileSiteKey !== undefined ? { turnstileSiteKey: input.turnstileSiteKey || null } : {}),
         ...(input.archived !== undefined ? { archived: input.archived } : {}),
       })
       .where(eq(forms.id, id))
@@ -161,6 +184,32 @@ export const updateForm = Effect.fn("forms.update")(function* (
   )
   yield* recordAudit({ actor, action: "form.update", target: id, before, after: row })
   return describe(row ?? before)
+})
+
+/** What the hosted page shows: the form, its live topics in its order, and the sender's brand. */
+export const formPage = Effect.fn("forms.page")(function* (id: string) {
+  const form = yield* findForm(id)
+  if (form.archived) return yield* new FormNotFound({ id })
+  const database = yield* Database
+  const rows = yield* database.query("forms.pageTopics", (db) =>
+    db
+      .select({
+        id: topics.id,
+        name: topics.name,
+        description: topics.description,
+        archived: topics.archived,
+      })
+      .from(topics)
+      .where(inArray(topics.id, [...form.topicIds]))
+      .all(),
+  )
+  const live = form.topicIds.flatMap((t) => rows.filter((r) => r.id === t && !r.archived))
+  const brand = yield* getBrand()
+  return {
+    form: describe(form),
+    topics: live.map((t) => ({ name: t.name, description: t.description })),
+    brand,
+  }
 })
 
 /**

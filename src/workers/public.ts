@@ -1,7 +1,9 @@
 import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
-import { submitForm } from "../domain/forms.ts"
+import { findForm, formPage, submitForm } from "../domain/forms.ts"
 import { confirmSubscription } from "../domain/subscriptions.ts"
+import { pageCsp, renderFormPage } from "../forms/page.ts"
+import { verifyTurnstile } from "../forms/turnstile.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /**
@@ -11,6 +13,38 @@ import { runtimeFor } from "./inbound.ts"
  */
 export const CONFIRM_PATH = /^\/c\/([^/]+)$/
 export const FORM_SUBMIT_PATH = /^\/v1\/forms\/([^/]+)\/submit$/
+export const FORM_PAGE_PATH = /^\/f\/([^/]+)$/
+
+/** `GET /f/{formId}`: the hosted signup page, in the sender's brand. */
+export const handleFormPage = async (request: Request, env: Env, formId: string) => {
+  if (request.method !== "GET" && request.method !== "HEAD")
+    return new Response("Method not allowed", { status: 405 })
+  const result = await runtimeFor(env).runPromise(Effect.result(formPage(formId)))
+  if (result._tag === "Failure") {
+    const tag = (result.failure as { _tag?: string })._tag
+    return tag === "FormNotFound"
+      ? page(404, "Form not found", "This signup form no longer exists.")
+      : page(500, "Something went wrong", "Please try again in a moment.")
+  }
+  const { form, topics, brand } = result.success
+  const html = renderFormPage({
+    form,
+    topics,
+    theme: brand.theme,
+    brandName: brand.theme.name,
+    siteUrl: brand.siteUrl === "https://example.com" ? null : brand.siteUrl,
+    action: `/v1/forms/${encodeURIComponent(form.id)}/submit`,
+  })
+  return new Response(request.method === "HEAD" ? null : html, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "content-security-policy": pageCsp(brand.theme.fontsHref),
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin-when-cross-origin",
+    },
+  })
+}
 
 /** Field names bots fill in and people can't see. A filled one gets a success page and no subscription. */
 const HONEYPOTS = ["_hp", "website"]
@@ -107,7 +141,28 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
     return Response.json({ status }, { headers: cors })
   }
   if (HONEYPOTS.some((f) => typeof body[f] === "string" && body[f] !== "")) return done("confirm", null)
-  const { email, name, ...fields } = body
+  // Turnstile, when this form has a site key and the deploy has the secret: checked before anything is written.
+  if (env.TURNSTILE_SECRET) {
+    const found = await runtimeFor(env).runPromise(Effect.result(findForm(formId)))
+    const siteKey = found._tag === "Success" ? found.success.turnstileSiteKey : null
+    if (siteKey) {
+      const verdict = await verifyTurnstile({
+        secret: env.TURNSTILE_SECRET,
+        token: body["cf-turnstile-response"],
+        ip: request.headers.get("cf-connecting-ip"),
+      })
+      if (!verdict.ok) {
+        return html
+          ? page(
+              400,
+              "Please try again",
+              "We couldn't confirm you're a person. Go back, complete the check and sign up again.",
+            )
+          : Response.json({ error: "challenge" }, { status: 400, headers: cors })
+      }
+    }
+  }
+  const { email, name, "cf-turnstile-response": _token, ...fields } = body
   if (typeof email !== "string") {
     return html
       ? page(400, "Email needed", "Enter your email address to sign up.")

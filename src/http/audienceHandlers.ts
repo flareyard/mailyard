@@ -44,6 +44,7 @@ import {
   updateTopic,
 } from "../domain/topics.ts"
 import { unsubscribeToken, unsubscribeUrl } from "../domain/unsubscribe.ts"
+import { embedSnippet } from "../forms/page.ts"
 import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
@@ -262,6 +263,19 @@ export const FormsHandlers = HttpApiBuilder.group(
         ),
       ),
       get: p(({ params }) => requireScope("read").pipe(Effect.andThen(getForm(params.id)), audienceErrors)),
+      embed: p(({ params, request }) =>
+        requireScope("read").pipe(
+          Effect.andThen(getForm(params.id)),
+          Effect.map((form) => {
+            const origin = originOf(request) ?? ""
+            return {
+              pageUrl: `${origin}/f/${encodeURIComponent(form.id)}`,
+              html: embedSnippet({ form, origin }),
+            }
+          }),
+          audienceErrors,
+        ),
+      ),
       update: p(({ params, payload }) =>
         requireScope("admin").pipe(
           Effect.flatMap((caller) => updateForm(params.id, payload, caller.keyId)),

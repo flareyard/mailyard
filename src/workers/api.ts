@@ -44,7 +44,14 @@ import {
 } from "./files.ts"
 import { handleEmail } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
-import { CONFIRM_PATH, FORM_SUBMIT_PATH, handleConfirm, handleFormSubmit } from "./public.ts"
+import {
+  CONFIRM_PATH,
+  FORM_PAGE_PATH,
+  FORM_SUBMIT_PATH,
+  handleConfirm,
+  handleFormPage,
+  handleFormSubmit,
+} from "./public.ts"
 import { handleQueue } from "./queue.ts"
 import { handleScheduled } from "./scheduled.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
@@ -119,6 +126,8 @@ export default {
       return handleClick(request, env, d(click[1]))
     const unsubscribe = UNSUBSCRIBE_PATH.exec(path)
     if (unsubscribe) return handleUnsubscribe(request, env, d(unsubscribe[1]))
+    const formPage = FORM_PAGE_PATH.exec(path)
+    if (formPage) return handleFormPage(request, env, d(formPage[1]))
     const form = FORM_SUBMIT_PATH.exec(path)
     if (form) return handleFormSubmit(request, env, d(form[1]))
     return handler(request)
