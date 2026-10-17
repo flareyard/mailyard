@@ -41,7 +41,7 @@ export type WranglerConfig = {
 
 /** The scope each kind of binding needs, as the platform's release CLI checks it. */
 const BINDING_SCOPES: ReadonlyArray<readonly [string, (c: WranglerConfig) => boolean]> = [
-  ["workers-scripts.write", () => true],
+  ["workers-scripts.edit", () => true],
   ["d1.write", (c) => (c.d1_databases?.length ?? 0) > 0],
   ["workers-r2.write", (c) => (c.r2_buckets?.length ?? 0) > 0],
   ["workers-kv-storage.write", (c) => (c.kv_namespaces?.length ?? 0) > 0],
