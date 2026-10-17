@@ -13,7 +13,7 @@ import {
   SegmentsHandlers,
   TopicsHandlers,
 } from "../http/audienceHandlers.ts"
-import { AutomationsHandlers } from "../http/automationHandlers.ts"
+import { AutomationsHandlers, RunsHandlers } from "../http/automationHandlers.ts"
 import { CampaignsHandlers } from "../http/campaignHandlers.ts"
 import { ExportsHandlers } from "../http/exportHandlers.ts"
 import {
@@ -61,6 +61,7 @@ import { handleUploads, UPLOADS_PATH } from "./uploads.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
 export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
+export { AutomationRunWorkflow } from "../workflows/automation.ts"
 export { CampaignSendWorkflow } from "../workflows/campaign.ts"
 export { ContactExportWorkflow } from "../workflows/contactExport.ts"
 export { ContactImportWorkflow } from "../workflows/contactImport.ts"
@@ -93,6 +94,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     ImportsHandlers,
     ExportsHandlers,
     AutomationsHandlers,
+    RunsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),

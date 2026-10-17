@@ -2426,6 +2426,59 @@ const AutomationDetail = Schema.Struct({
 })
 const AutomationRange = Schema.Literals(["24h", "7d", "30d"])
 
+const AutomationRunState = Schema.Literals(["running", "waiting", "completed", "exited", "failed"])
+const AutomationRun = Schema.Struct({
+  id: Schema.String,
+  automationId: Schema.String,
+  contactId: Schema.String,
+  email: Schema.NullOr(Schema.String),
+  version: Schema.Number,
+  /** The step it's at (or will run next). */
+  nodeId: Schema.NullOr(Schema.String),
+  status: AutomationRunState,
+  enteredAt: Schema.Number,
+  nextAt: Schema.NullOr(Schema.Number),
+  waitingFor: Schema.NullOr(Schema.String),
+  error: Schema.NullOr(Schema.String),
+  exitedBy: Schema.NullOr(Schema.String),
+  finishedAt: Schema.NullOr(Schema.Number),
+})
+const AutomationRunDetail = Schema.Struct({
+  ...AutomationRun.fields,
+  steps: Schema.Array(
+    Schema.Struct({
+      seq: Schema.Number,
+      nodeId: Schema.String,
+      outcome: Schema.Literals(["passed", "waiting", "sent", "skipped", "exited", "failed"]),
+      port: Schema.NullOr(Schema.String),
+      detail: Schema.String,
+      messageId: Schema.NullOr(Schema.String),
+      at: Schema.Number,
+    }),
+  ),
+})
+
+/** One run: its history, and ending or retrying it. */
+export class RunsApi extends HttpApiGroup.make("runs")
+  .add(
+    HttpApiEndpoint.get("get", "/v1/runs/:id", {
+      params: { id: Schema.String },
+      success: AutomationRunDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("exit", "/v1/runs/:id/exit", {
+      params: { id: Schema.String },
+      success: AutomationRunDetail,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+    HttpApiEndpoint.post("retry", "/v1/runs/:id/retry", {
+      params: { id: Schema.String },
+      success: AutomationRunDetail,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Automations: a trigger and a graph of steps, edited as a draft and published as frozen versions. */
 export class AutomationsApi extends HttpApiGroup.make("automations")
   .add(
@@ -2523,6 +2576,37 @@ export class AutomationsApi extends HttpApiGroup.make("automations")
       params: { id: Schema.String },
       success: AutomationDetail,
       error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /** Puts one contact into the live version now, with the same entry checks as a trigger. */
+    HttpApiEndpoint.post("enter", "/v1/automations/:id/enter", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        contactId: Schema.String,
+        data: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
+      }),
+      success: Schema.Struct({ result: Schema.String }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("runs", "/v1/automations/:id/runs", {
+      params: { id: Schema.String },
+      query: {
+        status: Schema.optionalKey(AutomationRunState),
+        version: Schema.optionalKey(Schema.NumberFromString),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+      },
+      success: Schema.Struct({
+        runs: Schema.Array(AutomationRun),
+        total: Schema.Number,
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    /** The secret this automation's webhook steps are signed with (Standard Webhooks). */
+    HttpApiEndpoint.get("webhookSecret", "/v1/automations/:id/webhook-secret", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ secret: Schema.String }),
+      error: [Forbidden, NotFound],
     }),
   )
   .middleware(ApiKeyAuth) {}
@@ -2725,4 +2809,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(ImportsApi)
   .add(ExportsApi)
   .add(AutomationsApi)
+  .add(RunsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

@@ -405,6 +405,8 @@ export const automations = sqliteTable(
     status: text("status", { enum: ["draft", "live", "paused"] })
       .notNull()
       .default("draft"),
+    /** The API origin captured at publish: the base of the unsubscribe and tracking links runs send. */
+    origin: text("origin"),
     /** Kept for the first schema; `status` is what counts. */
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
     createdAt: createdAt(),
@@ -448,6 +450,10 @@ export const automationRuns = sqliteTable(
     error: text("error"),
     /** When a waiting run next wakes (a wait's end, or a wait_event's timeout). */
     nextAt: integer("next_at"),
+    /** The event a `wait_event` step is waiting for; a tracked event with this name wakes the run. */
+    waitingEvent: text("waiting_event"),
+    /** The step sequence the run has reached, so a retried run carries on numbering its history. */
+    seq: integer("seq").notNull().default(0),
     /** What started it: the event's data, for templates and webhooks. */
     triggerData: text("trigger_data", { mode: "json" }).$type<Record<string, unknown> | null>(),
     exitedBy: text("exited_by"),

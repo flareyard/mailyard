@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { fireTrigger, wakeWaiting } from "../automations/runs.ts"
 import { events } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
@@ -40,6 +41,14 @@ export const track = Effect.fn("events.track")(function* (input: {
       .values({ id, contactId: contact.id, name: input.event, data: input.data ?? null, at })
       .run(),
   )
+  yield* fireTrigger({
+    kind: "event",
+    contactId: contact.id,
+    key: input.event,
+    data: input.data ? { ...input.data } : null,
+  })
+  yield* wakeWaiting(contact.id, input.event, input.data ? { ...input.data } : null)
+  yield* fireTrigger({ kind: "segment", contactId: contact.id })
   yield* emitSafely("event.tracked", {
     contactId: contact.id,
     email: contact.email,

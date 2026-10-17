@@ -49,6 +49,11 @@
       "name": "mailyard-contact-export",
       "binding": "CONTACT_EXPORT_WORKFLOW",
       "class_name": "ContactExportWorkflow"
+    },
+    {
+      "name": "mailyard-automation-run",
+      "binding": "AUTOMATION_WORKFLOW",
+      "class_name": "AutomationRunWorkflow"
     }
   ],
   "queues": {
@@ -56,7 +61,8 @@
       { "binding": "SEND_QUEUE", "queue": "mailyard-send" },
       { "binding": "WEBHOOK_QUEUE", "queue": "mailyard-webhooks" },
       { "binding": "INBOUND_QUEUE", "queue": "mailyard-inbound" },
-      { "binding": "MAILBOX_SEND_QUEUE", "queue": "mailyard-mailbox-send" }
+      { "binding": "MAILBOX_SEND_QUEUE", "queue": "mailyard-mailbox-send" },
+      { "binding": "AUTOMATION_QUEUE", "queue": "mailyard-automation-triggers" }
     ],
     "consumers": [
       {
@@ -93,6 +99,13 @@
         "max_batch_size": 10,
         "max_retries": 10,
         "dead_letter_queue": "mailyard-mailbox-send-dlq"
+      },
+      {
+        // Automation triggers: who enters which automation (src/automations/runs.ts).
+        "queue": "mailyard-automation-triggers",
+        "max_batch_size": 25,
+        "max_retries": 10,
+        "dead_letter_queue": "mailyard-automation-triggers-dlq"
       }
     ]
   },

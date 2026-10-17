@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { stopRunsForEmail } from "../automations/runs.ts"
 import {
   campaigns,
   contacts,
@@ -318,6 +319,10 @@ export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: Em
       email: recipient,
       reason: kind === "complained" ? "complaint" : "hard_bounce",
     })
+    yield* stopRunsForEmail(
+      recipient,
+      kind === "complained" ? "The contact complained." : "The address bounced.",
+    )
   }
   return (row ? "applied" : "applied-unmatched") as Outcome
 })

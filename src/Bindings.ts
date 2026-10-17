@@ -37,6 +37,10 @@ export interface Env {
   readonly IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Sends a campaign: snapshot, then governor-paced chunks (src/workflows/campaign.ts). */
   readonly CAMPAIGN_WORKFLOW: Workflow<{ readonly campaignId: string; readonly origin: string }>
+  /** Automation triggers, fanned out to runs (src/automations/runs.ts). */
+  readonly AUTOMATION_QUEUE: Queue<import("./automations/runs.ts").AutomationTriggerJob>
+  /** One automation run: walks a published graph for one contact (src/workflows/automation.ts). */
+  readonly AUTOMATION_WORKFLOW: Workflow<{ readonly runId: string }>
   /** Imports a contact CSV in 5,000-row steps (src/workflows/contactImport.ts). */
   readonly CONTACT_IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Writes contact exports past 10,000 rows as a multipart CSV (src/workflows/contactExport.ts). */

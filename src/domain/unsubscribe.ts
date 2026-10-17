@@ -1,5 +1,6 @@
 import { and, asc, eq, ne } from "drizzle-orm"
 import * as Effect from "effect/Effect"
+import { stopRunsFor } from "../automations/runs.ts"
 import { contacts, events, subscriptions, topics } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
@@ -77,6 +78,7 @@ const unsubscribeAll = (contact: ContactRow, source: string) =>
         topicId: null,
         source,
       })
+      yield* stopRunsFor(contact.id, "The contact unsubscribed from everything.")
     }
   })
 

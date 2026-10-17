@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, like, or, type SQL, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { fireTrigger, stopRunsFor } from "../automations/runs.ts"
 import {
   contacts,
   events,
@@ -162,6 +163,7 @@ export const upsertContact = Effect.fn("contacts.upsert")(function* (input: {
     email: created.email,
     status: created.status,
   })
+  yield* fireTrigger({ kind: "created", contactId: created.id })
   return { contact: created, merged: { ...persistent, ...transient }, created: true }
 })
 
@@ -525,6 +527,7 @@ export const createContact = Effect.fn("contacts.create")(function* (
   )
   yield* recordAudit({ actor, action: "contact.create", target: id, after: { email, status: row.status } })
   yield* emitSafely("contact.created", { contactId: id, email, status: row.status })
+  yield* fireTrigger({ kind: "created", contactId: id })
   return describeContact(row, [])
 })
 
@@ -569,7 +572,10 @@ export const updateContact = Effect.fn("contacts.update")(function* (
   yield* emitSafely("contact.updated", { contactId: id, email: after.email, status: after.status })
   if (input.status === "unsubscribed" && before.status !== "unsubscribed") {
     yield* emitSafely("contact.unsubscribed", { contactId: id, email: after.email, source: "api" })
+    yield* stopRunsFor(id, "The contact unsubscribed.")
   }
+  // A changed contact may have come into a segment an automation starts from.
+  yield* fireTrigger({ kind: "segment", contactId: id })
   return yield* getContact(id)
 })
 
@@ -625,6 +631,7 @@ export const writeSubscription = Effect.fn("contacts.writeSubscription")(functio
   }
   if (to === "subscribed") {
     yield* emitSafely("contact.subscribed", { contactId: contact.id, email: contact.email, topicId, source })
+    yield* fireTrigger({ kind: "topic", contactId: contact.id, key: topicId })
   } else if (to === "unsubscribed") {
     yield* emitSafely("contact.unsubscribed", {
       contactId: contact.id,

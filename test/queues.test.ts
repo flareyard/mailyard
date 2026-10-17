@@ -25,7 +25,13 @@ describe("wrangler.jsonc queues", () => {
 
   it("produces to every queue the Worker sends to itself", () => {
     expect(wrangler.queues.producers.map((p) => p.queue).sort()).toEqual(
-      ["mailyard-inbound", "mailyard-mailbox-send", "mailyard-send", "mailyard-webhooks"].sort(),
+      [
+        "mailyard-automation-triggers",
+        "mailyard-inbound",
+        "mailyard-mailbox-send",
+        "mailyard-send",
+        "mailyard-webhooks",
+      ].sort(),
     )
   })
 })

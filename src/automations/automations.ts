@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray } from "drizzle-orm"
+import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
@@ -222,9 +222,13 @@ const findAutomation = (id: string) =>
 const nodeCounts = (automationId: string) =>
   Effect.gen(function* () {
     const database = yield* Database
+    // A waiting run is "here" at the step it waits in, not the one it will resume at.
+    const position = sql<
+      string | null
+    >`case when ${automationRuns.state} = 'waiting' then coalesce((select s.node_id from automation_run_steps s where s.run_id = ${automationRuns.id} and s.outcome = 'waiting' order by s.seq desc limit 1), ${automationRuns.currentStep}) else ${automationRuns.currentStep} end`
     const here = yield* database.query("automations.here", (db) =>
       db
-        .select({ nodeId: automationRuns.currentStep, n: count() })
+        .select({ nodeId: position, n: count() })
         .from(automationRuns)
         .where(
           and(
@@ -232,7 +236,7 @@ const nodeCounts = (automationId: string) =>
             inArray(automationRuns.state, ["running", "waiting"]),
           ),
         )
-        .groupBy(automationRuns.currentStep)
+        .groupBy(position)
         .all(),
     )
     const passed = yield* database.query("automations.passed", (db) =>
@@ -438,6 +442,8 @@ export const publishAutomation = Effect.fn("automations.publish")(function* (
   id: string,
   note: string | null,
   actor: string,
+  /** The API's origin, from the publish request: the base of the links runs send. */
+  origin: string | null = null,
 ) {
   const row = yield* findAutomation(id)
   const graph = graphOf(row)
@@ -464,6 +470,7 @@ export const publishAutomation = Effect.fn("automations.publish")(function* (
           version: version + 1,
           triggerKey: triggerKeyOf(trigger.config),
           status: row.status === "paused" ? "paused" : "live",
+          ...(origin ? { origin } : {}),
           enabled: row.status !== "paused",
           updatedAt: now,
           updatedBy: actor,
