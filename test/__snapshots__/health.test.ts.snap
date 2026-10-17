@@ -30504,6 +30504,109 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/files/{token}": {
+      "get": {
+        "description": "The links in message detail, large-attachment links in sent mail, and export downloads. The token is signed and expires; no key is needed.",
+        "operationId": "files.get",
+        "parameters": [
+          {
+            "description": "The signed token from the link.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The file.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "The link isn't valid.",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "The file is no longer stored.",
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "The link has expired.",
+          },
+        },
+        "summary": "A file through a signed link",
+        "tags": [
+          "mail",
+        ],
+      },
+    },
     "/v1/forms": {
       "get": {
         "operationId": "forms.list",
@@ -31476,6 +31579,37 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "mailboxId": {
                             "type": "string",
                           },
+                          "signature": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "html": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "text",
+                                  "html",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "The signature to start a message from this address with: its own, or for an alias its mailbox's.",
+                          },
                           "via": {
                             "enum": [
                               "admin",
@@ -31491,6 +31625,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "mailboxId",
                           "kind",
                           "via",
+                          "signature",
                         ],
                         "type": "object",
                       },
@@ -36001,6 +36136,199 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/mailboxes/{id}/correspondents": {
+      "get": {
+        "operationId": "mail.correspondents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "maxLength": 200,
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "People this mailbox has heard from or written to whose address or name starts with q, most recent first: the composer's To field.",
+                  "properties": {
+                    "correspondents": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "address": {
+                            "type": "string",
+                          },
+                          "lastAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "received": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "sent": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "address",
+                          "name",
+                          "received",
+                          "sent",
+                          "lastAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "correspondents",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "People this mailbox has heard from or written to whose address or name starts with q, most recent first: the composer's To field.",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "mail",
+        ],
+      },
+    },
     "/v1/mailboxes/{id}/drafts": {
       "get": {
         "operationId": "mail.drafts",
@@ -36050,10 +36378,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "items": {
                               "additionalProperties": false,
                               "properties": {
+                                "delivery": {
+                                  "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                                  "enum": [
+                                    "inline",
+                                    "link",
+                                  ],
+                                  "type": "string",
+                                },
                                 "filename": {
                                   "type": "string",
                                 },
                                 "key": {
+                                  "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                                   "type": "string",
                                 },
                                 "mimeType": {
@@ -36491,10 +36828,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "items": {
                       "additionalProperties": false,
                       "properties": {
+                        "delivery": {
+                          "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                          "enum": [
+                            "inline",
+                            "link",
+                          ],
+                          "type": "string",
+                        },
                         "filename": {
                           "type": "string",
                         },
                         "key": {
+                          "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                           "type": "string",
                         },
                         "mimeType": {
@@ -36679,10 +37025,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "delivery": {
+                            "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                            "enum": [
+                              "inline",
+                              "link",
+                            ],
+                            "type": "string",
+                          },
                           "filename": {
                             "type": "string",
                           },
                           "key": {
+                            "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                             "type": "string",
                           },
                           "mimeType": {
@@ -37231,10 +37586,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "delivery": {
+                            "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                            "enum": [
+                              "inline",
+                              "link",
+                            ],
+                            "type": "string",
+                          },
                           "filename": {
                             "type": "string",
                           },
                           "key": {
+                            "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                             "type": "string",
                           },
                           "mimeType": {
@@ -37663,10 +38027,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "items": {
                       "additionalProperties": false,
                       "properties": {
+                        "delivery": {
+                          "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                          "enum": [
+                            "inline",
+                            "link",
+                          ],
+                          "type": "string",
+                        },
                         "filename": {
                           "type": "string",
                         },
                         "key": {
+                          "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                           "type": "string",
                         },
                         "mimeType": {
@@ -37820,10 +38193,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "delivery": {
+                            "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                            "enum": [
+                              "inline",
+                              "link",
+                            ],
+                            "type": "string",
+                          },
                           "filename": {
                             "type": "string",
                           },
                           "key": {
+                            "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                             "type": "string",
                           },
                           "mimeType": {
@@ -38255,10 +38637,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "delivery": {
+                            "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                            "enum": [
+                              "inline",
+                              "link",
+                            ],
+                            "type": "string",
+                          },
                           "filename": {
                             "type": "string",
                           },
                           "key": {
+                            "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                             "type": "string",
                           },
                           "mimeType": {
@@ -38757,10 +39148,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "items": {
                             "additionalProperties": false,
                             "properties": {
+                              "delivery": {
+                                "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                                "enum": [
+                                  "inline",
+                                  "link",
+                                ],
+                                "type": "string",
+                              },
                               "filename": {
                                 "type": "string",
                               },
                               "key": {
+                                "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                                 "type": "string",
                               },
                               "mimeType": {
@@ -43166,6 +43566,138 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/mailboxes/{id}/live": {
+      "get": {
+        "description": "Upgrade: websocket. Frames are JSON: hello { seq, schemaVersion, counts, labels }, then message.added, threads.changed, drafts.changed and counts, each with a seq. Reconnect with ?since=<seq>, or send {"type":"resume","since":n}, to replay what was missed: the frames, then resumed { since, seq, replayed }, or reset { seq, counts } when they're older than the kept 1,000 or a day. Send "ping" for "pong". A browser that can't set headers offers the subprotocols "mailyard.v1, bearer.<key>" instead of an Authorization header.",
+        "operationId": "mail.live",
+        "parameters": [
+          {
+            "description": "The mailbox.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "The last seq this client saw.",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "type": "number",
+            },
+          },
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching to the WebSocket.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key, or not a key Mailyard knows.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No read access to the mailbox.",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No such mailbox.",
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Not a WebSocket upgrade.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "Live changes over a WebSocket",
+        "tags": [
+          "mail",
+        ],
+      },
+    },
     "/v1/mailboxes/{id}/members": {
       "put": {
         "operationId": "mailboxes.setMembers",
@@ -45161,6 +45693,248 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "bearer": [],
           },
         ],
+        "tags": [
+          "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/messages/{messageId}/attachments/{attachmentId}": {
+      "get": {
+        "description": "Served as a download, never rendered from Mailyard's origin (nosniff, a sandboxing CSP).",
+        "operationId": "mail.attachment",
+        "parameters": [
+          {
+            "description": "The mailbox.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "The message.",
+            "in": "path",
+            "name": "messageId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "The attachment.",
+            "in": "path",
+            "name": "attachmentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The attachment, with its own Content-Type.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key, or not a key Mailyard knows.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No read access to the mailbox.",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No such attachment.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "One attachment's bytes",
+        "tags": [
+          "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/messages/{messageId}/raw": {
+      "get": {
+        "operationId": "mail.raw",
+        "parameters": [
+          {
+            "description": "The mailbox.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "The message.",
+            "in": "path",
+            "name": "messageId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "message/rfc822": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The message as received or sent.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key, or not a key Mailyard knows.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No read access to the mailbox.",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No such message, or its original is no longer stored.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "A message's original .eml",
         "tags": [
           "mail",
         ],
@@ -49659,10 +50433,19 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "items": {
                               "additionalProperties": false,
                               "properties": {
+                                "delivery": {
+                                  "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                                  "enum": [
+                                    "inline",
+                                    "link",
+                                  ],
+                                  "type": "string",
+                                },
                                 "filename": {
                                   "type": "string",
                                 },
                                 "key": {
+                                  "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
                                   "type": "string",
                                 },
                                 "mimeType": {
@@ -50781,6 +51564,205 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "bearer": [],
           },
         ],
+        "tags": [
+          "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/uploads": {
+      "post": {
+        "description": "The request body is the file, at most 25 MiB. Put the answered key in a draft's attachments; ones too big for Email Service's 5 MiB go as expiring links (see each draft attachment's delivery). Needs write access to the mailbox.",
+        "operationId": "mail.upload",
+        "parameters": [
+          {
+            "description": "The mailbox.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "The file's name, without slashes. An x-filename header works too.",
+            "in": "query",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "format": "binary",
+                "type": "string",
+              },
+            },
+          },
+          "description": "The file's bytes.",
+          "required": true,
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "filename": {
+                      "type": "string",
+                    },
+                    "key": {
+                      "type": "string",
+                    },
+                    "mimeType": {
+                      "type": "string",
+                    },
+                    "sha256": {
+                      "type": "string",
+                    },
+                    "size": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "key",
+                    "filename",
+                    "mimeType",
+                    "size",
+                    "sha256",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Stored.",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No filename, or an empty file.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key, or not a key Mailyard knows.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No write access to the mailbox.",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No such mailbox.",
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Over 25 MiB.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "Upload an attachment for a draft",
         "tags": [
           "mail",
         ],
@@ -64897,6 +65879,177 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "tags": [
           "Actions",
+        ],
+      },
+    },
+    "/v1/uploads": {
+      "post": {
+        "description": "The request body is the file: a contact or suppression CSV, at most 50 MiB. Its Content-Type is kept. Answers an id that POST /v1/imports/contacts and POST /v1/suppressions/import take. Needs the admin scope.",
+        "operationId": "uploads.create",
+        "parameters": [
+          {
+            "description": "The file's name, without slashes. An x-filename header works too.",
+            "in": "query",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "format": "binary",
+                "type": "string",
+              },
+            },
+          },
+          "description": "The file's bytes.",
+          "required": true,
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "createdAt": {
+                      "type": "number",
+                    },
+                    "filename": {
+                      "type": "string",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "mimeType": {
+                      "type": "string",
+                    },
+                    "sha256": {
+                      "type": "string",
+                    },
+                    "size": {
+                      "type": "number",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "filename",
+                    "mimeType",
+                    "size",
+                    "sha256",
+                    "createdAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Stored.",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No filename, or an empty file.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key, or not a key Mailyard knows.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "The key lacks the admin scope.",
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Over 50 MiB.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "Upload a file to import",
+        "tags": [
+          "imports",
         ],
       },
     },

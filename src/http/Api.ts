@@ -15,6 +15,7 @@ import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
 import { SendBlocked } from "../mail/send.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
+import { withRawRoutes } from "./rawRoutes.ts"
 
 export const Health = Schema.Struct({
   status: Schema.Literal("ok"),
@@ -992,6 +993,12 @@ export class IdentitiesApi extends HttpApiGroup.make("identities")
             mailboxId: Schema.String,
             kind: MailboxKindSchema,
             via: Schema.Literals(["admin", "member", "alias"]),
+            signature: Schema.NullOr(
+              Schema.Struct({ text: Schema.String, html: Schema.NullOr(Schema.String) }),
+            ).annotate({
+              description:
+                "The signature to start a message from this address with: its own, or for an alias its mailbox's.",
+            }),
           }),
         ),
         /** Domains on which this key may send as any address (root and admin keys). */
@@ -1115,10 +1122,16 @@ export const MessageDetailSchema = Schema.Struct({
 })
 
 const DraftAttachmentSchema = Schema.Struct({
-  key: Schema.String,
+  key: Schema.String.annotate({ description: "The `key` POST /v1/mailboxes/{id}/uploads answered with." }),
   filename: Schema.String,
   mimeType: Schema.String,
   size: Schema.Number,
+  delivery: Schema.optionalKey(
+    Schema.Literals(["inline", "link"]).annotate({
+      description:
+        "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+    }),
+  ),
 })
 const ReplyModeSchema = Schema.Literals(["reply", "replyAll", "forward"])
 
@@ -1336,6 +1349,30 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
       params: MailboxParam,
       query: { status: Schema.optionalKey(Schema.Literals(["draft", "scheduled", "due"])), limit: Limit },
       success: Schema.Struct({ drafts: Schema.Array(DraftSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("correspondents", "/v1/mailboxes/:id/correspondents", {
+      params: MailboxParam,
+      query: {
+        q: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(200))),
+        limit: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 50 })),
+        ),
+      },
+      success: Schema.Struct({
+        correspondents: Schema.Array(
+          Schema.Struct({
+            address: Schema.String,
+            name: Schema.NullOr(Schema.String),
+            received: Schema.Number,
+            sent: Schema.Number,
+            lastAt: Schema.Number,
+          }),
+        ),
+      }).annotate({
+        description:
+          "People this mailbox has heard from or written to whose address or name starts with q, most recent first: the composer's To field.",
+      }),
       error: MailErrors,
     }),
     HttpApiEndpoint.post("createDraft", "/v1/mailboxes/:id/drafts", {
@@ -3358,4 +3395,4 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(ExportsApi)
   .add(AutomationsApi)
   .add(RunsApi)
-  .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}
+  .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}

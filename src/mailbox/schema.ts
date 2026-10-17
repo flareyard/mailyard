@@ -5,7 +5,7 @@
  */
 export interface MailboxMigration {
   readonly statements: ReadonlyArray<string>
-  readonly after?: "threadAndIndexExisting" | "rebuildFolderCounts"
+  readonly after?: "threadAndIndexExisting" | "rebuildFolderCounts" | "rebuildCorrespondents"
 }
 
 /**
@@ -204,5 +204,13 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
       // What the live socket sent, numbered, so a client that reconnects can catch up from where it was.
       "CREATE TABLE IF NOT EXISTS live_events (seq INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, frame TEXT NOT NULL)",
     ],
+  },
+  {
+    statements: [
+      // Everyone this mailbox has heard from or written to, for the composer's To field (HAL-3398).
+      "CREATE TABLE correspondents (address TEXT PRIMARY KEY, name TEXT, received INTEGER NOT NULL DEFAULT 0, sent INTEGER NOT NULL DEFAULT 0, last_at INTEGER NOT NULL)",
+      "CREATE INDEX correspondents_recent ON correspondents (last_at DESC)",
+    ],
+    after: "rebuildCorrespondents",
   },
 ]
