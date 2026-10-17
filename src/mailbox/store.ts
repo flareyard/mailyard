@@ -6,6 +6,7 @@ import {
   type DeliveredAttachment,
   type Draft,
   type DraftInput,
+  type FilingOptions,
   FOLDERS,
   type Folder,
   type FolderCount,
@@ -115,7 +116,9 @@ export class MailboxStore {
   // ---------------------------------------------------------------------------------------------
 
   /** Files one message. Idempotent on `delivery.id`: a retried delivery reports `stored: false`. */
-  deliver(delivery: InboundDelivery, folder: Folder = "inbox") {
+  deliver(delivery: InboundDelivery, filing: Folder | FilingOptions = "inbox") {
+    const options: FilingOptions = typeof filing === "string" ? { folder: filing } : filing
+    const folder = options.folder ?? "inbox"
     return this.transaction(() => {
       const existing = this.sql.exec("SELECT thread_id FROM messages WHERE id = ?", delivery.id).toArray()[0]
       if (existing) {
@@ -164,7 +167,7 @@ export class MailboxStore {
         delivery.listId,
         delivery.listUnsubscribe,
         folder,
-        folder === "sent" ? 1 : 0,
+        folder === "sent" || options.seen ? 1 : 0,
         facts.key,
         facts.reply ? 1 : 0,
         delivery.inReplyTo === null && delivery.references.length === 0 ? 1 : 0,
@@ -187,6 +190,22 @@ export class MailboxStore {
           a.r2Key,
         )
       })
+      this.sql.exec(
+        "UPDATE messages SET spam_score = ?, spam_reasons = ?, rules_matched = ?, starred = ? WHERE id = ?",
+        delivery.spam?.score ?? null,
+        json(delivery.spam?.reasons ?? []),
+        json(delivery.rulesMatched ?? []),
+        options.starred ? 1 : 0,
+        delivery.id,
+      )
+      // Labels a rule applied; one that no longer exists is skipped rather than failing the delivery.
+      for (const labelId of options.labelIds ?? []) {
+        this.sql.exec(
+          "INSERT OR IGNORE INTO message_labels (message_id, label_id) SELECT ?, id FROM labels WHERE id = ?",
+          delivery.id,
+          labelId,
+        )
+      }
       this.index(delivery.id)
       const { threadId, merged } = this.assignThread(delivery.id)
       // New mail in a snoozed conversation brings it back, as every mail client does.
@@ -464,6 +483,9 @@ export class MailboxStore {
       listId: str(row.list_id),
       listUnsubscribe: str(row.list_unsubscribe),
       attachments: this.attachmentsOf(String(row.id)),
+      spamScore: num(row.spam_score),
+      spamReasons: row.spam_reasons ? parse(row.spam_reasons) : [],
+      rulesMatched: row.rules_matched ? parse(row.rules_matched) : [],
     }
   }
 

@@ -1,11 +1,13 @@
-import { and, desc, eq, lt, or, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm"
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core"
 import { Cause, Context, Effect, Layer, Option, Schema } from "effect"
 import { Bindings } from "../Bindings.ts"
-import { inboundMessages } from "../db/schema.ts"
+import { inboundMessages, mailboxes } from "../db/schema.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
 import { BODY_TEXT_LIMIT, type InboundDelivery } from "../mailbox/types.ts"
+import { runEffects } from "../rules/effects.ts"
+import { type FilingPlan, planFiling } from "../rules/filing.ts"
 import { Database } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { type ParsedMessage, parseMessage, sha256Hex } from "./parse.ts"
@@ -224,7 +226,17 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
   const delivered = [...row.deliveredTo]
   for (const mailboxId of resolution.mailboxIds) {
     if (delivered.includes(mailboxId)) continue
-    const result = yield* mailboxes.deliver(mailboxId, delivery)
+    // Each mailbox files the message its own way: its rules, its sender lists, its spam verdict.
+    const plan = yield* planFiling({ mailboxId, parsed, tag: resolution.tag })
+    const result = yield* mailboxes.deliver(
+      mailboxId,
+      {
+        ...delivery,
+        spam: { score: plan.spam.score, reasons: plan.spam.reasons },
+        rulesMatched: plan.rulesMatched,
+      },
+      plan.filing,
+    )
     delivered.push(mailboxId)
     yield* update(row.id, { deliveredTo: [...delivered] })
     if (result.stored) {
@@ -240,13 +252,56 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
         size: row.size,
         attachments: parsed.attachments.filter((a) => !a.related).length,
         auth: { spf: parsed.auth.spf, dkim: parsed.auth.dkim.map((d) => d.result), dmarc: parsed.auth.dmarc },
+        folder: plan.filing.folder,
+        spam: { score: plan.spam.score, isSpam: plan.spam.isSpam },
+        rulesMatched: plan.rulesMatched,
         receivedAt: new Date(row.receivedAt).toISOString(),
       })
+      // Forwards, auto-replies and rule webhooks run once: only for a newly stored copy, so a retried
+      // filing never sends them twice. Their failures are logged, never raised.
+      yield* effectsFor(mailboxId, plan, parsed, row, result.threadId)
     }
   }
   yield* update(row.id, { status: "filed", error: null, filedAt: Date.now() })
   return { outcome: "filed", id: row.id, mailboxIds: resolution.mailboxIds } as const
 })
+
+const effectsFor = (
+  mailboxId: string,
+  plan: FilingPlan,
+  parsed: ParsedMessage,
+  row: InboundRow,
+  threadId: string,
+) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const mailbox = yield* database.query("inbound.effectsMailbox", (db) =>
+      db.select().from(mailboxes).where(eq(mailboxes.id, mailboxId)).get(),
+    )
+    if (!mailbox) return
+    const aliases = yield* database.query("inbound.effectsAliases", (db) =>
+      db
+        .select({ address: mailboxes.address, targets: mailboxes.targets })
+        .from(mailboxes)
+        .where(inArray(mailboxes.kind, ["alias", "group"]))
+        .all(),
+    )
+    const ownAddresses = [
+      mailbox.address,
+      ...aliases.filter((a) => a.targets?.includes(mailboxId)).map((a) => a.address),
+      row.envelopeTo,
+    ]
+    const results = yield* runEffects(plan, {
+      mailbox,
+      ownAddresses,
+      parsed,
+      envelopeFrom: row.envelopeFrom,
+      inboundId: row.id,
+      threadId,
+    })
+    if (results.length > 0)
+      yield* Effect.logInfo(`inbound: effects for ${row.id} in ${mailboxId}: ${JSON.stringify(results)}`)
+  }).pipe(Effect.catchCause((cause) => Effect.logError("inbound: running rule effects failed", cause)))
 
 /** Runs `file` and, when it breaks, records why on the row before passing the failure on. */
 const fileRecording = (row: InboundRow, atDoor: boolean) =>

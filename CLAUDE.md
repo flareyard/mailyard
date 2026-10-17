@@ -30,6 +30,9 @@ Mailyard (founder, 2026-10-17). It was Mailflare, then Flaremail was considered;
   - "Send" means scheduling the draft for now plus the undo window (`MAILYARD_UNDO_SECONDS`, 10 by default), and undo means unscheduling it. The DO alarm hands due drafts to `mailyard-mailbox-send`, whose consumer sends through `sendFromMailbox` and files the sent copy.
   - Email Service assigns every Message-ID and refuses a custom one (measured 2026-10-17). Sent copies take the returned id, and `setMessageId` fills it in after a deferred first attempt.
   - Files are served from R2 through Worker-signed links (`GET /v1/files/{token}`), because R2 presigned URLs need S3 credentials the Worker doesn't hold.
+- Inbox rules and spam (`src/rules/`): `planFiling` decides per mailbox, from its rules (literal matching only, no regex, so a rule can't hang the pipeline), its sender lists (block always spam, allow never), the auth score, and the `Classifier`.
+  - The classifier is off by default and runs only on doubtful scores, from 1 to 5 points.
+  - Forwards, auto-replies and rule webhooks run only for a newly stored copy, so retries never repeat them. Auto-replies follow RFC 3834's guards.
 - D1 is deployed (since 2026-10-17): migrations are append-only. Run `bun run db:generate --name <change>`, then `wrangler d1 migrations apply mailyard --remote` before deploying code that needs it. Never edit or regenerate a shipped migration.
 - DNS checks (`src/domain/dnsChecks.ts`) go through the `Dns` service over DoH. In tests, `test/dns.ts` answers DoH from a table, and `LIVE_DNS=1` runs the read-only check against bridgehook.dev.
 - Tests never bind queue consumers: `vitest.config.ts` strips them from the generated Wrangler config, and tests drive consumers with `createMessageBatch` (HAL-3218).

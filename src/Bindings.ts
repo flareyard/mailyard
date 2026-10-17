@@ -22,6 +22,13 @@ export interface Env {
   readonly FILE_SIGNING_KEY?: string
   /** Seconds a send waits so it can be undone. 10 unless set; tests shorten it. */
   readonly MAILYARD_UNDO_SECONDS?: string
+  /** Spam classifier: `off` (default), `workers-ai` (needs AI) or `openai` (CLASSIFIER_URL and _MODEL). */
+  readonly MAILYARD_CLASSIFIER?: "off" | "workers-ai" | "openai"
+  /** Workers AI, only bound when the classifier uses it. */
+  readonly AI?: Ai
+  readonly CLASSIFIER_URL?: string
+  readonly CLASSIFIER_MODEL?: string
+  readonly CLASSIFIER_API_KEY?: string
   /** One Durable Object per mailbox: its messages, threads and search. */
   readonly MAILBOX: DurableObjectNamespace<MailboxDO>
   /** Deploy-time secret that encrypts webhook endpoint secrets at rest (manifest secret). */

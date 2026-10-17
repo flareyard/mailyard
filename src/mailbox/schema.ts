@@ -157,4 +157,13 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
       "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
     ],
   },
+  {
+    statements: [
+      // The spam check's verdict, kept so the UI can say why a message landed in spam.
+      "ALTER TABLE messages ADD COLUMN spam_score REAL",
+      "ALTER TABLE messages ADD COLUMN spam_reasons TEXT",
+      // Which inbox rules matched, for "why is this here?".
+      "ALTER TABLE messages ADD COLUMN rules_matched TEXT",
+    ],
+  },
 ]

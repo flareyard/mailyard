@@ -399,7 +399,8 @@ export const countByStatus = Effect.fn("outbox.countByStatus")(function* () {
  */
 export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (input: {
   readonly mailboxId: string
-  readonly sentCopyId: string
+  /** The sent copy filed in the mailbox, or null for mail the mailbox sends on its own (forwards, auto-replies). */
+  readonly sentCopyId: string | null
   readonly apiKeyId: string | null
   readonly message: Outgoing
 }) {

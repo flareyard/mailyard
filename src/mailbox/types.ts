@@ -53,11 +53,31 @@ export interface InboundDelivery {
   readonly listId: string | null
   readonly listUnsubscribe: string | null
   readonly attachments: ReadonlyArray<DeliveredAttachment>
+  /** The spam check's score and why, when one ran (src/rules/spam.ts). */
+  readonly spam?:
+    | {
+        readonly score: number
+        readonly reasons: ReadonlyArray<{ readonly rule: string; readonly points: number }>
+      }
+    | undefined
+  /** Inbox rules that matched. */
+  readonly rulesMatched?: ReadonlyArray<string> | undefined
+}
+
+/** Where and how a delivery is filed, as the rules and the spam check decided. */
+export interface FilingOptions {
+  readonly folder?: Folder | undefined
+  readonly labelIds?: ReadonlyArray<string> | undefined
+  readonly seen?: boolean | undefined
+  readonly starred?: boolean | undefined
 }
 
 export const BODY_TEXT_LIMIT = 256 * 1024
 
-export interface StoredMessage extends Omit<InboundDelivery, "bodyText"> {
+export interface StoredMessage extends Omit<InboundDelivery, "bodyText" | "spam" | "rulesMatched"> {
+  readonly spamScore: number | null
+  readonly spamReasons: ReadonlyArray<{ readonly rule: string; readonly points: number }>
+  readonly rulesMatched: ReadonlyArray<string>
   readonly storedAt: number
   readonly threadId: string
   readonly folder: Folder

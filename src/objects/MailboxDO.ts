@@ -3,6 +3,7 @@ import type { Env } from "../Bindings.ts"
 import { MailboxStore } from "../mailbox/store.ts"
 import type {
   DraftInput,
+  FilingOptions,
   Folder,
   InboundDelivery,
   MailboxEvent,
@@ -178,8 +179,8 @@ export class MailboxDO extends DurableObject<Env> {
   }
 
   /** Files one message. Idempotent on `delivery.id`: a retried delivery reports `stored: false`. */
-  async deliver(delivery: InboundDelivery, folder?: Folder) {
-    return await this.apply(this.store.deliver(delivery, folder))
+  async deliver(delivery: InboundDelivery, filing?: Folder | FilingOptions) {
+    return await this.apply(this.store.deliver(delivery, filing))
   }
 
   message(id: string) {
