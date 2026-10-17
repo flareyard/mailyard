@@ -3102,6 +3102,171 @@ export class SuppressionsApi extends HttpApiGroup.make("suppressions")
   )
   .middleware(ApiKeyAuth) {}
 
+const StatsRangeSchema = Schema.optionalKey(Schema.Literals(["24h", "7d", "30d", "90d"]))
+
+const MailboxAttentionSchema = Schema.Struct({
+  mailboxId: Schema.String,
+  address: Schema.String,
+  unread: Schema.Number,
+  waitingForReply: Schema.Number,
+  oldestWaitingAt: Schema.NullOr(Schema.Number),
+  snoozedReturning: Schema.Number,
+  assignedToMe: Schema.Number,
+})
+
+const ActivityEventSchema = Schema.Struct({
+  id: Schema.String,
+  kind: Schema.String.annotate({
+    description:
+      "audit.<action> for a change someone made (audit.campaign.schedule, audit.domain.created, …), alert.<kind> for an alert raised, email.bounced and email.complained for delivery trouble.",
+  }),
+  text: Schema.String,
+  subject: Schema.NullOr(
+    Schema.Struct({ type: Schema.String, id: Schema.String, label: Schema.NullOr(Schema.String) }),
+  ),
+  actor: Schema.NullOr(
+    Schema.Struct({
+      type: Schema.Literals(["key", "system"]),
+      id: Schema.String,
+      name: Schema.NullOr(Schema.String),
+    }),
+  ),
+  at: Schema.Number,
+})
+
+/**
+ * The Overview's read models: what needs a person in the mail, inbound and audience numbers, response
+ * times and the activity feed. Each reads through indexes or stored daily totals, never a whole table.
+ */
+export class OverviewApi extends HttpApiGroup.make("overview")
+  .add(
+    HttpApiEndpoint.get("attention", "/v1/mail/attention", {
+      query: {
+        replyTargetHours: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 720 })),
+        ),
+      },
+      success: Schema.Struct({
+        replyTargetHours: Schema.Number.annotate({
+          description:
+            "How long a conversation may wait before it counts as waiting: MAILYARD_REPLY_TARGET_HOURS (24) unless asked.",
+        }),
+        unread: Schema.Array(
+          Schema.Struct({ mailboxId: Schema.String, address: Schema.String, count: Schema.Number }),
+        ),
+        unreadTotal: Schema.Number,
+        waitingForReply: Schema.Number.annotate({
+          description:
+            "Inbox conversations whose latest message is someone else's and older than the target.",
+        }),
+        oldestWaitingAt: Schema.NullOr(Schema.Number),
+        snoozedReturningToday: Schema.Number,
+        assignedToMe: Schema.Number.annotate({
+          description: "Inbox conversations assigned to the calling key.",
+        }),
+        mailboxes: Schema.Array(MailboxAttentionSchema),
+        unavailable: Schema.Array(Schema.String).annotate({
+          description: "Mailboxes that didn't answer; their numbers are missing.",
+        }),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("inbound", "/v1/stats/inbound", {
+      query: { range: StatsRangeSchema },
+      success: Schema.Struct({
+        range: Schema.String,
+        received: Schema.Number,
+        rejected: Schema.Struct({
+          total: Schema.Number,
+          noSuchAddress: Schema.Number,
+          dmarcFail: Schema.NullOr(Schema.Number),
+          rbl: Schema.NullOr(Schema.Number),
+        }).annotate({
+          description:
+            "Mailyard's own refusals (no such address). Email Routing rejects DMARC failures and listed senders before mail reaches Mailyard, so those are null until its analytics are read.",
+        }),
+        held: Schema.Number,
+        spam: Schema.Number,
+        byMailbox: Schema.Array(
+          Schema.Struct({
+            mailboxId: Schema.String,
+            address: Schema.NullOr(Schema.String),
+            received: Schema.Number,
+            spam: Schema.Number,
+          }),
+        ),
+        days: Schema.Array(
+          Schema.Struct({
+            day: Schema.String,
+            received: Schema.Number,
+            rejected: Schema.Number,
+            spam: Schema.Number,
+          }),
+        ),
+        topSenders: Schema.Array(Schema.Struct({ address: Schema.String, received: Schema.Number })),
+        topSendersEstimate: Schema.Boolean,
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("audience", "/v1/stats/audience", {
+      query: { range: StatsRangeSchema },
+      success: Schema.Struct({
+        range: Schema.String,
+        asOf: Schema.Number.annotate({
+          description: "When the counts by status were taken: the hourly snapshot.",
+        }),
+        total: Schema.Number,
+        byStatus: Schema.Struct({
+          subscribed: Schema.Number,
+          unconfirmed: Schema.Number,
+          unsubscribed: Schema.Number,
+          bounced: Schema.Number,
+          complained: Schema.Number,
+          suppressed: Schema.Number,
+        }),
+        new: Schema.Number,
+        unsubscribed: Schema.Number,
+        suppressed: Schema.Number,
+        totalByDay: Schema.Array(Schema.Struct({ day: Schema.String, total: Schema.NullOr(Schema.Number) })),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("responseTimes", "/v1/stats/response-times", {
+      query: { range: StatsRangeSchema },
+      success: Schema.Struct({
+        range: Schema.String,
+        mailboxes: Schema.Array(
+          Schema.Struct({
+            mailboxId: Schema.String,
+            address: Schema.String,
+            assignees: Schema.Array(
+              Schema.Struct({
+                assigneeId: Schema.NullOr(Schema.String),
+                name: Schema.NullOr(Schema.String),
+                threads: Schema.Number,
+                answered: Schema.Number,
+                firstResponseMedianMin: Schema.NullOr(Schema.Number),
+                firstResponseP90Min: Schema.NullOr(Schema.Number),
+                resolutionMedianHours: Schema.NullOr(Schema.Number),
+              }),
+            ),
+          }),
+        ),
+        unavailable: Schema.Array(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("activity", "/v1/activity", {
+      query: { cursor: Schema.optionalKey(Schema.String), limit: Limit },
+      success: Schema.Struct({
+        events: Schema.Array(ActivityEventSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -3127,6 +3292,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(CampaignsApi)
   .add(ImportsApi)
   .add(SuppressionsApi)
+  .add(OverviewApi)
   .add(ExportsApi)
   .add(AutomationsApi)
   .add(RunsApi)

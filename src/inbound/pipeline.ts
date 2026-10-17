@@ -7,7 +7,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { inboundMessages, mailboxes } from "../db/schema.ts"
+import { inboundDeliveries, inboundMessages, mailboxes } from "../db/schema.ts"
 import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
@@ -313,6 +313,14 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
     )
     delivered.push(mailboxId)
     yield* update(row.id, { deliveredTo: [...delivered] })
+    // Where it went, for the inbound stats (per mailbox, and spam); a retry rewrites nothing.
+    yield* (yield* Database).query("inbound.deliveryRow", (db) =>
+      db
+        .insert(inboundDeliveries)
+        .values({ inboundId: row.id, mailboxId, folder: plan.filing.folder, at: Date.now() })
+        .onConflictDoNothing()
+        .run(),
+    )
     if (result.stored) {
       yield* emitSafely("mail.received", {
         id: row.id,

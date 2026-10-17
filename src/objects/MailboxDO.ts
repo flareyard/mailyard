@@ -207,6 +207,14 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.folderCounts()
   }
 
+  attention(input: { readonly olderThan: number; readonly until: number; readonly assignee: string | null }) {
+    return this.store.attention(input)
+  }
+
+  responseTimes(input: { readonly from: number; readonly to: number }) {
+    return this.store.responseTimes(input)
+  }
+
   search(query: string, options: { readonly limit?: number } = {}) {
     return this.store.search(query, options)
   }

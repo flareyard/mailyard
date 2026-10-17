@@ -172,4 +172,12 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
       "ALTER TABLE drafts ADD COLUMN track TEXT",
     ],
   },
+  {
+    statements: [
+      // Response times read conversations by when they started (HAL-3362).
+      "CREATE INDEX threads_first ON threads (first_at)",
+      // Unread inbox counts read only unseen inbox messages.
+      "CREATE INDEX messages_folder_seen ON messages (folder, seen, thread_id)",
+    ],
+  },
 ]
