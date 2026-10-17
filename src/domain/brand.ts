@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { settings } from "../db/schema.ts"
 import { Database } from "../services/Database.ts"
 import { DEFAULT_THEME, type Theme } from "../templates/kit.ts"

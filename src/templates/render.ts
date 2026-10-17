@@ -1,4 +1,4 @@
-import { Exit } from "effect"
+import * as Exit from "effect/Exit"
 import { htmlToText, render } from "../domain/render.ts"
 import { type BlockSpec, decodeBlocksDocument } from "./document.ts"
 import { createKit, type Theme } from "./kit.ts"

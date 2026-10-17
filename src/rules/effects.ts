@@ -1,5 +1,5 @@
 import { and, eq, gte } from "drizzle-orm"
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import { autoReplies, type mailboxes } from "../db/schema.ts"
 import { sendFromMailbox } from "../domain/outbox.ts"
 import { emitSafely } from "../domain/webhooks.ts"

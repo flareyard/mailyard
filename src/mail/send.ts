@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm"
-import { Effect, Option, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { mailboxes } from "../db/schema.ts"
 import type { Caller } from "../domain/apiKeys.ts"

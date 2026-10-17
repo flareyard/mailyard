@@ -1,4 +1,4 @@
-import { Context } from "effect"
+import * as Context from "effect/Context"
 import type { InboundJob } from "./inbound/pipeline.ts"
 import type { SendEmailBinding } from "./kit/index.ts"
 import type { MailboxDO } from "./objects/MailboxDO.ts"

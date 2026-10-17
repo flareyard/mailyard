@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import { isProviderProblem, type Outgoing, type SendError, type SendResult } from "./Sender.ts"
 
 interface SenderLike {

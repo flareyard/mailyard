@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { type Access, requireMailbox } from "../mail/access.ts"
 import { bodyTextOf } from "../mail/compose.ts"

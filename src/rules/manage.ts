@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, max } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { mailboxes, mailboxRules, mailboxSenders, webhookEndpoints } from "../db/schema.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { Ids } from "../kit/index.ts"

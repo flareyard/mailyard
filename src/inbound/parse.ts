@@ -1,4 +1,5 @@
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import PostalMime, { type Address, type Email } from "postal-mime"
 import { htmlToText } from "../domain/render.ts"
 import { type AuthResults, readAuthResults } from "./auth.ts"

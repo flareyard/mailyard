@@ -1,4 +1,6 @@
-import { Effect, type Layer, ManagedRuntime } from "effect"
+import * as Effect from "effect/Effect"
+import type * as Layer from "effect/Layer"
+import * as ManagedRuntime from "effect/ManagedRuntime"
 import type { Env } from "../Bindings.ts"
 import { MAX_INBOUND_BYTES, receive } from "../inbound/pipeline.ts"
 import { appLayer } from "../layers.ts"

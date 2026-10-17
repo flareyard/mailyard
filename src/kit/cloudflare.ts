@@ -1,4 +1,5 @@
-import { Effect, Predicate } from "effect"
+import * as Effect from "effect/Effect"
+import * as Predicate from "effect/Predicate"
 import {
   type Address,
   InvalidMessage,

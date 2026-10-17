@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
 import { requireMailbox } from "../mail/access.ts"
 import { authorize, problem } from "./auth.ts"

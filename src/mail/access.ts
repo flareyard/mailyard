@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { mailboxes, mailboxMembers } from "../db/schema.ts"
 import type { Caller, Scope } from "../domain/apiKeys.ts"
 import { HOLDS_MAIL } from "../domain/mailboxes.ts"

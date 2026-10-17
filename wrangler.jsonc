@@ -2,6 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mailyard-api",
   "main": "src/workers/api.ts",
+  "minify": true,
+  "upload_source_maps": true,
   "compatibility_date": "2026-10-16",
   // No resource ids: `wrangler deploy` provisions D1, R2 and the queues in whichever account deploys, and
   // keeps them linked by name. Don't commit the ids wrangler writes back after a deploy.

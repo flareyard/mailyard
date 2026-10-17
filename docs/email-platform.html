@@ -583,13 +583,13 @@ apps/platform/src/domains/ <span class="c">// DomainImport Workflow (RDAP, scan,
     <tbody>
       <tr><td>S1</td><td>Which OAuth scopes cover zone create, DNS edit, Email Routing, Email Sending and Queues event subscriptions? (joins HAL-2816)</td><td>Import and email setup can't run through OAuth without them</td></tr>
       <tr><td>S2</td><td>Which of routing enable, catch-all to Worker, sending subdomain and event subscription can Alchemy declare today?</td><td>Whatever it can't must become custom Alchemy resources in the kit</td></tr>
-      <tr><td>S3</td><td>Does Email Routing work on a subdomain (<code>in.mbprep.app</code>) while the apex MX stays on Google Workspace?</td><td>Decides whether MBPrep keeps Workspace</td></tr>
+      <tr><td>S3</td><td>Does Email Routing work on a subdomain (<code>in.mbprep.app</code>) while the apex MX stays on Google Workspace?</td><td>Decides whether MBPrep keeps Workspace<br><b>Answered 2026-10-17 (HAL-3120):</b> yes. Routing on <code>in.flareyard.dev</code> added records on the subdomain only, and the apex kept its Spacemail MX.</td></tr>
       <tr><td>S4</td><td>Does Gmail's "Send mail as" accept <code>smtp.mx.cloudflare.net:465</code> with <code>api_token</code> auth?</td><td>The free Gmail mode</td></tr>
       <tr><td>S5</td><td>IMAP import over Workers <code>connect()</code> from Hostinger and Spacemail: speed, and where the CPU limits bite</td><td>Moving existing mailboxes in</td></tr>
       <tr><td>S6</td><td>Is FTS5 available in Durable Object SQLite?</td><td>Mailbox search without Vectorize</td></tr>
       <tr><td>S7</td><td>Spaceship nameserver and DS update by API; Hostinger DNSSEC and DS by API</td><td>Whether DNSSEC can be one click too</td></tr>
       <tr><td>S8</td><td>A JMAP server in a Worker: which real clients connect to it?</td><td>Desktop and mobile access without IMAP</td></tr>
-      <tr><td>S9</td><td>Bundle size and cold start of an <code>inbound</code> Worker built with Effect 4 and Schema, against the same handler in plain TypeScript</td><td>Confirms Effect earns its weight on the hot paths; if not, the edges go plain</td></tr>
+      <tr><td>S9</td><td>Bundle size and cold start of an <code>inbound</code> Worker built with Effect 4 and Schema, against the same handler in plain TypeScript</td><td>Confirms Effect earns its weight on the hot paths; if not, the edges go plain<br><b>Answered 2026-10-17 (HAL-3116):</b> Effect stays. Its cost came from importing the <code>effect</code> barrel and shipping unminified. The same handler in plain TypeScript is 141 KiB (36 gzip, 4–7 ms startup). Wrapped in Effect and Schema it is 877 KiB from the barrel, but 357 KiB (82 gzip, 23–30 ms) with <code>effect/Effect</code>-style imports. The whole Worker went from 1,948 KiB (413 gzip) to 747 KiB (233 gzip) with module imports plus <code>minify</code>.</td></tr>
     </tbody>
   </table></div>
 </section>

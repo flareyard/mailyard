@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers"
-import { Effect, Layer } from "effect"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import { beforeAll, describe, expect, it } from "vitest"
 import { Bindings } from "../../src/Bindings.ts"
 import { forecast, reputation, usage } from "../../src/domain/insights.ts"

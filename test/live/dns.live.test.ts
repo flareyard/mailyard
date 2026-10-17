@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import { describe, expect, it } from "vitest"
 import { checkDomain } from "../../src/domain/dnsChecks.ts"
 import { Dns } from "../../src/services/Dns.ts"

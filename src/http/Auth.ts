@@ -1,6 +1,7 @@
-import { Context, Schema } from "effect"
+import * as Context from "effect/Context"
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware"
 import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity"
+import * as Schema from "effect/Schema"
 import type { Caller } from "../domain/apiKeys.ts"
 
 export class CurrentCaller extends Context.Service<CurrentCaller, Caller>()("mailyard/CurrentCaller") {}

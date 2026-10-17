@@ -1,5 +1,6 @@
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import * as Schema from "effect/Schema"
 import { BrandSettings, getBrand, getBrandSettings, putBrandSettings } from "../domain/brand.ts"
 import {
   archiveTemplate,

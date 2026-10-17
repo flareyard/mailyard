@@ -1,4 +1,5 @@
-import { Effect, Layer } from "effect"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import { makeCloudflareSender, type SendEmailBinding } from "./cloudflare.ts"
 import { failover } from "./failover.ts"
 import { Ids } from "./Ids.ts"
