@@ -4,6 +4,7 @@ import * as HttpServer from "effect/http/HttpServer"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Layer from "effect/Layer"
 import type { Env } from "../Bindings.ts"
+import { UNSUBSCRIBE_PATH } from "../domain/unsubscribe.ts"
 import { MailApi } from "../http/Api.ts"
 import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
 import {
@@ -42,6 +43,7 @@ import { handleEmail } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
 import { CONFIRM_PATH, FORM_SUBMIT_PATH, handleConfirm, handleFormSubmit } from "./public.ts"
 import { handleQueue } from "./queue.ts"
+import { handleUnsubscribe } from "./unsubscribe.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
 export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
@@ -97,6 +99,8 @@ export default {
     if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
     const confirm = CONFIRM_PATH.exec(path)
     if (confirm && request.method === "GET") return handleConfirm(env, d(confirm[1]))
+    const unsubscribe = UNSUBSCRIBE_PATH.exec(path)
+    if (unsubscribe) return handleUnsubscribe(request, env, d(unsubscribe[1]))
     const form = FORM_SUBMIT_PATH.exec(path)
     if (form) return handleFormSubmit(request, env, d(form[1]))
     return handler(request)

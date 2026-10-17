@@ -15,6 +15,17 @@ export const ConsentPayload = Schema.Union([
     topicId: Schema.String,
     issuedAt: Schema.Number,
   }),
+  /**
+   * In every bulk message: opens the preference page, and one-click unsubscribes from `topicId`
+   * (everything, when null). It never expires: Gmail and Yahoo require the link to keep working.
+   */
+  Schema.Struct({
+    kind: Schema.Literal("unsubscribe"),
+    contactId: Schema.String,
+    topicId: Schema.NullOr(Schema.String),
+    campaignId: Schema.NullOr(Schema.String),
+    issuedAt: Schema.Number,
+  }),
 ])
 export type ConsentPayload = typeof ConsentPayload.Type
 

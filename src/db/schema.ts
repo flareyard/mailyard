@@ -516,7 +516,10 @@ export const inboundMessages = sqliteTable(
      * `received`: stored, not yet filed. `filed`: in every target mailbox. `rejected`: bounced at the door.
      * `held`: stored, but no mailbox takes it any more. `failed`: an attempt broke; a retry job is queued.
      */
-    status: text("status", { enum: ["received", "filed", "rejected", "held", "failed"] }).notNull(),
+    /** `consumed`: handled by Mailyard itself (a mailto unsubscribe), not filed in a mailbox. */
+    status: text("status", {
+      enum: ["received", "filed", "rejected", "held", "failed", "consumed"],
+    }).notNull(),
     /** Where the recipient resolved to, fixed at first resolution so a retry files into the same mailboxes. */
     resolution: text("resolution", { mode: "json" }).$type<{
       readonly via: "mailbox" | "alias" | "group" | "catch_all"

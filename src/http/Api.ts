@@ -662,7 +662,7 @@ export class InsightsApi extends HttpApiGroup.make("insights")
 // Inbound ledger: every message Email Routing handed us, and whether it reached its mailboxes
 // ---------------------------------------------------------------------------------------------
 
-const InboundStatus = Schema.Literals(["received", "filed", "rejected", "held", "failed"])
+const InboundStatus = Schema.Literals(["received", "filed", "rejected", "held", "failed", "consumed"])
 
 export const InboundMessage = Schema.Struct({
   id: Schema.String,
@@ -1719,6 +1719,13 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
         messages: Schema.Array(Fields),
         suppression: Schema.NullOr(Fields),
       }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("preferencesLink", "/v1/contacts/:id/preferences-link", {
+      params: { id: Schema.String },
+      /** Ties the link (and its one-click) to one topic; without it, the link manages every topic. */
+      query: { topicId: Schema.optionalKey(Schema.String) },
+      success: Schema.Struct({ url: Schema.String }),
       error: [Forbidden, NotFound],
     }),
     HttpApiEndpoint.post("erase", "/v1/contacts/:id/erase", {

@@ -8,6 +8,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { inboundMessages, mailboxes } from "../db/schema.ts"
+import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
 import { BODY_TEXT_LIMIT, type InboundDelivery } from "../mailbox/types.ts"
@@ -74,6 +75,7 @@ export type Outcome =
   | { readonly outcome: "rejected"; readonly id: string; readonly reason: string }
   | { readonly outcome: "held"; readonly id: string; readonly reason: string }
   | { readonly outcome: "queued"; readonly id: string | null; readonly error: string }
+  | { readonly outcome: "consumed"; readonly id: string }
 
 /** A short, log-safe description of why an attempt failed: the tag and message, never the payload. */
 export const describeFailure = (cause: Cause.Cause<unknown>) => {
@@ -230,6 +232,35 @@ const toDelivery = (row: InboundRow, resolution: Resolution, parsed: ParsedMessa
  * mailbox not yet holding it, then mark it filed. Every step is idempotent, so any attempt can be
  * repeated after a failure. `atDoor` is true inside `email()`, the only moment a bounce is possible.
  */
+/**
+ * A mail to `unsubscribe@` (with no real mailbox of that name) carrying a valid token in its subject:
+ * the mailto half of List-Unsubscribe. Honoured at once and recorded as consumed, never filed.
+ * Anything else at that address falls through to the usual answer for an unknown recipient.
+ */
+const mailtoUnsubscribe = (row: InboundRow) =>
+  Effect.gen(function* () {
+    if (row.envelopeTo.trim().toLowerCase().split("@")[0] !== UNSUBSCRIBE_LOCAL) return null
+    const raw = yield* (yield* BlobStore).get(row.rawKey)
+    if (Option.isNone(raw)) return null
+    const parsed = yield* parseMessage(raw.value.body).pipe(Effect.option)
+    if (Option.isNone(parsed)) return null
+    const token = tokenFromSubject(parsed.value.subject)
+    if (!token) return null
+    const done = yield* Effect.result(oneClickUnsubscribe(token, "mailto"))
+    if (done._tag === "Failure") {
+      const tag = (done.failure as { _tag?: string })._tag
+      if (tag === "DatabaseError") return yield* Effect.die(done.failure)
+      if (tag !== "ContactNotFound") return null
+    }
+    yield* update(row.id, {
+      status: "consumed",
+      error: null,
+      subject: parsed.value.subject.slice(0, 998),
+      fromAddress: parsed.value.from?.address ?? null,
+    })
+    return { outcome: "consumed", id: row.id } as const
+  })
+
 const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boolean) {
   yield* update(row.id, { attempts: sql`${inboundMessages.attempts} + 1` })
 
@@ -239,6 +270,8 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
     if (resolved._tag === "Failure") {
       const failure = resolved.failure
       if (failure._tag !== "Unroutable") return yield* failure
+      const consumed = yield* mailtoUnsubscribe(row)
+      if (consumed) return consumed
       const status = atDoor ? "rejected" : "held"
       yield* update(row.id, { status, error: failure.reason })
       return atDoor
