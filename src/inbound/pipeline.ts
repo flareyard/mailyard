@@ -7,7 +7,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { inboundDeliveries, inboundMessages, mailboxes } from "../db/schema.ts"
+import { inboundDeliveries, inboundMessages, mailboxes, mailboxRules } from "../db/schema.ts"
 import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
@@ -321,6 +321,17 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
         .onConflictDoNothing()
         .run(),
     )
+    if (result.stored && plan.rulesMatched.length > 0) {
+      // Counted once per stored copy, so a retried filing doesn't count again.
+      const now = Date.now()
+      yield* (yield* Database).query("inbound.ruleMatches", (db) =>
+        db
+          .update(mailboxRules)
+          .set({ matchCount: sql`${mailboxRules.matchCount} + 1`, lastMatchedAt: now })
+          .where(inArray(mailboxRules.id, [...plan.rulesMatched]))
+          .run(),
+      )
+    }
     if (result.stored) {
       yield* emitSafely("mail.received", {
         id: row.id,

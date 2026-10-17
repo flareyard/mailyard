@@ -1392,8 +1392,31 @@ export const RuleSchema = Schema.Struct({
   actions: Schema.Array(RuleAction),
   stop: Schema.Boolean,
   position: Schema.Number,
+  matchCount: Schema.Number.annotate({
+    description: "Messages it matched as they arrived; an apply run doesn't count.",
+  }),
+  lastMatchedAt: Schema.NullOr(Schema.Number),
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
+})
+
+const SpamReasonSchema = Schema.Struct({ rule: Schema.String, points: Schema.Number })
+const RuleOutcomeSchema = Schema.Struct({
+  matched: Schema.Array(Schema.String),
+  folder: Schema.NullOr(Schema.Literals(["archive", "trash", "spam"])),
+  labelIds: Schema.Array(Schema.String),
+  markRead: Schema.Boolean,
+  star: Schema.Boolean,
+  skipSpamCheck: Schema.Boolean,
+  forwards: Schema.Array(Schema.Struct({ ruleId: Schema.String, to: Schema.Array(Schema.String) })),
+  autoReplies: Schema.Array(
+    Schema.Struct({ ruleId: Schema.String, subject: Schema.String, body: Schema.String }),
+  ),
+  webhooks: Schema.Array(Schema.Struct({ ruleId: Schema.String, endpointId: Schema.String })),
+  assignee: Schema.NullOr(Schema.String),
+  stoppedAt: Schema.NullOr(Schema.String).annotate({
+    description: "The rule that stopped the ones after it.",
+  }),
 })
 
 const SenderSchema = Schema.Struct({
@@ -1454,12 +1477,39 @@ export class RulesApi extends HttpApiGroup.make("rules")
       payload: Schema.Struct({ messageId: Schema.String }),
       success: Schema.Struct({
         matched: Schema.Array(Schema.Struct({ id: Schema.String, name: Schema.String })),
-        outcome: Schema.Unknown,
-        authScore: Schema.Struct({
-          score: Schema.Number,
-          reasons: Schema.Array(Schema.Struct({ rule: Schema.String, points: Schema.Number })),
+        outcome: RuleOutcomeSchema,
+        authScore: Schema.Struct({ score: Schema.Number, reasons: Schema.Array(SpamReasonSchema) }),
+        filedWith: Schema.Struct({
+          folder: Schema.String,
+          spamScore: Schema.NullOr(Schema.Number),
+          spamReasons: Schema.Array(SpamReasonSchema),
+          rulesMatched: Schema.Array(Schema.String),
+        }).annotate({ description: "How the message was actually filed when it arrived." }),
+      }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("apply", "/v1/mailboxes/:id/rules/:ruleId/apply", {
+      params: { id: Schema.String, ruleId: Schema.String },
+      payload: Schema.Struct({
+        folder: Schema.optionalKey(
+          Schema.Literals(["inbox", "archive", "sent", "trash", "spam", "snoozed"]).annotate({
+            description: "Only mail in this folder; by default everything but trash, spam and sent.",
+          }),
+        ),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Schema.optionalKey(Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 500 }))),
+      }),
+      success: Schema.Struct({
+        examined: Schema.Number,
+        matched: Schema.Number,
+        changed: Schema.Number,
+        skippedActions: Schema.Array(Schema.String).annotate({
+          description:
+            "Actions that only run as mail arrives (forward, autoReply, webhook): applying a rule never sends.",
         }),
-        filedWith: Schema.Unknown,
+        nextCursor: Schema.NullOr(Schema.String).annotate({
+          description: "Call again with it to go on to older mail.",
+        }),
       }),
       error: MailErrors,
     }),

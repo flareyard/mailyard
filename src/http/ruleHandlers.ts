@@ -4,6 +4,7 @@ import { type Access, requireMailbox } from "../mail/access.ts"
 import { bodyTextOf } from "../mail/compose.ts"
 import { callMailbox } from "../mail/rpc.ts"
 import {
+  applyRule,
   createRule,
   deleteRule,
   listRules,
@@ -82,6 +83,12 @@ export const RulesHandlers = HttpApiBuilder.group(
           const message = yield* callMailbox(params.id, (s) => s.message(payload.messageId))
           if (!message) return yield* new NotFound({ message: `Message ${payload.messageId} not found.` })
           return yield* testRules(params.id, message, yield* bodyTextOf(message))
+        }).pipe(mailErrors),
+      ),
+      apply: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          const { caller } = yield* owner(params.id)
+          return yield* applyRule(params.id, params.ruleId, payload, caller.keyId)
         }).pipe(mailErrors),
       ),
       senders: p(({ params, query }) =>

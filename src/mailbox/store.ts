@@ -1,3 +1,4 @@
+import { type Rule, ruleMatches } from "../rules/engine.ts"
 import { FOLDER_COUNT_TABLES, MAILBOX_MIGRATIONS } from "./schema.ts"
 import { HIGHLIGHT_END, HIGHLIGHT_START, parseSearch, SEARCH_WEIGHTS } from "./search.ts"
 import { linkIds, SUBJECT_WINDOW_MS, subjectKey } from "./threading.ts"
@@ -215,7 +216,11 @@ export class MailboxStore {
       // New mail in a snoozed conversation brings it back, as every mail client does.
       const snoozed = this.threadRow(threadId)?.snoozed_until
       if (folder === "inbox" && snoozed !== null && snoozed !== undefined) this.wake(threadId, false)
-      const thread = this.refresh(threadId)
+      let thread = this.refresh(threadId)
+      if (options.assignee && thread && !thread.assignee) {
+        this.sql.exec("UPDATE threads SET assignee = ? WHERE id = ?", options.assignee, threadId)
+        thread = this.refresh(threadId)
+      }
       if (!thread) throw new Error("thread vanished after delivery")
       const message = this.summaryOf(delivery.id)
       const events: Array<MailboxEvent> = [
@@ -964,6 +969,111 @@ export class MailboxStore {
       this.applyPatch(existing, patch)
       return { updated: existing.length, events: [this.changed(this.threadsOfMessages(existing))] }
     })
+  }
+
+  /**
+   * Runs one rule over mail already in the mailbox (`POST …/rules/{id}/apply`), newest first, a page
+   * at a time. Only actions that make sense after the fact apply: labels, moves, mark read, star and
+   * assign. Forwards, auto-replies and webhooks are left out, so applying a rule never sends anything.
+   * Matching reads the stored text, the same fields a delivery is matched on.
+   */
+  applyRule(
+    rule: Rule,
+    options: {
+      readonly folder?: Folder | null | undefined
+      readonly cursor?: string | null | undefined
+      readonly limit?: number | undefined
+    },
+  ) {
+    const limit = Math.min(Math.max(options.limit ?? 200, 1), 500)
+    const where: Array<string> = []
+    const args: Array<SqlStorageValue> = []
+    if (options.folder) {
+      where.push("folder = ?")
+      args.push(assertFolder(options.folder))
+    } else where.push("folder NOT IN ('trash', 'spam', 'sent')")
+    const [at, id] = options.cursor ? options.cursor.split(":") : []
+    if (at && id) {
+      where.push("(received_at < ? OR (received_at = ? AND id < ?))")
+      args.push(Number(at), Number(at), id)
+    }
+    const rows = this.sql
+      .exec(
+        `SELECT id, thread_id, received_at, from_name, from_address, to_list, cc_list, subject, list_id, tag,
+           body_text, has_attachments, automated FROM messages WHERE ${where.join(" AND ")}
+         ORDER BY received_at DESC, id DESC LIMIT ?`,
+        ...args,
+        limit + 1,
+      )
+      .toArray()
+    const page = rows.slice(0, limit)
+    const matched = page.filter((r) =>
+      ruleMatches(rule, {
+        from: r.from_address ? { name: str(r.from_name), address: String(r.from_address) } : null,
+        to: parse<Array<Party>>(r.to_list),
+        cc: parse<Array<Party>>(r.cc_list),
+        subject: String(r.subject),
+        listId: str(r.list_id),
+        tag: str(r.tag),
+        body: String(r.body_text).slice(0, 20_000),
+        hasAttachment: Number(r.has_attachments) === 1,
+        automated: Number(r.automated) === 1,
+      }),
+    )
+    const ids = matched.map((r) => String(r.id))
+    const events: Array<MailboxEvent> = []
+    let changed = 0
+    if (ids.length > 0) {
+      const patch: MessagePatch = {}
+      const labels: Array<string> = []
+      let folder: Folder | undefined
+      let seen: boolean | undefined
+      let starred: boolean | undefined
+      let assignee: string | null = null
+      for (const action of rule.actions) {
+        if (action.type === "label") labels.push(action.labelId)
+        else if (action.type === "archive" || action.type === "trash" || action.type === "spam")
+          folder = action.type
+        else if (action.type === "markRead") seen = true
+        else if (action.type === "star") starred = true
+        else if (action.type === "assign") assignee = action.assignee
+      }
+      const known = new Set(this.labels().map((l) => l.id))
+      const addLabels = labels.filter((l) => known.has(l))
+      const full: MessagePatch = {
+        ...patch,
+        ...(addLabels.length ? { addLabels } : {}),
+        ...(folder ? { folder } : {}),
+        ...(seen !== undefined ? { seen } : {}),
+        ...(starred !== undefined ? { starred } : {}),
+      }
+      if (Object.keys(full).length > 0) {
+        const result = this.updateMessages(ids, full)
+        events.push(...result.events)
+        changed = result.updated
+      }
+      if (assignee) {
+        const threads = [...new Set(matched.map((r) => String(r.thread_id)))]
+        const result = this.assign(threads, assignee)
+        events.push(...result.events)
+        changed = Math.max(changed, ids.length)
+      }
+    }
+    const last = page.at(-1)
+    return {
+      examined: page.length,
+      matched: ids.length,
+      changed,
+      skippedActions: [
+        ...new Set(
+          rule.actions
+            .map((a) => a.type)
+            .filter((t) => t === "forward" || t === "autoReply" || t === "webhook"),
+        ),
+      ],
+      nextCursor: rows.length > limit && last ? `${last.received_at}:${last.id}` : null,
+      events,
+    }
   }
 
   /**

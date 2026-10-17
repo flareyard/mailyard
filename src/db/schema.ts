@@ -811,6 +811,9 @@ export const mailboxRules = sqliteTable(
     conditions: text("conditions", { mode: "json" }).$type<ReadonlyArray<Condition>>().notNull(),
     actions: text("actions", { mode: "json" }).$type<ReadonlyArray<Action>>().notNull(),
     stop: integer("stop", { mode: "boolean" }).notNull().default(false),
+    /** Messages this rule matched as they arrived (not counting `apply` runs), and the latest. */
+    matchCount: integer("match_count").notNull().default(0),
+    lastMatchedAt: integer("last_matched_at"),
     createdAt: createdAt(),
     updatedAt: integer("updated_at").notNull(),
   },
