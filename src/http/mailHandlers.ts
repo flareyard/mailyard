@@ -23,7 +23,7 @@ type MailHttp<E> = E extends MailboxMissing | RuleNotFound | TransferNotFound
   : E extends MailboxAccessDenied
     ? Forbidden
     : E extends MailboxRefused
-      ? NotFound | InvalidRequest | Conflict
+      ? NotFound | InvalidRequest | Conflict | Forbidden
       : E extends ComposeInvalid | SendInvalid | RuleInvalid | TransferInvalid
         ? InvalidRequest
         : E extends {
@@ -59,6 +59,7 @@ export const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
           if (err.code === "not_found") return new NotFound({ message: err.message ?? "Not found." })
           if (err.code === "label_exists" || err.code === "draft_locked")
             return new Conflict({ message: err.message ?? "Conflict." })
+          if (err.code === "forbidden") return new Forbidden({ message: err.message ?? "Forbidden" })
           return new InvalidRequest({ field: "request", message: err.message ?? "Invalid request." })
         case "RuleInvalid":
         case "TransferInvalid":
@@ -136,7 +137,14 @@ const toMessage = (m: StoredMessage) => ({
   automated: m.automated,
   listId: m.listId,
   listUnsubscribe: m.listUnsubscribe,
-  auth: { source: m.auth.source, spf: m.auth.spf, dmarc: m.auth.dmarc, dkim: m.auth.dkim },
+  auth: {
+    source: m.auth.source,
+    spf: m.auth.spf,
+    dmarc: m.auth.dmarc,
+    dkim: m.auth.dkim,
+    // The ARC chain when it was recorded (HAL-3407); before that, the bare verdict.
+    arc: m.auth.arcChain ?? (m.auth.arc ? { result: m.auth.arc, instance: null, sealer: null } : null),
+  },
   attachments: m.attachments.map(({ r2Key: _, ...a }) => a),
   spamScore: m.spamScore,
   spamReasons: m.spamReasons,
@@ -197,6 +205,37 @@ const createDraftNow = (
       ...(attachments ? { attachments } : {}),
     }
     return (yield* callMailbox(params.id, (s) => s.saveDraft(input))).draft
+  })
+
+/** Names the key that wrote each note: the key's name until people exist (HAL-3361). */
+const withAuthors = (
+  notes: ReadonlyArray<{
+    readonly id: string
+    readonly author: string
+    readonly body: string
+    readonly createdAt: number
+  }>,
+) =>
+  Effect.gen(function* () {
+    const ids = [...new Set(notes.map((n) => n.author).filter((a) => a !== "root"))]
+    const names = new Map<string, string>([["root", "Admin key"]])
+    if (ids.length > 0) {
+      const database = yield* Database
+      const rows = yield* database.query("mail.noteAuthors", (db) =>
+        db
+          .select({ id: apiKeys.id, name: apiKeys.name })
+          .from(apiKeys)
+          .where(inArray(apiKeys.id, ids.slice(0, 90)))
+          .all(),
+      )
+      for (const r of rows) names.set(r.id, r.name)
+    }
+    return notes.map((n) => ({
+      id: n.id,
+      body: n.body,
+      author: { id: n.author, name: names.get(n.author) ?? n.author },
+      createdAt: n.createdAt,
+    }))
   })
 
 /** Adds who's handling each conversation, with a name: the key's, until people exist (HAL-3361). */
@@ -278,6 +317,7 @@ export const MailHandlers = HttpApiBuilder.group(
             thread: thread ?? result.thread,
             messages: result.messages.map(toMessage),
             drafts: result.drafts,
+            notes: yield* withAuthors(result.notes),
           }
         }).pipe(mailErrors),
       ),
@@ -356,6 +396,25 @@ export const MailHandlers = HttpApiBuilder.group(
           )
         }).pipe(mailErrors),
       ),
+      addNote: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          const { caller } = yield* access(params.id, "write")
+          const result = yield* callMailbox(params.id, (s) =>
+            s.addNote(params.threadId, caller.keyId, payload.body),
+          )
+          const [note] = yield* withAuthors(result.note ? [result.note] : [])
+          if (!note) return yield* new NotFound({ message: "The note vanished." })
+          return note
+        }).pipe(mailErrors),
+      ),
+      deleteNote: p(({ params }) =>
+        Effect.gen(function* () {
+          const { caller, role } = yield* access(params.id, "write")
+          return yield* callMailbox(params.id, (s) =>
+            s.deleteNote(params.noteId, caller.keyId, role === "admin" || role === "owner"),
+          )
+        }).pipe(mailErrors),
+      ),
       smartFolders: p(({ params }) =>
         Effect.gen(function* () {
           yield* access(params.id, "read")
@@ -386,7 +445,7 @@ export const MailHandlers = HttpApiBuilder.group(
           return yield* callMailbox(params.id, (s) => s.deleteSmartFolder(params.folderId))
         }).pipe(mailErrors),
       ),
-      message: p(({ params, request }) =>
+      message: p(({ params, request, query }) =>
         Effect.gen(function* () {
           yield* access(params.id, "read")
           const message = yield* callMailbox(params.id, (s) => s.message(params.messageId))
@@ -394,11 +453,17 @@ export const MailHandlers = HttpApiBuilder.group(
           const store = yield* BlobStore
           const bodyBlob = yield* store.get(message.bodyKey)
           let html: string | null = null
+          let headers: Array<{ name: string; value: string }> | null = null
           if (bodyBlob._tag === "Some") {
             try {
-              html =
-                (JSON.parse(new TextDecoder().decode(bodyBlob.value.body)) as { html?: string | null })
-                  .html ?? null
+              const stored = JSON.parse(new TextDecoder().decode(bodyBlob.value.body)) as {
+                html?: string | null
+                headers?: ReadonlyArray<{ key: string; value: string }>
+              }
+              html = stored.html ?? null
+              // In the order they arrived (newest hop first), as the parser kept them.
+              if (query.include === "headers")
+                headers = (stored.headers ?? []).map((h) => ({ name: h.key, value: h.value }))
             } catch {
               html = null
             }
@@ -440,7 +505,14 @@ export const MailHandlers = HttpApiBuilder.group(
                 firstClickedAt: sent.firstClickedAt,
               }
             : null
-          return { ...toMessage(message), body: { text, html }, rawUrl, attachmentUrls, delivery }
+          return {
+            ...toMessage(message),
+            body: { text, html },
+            rawUrl,
+            attachmentUrls,
+            delivery,
+            ...(query.include === "headers" ? { headers: headers ?? [] } : {}),
+          }
         }).pipe(mailErrors),
       ),
       updateMessage: p(({ params, payload }) =>

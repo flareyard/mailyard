@@ -262,17 +262,17 @@ The mailbox socket `ws /v1/mailboxes/:id/live` is **built**, with the events hel
 
 | # | Endpoint / field | Screens | Proposed shape |
 |---|---|---|---|
-| M3.1 | `label.color` values | `labels-manage`, every tag | `color` is a free `string \| null`. Brand rules keep green, amber and red for pass, warn and fail, so the designs offer six categorical swatches: `"blue" \| "navy" \| "sky" \| "teal" \| "pine" \| "slate"` (`null` = none). Make it that literal union, so another client can't store `#f38020`. |
+| M3.1 | `label.color` values | `labels-manage`, every tag | **Built** (HAL-3407): `color` is `"blue"\|"navy"\|"sky"\|"teal"\|"pine"\|"slate"\|null`. Old hex values moved to the nearest palette colour when each mailbox migrated; hex is refused from now on. |
 
 ## M4. Reader
 
 | # | Endpoint / field | Screens | Proposed shape |
 |---|---|---|---|
-| M4.1 | Full headers | `thread-details` → Headers | Messages carry `messageId`, `inReplyTo`, `references`, envelope, `via` and `auth`, but no header list. Proposed: `GET …/messages/{id}?include=headers` → `headers: [{ name, value }]` in order. The fallback is to parse `rawUrl` on the client. |
-| M4.2 | **ARC** | Authentication line, details | `auth` has `spf`, `dmarc` and `dkim[]`. Add `arc: { result: "pass"\|"fail"\|"none", instance: number, sealer: string \| null } \| null`. `thread-auth-fail` depends on it: DKIM broke at a forwarder and ARC passed. |
-| M4.3 | Spam threshold | Details → Spam score | Scores and reasons exist, but the cut-off doesn't, so the drawer says “Higher scores are more likely spam” without a line. Proposed: `spamThreshold: number` on `GET /v1/mailboxes/{id}`. |
+| M4.1 | Full headers | `thread-details` → Headers | **Built** (HAL-3407): `GET …/messages/{id}?include=headers` → `headers: [{ name, value }]`, every header in the order it arrived (newest hop first). |
+| M4.2 | **ARC** | Authentication line, details | **Built** (HAL-3407): `auth.arc: { result, instance, sealer } \| null`, from the newest ARC-Seal (i=, d=, cv=) and the receiver's arc= verdict. Messages stored before this have the verdict with instance and sealer null. |
+| M4.3 | Spam threshold | Details → Spam score | **Built** (HAL-3407): `mailbox.spamThreshold` (default 5, `spamThresholdIsDefault`), settable 1 to 20 with `PATCH /v1/mailboxes/{id}` (null for the default); filing uses it. |
 | M4.4 | **Delivery status of our sent replies** | `thread`, `thread-delivery`, `sent` | Sent mailbox messages don't link to the message log, where `/v1/messages/{id}` has `status`, `bounceType`, `attempts` and `smtpResponse`. Proposed: `message.delivery: [{ recipient, logId, status: "queued"\|"sent"\|"delivered"\|"deferred"\|"bounced"\|"failed"\|"rejected", at, attempts, nextAttemptAt?, smtpResponse }]` on `folder: "sent"` messages, pushed through `threads.changed`. |
-| M4.5 | Internal notes | `thread`, note composer (N) | Not in the API. `GET` comes with the thread as `notes: [{ id, author: { id, name }, body, createdAt }]`. `POST /v1/mailboxes/{id}/threads/{threadId}/notes { body }` and `DELETE …/notes/{noteId}`. Members only, never sent. |
+| M4.5 | Internal notes | `thread`, note composer (N) | **Built** (HAL-3407): `notes: [{ id, body, author: { id, name }, createdAt }]` with the thread; `POST …/threads/{id}/notes { body }` (members and owners), `DELETE …/notes/{id}` (its author, or the owner or an admin: 403 otherwise). Pushed as `notes.changed` on the socket; never sent. |
 | M4.6 | AI summary | `thread` (“when it's on”) | `POST /v1/mailboxes/{id}/threads/{threadId}/summary` → `{ threadId, text, provider, model, generatedAt }`, cached until a new message arrives. Gated by `GET /v1/settings/ai` (spec; not built). |
 | M4.7 | Calendar invites | `thread-invite` | An attachment with `mimeType: text/calendar` exists, but nothing is parsed. Proposed: `message.invite: { uid, method, summary, start, end, location, organizer, attendees: [{ address, partstat }] } \| null`. RSVP: `POST …/messages/{id}/rsvp { response: "accepted"\|"tentative"\|"declined" }` sends the iTIP reply from the mailbox (it counts as one send). |
 | M4.8 | Remote images per sender | `remote-bar` “Always show from gmail.com” | The block itself is client-side (frame CSP `img-src data: cid:`). The preference needs storing: `POST /v1/mailboxes/{id}/senders { value, list: "images" }`, or a separate `imageSenders` list. |

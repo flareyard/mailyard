@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { apiKeys, domains, mailboxExports, mailboxes, mailboxMembers } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
+import { SPAM_THRESHOLD } from "../rules/spam.ts"
 import { Database } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import type { Caller } from "./apiKeys.ts"
@@ -123,6 +124,8 @@ export const getMailbox = Effect.fn("mailboxes.get")(function* (id: string) {
     signature: m.signature ?? null,
     autoReply: m.autoReply ?? null,
     forwarding: m.forwarding ?? null,
+    spamThreshold: m.spamThreshold ?? SPAM_THRESHOLD,
+    spamThresholdIsDefault: m.spamThreshold === null,
     members: members.map((r) => ({
       apiKeyId: r.apiKeyId,
       name: r.name,
@@ -206,6 +209,17 @@ const checkSignature = (signature: Signature | null | undefined) =>
     return signature
   })
 
+const checkThreshold = (threshold: number | null) =>
+  Effect.gen(function* () {
+    if (threshold === null) return null
+    if (!Number.isFinite(threshold) || threshold < 1 || threshold > 20)
+      return yield* new MailboxInvalid({
+        field: "spamThreshold",
+        message: "A spam threshold is 1 to 20 points.",
+      })
+    return Math.round(threshold * 10) / 10
+  })
+
 const checkAutoReply = (autoReply: AutoReply | null | undefined) =>
   Effect.gen(function* () {
     if (!autoReply) return autoReply ?? null
@@ -254,6 +268,8 @@ export interface MailboxInput {
   readonly signature?: Signature | null | undefined
   readonly autoReply?: AutoReply | null | undefined
   readonly forwarding?: Forwarding | null | undefined
+  /** Spam points at or above which mail goes to spam (1 to 20); null for the default. */
+  readonly spamThreshold?: number | null | undefined
 }
 
 export const createMailbox = Effect.fn("mailboxes.create")(function* (input: MailboxInput, actor: string) {
@@ -301,6 +317,7 @@ export const createMailbox = Effect.fn("mailboxes.create")(function* (input: Mai
   const signature = yield* checkSignature(input.signature)
   const autoReply = yield* checkAutoReply(input.autoReply)
   const forwarding = yield* checkForwarding(input.forwarding, address)
+  const spamThreshold = input.spamThreshold === undefined ? null : yield* checkThreshold(input.spamThreshold)
   const id = `mbx_${yield* (yield* Ids).next}`
   const now = Date.now()
   yield* database.query("mailboxes.insert", (db) =>
@@ -316,6 +333,7 @@ export const createMailbox = Effect.fn("mailboxes.create")(function* (input: Mai
         signature,
         autoReply,
         forwarding,
+        spamThreshold,
         createdAt: now,
         updatedAt: now,
       })
@@ -350,6 +368,9 @@ export const updateMailbox = Effect.fn("mailboxes.update")(function* (
     ...(patch.forwarding !== undefined
       ? { forwarding: yield* checkForwarding(patch.forwarding, m.address) }
       : {}),
+    ...(patch.spamThreshold !== undefined
+      ? { spamThreshold: yield* checkThreshold(patch.spamThreshold) }
+      : {}),
     updatedAt: Date.now(),
   }
   const database = yield* Database
@@ -365,6 +386,7 @@ export const updateMailbox = Effect.fn("mailboxes.update")(function* (
       targets: m.targets,
       autoReply: m.autoReply,
       forwarding: m.forwarding,
+      spamThreshold: m.spamThreshold,
     },
     after: set,
   })

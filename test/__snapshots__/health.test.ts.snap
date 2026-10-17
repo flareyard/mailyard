@@ -34256,6 +34256,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                   },
+                  "spamThreshold": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                          },
+                          {
+                            "enum": [
+                              "Infinity",
+                              "-Infinity",
+                              "NaN",
+                            ],
+                            "type": "string",
+                          },
+                        ],
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                    "description": "1 to 20 points; null goes back to the default (5).",
+                  },
                   "targets": {
                     "items": {
                       "type": "string",
@@ -34625,6 +34648,24 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "spamThreshold": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "spamThresholdIsDefault": {
+                      "type": "boolean",
+                    },
                     "targetIds": {
                       "items": {
                         "type": "string",
@@ -34705,6 +34746,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "signature",
                     "autoReply",
                     "forwarding",
+                    "spamThreshold",
+                    "spamThresholdIsDefault",
                     "members",
                     "messageCount",
                     "lastExport",
@@ -35316,6 +35359,24 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "spamThreshold": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "spamThresholdIsDefault": {
+                      "type": "boolean",
+                    },
                     "targetIds": {
                       "items": {
                         "type": "string",
@@ -35396,6 +35457,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "signature",
                     "autoReply",
                     "forwarding",
+                    "spamThreshold",
+                    "spamThresholdIsDefault",
                     "members",
                     "messageCount",
                     "lastExport",
@@ -35619,6 +35682,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "type": "null",
                       },
                     ],
+                  },
+                  "spamThreshold": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                          },
+                          {
+                            "enum": [
+                              "Infinity",
+                              "-Infinity",
+                              "NaN",
+                            ],
+                            "type": "string",
+                          },
+                        ],
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                    "description": "1 to 20 points; null goes back to the default (5).",
                   },
                   "targets": {
                     "items": {
@@ -35985,6 +36071,24 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "spamThreshold": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "spamThresholdIsDefault": {
+                      "type": "boolean",
+                    },
                     "targetIds": {
                       "items": {
                         "type": "string",
@@ -36065,6 +36169,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "signature",
                     "autoReply",
                     "forwarding",
+                    "spamThreshold",
+                    "spamThresholdIsDefault",
                     "members",
                     "messageCount",
                     "lastExport",
@@ -40544,6 +40650,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "color": {
                             "anyOf": [
                               {
+                                "description": "A name from the label palette, drawn from the design tokens in either theme.",
+                                "enum": [
+                                  "blue",
+                                  "navy",
+                                  "sky",
+                                  "teal",
+                                  "pine",
+                                  "slate",
+                                ],
                                 "type": "string",
                               },
                               {
@@ -46114,6 +46229,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "color": {
                             "anyOf": [
                               {
+                                "description": "A name from the label palette, drawn from the design tokens in either theme.",
+                                "enum": [
+                                  "blue",
+                                  "navy",
+                                  "sky",
+                                  "teal",
+                                  "pine",
+                                  "slate",
+                                ],
                                 "type": "string",
                               },
                               {
@@ -46286,6 +46410,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "color": {
                     "anyOf": [
                       {
+                        "description": "A name from the label palette, drawn from the design tokens in either theme.",
+                        "enum": [
+                          "blue",
+                          "navy",
+                          "sky",
+                          "teal",
+                          "pine",
+                          "slate",
+                        ],
                         "type": "string",
                       },
                       {
@@ -46316,6 +46449,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "color": {
                       "anyOf": [
                         {
+                          "description": "A name from the label palette, drawn from the design tokens in either theme.",
+                          "enum": [
+                            "blue",
+                            "navy",
+                            "sky",
+                            "teal",
+                            "pine",
+                            "slate",
+                          ],
                           "type": "string",
                         },
                         {
@@ -46600,6 +46742,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "color": {
                     "anyOf": [
                       {
+                        "description": "A name from the label palette, drawn from the design tokens in either theme.",
+                        "enum": [
+                          "blue",
+                          "navy",
+                          "sky",
+                          "teal",
+                          "pine",
+                          "slate",
+                        ],
                         "type": "string",
                       },
                       {
@@ -46627,6 +46778,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "color": {
                       "anyOf": [
                         {
+                          "description": "A name from the label palette, drawn from the design tokens in either theme.",
+                          "enum": [
+                            "blue",
+                            "navy",
+                            "sky",
+                            "teal",
+                            "pine",
+                            "slate",
+                          ],
                           "type": "string",
                         },
                         {
@@ -47308,6 +47468,24 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "spamThreshold": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "spamThresholdIsDefault": {
+                      "type": "boolean",
+                    },
                     "targetIds": {
                       "items": {
                         "type": "string",
@@ -47388,6 +47566,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "signature",
                     "autoReply",
                     "forwarding",
+                    "spamThreshold",
+                    "spamThresholdIsDefault",
                     "members",
                     "messageCount",
                     "lastExport",
@@ -47476,6 +47656,18 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "name": "messageId",
             "required": true,
             "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "description": "headers: also return every header, in order.",
+              "enum": [
+                "headers",
+              ],
               "type": "string",
             },
           },
@@ -47575,6 +47767,61 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "auth": {
                       "additionalProperties": false,
                       "properties": {
+                        "arc": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "instance": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "result": {
+                                  "type": "string",
+                                },
+                                "sealer": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "description": "The domain that sealed the newest ARC hop (d=).",
+                                },
+                              },
+                              "required": [
+                                "result",
+                                "instance",
+                                "sealer",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The ARC chain from the newest ARC-Seal; null when the mail carried none.",
+                        },
                         "dkim": {
                           "items": {
                             "additionalProperties": false,
@@ -47641,6 +47888,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "spf",
                         "dmarc",
                         "dkim",
+                        "arc",
                       ],
                       "type": "object",
                     },
@@ -47904,6 +48152,26 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "hasHtml": {
                       "type": "boolean",
+                    },
+                    "headers": {
+                      "description": "With ?include=headers: every header in the order it arrived, newest hop first.",
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                          },
+                          "value": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "value",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
                     },
                     "id": {
                       "type": "string",
@@ -48397,6 +48665,61 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "auth": {
                       "additionalProperties": false,
                       "properties": {
+                        "arc": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "instance": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "result": {
+                                  "type": "string",
+                                },
+                                "sealer": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                  "description": "The domain that sealed the newest ARC hop (d=).",
+                                },
+                              },
+                              "required": [
+                                "result",
+                                "instance",
+                                "sealer",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The ARC chain from the newest ARC-Seal; null when the mail carried none.",
+                        },
                         "dkim": {
                           "items": {
                             "additionalProperties": false,
@@ -48463,6 +48786,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "spf",
                         "dmarc",
                         "dkim",
+                        "arc",
                       ],
                       "type": "object",
                     },
@@ -49140,6 +49464,118 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           },
         ],
         "summary": "A message's original .eml",
+        "tags": [
+          "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/notes/{noteId}": {
+      "delete": {
+        "operationId": "mail.deleteNote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "noteId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "deleted": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "deleted",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
         "tags": [
           "mail",
         ],
@@ -54875,6 +55311,61 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "auth": {
                             "additionalProperties": false,
                             "properties": {
+                              "arc": {
+                                "anyOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "instance": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "number",
+                                              },
+                                              {
+                                                "enum": [
+                                                  "Infinity",
+                                                  "-Infinity",
+                                                  "NaN",
+                                                ],
+                                                "type": "string",
+                                              },
+                                            ],
+                                          },
+                                          {
+                                            "type": "null",
+                                          },
+                                        ],
+                                      },
+                                      "result": {
+                                        "type": "string",
+                                      },
+                                      "sealer": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                          },
+                                          {
+                                            "type": "null",
+                                          },
+                                        ],
+                                        "description": "The domain that sealed the newest ARC hop (d=).",
+                                      },
+                                    },
+                                    "required": [
+                                      "result",
+                                      "instance",
+                                      "sealer",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                                "description": "The ARC chain from the newest ARC-Seal; null when the mail carried none.",
+                              },
                               "dkim": {
                                 "items": {
                                   "additionalProperties": false,
@@ -54941,6 +55432,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "spf",
                               "dmarc",
                               "dkim",
+                              "arc",
                             ],
                             "type": "object",
                           },
@@ -55308,6 +55800,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "notes": {
+                      "description": "Internal notes for the team; never sent.",
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "author": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "body": {
+                            "type": "string",
+                          },
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "body",
+                          "author",
+                          "createdAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "thread": {
                       "additionalProperties": false,
                       "properties": {
@@ -55579,6 +56124,177 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "thread",
                     "messages",
                     "drafts",
+                    "notes",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/threads/{threadId}/notes": {
+      "post": {
+        "operationId": "mail.addNote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "body": {
+                    "maxLength": 10000,
+                    "minLength": 1,
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "body",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "author": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                      ],
+                      "type": "object",
+                    },
+                    "body": {
+                      "type": "string",
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "body",
+                    "author",
+                    "createdAt",
                   ],
                   "type": "object",
                 },

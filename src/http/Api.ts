@@ -13,6 +13,7 @@ import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
 import { ALERT_KINDS } from "../domain/alerts.ts"
 import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
 import { SendBlocked } from "../mail/send.ts"
+import { LABEL_COLORS } from "../mailbox/types.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 import { withRawRoutes } from "./rawRoutes.ts"
@@ -859,6 +860,10 @@ export const MailboxDetailSchema = Schema.Struct({
   signature: Schema.NullOr(SignatureSchema),
   autoReply: Schema.NullOr(AutoReplySchema),
   forwarding: Schema.NullOr(ForwardingSchema),
+  spamThreshold: Schema.Number.annotate({
+    description: "Spam points at or above which mail is filed as spam.",
+  }),
+  spamThresholdIsDefault: Schema.Boolean,
   members: Schema.Array(
     Schema.Struct({
       apiKeyId: Schema.String,
@@ -933,6 +938,11 @@ const MailboxSettings = {
   signature: Schema.optionalKey(Schema.NullOr(SignatureSchema)),
   autoReply: Schema.optionalKey(Schema.NullOr(AutoReplySchema)),
   forwarding: Schema.optionalKey(Schema.NullOr(ForwardingSchema)),
+  spamThreshold: Schema.optionalKey(
+    Schema.NullOr(Schema.Number).annotate({
+      description: "1 to 20 points; null goes back to the default (5).",
+    }),
+  ),
 }
 
 export class MailboxesApi extends HttpApiGroup.make("mailboxes")
@@ -1103,6 +1113,15 @@ export const MessageSchema = Schema.Struct({
         selector: Schema.NullOr(Schema.String),
       }),
     ),
+    arc: Schema.NullOr(
+      Schema.Struct({
+        result: Schema.String,
+        instance: Schema.NullOr(Schema.Number),
+        sealer: Schema.NullOr(Schema.String).annotate({
+          description: "The domain that sealed the newest ARC hop (d=).",
+        }),
+      }),
+    ).annotate({ description: "The ARC chain from the newest ARC-Seal; null when the mail carried none." }),
   }),
   attachments: Schema.Array(AttachmentSchema),
   /** The spam check's score at delivery and its reasons; null for mail this mailbox sent. */
@@ -1113,6 +1132,11 @@ export const MessageSchema = Schema.Struct({
 
 export const MessageDetailSchema = Schema.Struct({
   ...MessageSchema.fields,
+  headers: Schema.optionalKey(
+    Schema.Array(Schema.Struct({ name: Schema.String, value: Schema.String })).annotate({
+      description: "With ?include=headers: every header in the order it arrived, newest hop first.",
+    }),
+  ),
   body: Schema.Struct({ text: Schema.String, html: Schema.NullOr(Schema.String) }),
   /** Signed links that work without a key for an hour: for <img> tags and download buttons. */
   rawUrl: Schema.String,
@@ -1182,10 +1206,14 @@ export const DraftSchema = Schema.Struct({
   updatedAt: Schema.Number,
 })
 
+const LabelColorSchema = Schema.Literals(LABEL_COLORS).annotate({
+  description: "A name from the label palette, drawn from the design tokens in either theme.",
+})
+
 export const LabelSchema = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
-  color: Schema.NullOr(Schema.String),
+  color: Schema.NullOr(LabelColorSchema),
   threads: Schema.Number,
   unreadThreads: Schema.Number,
   createdAt: Schema.Number,
@@ -1245,6 +1273,13 @@ export const CreateDraftPayload = Schema.Struct({
   ...DraftFields,
 })
 export type CreateDraftPayload = typeof CreateDraftPayload.Type
+
+const NoteSchema = Schema.Struct({
+  id: Schema.String,
+  body: Schema.String,
+  author: Schema.Struct({ id: Schema.String, name: Schema.String }),
+  createdAt: Schema.Number,
+})
 
 const SmartFolderSchema = Schema.Struct({
   id: Schema.String,
@@ -1308,7 +1343,21 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
         thread: ThreadSchema,
         messages: Schema.Array(MessageSchema),
         drafts: Schema.Array(DraftSchema),
+        notes: Schema.Array(NoteSchema).annotate({ description: "Internal notes for the team; never sent." }),
       }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("addNote", "/v1/mailboxes/:id/threads/:threadId/notes", {
+      params: { id: Schema.String, threadId: Schema.String },
+      payload: Schema.Struct({
+        body: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(10_000)),
+      }),
+      success: NoteSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("deleteNote", "/v1/mailboxes/:id/notes/:noteId", {
+      params: { id: Schema.String, noteId: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
       error: MailErrors,
     }),
     HttpApiEndpoint.post("bulk", "/v1/mailboxes/:id/threads/bulk", {
@@ -1386,6 +1435,11 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
     }),
     HttpApiEndpoint.get("message", "/v1/mailboxes/:id/messages/:messageId", {
       params: { id: Schema.String, messageId: Schema.String },
+      query: {
+        include: Schema.optionalKey(
+          Schema.Literal("headers").annotate({ description: "headers: also return every header, in order." }),
+        ),
+      },
       success: MessageDetailSchema,
       error: MailErrors,
     }),
@@ -1410,7 +1464,7 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
       params: MailboxParam,
       payload: Schema.Struct({
         name: Schema.String,
-        color: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        color: Schema.optionalKey(Schema.NullOr(LabelColorSchema)),
       }),
       success: LabelSchema,
       error: MailErrors,
@@ -1419,7 +1473,7 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
       params: { id: Schema.String, labelId: Schema.String },
       payload: Schema.Struct({
         name: Schema.optionalKey(Schema.String),
-        color: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        color: Schema.optionalKey(Schema.NullOr(LabelColorSchema)),
       }),
       success: LabelSchema,
       error: MailErrors,

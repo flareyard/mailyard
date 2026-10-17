@@ -2,7 +2,15 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import PostalMime, { type Address, type Email } from "postal-mime"
 import { htmlToText } from "../domain/render.ts"
-import { type AuthResults, readAuthResults } from "./auth.ts"
+import { type AuthResults, readArcChain, readAuthResults } from "./auth.ts"
+
+const withArc = (
+  auth: AuthResults,
+  headers: ReadonlyArray<{ readonly key: string; readonly value: string }>,
+): AuthResults => ({
+  ...auth,
+  arcChain: readArcChain(headers, auth.arc),
+})
 
 export interface Party {
   readonly name: string | null
@@ -171,7 +179,7 @@ export const parseMessage = (raw: Uint8Array) =>
       snippet: snippetOf(text),
       headers,
       attachments,
-      auth: readAuthResults(headers),
+      auth: withArc(readAuthResults(headers), headers),
       automated: isAutomated(email),
       listId: header(email, "list-id")?.trim() ?? null,
       listUnsubscribe: header(email, "list-unsubscribe")?.trim() ?? null,

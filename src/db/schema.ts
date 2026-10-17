@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import type { RecordCheck } from "../domain/dnsChecks.ts"
 import type { Action, Condition } from "../rules/engine.ts"
 
@@ -64,6 +64,8 @@ export const mailboxes = sqliteTable(
       readonly to: ReadonlyArray<string>
       readonly keepCopy: boolean
     }>(),
+    /** Spam points at or above which mail goes to spam; null for the default (5). */
+    spamThreshold: real("spam_threshold"),
     createdAt: createdAt(),
     updatedAt: integer("updated_at").notNull().default(0),
   },

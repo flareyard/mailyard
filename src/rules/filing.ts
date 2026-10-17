@@ -122,9 +122,11 @@ export const planFiling = Effect.fn("rules.planFiling")(function* (input: {
     score = Math.round(score * 10) / 10
   }
   // A blocked sender is spam however well it authenticates; an allowed one never is (unless a rule says so).
+  // Each mailbox can be stricter or more lenient than the default (HAL-3407).
+  const threshold = mailbox?.spamThreshold ?? SPAM_THRESHOLD
   const isSpam =
     listing?.list === "block" ||
-    (listing?.list !== "allow" && !outcome.skipSpamCheck && score >= SPAM_THRESHOLD) ||
+    (listing?.list !== "allow" && !outcome.skipSpamCheck && score >= threshold) ||
     outcome.folder === "spam"
 
   const forwarding = mailbox?.forwarding?.enabled ? mailbox.forwarding : null

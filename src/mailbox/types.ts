@@ -133,7 +133,7 @@ export interface ThreadSummary {
 export interface Label {
   readonly id: string
   readonly name: string
-  readonly color: string | null
+  readonly color: LabelColor | null
   readonly threads: number
   readonly unreadThreads: number
   readonly createdAt: number
@@ -266,6 +266,17 @@ export type MailboxEvent =
       readonly removedDraftIds: ReadonlyArray<string>
     }
   | { readonly type: "draft.due"; readonly draft: Draft }
+  /** A conversation's internal notes changed (HAL-3407). */
+  | {
+      readonly type: "notes.changed"
+      readonly threadId: string
+      readonly notes: ReadonlyArray<{
+        readonly id: string
+        readonly author: string
+        readonly body: string
+        readonly createdAt: number
+      }>
+    }
   /** A mailbox import moved (HAL-3399): its totals, rate, ETA and folders. Pushed by the import Workflow. */
   | {
       readonly type: "import.progress"
@@ -287,6 +298,8 @@ export const MAILBOX_ERRORS = [
   "label_exists",
   "unknown_label",
   "draft_locked",
+  /** The caller may use the mailbox but not do this to someone else's thing (a note). */
+  "forbidden",
 ] as const
 export type MailboxErrorCode = (typeof MAILBOX_ERRORS)[number]
 
@@ -296,4 +309,36 @@ export const mailboxErrorCode = (error: unknown): MailboxErrorCode | null => {
   const message = error instanceof Error ? error.message : String(error)
   const code = message.slice(0, message.indexOf(":"))
   return (MAILBOX_ERRORS as ReadonlyArray<string>).includes(code) ? (code as MailboxErrorCode) : null
+}
+
+/**
+ * The label palette (HAL-3407): names, not hex, so every screen draws a label from the design
+ * tokens in both themes. A colour stored as hex before became the nearest of these.
+ */
+export const LABEL_COLORS = ["blue", "navy", "sky", "teal", "pine", "slate"] as const
+export type LabelColor = (typeof LABEL_COLORS)[number]
+/** Where each palette colour sits, for mapping an old hex value to the nearest. */
+export const LABEL_COLOR_RGB: Record<LabelColor, readonly [number, number, number]> = {
+  blue: [37, 99, 235],
+  navy: [30, 58, 138],
+  sky: [14, 165, 233],
+  teal: [13, 148, 136],
+  pine: [22, 101, 52],
+  slate: [71, 85, 105],
+}
+export const nearestLabelColor = (hex: string): LabelColor => {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim())
+  if (!m) return "slate"
+  const rgb = [m[1], m[2], m[3]].map((x) => Number.parseInt(x as string, 16)) as [number, number, number]
+  let best: LabelColor = "slate"
+  let bestDistance = Number.POSITIVE_INFINITY
+  for (const color of LABEL_COLORS) {
+    const [r, g, b] = LABEL_COLOR_RGB[color]
+    const d = (r - rgb[0]) ** 2 + (g - rgb[1]) ** 2 + (b - rgb[2]) ** 2
+    if (d < bestDistance) {
+      bestDistance = d
+      best = color
+    }
+  }
+  return best
 }
