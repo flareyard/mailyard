@@ -4,6 +4,7 @@ import * as Option from "effect/Option"
 import * as Schedule from "effect/Schedule"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
+import { getCompliance, trackingOrigin } from "../campaigns/compliance.ts"
 import { contacts, messagesOut, suppressions } from "../db/schema.ts"
 import {
   type Attachment,
@@ -20,6 +21,7 @@ import { Governor } from "../services/Governor.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { SendQueue } from "../services/SendQueue.ts"
 import { renderTemplate, type TemplateSource } from "../templates/render.ts"
+import { instrument } from "../tracking/track.ts"
 import { getBrand } from "./brand.ts"
 import { upsertContact } from "./contacts.ts"
 import { bumpDailyStat } from "./deliveryEvents.ts"
@@ -42,6 +44,8 @@ export interface TransactionalRequest {
   readonly template?: string | undefined
   readonly subscribed?: boolean | undefined
   readonly attachments?: ReadonlyArray<{ filename: string; content: string; contentType: string }> | undefined
+  /** Opens and clicks to track, and the API origin (a configured tracking origin wins over it). */
+  readonly track?: { readonly opens: boolean; readonly clicks: boolean; readonly origin: string } | undefined
   readonly apiKeyId: string
   readonly idempotencyKey?: string | undefined
 }
@@ -178,8 +182,19 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
   const store = yield* BlobStore
   const ids = yield* Ids
   const results: Array<{ contact: { id: string; email: string }; email: string; status: string }> = []
-  for (const [index, { contact, message }] of prepared.entries()) {
+  const tracking = request.track && (request.track.opens || request.track.clicks) ? request.track : undefined
+  const trackOrigin = tracking ? trackingOrigin(yield* getCompliance(), tracking.origin) : ""
+  for (const [index, prep] of prepared.entries()) {
+    const { contact } = prep
     const id = yield* ids.next
+    const message = tracking
+      ? yield* instrument(prep.message, {
+          messageId: id,
+          origin: trackOrigin,
+          opens: tracking.opens,
+          clicks: tracking.clicks,
+        })
+      : prep.message
     yield* store.put(renderedKey(id), new TextEncoder().encode(encodeRendered(message)), "application/json")
     yield* database.query("messagesOut.insert", (db) =>
       db
@@ -191,6 +206,7 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
           contactId: contact.id,
           templateId: templateId ?? null,
           templateVersion: templateVersion ?? null,
+          tracked: Boolean(tracking),
           // One idempotency key covers the whole request; suffix it per recipient to keep rows unique.
           idempotencyKey: request.idempotencyKey
             ? `${request.apiKeyId}:${request.idempotencyKey}:${index}`
@@ -254,6 +270,8 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
   readonly templateId?: string | null
   readonly templateVersion?: number | null
   readonly variant?: "a" | "b" | null
+  /** Opens and clicks to track, and the origin the tracking links point at. */
+  readonly track?: { readonly opens: boolean; readonly clicks: boolean; readonly origin: string } | undefined
   readonly idempotencyKey: string
 }) {
   const database = yield* Database
@@ -265,9 +283,19 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
       .get(),
   )
   if (existing) return { id: existing.id, status: existing.status, duplicate: true }
-  const message = yield* validate(input.message)
-  const recipient = (message.to[0]?.email ?? "").toLowerCase()
   const id = yield* (yield* Ids).next
+  const tracked = Boolean(input.track && (input.track.opens || input.track.clicks))
+  const message = yield* validate(
+    input.track && tracked
+      ? yield* instrument(input.message, {
+          messageId: id,
+          origin: input.track.origin,
+          opens: input.track.opens,
+          clicks: input.track.clicks,
+        })
+      : input.message,
+  )
+  const recipient = (message.to[0]?.email ?? "").toLowerCase()
   yield* (yield* BlobStore).put(
     renderedKey(id),
     new TextEncoder().encode(encodeRendered(message)),
@@ -285,6 +313,7 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
         templateId: input.templateId ?? null,
         templateVersion: input.templateVersion ?? null,
         variant: input.variant ?? null,
+        tracked,
         idempotencyKey: input.idempotencyKey,
         recipient,
         sender: message.from.email,

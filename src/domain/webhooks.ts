@@ -23,6 +23,8 @@ export const WEBHOOK_EVENTS = [
   "message.failed",
   "message.rejected",
   "message.complained",
+  "email.opened",
+  "email.clicked",
   "contact.created",
   "contact.updated",
   "contact.subscribed",

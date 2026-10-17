@@ -264,12 +264,29 @@ export const checkCampaign = Effect.fn("campaigns.checks")(function* (campaign: 
             detail: links.length ? `All ${probed.length} answered.` : "No links to check.",
           },
   )
-  checks.push({
-    id: "tracking",
-    status: "pass",
-    title: "Tracking domain",
-    detail: "Click tracking is off: links go straight to their address.",
-  })
+  const trackingHost = hostOf(compliance.trackingOrigin ?? origin) ?? ""
+  checks.push(
+    !campaign.trackOpens && !campaign.trackClicks
+      ? {
+          id: "tracking",
+          status: "pass",
+          title: "Tracking domain",
+          detail: "Tracking is off: no pixel, and links go straight to their address.",
+        }
+      : within(trackingHost, apexOf(sendingDomain))
+        ? {
+            id: "tracking",
+            status: "pass",
+            title: "Tracking domain",
+            detail: `Tracking runs on ${trackingHost}, your own domain.`,
+          }
+        : {
+            id: "tracking",
+            status: "warn",
+            title: "Tracking domain",
+            detail: `Tracked links go through ${trackingHost}, not your domain; filters trust links on the sender's own domain more. Point a subdomain of ${apexOf(sendingDomain)} at Mailyard and set it as the tracking origin.`,
+          },
+  )
 
   const replyTo = (campaign.replyTo ? parseParty(campaign.replyTo).email : from.email).toLowerCase()
   checks.push(

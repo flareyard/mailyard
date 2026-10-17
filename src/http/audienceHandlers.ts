@@ -48,7 +48,13 @@ import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
 
 type Faults = {
-  readonly _tag: "DatabaseError" | "BlobStoreError" | "ConsentKeyMissing" | "SenderError" | "TemplateMissing"
+  readonly _tag:
+    | "DatabaseError"
+    | "BlobStoreError"
+    | "ConsentKeyMissing"
+    | "SenderError"
+    | "TemplateMissing"
+    | "TrackingKeyMissing"
 }
 
 /** Each audience error to its HTTP error; distributive, so a handler lists only what it can return. */
@@ -69,6 +75,7 @@ type AudienceHttp<E> = E extends ContactNotFound | TopicNotFound | FormNotFound 
         : E
 
 const FAULTS = new Set([
+  "TrackingKeyMissing",
   "DatabaseError",
   "BlobStoreError",
   "ConsentKeyMissing",

@@ -56,6 +56,10 @@ export interface Env {
    * HAL-3297. Deploy-time secret; the links stop working if it changes.
    */
   readonly UNSUBSCRIBE_KEY?: string
+  /** Signs tracking links; FILE_SIGNING_KEY when unset. */
+  readonly TRACKING_KEY?: string
+  /** Raw open and click hits (Analytics Engine); optional, the D1 rollups work without it. */
+  readonly TRACK_EVENTS?: AnalyticsEngineDataset
   /** Rate limit for public signup forms, per IP and form (wrangler `ratelimits`). */
   readonly FORM_LIMITER?: RateLimit
   /** Used when a send names no sender and its template has none. */

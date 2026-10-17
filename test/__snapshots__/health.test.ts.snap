@@ -1522,6 +1522,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "trackClicks": {
+                            "type": "boolean",
+                          },
+                          "trackOpens": {
+                            "type": "boolean",
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -1561,6 +1567,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "subjectB",
                           "preheader",
                           "ab",
+                          "trackOpens",
+                          "trackClicks",
                           "sendAt",
                           "audienceSize",
                           "pausedReason",
@@ -1778,6 +1786,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "type": "null",
                       },
                     ],
+                  },
+                  "trackClicks": {
+                    "type": "boolean",
+                  },
+                  "trackOpens": {
+                    "type": "boolean",
                   },
                 },
                 "required": [
@@ -2105,6 +2119,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -2144,6 +2164,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "subjectB",
                     "preheader",
                     "ab",
+                    "trackOpens",
+                    "trackClicks",
                     "sendAt",
                     "audienceSize",
                     "pausedReason",
@@ -2613,6 +2635,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -2652,6 +2680,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "subjectB",
                     "preheader",
                     "ab",
+                    "trackOpens",
+                    "trackClicks",
                     "sendAt",
                     "audienceSize",
                     "pausedReason",
@@ -2869,6 +2899,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "type": "null",
                       },
                     ],
+                  },
+                  "trackClicks": {
+                    "type": "boolean",
+                  },
+                  "trackOpens": {
+                    "type": "boolean",
                   },
                 },
                 "type": "object",
@@ -3191,6 +3227,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -3230,6 +3272,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "subjectB",
                     "preheader",
                     "ab",
+                    "trackOpens",
+                    "trackClicks",
                     "sendAt",
                     "audienceSize",
                     "pausedReason",
@@ -3808,6 +3852,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -3847,6 +3897,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "subjectB",
                     "preheader",
                     "ab",
+                    "trackOpens",
+                    "trackClicks",
                     "sendAt",
                     "audienceSize",
                     "pausedReason",
@@ -4577,6 +4629,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -4616,6 +4674,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "subjectB",
                     "preheader",
                     "ab",
+                    "trackOpens",
+                    "trackClicks",
                     "sendAt",
                     "audienceSize",
                     "pausedReason",
@@ -5151,6 +5211,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -5190,6 +5256,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "subjectB",
                     "preheader",
                     "ab",
+                    "trackOpens",
+                    "trackClicks",
                     "sendAt",
                     "audienceSize",
                     "pausedReason",
@@ -5611,6 +5679,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -5650,6 +5724,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "subjectB",
                     "preheader",
                     "ab",
+                    "trackOpens",
+                    "trackClicks",
                     "sendAt",
                     "audienceSize",
                     "pausedReason",
@@ -27201,6 +27277,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "campaignId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "cfMessageId": {
                             "anyOf": [
                               {
@@ -27208,6 +27294,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                               {
                                 "type": "null",
+                              },
+                            ],
+                          },
+                          "clicks": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
                               },
                             ],
                           },
@@ -27236,8 +27337,97 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "firstClickedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "firstOpenedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "id": {
                             "type": "string",
+                          },
+                          "machineClicks": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "machineOpens": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "opens": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "provider": {
                             "anyOf": [
@@ -27284,6 +27474,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "tracked": {
+                            "type": "boolean",
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -27321,6 +27514,14 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "cfMessageId",
                           "templateId",
                           "apiKeyId",
+                          "campaignId",
+                          "tracked",
+                          "firstOpenedAt",
+                          "firstClickedAt",
+                          "opens",
+                          "clicks",
+                          "machineOpens",
+                          "machineClicks",
                           "createdAt",
                           "updatedAt",
                         ],
@@ -27435,6 +27636,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "campaignId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "cfMessageId": {
                       "anyOf": [
                         {
@@ -27442,6 +27653,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                         {
                           "type": "null",
+                        },
+                      ],
+                    },
+                    "clicks": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
                         },
                       ],
                     },
@@ -27470,8 +27696,97 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "firstClickedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "firstOpenedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
+                    },
+                    "machineClicks": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "machineOpens": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "opens": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
                     },
                     "provider": {
                       "anyOf": [
@@ -27616,6 +27931,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "tracked": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -27653,6 +27971,14 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "cfMessageId",
                     "templateId",
                     "apiKeyId",
+                    "campaignId",
+                    "tracked",
+                    "firstOpenedAt",
+                    "firstClickedAt",
+                    "opens",
+                    "clicks",
+                    "machineOpens",
+                    "machineClicks",
                     "createdAt",
                     "updatedAt",
                     "smtpResponse",
@@ -29555,6 +29881,18 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                   },
+                  "track": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "clicks": {
+                        "type": "boolean",
+                      },
+                      "opens": {
+                        "type": "boolean",
+                      },
+                    },
+                    "type": "object",
+                  },
                 },
                 "required": [
                   "to",
@@ -30550,6 +30888,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "trackingOrigin": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                   },
                   "required": [
                     "postalAddress",
@@ -30625,6 +30973,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "maxItems": 5,
                     "type": "array",
                   },
+                  "trackingOrigin": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
                 },
                 "required": [
                   "postalAddress",
@@ -30665,6 +31023,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "type": "string",
                       },
                       "type": "array",
+                    },
+                    "trackingOrigin": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                   },
                   "required": [
