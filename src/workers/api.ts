@@ -36,6 +36,7 @@ import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts
 import { TransfersHandlers } from "../http/transferHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { appLayer } from "../layers.ts"
+import { handleMcp, MCP_PATH } from "../mcp/handler.ts"
 import {
   ATTACHMENT_PATH,
   FILE_PATH,
@@ -115,6 +116,7 @@ const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> => {
   // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
   const path = new URL(request.url).pathname
+  if (path === MCP_PATH) return handleMcp(request, env)
   const d = (s: string | undefined) => decodeURIComponent(s ?? "")
   const live = LIVE_PATH.exec(path)
   if (live) return handleLive(request, env, d(live[1]))

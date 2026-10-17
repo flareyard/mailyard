@@ -775,6 +775,139 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/mcp": {
+      "post": {
+        "description": "JSON-RPC 2.0, one message or a batch: initialize, ping, tools/list and tools/call. Tools: list_mailboxes, search_mail, read_thread, draft_reply, send_draft, send_email, preview_segment, campaign_stats, contact_lookup, track_event, each limited by the key's scopes and mailbox memberships. send_draft and send_email need confirm: true. Notifications are answered 202. GET (no server stream) and DELETE (no sessions) answer 405.",
+        "operationId": "mcp.rpc",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "A JSON-RPC 2.0 request, or an array of them.",
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                },
+              },
+            },
+            "description": "The JSON-RPC response (or array of them).",
+          },
+          "202": {
+            "description": "Only notifications: accepted.",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Not JSON-RPC, or an unsupported MCP-Protocol-Version.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key, or not a key Mailyard knows.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "A public key.",
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Not a POST.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "The MCP server (Streamable HTTP, stateless)",
+        "tags": [
+          "mcp",
+        ],
+      },
+    },
     "/v1/activity": {
       "get": {
         "operationId": "overview.activity",

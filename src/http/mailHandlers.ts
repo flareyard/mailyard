@@ -171,7 +171,7 @@ const BULK: Record<
 }
 
 /** Builds and saves a new draft: blank, or a reply or forward of a message in the mailbox. */
-const createDraftNow = (
+export const createDraftNow = (
   mailboxId: string,
   mailbox: { readonly address: string },
   payload: CreateDraftPayload,

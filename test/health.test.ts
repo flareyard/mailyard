@@ -79,6 +79,7 @@ describe("GET /openapi.json", () => {
     expect(doc.info.title).toBe("Mailyard API")
     expect(Object.keys(doc.paths).sort()).toEqual([
       "/healthz",
+      "/mcp",
       "/v1/activity",
       "/v1/alerts",
       "/v1/alerts/{id}/resolve",

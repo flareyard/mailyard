@@ -44,6 +44,35 @@ const bytes = (description: string, type = "application/octet-stream") => ({
 })
 
 export const RAW_PATHS: Record<string, Record<string, unknown>> = {
+  "/mcp": {
+    post: {
+      tags: ["mcp"],
+      operationId: "mcp.rpc",
+      summary: "The MCP server (Streamable HTTP, stateless)",
+      description:
+        "JSON-RPC 2.0, one message or a batch: initialize, ping, tools/list and tools/call. Tools: list_mailboxes, search_mail, read_thread, draft_reply, send_draft, send_email, preview_segment, campaign_stats, contact_lookup, track_event, each limited by the key's scopes and mailbox memberships. send_draft and send_email need confirm: true. Notifications are answered 202. GET (no server stream) and DELETE (no sessions) answer 405.",
+      security: bearer,
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { type: "object", description: "A JSON-RPC 2.0 request, or an array of them." },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "The JSON-RPC response (or array of them).",
+          content: { "application/json": { schema: { type: "object" } } },
+        },
+        "202": { description: "Only notifications: accepted." },
+        "400": problem("Not JSON-RPC, or an unsupported MCP-Protocol-Version."),
+        "401": problem("No key, or not a key Mailyard knows."),
+        "403": problem("A public key."),
+        "405": problem("Not a POST."),
+      },
+    },
+  },
   "/v1/uploads": {
     post: {
       tags: ["imports"],
