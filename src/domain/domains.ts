@@ -4,8 +4,9 @@ import * as Schema from "effect/Schema"
 import { domains, mailboxes } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { clearAlert, raiseAlert } from "./alerts.ts"
 import { recordAudit } from "./audit.ts"
-import { checkDomain, type DomainCheck, expectedRecords } from "./dnsChecks.ts"
+import { checkDomain, type DomainCheck, expectedRecords, type RecordCheck } from "./dnsChecks.ts"
 
 export class DomainNotFound extends Schema.TaggedError<DomainNotFound>()("DomainNotFound", {
   id: Schema.String,
@@ -111,15 +112,72 @@ export const recheckDomain = Effect.fn("domains.recheck")(function* (id: string)
   const d = yield* findDomain(id)
   const result = yield* checkDomain(d.name, purposesOf(d))
   const database = yield* Database
+  const allPass = result.checks.length > 0 && result.checks.every((c) => c.status === "pass")
+  const activating = allPass && d.activatedAt === null
   yield* database.query("domains.saveCheck", (db) =>
     db
       .update(domains)
-      .set({ checks: result.checks, lastCheckedAt: result.checkedAt })
+      .set({
+        checks: result.checks,
+        lastCheckedAt: result.checkedAt,
+        ...(activating ? { activatedAt: result.checkedAt } : {}),
+      })
       .where(eq(domains.id, id))
       .run(),
   )
+  if (activating)
+    yield* raiseAlert({
+      key: `domain_activated:${id}`,
+      kind: "domain_activated",
+      severity: "info",
+      title: `${d.name} is ready`,
+      detail: `Every DNS record checks out: ${
+        d.routingEnabled && d.sendingEnabled
+          ? "receiving and sending work"
+          : d.routingEnabled
+            ? "receiving works"
+            : "sending works"
+      } on ${d.name}.`,
+      subject: { type: "domain", id },
+    })
+  yield* watchDrift(d, result.checks, activating)
   return yield* getDomain(id)
 })
+
+/**
+ * `dns_drift:<domain>`: once a domain has been fully set up, a record that now fails is drift: someone
+ * changed DNS, or a provider rewrote it. Lookup errors don't count (a resolver hiccup isn't drift).
+ * Clears when every record passes again.
+ */
+const watchDrift = (
+  d: typeof domains.$inferSelect,
+  checks: ReadonlyArray<RecordCheck>,
+  justActivated: boolean,
+) =>
+  Effect.gen(function* () {
+    const key = `dns_drift:${d.id}`
+    if (d.activatedAt === null && !justActivated) return
+    const failing = checks.filter((c) => c.status === "fail")
+    if (failing.length === 0) {
+      if (checks.every((c) => c.status === "pass")) yield* clearAlert(key, "dns-check")
+      return
+    }
+    const breaksMail = failing.some(
+      (c) => c.id === "mx" || c.id === "bounce-mx" || c.id === "spf" || c.id === "dkim",
+    )
+    yield* raiseAlert({
+      key,
+      kind: "dns_drift",
+      severity: breaksMail ? "critical" : "warning",
+      title: `${d.name}'s DNS changed: ${failing.map((c) => c.id.toUpperCase()).join(", ")} ${failing.length === 1 ? "no longer passes" : "no longer pass"}`,
+      detail: failing
+        .map((c) => `${c.type} ${c.name}: ${c.detail}`)
+        .join(" ")
+        .slice(0, 1000),
+      subject: { type: "domain", id: d.id },
+      count: failing.length,
+    })
+  })
 
 export interface DomainInput {
   readonly name: string

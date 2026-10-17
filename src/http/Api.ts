@@ -10,6 +10,7 @@ import {
   TriggerConfig,
 } from "../automations/graph.ts"
 import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
+import { ALERT_KINDS } from "../domain/alerts.ts"
 import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
@@ -2094,16 +2095,29 @@ export class SendingApi extends HttpApiGroup.make("sending")
   )
   .middleware(ApiKeyAuth) {}
 
+export const AlertKindSchema = Schema.Literals(ALERT_KINDS).annotate({
+  description:
+    "What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).",
+})
+
 export const AlertSchema = Schema.Struct({
   id: Schema.String,
-  kind: Schema.String,
+  kind: AlertKindSchema,
   severity: Schema.Literals(["info", "warning", "critical"]),
   title: Schema.String,
   detail: Schema.String,
   subject: Schema.NullOr(Schema.Struct({ type: Schema.String, id: Schema.String })),
+  count: Schema.Number.annotate({
+    description:
+      "How many times it happened while open: failed runs today, dead deliveries, failing records.",
+  }),
   createdAt: Schema.Number,
+  updatedAt: Schema.Number,
   resolvedAt: Schema.NullOr(Schema.Number),
-  resolvedBy: Schema.NullOr(Schema.String),
+  resolvedBy: Schema.NullOr(Schema.String).annotate({
+    description:
+      "Who resolved it: an API key id, or the system (sweep, expired, watchdog, …) when its condition cleared.",
+  }),
 })
 
 export class AlertsApi extends HttpApiGroup.make("alerts")
@@ -2111,10 +2125,21 @@ export class AlertsApi extends HttpApiGroup.make("alerts")
     HttpApiEndpoint.get("list", "/v1/alerts", {
       query: {
         status: Schema.optionalKey(Schema.Literals(["open", "resolved", "all"])),
+        kind: Schema.optionalKey(AlertKindSchema),
+        severity: Schema.optionalKey(Schema.Literals(["info", "warning", "critical"])),
         cursor: Schema.optionalKey(Schema.String),
         limit: Limit,
       },
-      success: Schema.Struct({ alerts: Schema.Array(AlertSchema), nextCursor: Schema.NullOr(Schema.String) }),
+      success: Schema.Struct({
+        alerts: Schema.Array(AlertSchema),
+        open: Schema.Struct({
+          total: Schema.Number,
+          critical: Schema.Number,
+          warning: Schema.Number,
+          info: Schema.Number,
+        }).annotate({ description: "Open alerts by severity, whatever the filters: the badge on the bell." }),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
       error: Forbidden,
     }),
     HttpApiEndpoint.post("resolve", "/v1/alerts/:id/resolve", {

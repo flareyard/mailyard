@@ -24,6 +24,8 @@ export const domains = sqliteTable(
       .notNull()
       .default("bounce"),
     lastCheckedAt: integer("last_checked_at"),
+    /** When every record first passed: `domain_activated` is raised once, and `dns_drift` watches after. */
+    activatedAt: integer("activated_at"),
     /** The last DNS record check (src/domain/dnsChecks.ts), as shown on the domain detail screen. */
     checks: text("checks", { mode: "json" }).$type<ReadonlyArray<RecordCheck>>(),
     createdAt: createdAt(),
@@ -188,7 +190,10 @@ export const alerts = sqliteTable(
     title: text("title").notNull(),
     detail: text("detail").notNull(),
     subject: text("subject", { mode: "json" }).$type<{ readonly type: string; readonly id: string } | null>(),
+    /** How many times it happened while open: failed runs, dead deliveries, repeat raises. */
+    count: integer("count").notNull().default(1),
     createdAt: createdAt(),
+    updatedAt: integer("updated_at"),
     resolvedAt: integer("resolved_at"),
     resolvedBy: text("resolved_by"),
   },

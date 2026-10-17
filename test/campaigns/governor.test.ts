@@ -323,7 +323,7 @@ describe("governor wiring", () => {
       alerts: Array<{ id: string; kind: string; subject: { id: string } | null; severity: string }>
     }>(await call("/v1/alerts", { key: ADMIN }))
     const alert = alerts.alerts.find((a) => a.subject?.id === campaignId)
-    expect(alert).toMatchObject({ kind: "campaign.paused", severity: "critical" })
+    expect(alert).toMatchObject({ kind: "campaign_paused", severity: "critical" })
     const resolved = await json<{ resolvedAt: number | null }>(
       await call(`/v1/alerts/${alert?.id}/resolve`, { method: "POST", key: ADMIN }),
     )

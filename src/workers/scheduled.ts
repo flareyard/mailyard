@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import { sweepAutomations } from "../automations/runs.ts"
 import type { Env } from "../Bindings.ts"
+import { sweepAlerts } from "../domain/alertSweep.ts"
 import { watchEventCoverage } from "../domain/eventCoverage.ts"
 import { syncWithCloudflare } from "../domain/suppressions.ts"
 import { runtimeFor } from "./inbound.ts"
@@ -8,7 +9,8 @@ import { runtimeFor } from "./inbound.ts"
 /**
  * The hourly cron: checks that every sending domain's delivery events are reaching Mailyard, sweeps
  * automations (date triggers whose hour it is; segment triggers at 02:00 UTC), and syncs the
- * suppression list with Cloudflare's when Mailyard can read it.
+ * suppression list with Cloudflare's when Mailyard can read it, then sweeps the alerts whose
+ * condition is a state (src/domain/alertSweep.ts).
  */
 export const handleScheduled = (env: Env) =>
   runtimeFor(env).runPromise(
@@ -31,6 +33,9 @@ export const handleScheduled = (env: Env) =>
         ),
       ),
       Effect.catchCause((cause) => Effect.logError("cron: suppression sync failed", cause)),
+      Effect.andThen(sweepAlerts()),
+      Effect.tap((report) => Effect.logInfo(`cron: alerts ${report.join(", ")}`)),
+      Effect.catchCause((cause) => Effect.logError("cron: alert sweep failed", cause)),
       Effect.asVoid,
     ),
   )

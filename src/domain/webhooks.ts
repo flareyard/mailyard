@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or } from "drizzle-orm"
+import { and, desc, eq, lt, or, sql } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -7,6 +7,7 @@ import { Bindings } from "../Bindings.ts"
 import { webhookDeliveries, webhookEndpoints } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { clearAlert, raiseAlert } from "./alerts.ts"
 
 /**
  * Outbound webhooks, signed per the Standard Webhooks spec (standardwebhooks.com): headers
@@ -235,6 +236,7 @@ export const deleteEndpoint = Effect.fn("webhooks.delete")(function* (id: string
   yield* database.query("webhooks.delete", (db) =>
     db.delete(webhookEndpoints).where(eq(webhookEndpoints.id, id)).run(),
   )
+  yield* clearAlert(`webhook_dead_letter:${id}`, "webhooks")
   return describeEndpoint(current)
 })
 
@@ -454,8 +456,47 @@ export const deliver = Effect.fn("webhooks.deliver")(function* (deliveryId: stri
     ]),
   )
   if (!dead) yield* (yield* WebhookQueue).enqueue(deliveryId, delay)
+  else yield* syncDeadLetterAlert(endpoint)
   return dead ? ("dead" as const) : ("retrying" as const)
 })
+
+/**
+ * `webhook_dead_letter:<endpoint>`: open while the endpoint has deliveries that failed for good, with
+ * their count; cleared when replays (or deleting the endpoint) leave none.
+ */
+export const syncDeadLetterAlert = (endpoint: { readonly id: string; readonly url: string }) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const row = yield* database.query("webhooks.deadCount", (db) =>
+      db
+        .select({ n: sql<number>`count(*)` })
+        .from(webhookDeliveries)
+        .where(and(eq(webhookDeliveries.endpointId, endpoint.id), eq(webhookDeliveries.status, "dead")))
+        .get(),
+    )
+    const n = row?.n ?? 0
+    const key = `webhook_dead_letter:${endpoint.id}`
+    if (n === 0) return yield* clearAlert(key, "webhooks")
+    yield* raiseAlert({
+      key,
+      kind: "webhook_dead_letter",
+      severity: "warning",
+      title: `${n} webhook ${n === 1 ? "delivery" : "deliveries"} to ${hostOf(endpoint.url)} failed for good`,
+      detail: `They were tried ${MAX_WEBHOOK_ATTEMPTS} times over about two hours. Fix the endpoint, then replay them.`,
+      subject: { type: "webhook", id: endpoint.id },
+      count: n,
+    })
+  }).pipe(
+    Effect.catchCause((cause) => Effect.logError("webhooks: could not update the dead-letter alert", cause)),
+  )
+
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
+}
 
 /** Sends a dead (or any) delivery again, from attempt one. */
 export const replay = Effect.fn("webhooks.replay")(function* (endpointId: string, deliveryId: string) {
@@ -470,6 +511,15 @@ export const replay = Effect.fn("webhooks.replay")(function* (endpointId: string
   )
   if (!row) return yield* new WebhookNotFound({ id: deliveryId })
   yield* (yield* WebhookQueue).enqueue(deliveryId, 0)
+  // One fewer dead letter; if this one dies again, the alert comes back with it.
+  const endpoint = yield* database.query("webhooks.replayEndpoint", (db) =>
+    db
+      .select({ id: webhookEndpoints.id, url: webhookEndpoints.url })
+      .from(webhookEndpoints)
+      .where(eq(webhookEndpoints.id, endpointId))
+      .get(),
+  )
+  if (endpoint) yield* syncDeadLetterAlert(endpoint)
   return { id: row.id, status: row.status }
 })
 

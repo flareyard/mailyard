@@ -270,6 +270,12 @@ describe("POST /v1/exports", () => {
     await runtime.runPromise(finishLargeExport(id))
     const view = await json<Export>(await call(`/v1/exports/${id}`, { key: ADMIN }))
     expect(view).toMatchObject({ status: "completed", rows: n })
+    // A large export finishes after its request: the alerts drawer says it's ready.
+    expect(
+      await env.DB.prepare("select kind, severity, subject from alerts where key = ? and resolved_at is null")
+        .bind(`export_ready:${id}`)
+        .first(),
+    ).toMatchObject({ kind: "export_ready", severity: "info" })
     const rows = rowsOf(await download(view.url))
     expect(rows).toHaveLength(n + 1)
     expect(new Set(rows.slice(1).map((r) => r[0])).size).toBe(n)

@@ -4,6 +4,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { contactImports, contacts, subscriptions, suppressions, topics, uploads } from "../db/schema.ts"
+import { raiseAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { normalizeEmail } from "../domain/contacts.ts"
 import { sha256Hex } from "../inbound/parse.ts"
@@ -279,6 +280,14 @@ const fail = (id: string, message: string) =>
         .where(eq(contactImports.id, id))
         .run(),
     )
+    yield* raiseAlert({
+      key: `import_failed:${id}`,
+      kind: "import_failed",
+      severity: "warning",
+      title: "A contact import failed",
+      detail: message.slice(0, 500),
+      subject: { type: "contact_import", id },
+    })
     return { done: true as const, failed: true, offset: -1 }
   })
 
