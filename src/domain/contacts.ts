@@ -37,7 +37,7 @@ const BLOCKED: ReadonlyArray<ContactStatus> = ["bounced", "complained", "suppres
 export const isBlocked = (status: ContactStatus) => BLOCKED.includes(status)
 
 /** An address with a local part, an @ and a domain with a dot; deliverability is the sender's job. */
-const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@]{2,}$/
+export const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@]{2,}$/
 export const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
 const DAY = 86_400_000

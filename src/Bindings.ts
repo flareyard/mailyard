@@ -43,6 +43,8 @@ export interface Env {
   readonly AUTOMATION_WORKFLOW: Workflow<{ readonly runId: string }>
   /** Imports a contact CSV in 5,000-row steps (src/workflows/contactImport.ts). */
   readonly CONTACT_IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
+  /** Imports a suppression-list CSV in 5,000-row steps (src/workflows/suppressionImport.ts). */
+  readonly SUPPRESSION_IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Writes contact exports past 10,000 rows as a multipart CSV (src/workflows/contactExport.ts). */
   readonly CONTACT_EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** Tests only: the multipart part size for contact exports (6 MiB unless set; R2 refuses under 5 MiB). */
@@ -66,6 +68,12 @@ export interface Env {
   /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
   readonly CLOUDFLARE_ACCOUNT_ID?: string
   readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string
+  /**
+   * Optional, Email Sending: Edit: lets Mailyard add to and remove from Cloudflare's suppression
+   * list (`POST /v1/suppressions/{email}/push`, removals, imports with `push`). Without it, only
+   * Mailyard's own list changes.
+   */
+  readonly CLOUDFLARE_EMAIL_WRITE_TOKEN?: string
   /** The queue Email Sending's delivery events arrive on; `mailyard-email-events` unless renamed. */
   readonly MAILYARD_EVENTS_QUEUE?: string
   /**

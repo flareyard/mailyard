@@ -118,7 +118,11 @@ export class IdempotencyConflict extends Schema.TaggedError<IdempotencyConflict>
 
 export class Conflict extends Schema.TaggedError<Conflict>()(
   "Conflict",
-  { message: Schema.String },
+  {
+    message: Schema.String,
+    /** A machine-readable why, where the screen acts on it (suppressions: `complaint`, `not-applicable`). */
+    reason: Schema.optionalKey(Schema.String),
+  },
   { httpApiStatus: 409 },
 ) {}
 
@@ -2827,6 +2831,252 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
   )
   .middleware(ApiKeyAuth) {}
 
+const SuppressionReason = Schema.Literals(["hard_bounce", "complaint", "unsubscribe", "manual"])
+const CloudflareStateSchema = Schema.Literals(["in-sync", "missing", "not-applicable", "unchecked"]).annotate(
+  {
+    description:
+      "Whether Cloudflare's Email Sending suppression list agrees. in-sync: it has the address. missing: the last sync didn't find it (push it). not-applicable: an unsubscribe or bulk-only row, which Cloudflare's list must not hold, since it blocks transactional mail too. unchecked: no sync has looked yet, or Mailyard can't read the list.",
+  },
+)
+
+const SuppressionSchema = Schema.Struct({
+  email: Schema.String,
+  reason: SuppressionReason,
+  source: Schema.Literals(["cloudflare", "events", "manual", "import"]).annotate({
+    description:
+      "events: a bounce or complaint event. cloudflare: Cloudflare refused a send, or the sync adopted it from Cloudflare's list. manual: added through the API. import: a suppression CSV.",
+  }),
+  messageId: Schema.NullOr(Schema.String).annotate({
+    description: "The message whose bounce or complaint added it.",
+  }),
+  note: Schema.NullOr(Schema.String),
+  bulkOnly: Schema.Boolean.annotate({
+    description:
+      "Blocks only campaigns and automations; transactional and mailbox mail still go. Always true for unsubscribes.",
+  }),
+  streams: Schema.Array(Schema.Literals(["all", "campaign", "automation"])),
+  cloudflare: CloudflareStateSchema,
+  at: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+const CloudflareRemovalSchema = Schema.Struct({
+  state: Schema.Literals(["removed", "not-listed", "read-only", "not-connected", "failed"]),
+  message: Schema.NullOr(Schema.String),
+}).annotate({
+  description:
+    "What happened on Cloudflare's list. removed: its entries for the address are gone. not-listed: it had none. read-only: Cloudflare keeps an entry nobody can delete, until it expires. not-connected: no write token, so Cloudflare may still refuse the address. failed: Cloudflare said no.",
+})
+
+const SuppressionImportSchema = Schema.Struct({
+  id: Schema.String,
+  uploadId: Schema.String,
+  status: Schema.Literals(["queued", "running", "completed", "failed"]),
+  reason: SuppressionReason,
+  note: Schema.NullOr(Schema.String),
+  emailColumn: Schema.NullOr(Schema.String),
+  reasonColumn: Schema.NullOr(Schema.String),
+  noteColumn: Schema.NullOr(Schema.String),
+  push: Schema.Boolean,
+  headers: Schema.NullOr(Schema.Array(Schema.String)),
+  rows: Schema.Number.annotate({
+    description: "Data rows read so far. rows = added + existing + invalid + duplicates.",
+  }),
+  added: Schema.Number,
+  existing: Schema.Number.annotate({ description: "Addresses already on the list; their reason is kept." }),
+  invalid: Schema.Number,
+  duplicates: Schema.Number,
+  pushed: Schema.Number.annotate({
+    description: "New addresses also added to Cloudflare's list (with push).",
+  }),
+  errors: Schema.Array(Schema.Struct({ line: Schema.Number, message: Schema.String })),
+  error: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  finishedAt: Schema.NullOr(Schema.Number),
+})
+
+const SyncSchema = Schema.Struct({
+  connected: Schema.Boolean,
+  checkedAt: Schema.NullOr(Schema.Number),
+  cloudflareOnly: Schema.Number.annotate({
+    description: "Cloudflare's temporary entries (with an expiry, usually soft bounces), left to Cloudflare.",
+  }),
+  adopted: Schema.Number.annotate({
+    description: "Cloudflare's permanent entries Mailyard didn't hold, added to its list by this sync.",
+  }),
+  complete: Schema.Boolean,
+  error: Schema.NullOr(Schema.String),
+  matched: Schema.optionalKey(Schema.Number),
+})
+
+/** Cloudflare's list can't be changed from here: no CLOUDFLARE_EMAIL_WRITE_TOKEN. */
+export class CloudflareNotConnected extends Schema.TaggedError<CloudflareNotConnected>()(
+  "CloudflareNotConnected",
+  { message: Schema.String },
+  { httpApiStatus: 409 },
+) {}
+/** Cloudflare refused the change; its status and words. */
+export class CloudflareRefused extends Schema.TaggedError<CloudflareRefused>()(
+  "CloudflareRefused",
+  { status: Schema.Number, message: Schema.String },
+  { httpApiStatus: 502 },
+) {}
+
+const EmailParam = { email: Schema.String }
+
+/**
+ * The suppression list: addresses Mailyard won't send to, and its agreement with Cloudflare's Email
+ * Sending suppression list. Reading needs `read`; changing it needs `admin`.
+ */
+export class SuppressionsApi extends HttpApiGroup.make("suppressions")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/suppressions", {
+      query: {
+        reason: Schema.optionalKey(SuppressionReason),
+        source: Schema.optionalKey(Schema.Literals(["cloudflare", "events", "manual", "import"])),
+        cloudflare: Schema.optionalKey(CloudflareStateSchema),
+        q: Schema.optionalKey(Schema.String),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+      },
+      success: Schema.Struct({
+        suppressions: Schema.Array(SuppressionSchema),
+        counts: Schema.Struct({
+          total: Schema.Number,
+          hard_bounce: Schema.Number,
+          complaint: Schema.Number,
+          unsubscribe: Schema.Number,
+          manual: Schema.Number,
+        }),
+        cloudflare: Schema.Struct({
+          readable: Schema.Boolean,
+          writable: Schema.Boolean,
+          checkedAt: Schema.NullOr(Schema.Number),
+          cloudflareOnly: Schema.Number,
+          error: Schema.NullOr(Schema.String),
+        }),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("add", "/v1/suppressions", {
+      payload: Schema.Struct({
+        email: Schema.String,
+        reason: Schema.optionalKey(SuppressionReason),
+        note: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(1000)))),
+        bulkOnly: Schema.optionalKey(Schema.Boolean),
+        push: Schema.optionalKey(
+          Schema.Boolean.annotate({ description: "Also add it to Cloudflare's list." }),
+        ),
+      }),
+      success: Schema.Struct({
+        suppression: SuppressionSchema,
+        created: Schema.Boolean.annotate({
+          description:
+            "False when the address was already on the list: its reason is kept, and a new note is taken.",
+        }),
+        cloudflare: Schema.NullOr(
+          Schema.Struct({ state: Schema.String, message: Schema.NullOr(Schema.String) }),
+        ),
+      }),
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("import", "/v1/suppressions/import", {
+      payload: Schema.Struct({
+        uploadId: Schema.String,
+        reason: Schema.optionalKey(SuppressionReason),
+        note: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(1000)))),
+        emailColumn: Schema.optionalKey(Schema.String),
+        reasonColumn: Schema.optionalKey(Schema.String),
+        noteColumn: Schema.optionalKey(Schema.String),
+        push: Schema.optionalKey(Schema.Boolean),
+      }),
+      success: SuppressionImportSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("imports", "/v1/suppressions/imports", {
+      query: { cursor: Schema.optionalKey(Schema.String), limit: Limit },
+      success: Schema.Struct({
+        imports: Schema.Array(SuppressionImportSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("getImport", "/v1/suppressions/imports/:id", {
+      params: { id: Schema.String },
+      success: SuppressionImportSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("sync", "/v1/suppressions/sync", {
+      success: SyncSchema,
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("get", "/v1/suppressions/:email", {
+      params: EmailParam,
+      success: Schema.Struct({
+        ...SuppressionSchema.fields,
+        contact: Schema.NullOr(Schema.Struct({ id: Schema.String, status: Schema.String })),
+        contactStatusBefore: Schema.NullOr(Schema.String),
+        cloudflareEntries: Schema.NullOr(
+          Schema.Array(
+            Schema.Struct({
+              id: Schema.String,
+              reason: Schema.String,
+              scope: Schema.String,
+              expiresAt: Schema.NullOr(Schema.Number),
+              readOnly: Schema.Boolean,
+            }),
+          ),
+        ).annotate({
+          description: "Cloudflare's own entries for the address; null when Mailyard can't read its list.",
+        }),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/suppressions/:email", {
+      params: EmailParam,
+      payload: Schema.Struct({
+        note: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(1000)))),
+        bulkOnly: Schema.optionalKey(
+          Schema.Boolean.annotate({
+            description:
+              "True lets transactional mail through again (the way to treat a complaint); Cloudflare's account-wide entry is removed too, since it would block that mail.",
+          }),
+        ),
+      }),
+      success: Schema.Struct({
+        suppression: SuppressionSchema,
+        cloudflare: Schema.NullOr(CloudflareRemovalSchema),
+      }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/suppressions/:email", {
+      params: EmailParam,
+      payload: Schema.Struct({ confirm: Schema.optionalKey(Schema.Boolean) }),
+      success: Schema.Struct({
+        email: Schema.String,
+        removed: Schema.Boolean,
+        contactStatus: Schema.NullOr(Schema.String).annotate({
+          description: "The contact's status now: restored to what it was before the suppression.",
+        }),
+        cloudflare: CloudflareRemovalSchema,
+      }),
+      error: [Forbidden, NotFound, InvalidRequest, Conflict],
+    }),
+    HttpApiEndpoint.post("push", "/v1/suppressions/:email/push", {
+      params: EmailParam,
+      success: Schema.Struct({
+        suppression: SuppressionSchema,
+        cloudflare: Schema.Struct({
+          state: Schema.Literals(["pushed", "already-listed"]),
+          message: Schema.NullOr(Schema.String),
+        }),
+      }),
+      error: [Forbidden, NotFound, Conflict, CloudflareNotConnected, CloudflareRefused],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -2851,6 +3101,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(AlertsApi)
   .add(CampaignsApi)
   .add(ImportsApi)
+  .add(SuppressionsApi)
   .add(ExportsApi)
   .add(AutomationsApi)
   .add(RunsApi)

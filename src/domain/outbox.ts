@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm"
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schedule from "effect/Schedule"
@@ -23,7 +23,7 @@ import { SendQueue } from "../services/SendQueue.ts"
 import { renderTemplate, type TemplateSource } from "../templates/render.ts"
 import { instrument } from "../tracking/track.ts"
 import { getBrand } from "./brand.ts"
-import { upsertContact } from "./contacts.ts"
+import { isBlocked, upsertContact } from "./contacts.ts"
 import { bumpDailyStat } from "./deliveryEvents.ts"
 import { resolveForSend } from "./templates.ts"
 import { emitSafely } from "./webhooks.ts"
@@ -144,9 +144,13 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
         .select({ email: suppressions.email })
         .from(suppressions)
         .where(
-          inArray(
-            suppressions.email,
-            request.recipients.map((r) => r.email.trim().toLowerCase()),
+          and(
+            inArray(
+              suppressions.email,
+              request.recipients.map((r) => r.email.trim().toLowerCase()),
+            ),
+            // A bulk-only suppression (a complaint narrowed to bulk mail) still lets transactional mail through.
+            eq(suppressions.bulkOnly, false),
           ),
         )
         .all(),
@@ -339,7 +343,11 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
     db
       .select({ email: suppressions.email })
       .from(suppressions)
-      .where(eq(suppressions.email, recipient))
+      .where(
+        input.stream === "test"
+          ? and(eq(suppressions.email, recipient), eq(suppressions.bulkOnly, false))
+          : eq(suppressions.email, recipient),
+      )
       .get(),
   )
   if (suppressed) {
@@ -470,15 +478,31 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
   )
   if (error._tag === "SendSuppressed") {
     for (const email of error.recipients) {
+      const before = yield* database.query("contacts.statusBefore", (db) =>
+        db.select({ status: contacts.status }).from(contacts).where(eq(contacts.email, email)).get(),
+      )
       yield* database.query("suppressions.upsert", (db) =>
         db
           .insert(suppressions)
-          .values({ email, reason: "manual", source: "cloudflare", syncedToCloudflare: true, at: now })
+          .values({
+            email,
+            reason: "manual",
+            source: "cloudflare",
+            syncedToCloudflare: true,
+            messageId: id,
+            note: "Cloudflare refused to send to this address: it's on Cloudflare's suppression list.",
+            contactStatusBefore: before && !isBlocked(before.status) ? before.status : null,
+            at: now,
+          })
           .onConflictDoNothing()
           .run(),
       )
       yield* database.query("contacts.suppress", (db) =>
-        db.update(contacts).set({ status: "suppressed" }).where(eq(contacts.email, email)).run(),
+        db
+          .update(contacts)
+          .set({ status: "suppressed" })
+          .where(and(eq(contacts.email, email), notInArray(contacts.status, ["bounced", "complained"])))
+          .run(),
       )
     }
   }
@@ -552,9 +576,12 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
         .select({ email: suppressions.email })
         .from(suppressions)
         .where(
-          inArray(
-            suppressions.email,
-            all.map((a) => a.email.trim().toLowerCase()),
+          and(
+            inArray(
+              suppressions.email,
+              all.map((a) => a.email.trim().toLowerCase()),
+            ),
+            eq(suppressions.bulkOnly, false),
           ),
         )
         .all(),

@@ -507,13 +507,72 @@ export const automationSends = sqliteTable(
   (t) => [index("automation_sends_contact").on(t.contactId, t.at)],
 )
 
-export const suppressions = sqliteTable("suppressions", {
-  email: text("email").primaryKey(),
-  reason: text("reason", { enum: ["hard_bounce", "complaint", "unsubscribe", "manual"] }).notNull(),
-  source: text("source", { enum: ["cloudflare", "events", "manual", "import"] }).notNull(),
-  syncedToCloudflare: integer("synced_to_cloudflare", { mode: "boolean" }).notNull().default(false),
-  at: integer("at").notNull(),
-})
+/**
+ * Addresses Mailyard won't send to (HAL-3372). A row blocks every stream, or only bulk mail
+ * (campaigns and automations) when `bulkOnly`: how a complaint can still get a password reset.
+ */
+export const suppressions = sqliteTable(
+  "suppressions",
+  {
+    email: text("email").primaryKey(),
+    reason: text("reason", { enum: ["hard_bounce", "complaint", "unsubscribe", "manual"] }).notNull(),
+    source: text("source", { enum: ["cloudflare", "events", "manual", "import"] }).notNull(),
+    syncedToCloudflare: integer("synced_to_cloudflare", { mode: "boolean" }).notNull().default(false),
+    note: text("note"),
+    /** The message whose bounce or complaint added it. */
+    messageId: text("message_id"),
+    bulkOnly: integer("bulk_only", { mode: "boolean" }).notNull().default(false),
+    /** The contact's status before it was blocked, restored when the suppression is removed. */
+    contactStatusBefore: text("contact_status_before"),
+    /** The matching entry on Cloudflare's Email Sending suppression list, as the last sync found it. */
+    cloudflareId: text("cloudflare_id"),
+    /** When a sync last looked for this address on Cloudflare's list; null until one has. */
+    cloudflareCheckedAt: integer("cloudflare_checked_at"),
+    at: integer("at").notNull(),
+    updatedAt: integer("updated_at"),
+  },
+  (t) => [index("suppressions_at").on(t.at, t.email), index("suppressions_reason").on(t.reason, t.at)],
+)
+
+/** A CSV of addresses to suppress (`POST /v1/suppressions/import`), read in steps like a contact import. */
+export const suppressionImports = sqliteTable(
+  "suppression_imports",
+  {
+    id: text("id").primaryKey(),
+    uploadId: text("upload_id")
+      .notNull()
+      .references(() => uploads.id),
+    /** The reason for rows without a reason column (or with an empty cell). */
+    reason: text("reason", { enum: ["hard_bounce", "complaint", "unsubscribe", "manual"] }).notNull(),
+    note: text("note"),
+    emailColumn: text("email_column"),
+    reasonColumn: text("reason_column"),
+    noteColumn: text("note_column"),
+    /** Also add each new address to Cloudflare's suppression list. */
+    push: integer("push", { mode: "boolean" }).notNull().default(false),
+    status: text("status", { enum: ["queued", "running", "completed", "failed"] })
+      .notNull()
+      .default("queued"),
+    headers: text("headers", { mode: "json" }).$type<ReadonlyArray<string>>(),
+    offset: integer("offset").notNull().default(0),
+    line: integer("line").notNull().default(1),
+    rows: integer("rows").notNull().default(0),
+    added: integer("added").notNull().default(0),
+    existing: integer("existing").notNull().default(0),
+    invalid: integer("invalid").notNull().default(0),
+    duplicates: integer("duplicates").notNull().default(0),
+    pushed: integer("pushed").notNull().default(0),
+    errors: text("errors", { mode: "json" })
+      .$type<ReadonlyArray<{ readonly line: number; readonly message: string }>>()
+      .notNull()
+      .default(sql`'[]'`),
+    error: text("error"),
+    createdBy: text("created_by").notNull(),
+    createdAt: createdAt(),
+    finishedAt: integer("finished_at"),
+  },
+  (t) => [index("suppression_imports_created").on(t.createdAt)],
+)
 
 export const apiKeys = sqliteTable(
   "api_keys",

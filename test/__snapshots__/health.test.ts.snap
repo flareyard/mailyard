@@ -4,6 +4,60 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
 {
   "components": {
     "schemas": {
+      "CloudflareNotConnectedEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "CloudflareNotConnected",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+        ],
+        "type": "object",
+      },
+      "CloudflareRefusedEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "CloudflareRefused",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "number",
+              },
+              {
+                "enum": [
+                  "Infinity",
+                  "-Infinity",
+                  "NaN",
+                ],
+                "type": "string",
+              },
+            ],
+          },
+        },
+        "required": [
+          "_tag",
+          "status",
+          "message",
+        ],
+        "type": "object",
+      },
       "ConflictEncoded": {
         "additionalProperties": false,
         "properties": {
@@ -14,6 +68,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "message": {
+            "type": "string",
+          },
+          "reason": {
             "type": "string",
           },
         },
@@ -55730,6 +55787,2939 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/suppressions": {
+      "get": {
+        "operationId": "suppressions.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "enum": [
+                "hard_bounce",
+                "complaint",
+                "unsubscribe",
+                "manual",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "enum": [
+                "cloudflare",
+                "events",
+                "manual",
+                "import",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cloudflare",
+            "required": false,
+            "schema": {
+              "description": "Whether Cloudflare's Email Sending suppression list agrees. in-sync: it has the address. missing: the last sync didn't find it (push it). not-applicable: an unsubscribe or bulk-only row, which Cloudflare's list must not hold, since it blocks transactional mail too. unchecked: no sync has looked yet, or Mailyard can't read the list.",
+              "enum": [
+                "in-sync",
+                "missing",
+                "not-applicable",
+                "unchecked",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cloudflare": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "checkedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "cloudflareOnly": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "error": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "readable": {
+                          "type": "boolean",
+                        },
+                        "writable": {
+                          "type": "boolean",
+                        },
+                      },
+                      "required": [
+                        "readable",
+                        "writable",
+                        "checkedAt",
+                        "cloudflareOnly",
+                        "error",
+                      ],
+                      "type": "object",
+                    },
+                    "counts": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "complaint": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "hard_bounce": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "manual": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "total": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "unsubscribe": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "total",
+                        "hard_bounce",
+                        "complaint",
+                        "unsubscribe",
+                        "manual",
+                      ],
+                      "type": "object",
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "suppressions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "at": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "bulkOnly": {
+                            "description": "Blocks only campaigns and automations; transactional and mailbox mail still go. Always true for unsubscribes.",
+                            "type": "boolean",
+                          },
+                          "cloudflare": {
+                            "description": "Whether Cloudflare's Email Sending suppression list agrees. in-sync: it has the address. missing: the last sync didn't find it (push it). not-applicable: an unsubscribe or bulk-only row, which Cloudflare's list must not hold, since it blocks transactional mail too. unchecked: no sync has looked yet, or Mailyard can't read the list.",
+                            "enum": [
+                              "in-sync",
+                              "missing",
+                              "not-applicable",
+                              "unchecked",
+                            ],
+                            "type": "string",
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "messageId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "The message whose bounce or complaint added it.",
+                          },
+                          "note": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "reason": {
+                            "enum": [
+                              "hard_bounce",
+                              "complaint",
+                              "unsubscribe",
+                              "manual",
+                            ],
+                            "type": "string",
+                          },
+                          "source": {
+                            "description": "events: a bounce or complaint event. cloudflare: Cloudflare refused a send, or the sync adopted it from Cloudflare's list. manual: added through the API. import: a suppression CSV.",
+                            "enum": [
+                              "cloudflare",
+                              "events",
+                              "manual",
+                              "import",
+                            ],
+                            "type": "string",
+                          },
+                          "streams": {
+                            "items": {
+                              "enum": [
+                                "all",
+                                "campaign",
+                                "automation",
+                              ],
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "updatedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "email",
+                          "reason",
+                          "source",
+                          "messageId",
+                          "note",
+                          "bulkOnly",
+                          "streams",
+                          "cloudflare",
+                          "at",
+                          "updatedAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "suppressions",
+                    "counts",
+                    "cloudflare",
+                    "nextCursor",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+      "post": {
+        "operationId": "suppressions.add",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "bulkOnly": {
+                    "type": "boolean",
+                  },
+                  "email": {
+                    "type": "string",
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "maxLength": 1000,
+                        "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "push": {
+                    "description": "Also add it to Cloudflare's list.",
+                    "type": "boolean",
+                  },
+                  "reason": {
+                    "enum": [
+                      "hard_bounce",
+                      "complaint",
+                      "unsubscribe",
+                      "manual",
+                    ],
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "email",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cloudflare": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "message": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "state": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "state",
+                            "message",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "created": {
+                      "description": "False when the address was already on the list: its reason is kept, and a new note is taken.",
+                      "type": "boolean",
+                    },
+                    "suppression": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "at": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "bulkOnly": {
+                          "description": "Blocks only campaigns and automations; transactional and mailbox mail still go. Always true for unsubscribes.",
+                          "type": "boolean",
+                        },
+                        "cloudflare": {
+                          "description": "Whether Cloudflare's Email Sending suppression list agrees. in-sync: it has the address. missing: the last sync didn't find it (push it). not-applicable: an unsubscribe or bulk-only row, which Cloudflare's list must not hold, since it blocks transactional mail too. unchecked: no sync has looked yet, or Mailyard can't read the list.",
+                          "enum": [
+                            "in-sync",
+                            "missing",
+                            "not-applicable",
+                            "unchecked",
+                          ],
+                          "type": "string",
+                        },
+                        "email": {
+                          "type": "string",
+                        },
+                        "messageId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The message whose bounce or complaint added it.",
+                        },
+                        "note": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "reason": {
+                          "enum": [
+                            "hard_bounce",
+                            "complaint",
+                            "unsubscribe",
+                            "manual",
+                          ],
+                          "type": "string",
+                        },
+                        "source": {
+                          "description": "events: a bounce or complaint event. cloudflare: Cloudflare refused a send, or the sync adopted it from Cloudflare's list. manual: added through the API. import: a suppression CSV.",
+                          "enum": [
+                            "cloudflare",
+                            "events",
+                            "manual",
+                            "import",
+                          ],
+                          "type": "string",
+                        },
+                        "streams": {
+                          "items": {
+                            "enum": [
+                              "all",
+                              "campaign",
+                              "automation",
+                            ],
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "email",
+                        "reason",
+                        "source",
+                        "messageId",
+                        "note",
+                        "bulkOnly",
+                        "streams",
+                        "cloudflare",
+                        "at",
+                        "updatedAt",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "suppression",
+                    "created",
+                    "cloudflare",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+    },
+    "/v1/suppressions/import": {
+      "post": {
+        "operationId": "suppressions.import",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "emailColumn": {
+                    "type": "string",
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "maxLength": 1000,
+                        "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "noteColumn": {
+                    "type": "string",
+                  },
+                  "push": {
+                    "type": "boolean",
+                  },
+                  "reason": {
+                    "enum": [
+                      "hard_bounce",
+                      "complaint",
+                      "unsubscribe",
+                      "manual",
+                    ],
+                    "type": "string",
+                  },
+                  "reasonColumn": {
+                    "type": "string",
+                  },
+                  "uploadId": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "uploadId",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "added": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "duplicates": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "emailColumn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "errors": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "line": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "message": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "line",
+                          "message",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "existing": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "headers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "invalid": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "note": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "noteColumn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "push": {
+                      "type": "boolean",
+                    },
+                    "pushed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "reason": {
+                      "enum": [
+                        "hard_bounce",
+                        "complaint",
+                        "unsubscribe",
+                        "manual",
+                      ],
+                      "type": "string",
+                    },
+                    "reasonColumn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "rows": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "running",
+                        "completed",
+                        "failed",
+                      ],
+                      "type": "string",
+                    },
+                    "uploadId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "uploadId",
+                    "status",
+                    "reason",
+                    "note",
+                    "emailColumn",
+                    "reasonColumn",
+                    "noteColumn",
+                    "push",
+                    "headers",
+                    "rows",
+                    "added",
+                    "existing",
+                    "invalid",
+                    "duplicates",
+                    "pushed",
+                    "errors",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+    },
+    "/v1/suppressions/imports": {
+      "get": {
+        "operationId": "suppressions.imports",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "imports": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "added": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "duplicates": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "emailColumn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "errors": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "line": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "message": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "line",
+                                "message",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                          "existing": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "finishedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "headers": {
+                            "anyOf": [
+                              {
+                                "items": {
+                                  "type": "string",
+                                },
+                                "type": "array",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "invalid": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "note": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "noteColumn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "push": {
+                            "type": "boolean",
+                          },
+                          "pushed": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "reason": {
+                            "enum": [
+                              "hard_bounce",
+                              "complaint",
+                              "unsubscribe",
+                              "manual",
+                            ],
+                            "type": "string",
+                          },
+                          "reasonColumn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "rows": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "status": {
+                            "enum": [
+                              "queued",
+                              "running",
+                              "completed",
+                              "failed",
+                            ],
+                            "type": "string",
+                          },
+                          "uploadId": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "uploadId",
+                          "status",
+                          "reason",
+                          "note",
+                          "emailColumn",
+                          "reasonColumn",
+                          "noteColumn",
+                          "push",
+                          "headers",
+                          "rows",
+                          "added",
+                          "existing",
+                          "invalid",
+                          "duplicates",
+                          "pushed",
+                          "errors",
+                          "error",
+                          "createdAt",
+                          "finishedAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "imports",
+                    "nextCursor",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+    },
+    "/v1/suppressions/imports/{id}": {
+      "get": {
+        "operationId": "suppressions.getImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "added": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "duplicates": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "emailColumn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "errors": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "line": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "message": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "line",
+                          "message",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "existing": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "headers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "invalid": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "note": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "noteColumn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "push": {
+                      "type": "boolean",
+                    },
+                    "pushed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "reason": {
+                      "enum": [
+                        "hard_bounce",
+                        "complaint",
+                        "unsubscribe",
+                        "manual",
+                      ],
+                      "type": "string",
+                    },
+                    "reasonColumn": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "rows": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "running",
+                        "completed",
+                        "failed",
+                      ],
+                      "type": "string",
+                    },
+                    "uploadId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "uploadId",
+                    "status",
+                    "reason",
+                    "note",
+                    "emailColumn",
+                    "reasonColumn",
+                    "noteColumn",
+                    "push",
+                    "headers",
+                    "rows",
+                    "added",
+                    "existing",
+                    "invalid",
+                    "duplicates",
+                    "pushed",
+                    "errors",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+    },
+    "/v1/suppressions/sync": {
+      "post": {
+        "operationId": "suppressions.sync",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "adopted": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "checkedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "cloudflareOnly": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "complete": {
+                      "type": "boolean",
+                    },
+                    "connected": {
+                      "type": "boolean",
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "matched": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "connected",
+                    "checkedAt",
+                    "cloudflareOnly",
+                    "adopted",
+                    "complete",
+                    "error",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+    },
+    "/v1/suppressions/{email}": {
+      "delete": {
+        "operationId": "suppressions.remove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "confirm": {
+                    "type": "boolean",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cloudflare": {
+                      "additionalProperties": false,
+                      "description": "What happened on Cloudflare's list. removed: its entries for the address are gone. not-listed: it had none. read-only: Cloudflare keeps an entry nobody can delete, until it expires. not-connected: no write token, so Cloudflare may still refuse the address. failed: Cloudflare said no.",
+                      "properties": {
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "state": {
+                          "enum": [
+                            "removed",
+                            "not-listed",
+                            "read-only",
+                            "not-connected",
+                            "failed",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "state",
+                        "message",
+                      ],
+                      "type": "object",
+                    },
+                    "contactStatus": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "The contact's status now: restored to what it was before the suppression.",
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "removed": {
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "email",
+                    "removed",
+                    "contactStatus",
+                    "cloudflare",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+      "get": {
+        "operationId": "suppressions.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "at": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "bulkOnly": {
+                      "description": "Blocks only campaigns and automations; transactional and mailbox mail still go. Always true for unsubscribes.",
+                      "type": "boolean",
+                    },
+                    "cloudflare": {
+                      "description": "Whether Cloudflare's Email Sending suppression list agrees. in-sync: it has the address. missing: the last sync didn't find it (push it). not-applicable: an unsubscribe or bulk-only row, which Cloudflare's list must not hold, since it blocks transactional mail too. unchecked: no sync has looked yet, or Mailyard can't read the list.",
+                      "enum": [
+                        "in-sync",
+                        "missing",
+                        "not-applicable",
+                        "unchecked",
+                      ],
+                      "type": "string",
+                    },
+                    "cloudflareEntries": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "expiresAt": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                              "readOnly": {
+                                "type": "boolean",
+                              },
+                              "reason": {
+                                "type": "string",
+                              },
+                              "scope": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "reason",
+                              "scope",
+                              "expiresAt",
+                              "readOnly",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Cloudflare's own entries for the address; null when Mailyard can't read its list.",
+                    },
+                    "contact": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                            },
+                            "status": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "contactStatusBefore": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "messageId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "The message whose bounce or complaint added it.",
+                    },
+                    "note": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "reason": {
+                      "enum": [
+                        "hard_bounce",
+                        "complaint",
+                        "unsubscribe",
+                        "manual",
+                      ],
+                      "type": "string",
+                    },
+                    "source": {
+                      "description": "events: a bounce or complaint event. cloudflare: Cloudflare refused a send, or the sync adopted it from Cloudflare's list. manual: added through the API. import: a suppression CSV.",
+                      "enum": [
+                        "cloudflare",
+                        "events",
+                        "manual",
+                        "import",
+                      ],
+                      "type": "string",
+                    },
+                    "streams": {
+                      "items": {
+                        "enum": [
+                          "all",
+                          "campaign",
+                          "automation",
+                        ],
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "email",
+                    "reason",
+                    "source",
+                    "messageId",
+                    "note",
+                    "bulkOnly",
+                    "streams",
+                    "cloudflare",
+                    "at",
+                    "updatedAt",
+                    "contact",
+                    "contactStatusBefore",
+                    "cloudflareEntries",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+      "patch": {
+        "operationId": "suppressions.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "bulkOnly": {
+                    "description": "True lets transactional mail through again (the way to treat a complaint); Cloudflare's account-wide entry is removed too, since it would block that mail.",
+                    "type": "boolean",
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "maxLength": 1000,
+                        "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cloudflare": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "description": "What happened on Cloudflare's list. removed: its entries for the address are gone. not-listed: it had none. read-only: Cloudflare keeps an entry nobody can delete, until it expires. not-connected: no write token, so Cloudflare may still refuse the address. failed: Cloudflare said no.",
+                          "properties": {
+                            "message": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "state": {
+                              "enum": [
+                                "removed",
+                                "not-listed",
+                                "read-only",
+                                "not-connected",
+                                "failed",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "state",
+                            "message",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "suppression": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "at": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "bulkOnly": {
+                          "description": "Blocks only campaigns and automations; transactional and mailbox mail still go. Always true for unsubscribes.",
+                          "type": "boolean",
+                        },
+                        "cloudflare": {
+                          "description": "Whether Cloudflare's Email Sending suppression list agrees. in-sync: it has the address. missing: the last sync didn't find it (push it). not-applicable: an unsubscribe or bulk-only row, which Cloudflare's list must not hold, since it blocks transactional mail too. unchecked: no sync has looked yet, or Mailyard can't read the list.",
+                          "enum": [
+                            "in-sync",
+                            "missing",
+                            "not-applicable",
+                            "unchecked",
+                          ],
+                          "type": "string",
+                        },
+                        "email": {
+                          "type": "string",
+                        },
+                        "messageId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The message whose bounce or complaint added it.",
+                        },
+                        "note": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "reason": {
+                          "enum": [
+                            "hard_bounce",
+                            "complaint",
+                            "unsubscribe",
+                            "manual",
+                          ],
+                          "type": "string",
+                        },
+                        "source": {
+                          "description": "events: a bounce or complaint event. cloudflare: Cloudflare refused a send, or the sync adopted it from Cloudflare's list. manual: added through the API. import: a suppression CSV.",
+                          "enum": [
+                            "cloudflare",
+                            "events",
+                            "manual",
+                            "import",
+                          ],
+                          "type": "string",
+                        },
+                        "streams": {
+                          "items": {
+                            "enum": [
+                              "all",
+                              "campaign",
+                              "automation",
+                            ],
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "email",
+                        "reason",
+                        "source",
+                        "messageId",
+                        "note",
+                        "bulkOnly",
+                        "streams",
+                        "cloudflare",
+                        "at",
+                        "updatedAt",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "suppression",
+                    "cloudflare",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+    },
+    "/v1/suppressions/{email}/push": {
+      "post": {
+        "operationId": "suppressions.push",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cloudflare": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "state": {
+                          "enum": [
+                            "pushed",
+                            "already-listed",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "state",
+                        "message",
+                      ],
+                      "type": "object",
+                    },
+                    "suppression": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "at": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "bulkOnly": {
+                          "description": "Blocks only campaigns and automations; transactional and mailbox mail still go. Always true for unsubscribes.",
+                          "type": "boolean",
+                        },
+                        "cloudflare": {
+                          "description": "Whether Cloudflare's Email Sending suppression list agrees. in-sync: it has the address. missing: the last sync didn't find it (push it). not-applicable: an unsubscribe or bulk-only row, which Cloudflare's list must not hold, since it blocks transactional mail too. unchecked: no sync has looked yet, or Mailyard can't read the list.",
+                          "enum": [
+                            "in-sync",
+                            "missing",
+                            "not-applicable",
+                            "unchecked",
+                          ],
+                          "type": "string",
+                        },
+                        "email": {
+                          "type": "string",
+                        },
+                        "messageId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The message whose bounce or complaint added it.",
+                        },
+                        "note": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "reason": {
+                          "enum": [
+                            "hard_bounce",
+                            "complaint",
+                            "unsubscribe",
+                            "manual",
+                          ],
+                          "type": "string",
+                        },
+                        "source": {
+                          "description": "events: a bounce or complaint event. cloudflare: Cloudflare refused a send, or the sync adopted it from Cloudflare's list. manual: added through the API. import: a suppression CSV.",
+                          "enum": [
+                            "cloudflare",
+                            "events",
+                            "manual",
+                            "import",
+                          ],
+                          "type": "string",
+                        },
+                        "streams": {
+                          "items": {
+                            "enum": [
+                              "all",
+                              "campaign",
+                              "automation",
+                            ],
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "email",
+                        "reason",
+                        "source",
+                        "messageId",
+                        "note",
+                        "bulkOnly",
+                        "streams",
+                        "cloudflare",
+                        "at",
+                        "updatedAt",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "suppression",
+                    "cloudflare",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictEncoded",
+                    },
+                    {
+                      "$ref": "#/components/schemas/CloudflareNotConnectedEncoded",
+                    },
+                  ],
+                },
+              },
+            },
+            "description": "Conflict | CloudflareNotConnected",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudflareRefusedEncoded",
+                },
+              },
+            },
+            "description": "CloudflareRefused",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "suppressions",
+        ],
+      },
+    },
     "/v1/templates": {
       "get": {
         "operationId": "templates.list",
@@ -59912,6 +62902,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "contact.unsubscribed",
                           "contact.deleted",
                           "contact.suppressed",
+                          "contact.unsuppressed",
                           "event.tracked",
                           "campaign.paused",
                           "campaign.sent",
@@ -59975,6 +62966,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                     "contact.unsubscribed",
                                     "contact.deleted",
                                     "contact.suppressed",
+                                    "contact.unsuppressed",
                                     "event.tracked",
                                     "campaign.paused",
                                     "campaign.sent",
@@ -60222,6 +63214,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "contact.unsubscribed",
                                   "contact.deleted",
                                   "contact.suppressed",
+                                  "contact.unsuppressed",
                                   "event.tracked",
                                   "campaign.paused",
                                   "campaign.sent",
@@ -60453,6 +63446,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "contact.unsubscribed",
                               "contact.deleted",
                               "contact.suppressed",
+                              "contact.unsuppressed",
                               "event.tracked",
                               "campaign.paused",
                               "campaign.sent",
@@ -60672,6 +63666,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "contact.unsubscribed",
                               "contact.deleted",
                               "contact.suppressed",
+                              "contact.unsuppressed",
                               "event.tracked",
                               "campaign.paused",
                               "campaign.sent",
@@ -60932,6 +63927,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "contact.unsubscribed",
                               "contact.deleted",
                               "contact.suppressed",
+                              "contact.unsuppressed",
                               "event.tracked",
                               "campaign.paused",
                               "campaign.sent",
@@ -61560,6 +64556,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "contact.unsubscribed",
                                   "contact.deleted",
                                   "contact.suppressed",
+                                  "contact.unsuppressed",
                                   "event.tracked",
                                   "campaign.paused",
                                   "campaign.sent",
@@ -61882,6 +64879,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "imports",
+    },
+    {
+      "name": "suppressions",
     },
     {
       "name": "exports",

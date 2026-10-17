@@ -15,6 +15,7 @@ import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
 import { raiseAlert } from "./alerts.ts"
+import { isBlocked } from "./contacts.ts"
 import { emitSafely } from "./webhooks.ts"
 
 /**
@@ -289,8 +290,20 @@ export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: Em
       db
         .insert(suppressions)
         // Cloudflare suppresses these itself, so its list already agrees with ours.
-        .values({ email: recipient, reason, source: "events", syncedToCloudflare: true, at })
-        .onConflictDoUpdate({ target: suppressions.email, set: { reason, source: "events", at } })
+        .values({
+          email: recipient,
+          reason,
+          source: "events",
+          syncedToCloudflare: true,
+          messageId: row?.id ?? null,
+          contactStatusBefore: contact && !isBlocked(contact.status) ? contact.status : null,
+          at,
+        })
+        .onConflictDoUpdate({
+          target: suppressions.email,
+          // A complaint after a manual bulk-only narrowing blocks every stream again.
+          set: { reason, source: "events", messageId: row?.id ?? null, bulkOnly: false, at, updatedAt: at },
+        })
         .run(),
     )
     if (contact) {

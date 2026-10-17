@@ -2,11 +2,13 @@ import * as Effect from "effect/Effect"
 import { sweepAutomations } from "../automations/runs.ts"
 import type { Env } from "../Bindings.ts"
 import { watchEventCoverage } from "../domain/eventCoverage.ts"
+import { syncWithCloudflare } from "../domain/suppressions.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /**
- * The hourly cron: checks that every sending domain's delivery events are reaching Mailyard, and
- * sweeps automations (date triggers whose hour it is; segment triggers at 02:00 UTC).
+ * The hourly cron: checks that every sending domain's delivery events are reaching Mailyard, sweeps
+ * automations (date triggers whose hour it is; segment triggers at 02:00 UTC), and syncs the
+ * suppression list with Cloudflare's when Mailyard can read it.
  */
 export const handleScheduled = (env: Env) =>
   runtimeFor(env).runPromise(
@@ -20,6 +22,15 @@ export const handleScheduled = (env: Env) =>
         ),
       ),
       Effect.catchCause((cause) => Effect.logError("cron: delivery-events watchdog failed", cause)),
+      Effect.andThen(syncWithCloudflare()),
+      Effect.tap((sync) =>
+        Effect.logInfo(
+          sync.connected
+            ? `cron: suppressions synced, ${sync.adopted} adopted, ${sync.cloudflareOnly} Cloudflare-only${sync.error ? ` (${sync.error})` : ""}`
+            : "cron: suppressions not synced (Cloudflare's list isn't readable)",
+        ),
+      ),
+      Effect.catchCause((cause) => Effect.logError("cron: suppression sync failed", cause)),
       Effect.asVoid,
     ),
   )

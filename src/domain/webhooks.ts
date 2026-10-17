@@ -31,6 +31,7 @@ export const WEBHOOK_EVENTS = [
   "contact.unsubscribed",
   "contact.deleted",
   "contact.suppressed",
+  "contact.unsuppressed",
   "event.tracked",
   "campaign.paused",
   "campaign.sent",
