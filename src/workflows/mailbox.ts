@@ -20,6 +20,17 @@ const MAX_EXPORT_STEPS = 10_000 - 3
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 /**
+ * Releases a step's result once read. Under Miniflare a `step.do` result comes back as an RPC result
+ * with a disposer, and workerd warns "An RPC result was not disposed properly" when one is collected
+ * without it (HAL-3244, bisected 2026-10-17 to the export's step results). The values stay readable.
+ */
+const released = <T>(value: T): T => {
+  const disposer = (value as { [Symbol.dispose]?: () => void } | null)?.[Symbol.dispose]
+  if (typeof disposer === "function") disposer.call(value)
+  return value
+}
+
+/**
  * Copies a mailbox from an IMAP server (or an mbox in R2): plan, then one step per batch, each its own
  * checkpoint (a failed batch retries without redoing the others), then finish. Whatever happens, the
  * source password is wiped when the instance ends.
@@ -30,17 +41,19 @@ export class MailboxImportWorkflow extends WorkflowEntrypoint<Env, { readonly im
     const run = <A, E>(effect: Effect.Effect<A, E, AppServices>) => runtime.runPromise(effect)
     const { importId } = event.payload
     try {
-      const plan = await step.do("plan", RETRY, () => run(planImport(importId)))
+      const plan = released(await step.do("plan", RETRY, () => run(planImport(importId))))
       for (const [folderIndex, folder] of plan.folders.entries()) {
         for (let batchIndex = 0; batchIndex < folder.batches; batchIndex++) {
-          await step.do(`batch ${folderIndex}.${batchIndex}`, RETRY, () =>
-            run(runBatch(importId, folderIndex, batchIndex)),
+          released(
+            await step.do(`batch ${folderIndex}.${batchIndex}`, RETRY, () =>
+              run(runBatch(importId, folderIndex, batchIndex)),
+            ),
           )
         }
       }
-      return await step.do("finish", RETRY, () => run(finishImport(importId)))
+      return released(await step.do("finish", RETRY, () => run(finishImport(importId))))
     } catch (error) {
-      await step.do("fail", () => run(failImport(importId, errorText(error))))
+      released(await step.do("fail", () => run(failImport(importId, errorText(error)))))
       throw error
     }
   }
@@ -53,15 +66,15 @@ export class MailboxExportWorkflow extends WorkflowEntrypoint<Env, { readonly ex
     const run = <A, E>(effect: Effect.Effect<A, E, AppServices>) => runtime.runPromise(effect)
     const { exportId } = event.payload
     try {
-      const plan = await step.do("plan", RETRY, () => run(planExport(exportId)))
+      const plan = released(await step.do("plan", RETRY, () => run(planExport(exportId))))
       if (plan.complete) return { messages: 0 }
       for (let n = 0; n < MAX_EXPORT_STEPS; n++) {
-        const chunk = await step.do(`chunk ${n}`, RETRY, () => run(exportChunk(exportId)))
+        const chunk = released(await step.do(`chunk ${n}`, RETRY, () => run(exportChunk(exportId))))
         if (chunk.done) break
       }
-      return await step.do("finish", RETRY, () => run(finishExport(exportId)))
+      return released(await step.do("finish", RETRY, () => run(finishExport(exportId))))
     } catch (error) {
-      await step.do("fail", () => run(failExport(exportId, errorText(error))))
+      released(await step.do("fail", () => run(failExport(exportId, errorText(error)))))
       throw error
     }
   }
