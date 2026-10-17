@@ -239,6 +239,10 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.folderCounts()
   }
 
+  views(assignee: string | null) {
+    return this.store.views(assignee)
+  }
+
   attention(input: { readonly olderThan: number; readonly until: number; readonly assignee: string | null }) {
     return this.store.attention(input)
   }

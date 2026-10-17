@@ -124,6 +124,10 @@ export interface ThreadSummary {
   readonly snoozedUntil: number | null
   /** The API key handling this conversation in a shared inbox, or null. */
   readonly assignee: string | null
+  /** The earliest scheduled send of a reply in this conversation (HAL-3405), or null. */
+  readonly scheduledSendAt?: number | null
+  /** The highest spam score of its messages in spam; only when listing spam. */
+  readonly spamScore?: number | null
 }
 
 export interface Label {
@@ -216,7 +220,8 @@ export interface MessagePatch {
 }
 
 export interface ThreadFilter {
-  readonly folder?: Folder | undefined
+  /** A folder, or "all": every folder but spam and trash (All mail). */
+  readonly folder?: Folder | "all" | undefined
   readonly labelId?: string | undefined
   readonly unread?: boolean | undefined
   readonly starred?: boolean | undefined

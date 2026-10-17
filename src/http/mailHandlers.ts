@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
-import { mailboxes, messagesOut } from "../db/schema.ts"
+import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
 import { BlobStore } from "../kit/index.ts"
 import { type Access, type MailboxAccessDenied, type MailboxMissing, requireMailbox } from "../mail/access.ts"
@@ -199,6 +199,30 @@ const createDraftNow = (
     return (yield* callMailbox(params.id, (s) => s.saveDraft(input))).draft
   })
 
+/** Adds who's handling each conversation, with a name: the key's, until people exist (HAL-3361). */
+const withAssignees = <T extends { readonly assignee: string | null }>(threads: ReadonlyArray<T>) =>
+  Effect.gen(function* () {
+    const ids = [
+      ...new Set(threads.map((t) => t.assignee).filter((a): a is string => a !== null && a !== "root")),
+    ]
+    const names = new Map<string, string>([["root", "Admin key"]])
+    if (ids.length > 0) {
+      const database = yield* Database
+      const rows = yield* database.query("mail.assigneeNames", (db) =>
+        db
+          .select({ id: apiKeys.id, name: apiKeys.name })
+          .from(apiKeys)
+          .where(inArray(apiKeys.id, ids.slice(0, 90)))
+          .all(),
+      )
+      for (const r of rows) names.set(r.id, r.name)
+    }
+    return threads.map((t) => ({
+      ...t,
+      assignedTo: t.assignee ? { id: t.assignee, name: names.get(t.assignee) ?? t.assignee } : null,
+    }))
+  })
+
 export const MailHandlers = HttpApiBuilder.group(
   MailApi,
   "mail",
@@ -207,10 +231,11 @@ export const MailHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       folders: p(({ params }) =>
         Effect.gen(function* () {
-          yield* access(params.id, "read")
+          const { caller } = yield* access(params.id, "read")
           const folders = yield* callMailbox(params.id, (s) => s.folderCounts())
           const labels = yield* callMailbox(params.id, (s) => s.labels())
-          return { folders, labels }
+          const views = yield* callMailbox(params.id, (s) => s.views(caller.keyId))
+          return { folders, labels, views }
         }).pipe(mailErrors),
       ),
       emptyFolder: p(({ params }) =>
@@ -228,7 +253,7 @@ export const MailHandlers = HttpApiBuilder.group(
       threads: p(({ params, query }) =>
         Effect.gen(function* () {
           yield* access(params.id, "read")
-          return yield* callMailbox(params.id, (s) =>
+          const list = yield* callMailbox(params.id, (s) =>
             s.threads({
               ...(query.folder ? { folder: query.folder } : {}),
               ...(query.labelId ? { labelId: query.labelId } : {}),
@@ -239,6 +264,7 @@ export const MailHandlers = HttpApiBuilder.group(
               limit: query.limit ?? 50,
             }),
           )
+          return { ...list, threads: yield* withAssignees(list.threads) }
         }).pipe(mailErrors),
       ),
       thread: p(({ params }) =>
@@ -246,7 +272,12 @@ export const MailHandlers = HttpApiBuilder.group(
           yield* access(params.id, "read")
           const result = yield* callMailbox(params.id, (s) => s.thread(params.threadId))
           if (!result) return yield* new NotFound({ message: `Thread ${params.threadId} not found.` })
-          return { thread: result.thread, messages: result.messages.map(toMessage), drafts: result.drafts }
+          const [thread] = yield* withAssignees([result.thread])
+          return {
+            thread: thread ?? result.thread,
+            messages: result.messages.map(toMessage),
+            drafts: result.drafts,
+          }
         }).pipe(mailErrors),
       ),
       bulk: p(({ params, payload }) =>

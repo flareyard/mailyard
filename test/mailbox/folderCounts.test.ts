@@ -139,6 +139,17 @@ describe("kept folder counts", () => {
               // A refusal (an invalid move, a snooze of nothing) changes nothing; the counts must still hold.
             }
             expect(kept(store)).toEqual(store.recountFolders().filter((c) => c.threads > 0 || c.unread > 0))
+            // All mail (HAL-3405): threads with a message outside spam and trash, kept the same way.
+            const all = state.storage.sql
+              .exec<{ threads: number; unread: number }>(
+                `SELECT count(*) AS threads, coalesce(sum(u), 0) AS unread FROM (
+                   SELECT thread_id, max(seen = 0) AS u FROM messages WHERE folder NOT IN ('spam', 'trash') GROUP BY thread_id)`,
+              )
+              .one()
+            expect(store.views(null).all).toEqual({
+              threads: Number(all.threads),
+              unreadThreads: Number(all.unread),
+            })
           }
         }),
         { numRuns: 60 },

@@ -12,6 +12,20 @@ import { ADMIN, call, createKey, json } from "../helpers.ts"
 installDohFixture()
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Waits for the mailbox's alarm to hand a sent draft over (status "due"), however long a loaded run
+ * takes; a fixed sleep made these tests flaky under the full parallel suite (HAL-3391).
+ */
+const untilDue = async (mailboxId: string, draftId: string, timeoutMs = 10_000) => {
+  const stub = env.MAILBOX.get(env.MAILBOX.idFromName(mailboxId))
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if ((await stub.draft(draftId))?.status === "due") return
+    await sleep(50)
+  }
+  throw new Error(`draft ${draftId} never became due`)
+}
 const admin = (path: string, init: RequestInit & { json?: unknown } = {}) =>
   call(path, { ...init, key: ADMIN })
 
@@ -429,7 +443,7 @@ describe("composing and sending", () => {
       }),
     )
     await call(`${base}/drafts/${draft.id}/send`, { method: "POST", key: member.key, json: {} })
-    await sleep(900)
+    await untilDue(sam.id, draft.id)
     const stub = env.MAILBOX.get(env.MAILBOX.idFromName(sam.id))
     expect(await stub.draft(draft.id)).toMatchObject({ status: "due" })
 
@@ -595,7 +609,7 @@ describe("composing and sending", () => {
       }),
     )
     await call(`${base}/drafts/${draft.id}/send`, { method: "POST", key: member.key, json: {} })
-    await sleep(900)
+    await untilDue(sam.id, draft.id)
     await runMailboxSendQueue([{ mailboxId: sam.id, draftId: draft.id, origin: "https://mailyard.test" }])
     const send = (await mailboxSends(sam.id)).results[0]
     const message = await rendered(send?.rendered_key ?? "")
@@ -652,7 +666,7 @@ describe("composing and sending", () => {
     })
     await env.STORE.delete(gone.key)
     await call(`${base}/drafts/${draft.id}/send`, { method: "POST", key: member.key, json: {} })
-    await sleep(900)
+    await untilDue(sam.id, draft.id)
     await runMailboxSendQueue([{ mailboxId: sam.id, draftId: draft.id, origin: null }])
     expect(await json(await call(`${base}/drafts/${draft.id}`, { key: member.key }))).toMatchObject({
       status: "draft",

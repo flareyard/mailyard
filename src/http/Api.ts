@@ -1033,7 +1033,24 @@ export const ThreadSchema = Schema.Struct({
   lastAt: Schema.Number,
   sortAt: Schema.Number,
   snoozedUntil: Schema.NullOr(Schema.Number),
-  assignee: Schema.NullOr(Schema.String),
+  assignee: Schema.NullOr(Schema.String).annotate({
+    description: "The API key id handling it; see assignedTo for the name.",
+  }),
+  assignedTo: Schema.optionalKey(
+    Schema.NullOr(Schema.Struct({ id: Schema.String, name: Schema.String })).annotate({
+      description: "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+    }),
+  ),
+  scheduledSendAt: Schema.optionalKey(
+    Schema.NullOr(Schema.Number).annotate({
+      description: "The earliest scheduled send of a reply in this conversation.",
+    }),
+  ),
+  spamScore: Schema.optionalKey(
+    Schema.NullOr(Schema.Number).annotate({
+      description: "The highest spam score of its messages in spam; only when listing spam.",
+    }),
+  ),
 })
 
 const AttachmentSchema = Schema.Struct({
@@ -1233,7 +1250,18 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
   .add(
     HttpApiEndpoint.get("folders", "/v1/mailboxes/:id/folders", {
       params: MailboxParam,
-      success: Schema.Struct({ folders: Schema.Array(FolderCountSchema), labels: Schema.Array(LabelSchema) }),
+      success: Schema.Struct({
+        folders: Schema.Array(FolderCountSchema),
+        labels: Schema.Array(LabelSchema),
+        views: Schema.Struct({
+          starred: Schema.Number,
+          assignedToMe: Schema.Number.annotate({ description: "Conversations assigned to the calling key." }),
+          scheduled: Schema.Number.annotate({ description: "Drafts scheduled to send." }),
+          all: Schema.Struct({ threads: Schema.Number, unreadThreads: Schema.Number }),
+        }).annotate({
+          description: "The views beside the folders: Starred, Assigned to me, Scheduled, All mail.",
+        }),
+      }),
       error: MailErrors,
     }),
     HttpApiEndpoint.post("emptyFolder", "/v1/mailboxes/:id/folders/:folder/empty", {
@@ -1244,7 +1272,11 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
     HttpApiEndpoint.get("threads", "/v1/mailboxes/:id/threads", {
       params: MailboxParam,
       query: {
-        folder: Schema.optionalKey(FolderSchema),
+        folder: Schema.optionalKey(
+          Schema.Union([FolderSchema, Schema.Literal("all")]).annotate({
+            description: "A folder, or all: every folder but spam and trash (All mail).",
+          }),
+        ),
         labelId: Schema.optionalKey(Schema.String),
         unread: Schema.optionalKey(Schema.Literals(["true", "false"])),
         starred: Schema.optionalKey(Schema.Literals(["true", "false"])),
@@ -1254,6 +1286,10 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
       },
       success: Schema.Struct({
         threads: Schema.Array(ThreadSchema),
+        total: Schema.NullOr(Schema.Number).annotate({
+          description:
+            "Conversations in the whole list, when it's a plain folder (no other filter); null otherwise.",
+        }),
         nextCursor: Schema.NullOr(Schema.String),
       }),
       error: MailErrors,

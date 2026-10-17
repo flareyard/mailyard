@@ -350,6 +350,20 @@ export class MailboxStore {
             .map((r) => [String(r.folder), Number(r.unread)])
         : [],
     )
+    // "all" (All mail): in any folder but spam and trash; unread if unread in one of those.
+    const allOf = (m: Map<string, number>) => {
+      const kept = [...m].filter(([f]) => f !== "spam" && f !== "trash" && f !== "all")
+      return kept.length ? Math.max(...kept.map(([, u]) => u)) : undefined
+    }
+    const allBefore = allOf(before)
+    const allAfter = allOf(after)
+    if (allBefore !== allAfter)
+      this.sql.exec(
+        `INSERT INTO folder_counts (folder, threads, unread) VALUES ('all', ?, ?)
+         ON CONFLICT (folder) DO UPDATE SET threads = threads + excluded.threads, unread = unread + excluded.unread`,
+        (allAfter === undefined ? 0 : 1) - (allBefore === undefined ? 0 : 1),
+        (allAfter ?? 0) - (allBefore ?? 0),
+      )
     let changed = before.size !== after.size
     for (const folder of new Set([...before.keys(), ...after.keys()])) {
       const was = before.get(folder)
@@ -533,6 +547,31 @@ export class MailboxStore {
     this.sql.exec(
       "INSERT INTO folder_counts (folder, threads, unread) SELECT folder, count(*), sum(unread) FROM thread_folders GROUP BY folder",
     )
+    this.sql.exec(
+      `INSERT INTO folder_counts (folder, threads, unread)
+       SELECT 'all', count(*), coalesce(sum(u), 0) FROM (
+         SELECT thread_id, max(unread) AS u FROM thread_folders WHERE folder NOT IN ('spam', 'trash') GROUP BY thread_id)`,
+    )
+  }
+
+  /**
+   * The views beside the folders (HAL-3405), each read through an index or a kept count: starred,
+   * assigned to a key, scheduled sends, and All mail.
+   */
+  views(assignee: string | null) {
+    const n = (sql: string, ...args: Array<SqlStorageValue>) =>
+      Number(this.sql.exec<{ n: number }>(sql, ...args).one().n)
+    const all = this.sql
+      .exec<{ threads: number; unread: number }>(
+        "SELECT threads, unread FROM folder_counts WHERE folder = 'all'",
+      )
+      .toArray()[0]
+    return {
+      starred: n("SELECT count(*) AS n FROM threads WHERE starred = 1"),
+      assignedToMe: assignee ? n("SELECT count(*) AS n FROM threads WHERE assignee = ?", assignee) : 0,
+      scheduled: n("SELECT count(*) AS n FROM drafts WHERE status = 'scheduled'"),
+      all: { threads: Number(all?.threads ?? 0), unreadThreads: Number(all?.unread ?? 0) },
+    }
   }
 
   /** The counts recounted from the messages, for checking the kept ones. */
@@ -785,7 +824,11 @@ export class MailboxStore {
     const limit = clampLimit(filter.limit)
     const where: Array<string> = []
     const args: Array<SqlStorageValue> = []
-    if (filter.folder) {
+    if (filter.folder === "all") {
+      where.push(
+        "EXISTS (SELECT 1 FROM thread_folders tf WHERE tf.thread_id = t.id AND tf.folder NOT IN ('spam', 'trash'))",
+      )
+    } else if (filter.folder) {
       where.push("EXISTS (SELECT 1 FROM messages m WHERE m.thread_id = t.id AND m.folder = ?)")
       args.push(assertFolder(filter.folder))
     }
@@ -807,17 +850,39 @@ export class MailboxStore {
       where.push("(t.sort_at < ? OR (t.sort_at = ? AND t.id < ?))")
       args.push(Number(at), Number(at), id)
     }
+    const spam = filter.folder === "spam"
     const rows = this.sql
       .exec(
-        `SELECT t.* FROM threads t ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+        `SELECT t.*,
+           (SELECT min(d.send_at) FROM drafts d WHERE d.thread_id = t.id AND d.status = 'scheduled') AS scheduled_send_at
+           ${spam ? ", (SELECT max(m.spam_score) FROM messages m WHERE m.thread_id = t.id AND m.folder = 'spam') AS spam_score_max" : ""}
+         FROM threads t ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
          ORDER BY t.sort_at DESC, t.id DESC LIMIT ?`,
         ...args,
         limit + 1,
       )
       .toArray()
-    const page = rows.slice(0, limit).map((r) => this.toThread(r))
+    const page = rows.slice(0, limit).map((r) => ({
+      ...this.toThread(r),
+      scheduledSendAt: num(r.scheduled_send_at),
+      ...(spam ? { spamScore: num(r.spam_score_max) } : {}),
+    }))
     const last = page.at(-1)
-    return { threads: page, nextCursor: rows.length > limit && last ? `${last.sortAt}:${last.id}` : null }
+    // The total is free when the list is a whole folder: the kept counts already hold it.
+    const plain = !filter.labelId && !filter.unread && !filter.starred && !filter.assignee
+    const total =
+      plain && filter.folder
+        ? Number(
+            this.sql
+              .exec<{ threads: number }>("SELECT threads FROM folder_counts WHERE folder = ?", filter.folder)
+              .toArray()[0]?.threads ?? 0,
+          )
+        : null
+    return {
+      threads: page,
+      total,
+      nextCursor: rows.length > limit && last ? `${last.sortAt}:${last.id}` : null,
+    }
   }
 
   /** A thread with its messages in conversation order and any drafts replying in it. */

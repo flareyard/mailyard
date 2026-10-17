@@ -213,4 +213,11 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
     ],
     after: "rebuildCorrespondents",
   },
+  {
+    statements: [
+      // Views beside the folders (HAL-3405): starred counts through an index, All mail as a kept count.
+      "CREATE INDEX threads_starred ON threads (starred)",
+    ],
+    after: "rebuildFolderCounts",
+  },
 ]

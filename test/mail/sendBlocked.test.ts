@@ -98,10 +98,14 @@ describe("typed send refusals (SendBlocked)", () => {
     expect((await send(base, draft.id)).status).toBe(200)
     // Suppressed after the send was accepted, before the alarm handed it over.
     await call("/v1/suppressions", { method: "POST", key: ADMIN, json: { email: to } })
-    await new Promise((r) => setTimeout(r, 400))
-    await runInDurableObject(env.MAILBOX.get(env.MAILBOX.idFromName(box.id)), (instance: MailboxDO) =>
-      instance.alarm(),
-    )
+    // Hand it over the way the alarm does, however long a loaded run takes to make it due.
+    const stub = env.MAILBOX.get(env.MAILBOX.idFromName(box.id))
+    const deadline = Date.now() + 10_000
+    while ((await stub.draft(draft.id))?.status !== "due" && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 100))
+      await runInDurableObject(stub, (instance: MailboxDO) => instance.alarm())
+    }
+    expect((await stub.draft(draft.id))?.status).toBe("due")
     const batch = createMessageBatch("mailyard-mailbox-send", [
       {
         id: `m-${uid()}`,
