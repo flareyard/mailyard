@@ -83,17 +83,9 @@ const withPreheader = (html: string, preheader: string | null) => {
 const withFooter = (html: string, block: string) =>
   /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${block}</body>`) : `${html}${block}`
 
-/**
- * One recipient's message: merge fields, the unsubscribe and preference links (as `{{unsubscribe_url}}`
- * and `{{preferences_url}}` for templates that place them), the footer when a template doesn't,
- * the preheader, and the List-Unsubscribe headers.
- */
-export const renderFor = Effect.fn("campaigns.renderFor")(function* (
-  campaign: CampaignRow,
-  recipient: Recipient,
-  options: { readonly origin: string; readonly variant?: "a" | "b"; readonly test?: boolean },
-) {
-  const { source } = yield* contentOf(campaign)
+/** Everything a campaign's messages share, loaded once per batch rather than once per recipient. */
+export const prepareRender = Effect.fn("campaigns.prepareRender")(function* (campaign: CampaignRow) {
+  const { source, templateId, templateVersion } = yield* contentOf(campaign)
   const brand = yield* getBrand()
   const compliance = yield* getCompliance()
   const database = yield* Database
@@ -107,14 +99,38 @@ export const renderFor = Effect.fn("campaigns.renderFor")(function* (
       )
     : undefined
   const from = parseParty(campaign.fromAddress)
-  const mailDomain = from.email.slice(from.email.lastIndexOf("@") + 1)
+  return {
+    campaign,
+    source,
+    templateId,
+    templateVersion,
+    brand,
+    compliance,
+    topicName: topic?.name ?? null,
+    from,
+    mailDomain: from.email.slice(from.email.lastIndexOf("@") + 1),
+  }
+})
+export type RenderContext = Effect.Success<ReturnType<typeof prepareRender>>
+
+/**
+ * One recipient's message: merge fields, the unsubscribe and preference links (as `{{unsubscribe_url}}`
+ * and `{{preferences_url}}` for templates that place them), the footer when a template doesn't,
+ * the preheader, and the List-Unsubscribe headers.
+ */
+export const renderWith = Effect.fn("campaigns.renderWith")(function* (
+  ctx: RenderContext,
+  recipient: Recipient,
+  options: { readonly origin: string; readonly variant?: "a" | "b"; readonly test?: boolean },
+) {
+  const { campaign, source, brand, compliance, from, mailDomain, topicName } = ctx
   const links = yield* unsubscribeHeaders({
     contactId: recipient.contactId ?? "test",
     topicId: campaign.topicId,
     campaignId: campaign.id,
     origin: options.origin,
     mailDomain,
-    listName: topic?.name,
+    listName: topicName ?? undefined,
   })
   const preferences = yield* unsubscribeHeaders({
     contactId: recipient.contactId ?? "test",
@@ -131,15 +147,15 @@ export const renderFor = Effect.fn("campaigns.renderFor")(function* (
     unsubscribe_url: links.url,
     preferences_url: preferences.url,
     campaign: { name: campaign.name },
-    topic: topic?.name ?? null,
+    topic: topicName,
   }
   const rendered: Rendered = yield* Effect.try({
     try: () => renderTemplate({ ...source, subject }, vars, brand),
     catch: (e) =>
       new CampaignContentInvalid({ field: "template", message: e instanceof Error ? e.message : String(e) }),
   })
-  const reason = topic
-    ? `You're receiving this because you subscribed to ${topic.name} from ${brand.theme.name}.`
+  const reason = topicName
+    ? `You're receiving this because you subscribed to ${topicName} from ${brand.theme.name}.`
     : `You're receiving this because you're on ${brand.theme.name}'s mailing list.`
   const needsFooter = !rendered.html.includes(links.url) && !rendered.html.includes(preferences.url)
   const block = footer({
@@ -168,4 +184,13 @@ export const renderFor = Effect.fn("campaigns.renderFor")(function* (
     footerAdded: needsFooter,
     size: new TextEncoder().encode(html).length,
   }
+})
+
+/** renderWith for a single message: the editor's preview and test sends. */
+export const renderFor = Effect.fn("campaigns.renderFor")(function* (
+  campaign: CampaignRow,
+  recipient: Recipient,
+  options: { readonly origin: string; readonly variant?: "a" | "b"; readonly test?: boolean },
+) {
+  return yield* renderWith(yield* prepareRender(campaign), recipient, options)
 })

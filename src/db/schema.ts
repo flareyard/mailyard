@@ -287,6 +287,8 @@ export const campaigns = sqliteTable(
     workflowId: text("workflow_id"),
     audienceSize: integer("audience_size"),
     pausedReason: text("paused_reason"),
+    /** The subject that won the A/B test, once picked; the rest of the audience gets it. */
+    abWinner: text("ab_winner", { enum: ["a", "b"] }),
     startedAt: integer("started_at"),
     finishedAt: integer("finished_at"),
     createdAt: createdAt(),
@@ -335,6 +337,8 @@ export const messagesOut = sqliteTable(
     /** R2 key of the rendered message as sent, for the message log and for retries. */
     renderedKey: text("rendered_key"),
     /** First open and first click, from tracking (HAL-3277); segments filter on them. */
+    /** Which subject an A/B campaign message carried. */
+    variant: text("variant", { enum: ["a", "b"] }),
     firstOpenedAt: integer("first_opened_at"),
     firstClickedAt: integer("first_clicked_at"),
     createdAt: createdAt(),
