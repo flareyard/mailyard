@@ -16,6 +16,9 @@ export { BODY_TEXT_LIMIT } from "../mailbox/types.ts"
 /** WebSockets accepted on `/live` carry this tag. */
 const LIVE = "live"
 
+/** How long a due draft waits before another try when the send queue refused it. */
+const REQUEUE_MS = 30_000
+
 /** Drops the events a store call produced, once they've been broadcast. */
 const withoutEvents = <T extends { readonly events: ReadonlyArray<MailboxEvent> }>({
   events: _,
@@ -123,6 +126,23 @@ export class MailboxDO extends DurableObject<Env> {
   override async alarm() {
     const result = this.store.runDue()
     this.broadcast(result.events)
+    // Hand due drafts to the sender. One that can't be handed over goes back on the schedule, so a
+    // queue hiccup delays a scheduled send instead of losing it.
+    const mailboxId = this.store.getMeta("mailboxId")
+    const origin = this.store.getMeta("origin")
+    for (const draftId of result.dueDrafts) {
+      if (!mailboxId) {
+        // Only drafts scheduled through the API carry the mailbox id; a due draft without one stays due.
+        console.error(`mailbox: draft ${draftId} is due but this mailbox's id is unknown; it stays due`)
+        continue
+      }
+      try {
+        await this.env.MAILBOX_SEND_QUEUE.send({ mailboxId, draftId, origin })
+      } catch (error) {
+        console.error(`mailbox: could not queue draft ${draftId}, retrying in ${REQUEUE_MS / 1000}s`, error)
+        this.store.requeueDraft(draftId, Date.now() + REQUEUE_MS)
+      }
+    }
     await this.syncAlarm()
   }
 
@@ -242,8 +262,36 @@ export class MailboxDO extends DurableObject<Env> {
     return await this.apply(this.store.saveDraft(input))
   }
 
-  async scheduleDraft(id: string, sendAt: number) {
+  /**
+   * Schedules a draft. `mailboxId` and `origin` are kept so the alarm can hand the draft to the sender
+   * (the object doesn't otherwise know its own name) and build links to large attachments.
+   */
+  async scheduleDraft(
+    id: string,
+    sendAt: number,
+    context?: { readonly mailboxId: string; readonly origin: string | null },
+  ) {
+    if (context) {
+      this.store.setMeta("mailboxId", context.mailboxId)
+      if (context.origin) this.store.setMeta("origin", context.origin)
+    }
     return await this.apply(this.store.scheduleDraft(id, sendAt))
+  }
+
+  async assign(threadIds: ReadonlyArray<string>, assignee: string | null) {
+    return await this.apply(this.store.assign(threadIds, assignee))
+  }
+
+  async failDraft(id: string, error: string) {
+    return await this.apply(this.store.failDraft(id, error))
+  }
+
+  hasAttachmentKey(key: string) {
+    return this.store.hasAttachmentKey(key)
+  }
+
+  async setMessageId(id: string, messageId: string) {
+    return await this.apply(this.store.setMessageId(id, messageId))
   }
 
   async unscheduleDraft(id: string) {

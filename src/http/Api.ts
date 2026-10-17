@@ -950,6 +950,348 @@ export class IdentitiesApi extends HttpApiGroup.make("identities")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Mail: folders, threads, messages, labels, drafts and sending (docs/email-ui.html: Mail)
+// ---------------------------------------------------------------------------------------------
+
+const FolderSchema = Schema.Literals(["inbox", "archive", "sent", "spam", "trash", "snoozed"])
+const PartySchema = Schema.Struct({ name: Schema.NullOr(Schema.String), address: Schema.String })
+const AuthVerdictSchema = Schema.NullOr(Schema.String)
+
+export const ThreadSchema = Schema.Struct({
+  id: Schema.String,
+  subject: Schema.String,
+  snippet: Schema.String,
+  latestMessageId: Schema.String,
+  messageCount: Schema.Number,
+  unreadCount: Schema.Number,
+  starred: Schema.Boolean,
+  hasAttachments: Schema.Boolean,
+  participants: Schema.Array(PartySchema),
+  folders: Schema.Array(FolderSchema),
+  labelIds: Schema.Array(Schema.String),
+  firstAt: Schema.Number,
+  lastAt: Schema.Number,
+  sortAt: Schema.Number,
+  snoozedUntil: Schema.NullOr(Schema.Number),
+  assignee: Schema.NullOr(Schema.String),
+})
+
+const AttachmentSchema = Schema.Struct({
+  id: Schema.String,
+  filename: Schema.NullOr(Schema.String),
+  mimeType: Schema.String,
+  disposition: Schema.NullOr(Schema.String),
+  contentId: Schema.NullOr(Schema.String),
+  related: Schema.Boolean,
+  size: Schema.Number,
+  sha256: Schema.String,
+})
+
+export const MessageSchema = Schema.Struct({
+  id: Schema.String,
+  threadId: Schema.String,
+  folder: FolderSchema,
+  seen: Schema.Boolean,
+  starred: Schema.Boolean,
+  answered: Schema.Boolean,
+  labelIds: Schema.Array(Schema.String),
+  receivedAt: Schema.Number,
+  envelopeFrom: Schema.String,
+  envelopeTo: Schema.String,
+  via: Schema.String,
+  tag: Schema.NullOr(Schema.String),
+  size: Schema.Number,
+  messageId: Schema.NullOr(Schema.String),
+  inReplyTo: Schema.NullOr(Schema.String),
+  references: Schema.Array(Schema.String),
+  subject: Schema.String,
+  date: Schema.NullOr(Schema.Number),
+  from: Schema.NullOr(PartySchema),
+  replyTo: Schema.Array(PartySchema),
+  to: Schema.Array(PartySchema),
+  cc: Schema.Array(PartySchema),
+  snippet: Schema.String,
+  hasHtml: Schema.Boolean,
+  automated: Schema.Boolean,
+  listId: Schema.NullOr(Schema.String),
+  listUnsubscribe: Schema.NullOr(Schema.String),
+  auth: Schema.Struct({
+    source: Schema.String,
+    spf: AuthVerdictSchema,
+    dmarc: AuthVerdictSchema,
+    dkim: Schema.Array(
+      Schema.Struct({
+        result: Schema.String,
+        domain: Schema.NullOr(Schema.String),
+        selector: Schema.NullOr(Schema.String),
+      }),
+    ),
+  }),
+  attachments: Schema.Array(AttachmentSchema),
+})
+
+export const MessageDetailSchema = Schema.Struct({
+  ...MessageSchema.fields,
+  body: Schema.Struct({ text: Schema.String, html: Schema.NullOr(Schema.String) }),
+  /** Signed links that work without a key for an hour: for <img> tags and download buttons. */
+  rawUrl: Schema.String,
+  attachmentUrls: Schema.Record(Schema.String, Schema.String),
+})
+
+const DraftAttachmentSchema = Schema.Struct({
+  key: Schema.String,
+  filename: Schema.String,
+  mimeType: Schema.String,
+  size: Schema.Number,
+})
+const ReplyModeSchema = Schema.Literals(["reply", "replyAll", "forward"])
+
+export const DraftSchema = Schema.Struct({
+  id: Schema.String,
+  threadId: Schema.NullOr(Schema.String),
+  inReplyTo: Schema.NullOr(Schema.String),
+  references: Schema.Array(Schema.String),
+  from: Schema.NullOr(Schema.String),
+  to: Schema.Array(PartySchema),
+  cc: Schema.Array(PartySchema),
+  bcc: Schema.Array(PartySchema),
+  subject: Schema.String,
+  bodyText: Schema.String,
+  bodyHtml: Schema.NullOr(Schema.String),
+  attachments: Schema.Array(DraftAttachmentSchema),
+  status: Schema.Literals(["draft", "scheduled", "due"]),
+  sendAt: Schema.NullOr(Schema.Number),
+  replyMode: Schema.NullOr(ReplyModeSchema),
+  sourceMessageId: Schema.NullOr(Schema.String),
+  lastError: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+export const LabelSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  color: Schema.NullOr(Schema.String),
+  threads: Schema.Number,
+  unreadThreads: Schema.Number,
+  createdAt: Schema.Number,
+})
+
+const FolderCountSchema = Schema.Struct({
+  folder: Schema.Literals(["inbox", "archive", "sent", "spam", "trash", "snoozed", "drafts"]),
+  threads: Schema.Number,
+  unreadThreads: Schema.Number,
+})
+
+const PartyInput = Schema.Struct({
+  name: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  address: Schema.String,
+})
+
+const DraftFields = {
+  from: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  to: Schema.optionalKey(Schema.Array(PartyInput)),
+  cc: Schema.optionalKey(Schema.Array(PartyInput)),
+  bcc: Schema.optionalKey(Schema.Array(PartyInput)),
+  subject: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(998))),
+  bodyText: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(1_000_000))),
+  bodyHtml: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(2_000_000)))),
+  attachments: Schema.optionalKey(Schema.Array(DraftAttachmentSchema)),
+}
+
+export const BULK_ACTIONS = [
+  "archive",
+  "inbox",
+  "trash",
+  "delete",
+  "spam",
+  "notSpam",
+  "read",
+  "unread",
+  "star",
+  "unstar",
+  "label",
+  "unlabel",
+  "move",
+  "snooze",
+  "unsnooze",
+  "assign",
+] as const
+
+const MailboxParam = { id: Schema.String }
+const Limit = Schema.optionalKey(
+  Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+)
+const MailErrors = [Forbidden, NotFound, InvalidRequest, Conflict] as const
+
+export class MailApiGroup extends HttpApiGroup.make("mail")
+  .add(
+    HttpApiEndpoint.get("folders", "/v1/mailboxes/:id/folders", {
+      params: MailboxParam,
+      success: Schema.Struct({ folders: Schema.Array(FolderCountSchema), labels: Schema.Array(LabelSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("emptyFolder", "/v1/mailboxes/:id/folders/:folder/empty", {
+      params: { id: Schema.String, folder: Schema.Literals(["trash", "spam"]) },
+      success: Schema.Struct({ purged: Schema.Number }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("threads", "/v1/mailboxes/:id/threads", {
+      params: MailboxParam,
+      query: {
+        folder: Schema.optionalKey(FolderSchema),
+        labelId: Schema.optionalKey(Schema.String),
+        unread: Schema.optionalKey(Schema.Literals(["true", "false"])),
+        starred: Schema.optionalKey(Schema.Literals(["true", "false"])),
+        assignee: Schema.optionalKey(Schema.String),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+      },
+      success: Schema.Struct({
+        threads: Schema.Array(ThreadSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("thread", "/v1/mailboxes/:id/threads/:threadId", {
+      params: { id: Schema.String, threadId: Schema.String },
+      success: Schema.Struct({
+        thread: ThreadSchema,
+        messages: Schema.Array(MessageSchema),
+        drafts: Schema.Array(DraftSchema),
+      }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("bulk", "/v1/mailboxes/:id/threads/bulk", {
+      params: MailboxParam,
+      payload: Schema.Struct({
+        threadIds: Schema.Array(Schema.String).check(Schema.isMinLength(1), Schema.isMaxLength(500)),
+        action: Schema.Literals(BULK_ACTIONS),
+        labelId: Schema.optionalKey(Schema.String),
+        folder: Schema.optionalKey(FolderSchema),
+        until: Schema.optionalKey(Schema.Number),
+        assignee: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: Schema.Struct({ updated: Schema.Number }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("search", "/v1/mailboxes/:id/search", {
+      params: MailboxParam,
+      query: { q: Schema.String, limit: Limit },
+      success: Schema.Struct({
+        hits: Schema.Array(
+          Schema.Struct({
+            messageId: Schema.String,
+            threadId: Schema.String,
+            folder: FolderSchema,
+            from: Schema.NullOr(PartySchema),
+            receivedAt: Schema.Number,
+            subject: Schema.String,
+            excerpt: Schema.String,
+            rank: Schema.Number,
+          }),
+        ),
+        threads: Schema.Array(ThreadSchema),
+      }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("message", "/v1/mailboxes/:id/messages/:messageId", {
+      params: { id: Schema.String, messageId: Schema.String },
+      success: MessageDetailSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.patch("updateMessage", "/v1/mailboxes/:id/messages/:messageId", {
+      params: { id: Schema.String, messageId: Schema.String },
+      payload: Schema.Struct({
+        seen: Schema.optionalKey(Schema.Boolean),
+        starred: Schema.optionalKey(Schema.Boolean),
+        folder: Schema.optionalKey(FolderSchema),
+        addLabels: Schema.optionalKey(Schema.Array(Schema.String)),
+        removeLabels: Schema.optionalKey(Schema.Array(Schema.String)),
+      }),
+      success: MessageSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("labels", "/v1/mailboxes/:id/labels", {
+      params: MailboxParam,
+      success: Schema.Struct({ labels: Schema.Array(LabelSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("createLabel", "/v1/mailboxes/:id/labels", {
+      params: MailboxParam,
+      payload: Schema.Struct({
+        name: Schema.String,
+        color: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: LabelSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.patch("updateLabel", "/v1/mailboxes/:id/labels/:labelId", {
+      params: { id: Schema.String, labelId: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String),
+        color: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: LabelSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("deleteLabel", "/v1/mailboxes/:id/labels/:labelId", {
+      params: { id: Schema.String, labelId: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("drafts", "/v1/mailboxes/:id/drafts", {
+      params: MailboxParam,
+      query: { status: Schema.optionalKey(Schema.Literals(["draft", "scheduled", "due"])), limit: Limit },
+      success: Schema.Struct({ drafts: Schema.Array(DraftSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("createDraft", "/v1/mailboxes/:id/drafts", {
+      params: MailboxParam,
+      payload: Schema.Struct({
+        /** Start from a message in this mailbox: a reply, a reply to all, or a forward. */
+        replyTo: Schema.optionalKey(Schema.Struct({ messageId: Schema.String, mode: ReplyModeSchema })),
+        threadId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        ...DraftFields,
+      }),
+      success: DraftSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("draft", "/v1/mailboxes/:id/drafts/:draftId", {
+      params: { id: Schema.String, draftId: Schema.String },
+      success: DraftSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.patch("updateDraft", "/v1/mailboxes/:id/drafts/:draftId", {
+      params: { id: Schema.String, draftId: Schema.String },
+      payload: Schema.Struct(DraftFields),
+      success: DraftSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("deleteDraft", "/v1/mailboxes/:id/drafts/:draftId", {
+      params: { id: Schema.String, draftId: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("send", "/v1/mailboxes/:id/drafts/:draftId/send", {
+      params: { id: Schema.String, draftId: Schema.String },
+      payload: Schema.Struct({ sendAt: Schema.optionalKey(Schema.Number) }),
+      success: Schema.Struct({
+        draft: DraftSchema,
+        sendAt: Schema.Number,
+        undoUntil: Schema.NullOr(Schema.Number),
+      }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("cancelSend", "/v1/mailboxes/:id/drafts/:draftId/cancel", {
+      params: { id: Schema.String, draftId: Schema.String },
+      success: DraftSchema,
+      error: MailErrors,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailyard's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
@@ -964,4 +1306,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(DomainsApi)
   .add(MailboxesApi)
   .add(IdentitiesApi)
+  .add(MailApiGroup)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

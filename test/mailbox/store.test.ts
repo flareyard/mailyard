@@ -411,6 +411,7 @@ describe("schema migrations", () => {
         "threads",
         "attachments",
         "messages",
+        "meta",
       ]) {
         sql.exec(`DROP TABLE IF EXISTS ${table}`)
       }
@@ -442,5 +443,45 @@ describe("schema migrations", () => {
       expect(threads[0]).toMatchObject({ subject: "Legacy", messageCount: 2, folders: ["inbox"] })
       expect(store.search("migrated").hits).toHaveLength(2)
     })
+  })
+})
+
+describe("sent copies and shared inboxes", () => {
+  it("a sent copy filed without its Message-ID joins replies once the id is known", async () => {
+    const box = freshMailbox()
+    // Sent fresh (not a reply), deferred on its first attempt, so filed with no Message-ID yet.
+    await box.deliver(delivery({ id: "snt_1", messageId: null, subject: "Proposal" }), "sent")
+    // The recipient's reply names the Message-ID Email Service gave it.
+    await box.deliver(
+      delivery({
+        id: "inb_reply",
+        messageId: "<r@x>",
+        inReplyTo: "<cf-1@acme.test>",
+        references: ["<cf-1@acme.test>"],
+        subject: "Re: Proposal",
+      }),
+    )
+    expect((await box.threads()).threads).toHaveLength(2)
+    expect(await box.setMessageId("snt_1", "<cf-1@acme.test>")).toMatchObject({ changed: true })
+    const { threads } = await box.threads()
+    expect(threads).toHaveLength(1)
+    expect(threads[0]).toMatchObject({ messageCount: 2, folders: ["inbox", "sent"] })
+    expect(await box.setMessageId("snt_1", "<cf-1@acme.test>")).toMatchObject({ changed: false })
+    expect(await codeOf(box.setMessageId("snt_missing", "<x@x>"))).toBe("not_found")
+  })
+
+  it("assigns and unassigns conversations, and filters by assignee", async () => {
+    const box = freshMailbox()
+    await box.deliver(delivery({ id: "inb_a1", subject: "A" }))
+    await box.deliver(delivery({ id: "inb_a2", subject: "B" }))
+    const [a] = (await box.threads()).threads
+    await box.assign([a?.id ?? ""], "key_sam")
+    expect((await box.threads({ assignee: "key_sam" })).threads.map((t) => t.id)).toEqual([a?.id])
+    expect((await box.threads({ assignee: "none" })).threads).toHaveLength(1)
+    // Assignment survives the thread being recomputed by new mail.
+    await box.updateThreads([a?.id ?? ""], { seen: true })
+    expect((await box.thread(a?.id ?? ""))?.thread.assignee).toBe("key_sam")
+    await box.assign([a?.id ?? ""], null)
+    expect((await box.threads({ assignee: "none" })).threads).toHaveLength(2)
   })
 })

@@ -143,4 +143,18 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
     ],
     after: "threadAndIndexExisting",
   },
+  {
+    statements: [
+      // Shared inboxes: who is handling a conversation (an API key id), or nobody.
+      "ALTER TABLE threads ADD COLUMN assignee TEXT",
+      "CREATE INDEX threads_assignee ON threads (assignee, sort_at DESC)",
+      // How a draft relates to the message it answers: a reply, a reply to all, or a forward.
+      "ALTER TABLE drafts ADD COLUMN reply_mode TEXT",
+      "ALTER TABLE drafts ADD COLUMN source_message_id TEXT",
+      // Why the last send of this draft failed, shown on the draft until it is edited.
+      "ALTER TABLE drafts ADD COLUMN last_error TEXT",
+      // Facts about the mailbox itself, such as its id, which the alarm needs to dispatch due drafts.
+      "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+    ],
+  },
 ]

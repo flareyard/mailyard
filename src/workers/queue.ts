@@ -5,6 +5,7 @@ import { retryDeferred } from "../domain/outbox.ts"
 import { deliver, WebhookJob } from "../domain/webhooks.ts"
 import { InboundJob, ingest } from "../inbound/pipeline.ts"
 import type { appLayer } from "../layers.ts"
+import { dispatchDraft, MailboxSendJob } from "../mail/send.ts"
 import { SendJob } from "../services/SendQueue.ts"
 import { runtimeFor } from "./inbound.ts"
 
@@ -15,9 +16,16 @@ export const SEND_QUEUE = "mailyard-send"
 export const EMAIL_EVENTS_QUEUE = "mailyard-email-events"
 export const WEBHOOK_QUEUE = "mailyard-webhooks"
 export const INBOUND_QUEUE = "mailyard-inbound"
+export const MAILBOX_SEND_QUEUE = "mailyard-mailbox-send"
 
 /** Every queue this Worker consumes; test/queues.test.ts checks wrangler.jsonc binds a consumer for each. */
-export const CONSUMED_QUEUES = [SEND_QUEUE, EMAIL_EVENTS_QUEUE, WEBHOOK_QUEUE, INBOUND_QUEUE] as const
+export const CONSUMED_QUEUES = [
+  SEND_QUEUE,
+  EMAIL_EVENTS_QUEUE,
+  WEBHOOK_QUEUE,
+  INBOUND_QUEUE,
+  MAILBOX_SEND_QUEUE,
+] as const
 
 const handle = <T, A>(
   message: Message<unknown>,
@@ -69,6 +77,14 @@ export const handleQueue = async (batch: MessageBatch<unknown>, env: Env) => {
       if (batch.queue === INBOUND_QUEUE || batch.queue.startsWith(`${INBOUND_QUEUE}-`)) {
         return handle(message, Schema.decodeUnknownOption(InboundJob)(message.body), "inbound", (job) =>
           ingest(job).pipe(Effect.map((o) => `${o.outcome} ${o.id}`)),
+        )
+      }
+      if (batch.queue === MAILBOX_SEND_QUEUE || batch.queue.startsWith(`${MAILBOX_SEND_QUEUE}-`)) {
+        return handle(
+          message,
+          Schema.decodeUnknownOption(MailboxSendJob)(message.body),
+          "mailbox send",
+          (job) => dispatchDraft(job).pipe(Effect.map((outcome) => `${outcome} ${job.draftId}`)),
         )
       }
       return Effect.logError(`queue ${batch.queue} has no consumer here`).pipe(Effect.as(message.retry()))

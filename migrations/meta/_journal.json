@@ -15,6 +15,13 @@
       "when": 1792224704904,
       "tag": "0001_mailbox_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792225851070,
+      "tag": "0002_mailbox_sends",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,8 @@ export class Mailboxes extends Context.Service<
     count(mailboxId: string): Effect.Effect<number, MailboxUnavailable>
     /** Deletes everything the mailbox stores. Only after an export (src/domain/mailboxes.ts). */
     erase(mailboxId: string): Effect.Effect<void, MailboxUnavailable>
+    /** Gives a sent copy the Message-ID Email Service assigned it. */
+    setMessageId(mailboxId: string, id: string, messageId: string): Effect.Effect<void, MailboxUnavailable>
   }
 >()("mailyard/Mailboxes") {
   static readonly layer = Layer.effect(
@@ -37,6 +39,13 @@ export class Mailboxes extends Context.Service<
         count: (mailboxId) =>
           Effect.tryPromise({
             try: () => MAILBOX.get(MAILBOX.idFromName(mailboxId)).count(),
+            catch: (cause) => new MailboxUnavailable({ mailboxId, cause }),
+          }),
+        setMessageId: (mailboxId, id, messageId) =>
+          Effect.tryPromise({
+            try: async () => {
+              await MAILBOX.get(MAILBOX.idFromName(mailboxId)).setMessageId(id, messageId)
+            },
             catch: (cause) => new MailboxUnavailable({ mailboxId, cause }),
           }),
         erase: (mailboxId) =>

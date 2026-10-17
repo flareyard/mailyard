@@ -215,8 +215,13 @@ export const messagesOut = sqliteTable(
   "messages_out",
   {
     id: text("id").primaryKey(),
-    stream: text("stream", { enum: ["transactional", "campaign", "automation", "reply"] }).notNull(),
+    stream: text("stream", {
+      enum: ["transactional", "campaign", "automation", "reply", "mailbox"],
+    }).notNull(),
     cfMessageId: text("cf_message_id"),
+    /** For mail sent from a mailbox: the mailbox, and the id of the sent copy filed in it. */
+    mailboxId: text("mailbox_id"),
+    mailboxMessageId: text("mailbox_message_id"),
     idempotencyKey: text("idempotency_key"),
     apiKeyId: text("api_key_id"),
     contactId: text("contact_id").references(() => contacts.id, { onDelete: "set null" }),

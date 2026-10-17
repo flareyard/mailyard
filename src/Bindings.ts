@@ -12,6 +12,16 @@ export interface Env {
   readonly WEBHOOK_QUEUE: Queue<{ readonly deliveryId: string }>
   /** Inbound messages whose filing failed after the raw copy was stored; the consumer retries them. */
   readonly INBOUND_QUEUE: Queue<InboundJob>
+  /** Drafts whose send time has come, handed from a mailbox's alarm to the sender. */
+  readonly MAILBOX_SEND_QUEUE: Queue<{
+    readonly mailboxId: string
+    readonly draftId: string
+    readonly origin: string | null
+  }>
+  /** Signs links to attachments and large files (GET /v1/files/{token}). Deploy-time secret. */
+  readonly FILE_SIGNING_KEY?: string
+  /** Seconds a send waits so it can be undone. 10 unless set; tests shorten it. */
+  readonly MAILYARD_UNDO_SECONDS?: string
   /** One Durable Object per mailbox: its messages, threads and search. */
   readonly MAILBOX: DurableObjectNamespace<MailboxDO>
   /** Deploy-time secret that encrypts webhook endpoint secrets at rest (manifest secret). */

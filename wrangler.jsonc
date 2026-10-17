@@ -16,7 +16,8 @@
     "producers": [
       { "binding": "SEND_QUEUE", "queue": "mailyard-send" },
       { "binding": "WEBHOOK_QUEUE", "queue": "mailyard-webhooks" },
-      { "binding": "INBOUND_QUEUE", "queue": "mailyard-inbound" }
+      { "binding": "INBOUND_QUEUE", "queue": "mailyard-inbound" },
+      { "binding": "MAILBOX_SEND_QUEUE", "queue": "mailyard-mailbox-send" }
     ],
     "consumers": [
       {
@@ -46,6 +47,13 @@
         "max_batch_size": 5,
         "max_retries": 10,
         "dead_letter_queue": "mailyard-inbound-dlq"
+      },
+      {
+        // Drafts a mailbox's alarm found due (scheduled sends, and sends past their undo window).
+        "queue": "mailyard-mailbox-send",
+        "max_batch_size": 10,
+        "max_retries": 10,
+        "dead_letter_queue": "mailyard-mailbox-send-dlq"
       }
     ]
   },
