@@ -70,7 +70,10 @@ describe("campaigns: drafts", () => {
       [{ ...base, segmentId: "seg_missing" }, "segmentId"],
       [{ ...base, ab: { percent: 20, waitHours: 4, metric: "clicks" } }, "subjectB"],
       [{ ...base, subjectB: "Other", ab: { percent: 80, waitHours: 4, metric: "clicks" } }, "ab.percent"],
-      [{ ...base, subjectB: "Other", ab: { percent: 20, waitHours: 4, metric: "opens" } }, "ab.metric"],
+      [
+        { ...base, subjectB: "Other", trackOpens: false, ab: { percent: 20, waitHours: 4, metric: "opens" } },
+        "ab.metric",
+      ],
     ]
     for (const [body, field] of bad) {
       const r = await createCampaign(body)

@@ -287,6 +287,9 @@ export const campaigns = sqliteTable(
     workflowId: text("workflow_id"),
     audienceSize: integer("audience_size"),
     pausedReason: text("paused_reason"),
+    /** Opens (a pixel) and clicks (redirected links) for this campaign; both on unless switched off. */
+    trackOpens: integer("track_opens", { mode: "boolean" }).notNull().default(true),
+    trackClicks: integer("track_clicks", { mode: "boolean" }).notNull().default(true),
     /** The subject that won the A/B test, once picked; the rest of the audience gets it. */
     abWinner: text("ab_winner", { enum: ["a", "b"] }),
     startedAt: integer("started_at"),
@@ -336,11 +339,18 @@ export const messagesOut = sqliteTable(
     attempts: integer("attempts").notNull().default(0),
     /** R2 key of the rendered message as sent, for the message log and for retries. */
     renderedKey: text("rendered_key"),
-    /** First open and first click, from tracking (HAL-3277); segments filter on them. */
     /** Which subject an A/B campaign message carried. */
     variant: text("variant", { enum: ["a", "b"] }),
+    /** First human open and click, from tracking (HAL-3277); segments filter on them. */
     firstOpenedAt: integer("first_opened_at"),
     firstClickedAt: integer("first_clicked_at"),
+    /** Whether the message carried a tracking pixel and tracked links. */
+    tracked: integer("tracked", { mode: "boolean" }).notNull().default(false),
+    /** Hits that look like people, and hits that look like machines (privacy proxies, link scanners). */
+    opens: integer("opens").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+    machineOpens: integer("machine_opens").notNull().default(0),
+    machineClicks: integer("machine_clicks").notNull().default(0),
     createdAt: createdAt(),
     updatedAt: integer("updated_at"),
   },

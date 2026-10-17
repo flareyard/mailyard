@@ -46,6 +46,10 @@ export const SendPayload = Schema.Struct({
   headers: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   data: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
   template: Schema.optionalKey(Schema.String),
+  /** Track opens and clicks on this send. Transactional mail is untracked unless asked. */
+  track: Schema.optionalKey(
+    Schema.Struct({ opens: Schema.optionalKey(Schema.Boolean), clicks: Schema.optionalKey(Schema.Boolean) }),
+  ),
   attachments: Schema.optionalKey(
     Schema.Array(
       Schema.Struct({
@@ -211,6 +215,15 @@ export const MessageSummary = Schema.Struct({
   cfMessageId: Schema.NullOr(Schema.String),
   templateId: Schema.NullOr(Schema.String),
   apiKeyId: Schema.NullOr(Schema.String),
+  campaignId: Schema.NullOr(Schema.String),
+  tracked: Schema.Boolean,
+  firstOpenedAt: Schema.NullOr(Schema.Number),
+  firstClickedAt: Schema.NullOr(Schema.Number),
+  opens: Schema.Number,
+  clicks: Schema.Number,
+  /** Opens and clicks that looked like machines: privacy proxies, link scanners. */
+  machineOpens: Schema.Number,
+  machineClicks: Schema.Number,
   createdAt: Schema.Number,
   updatedAt: Schema.NullOr(Schema.Number),
 })
@@ -2032,6 +2045,8 @@ export const CampaignSchema = Schema.Struct({
   subjectB: Schema.NullOr(Schema.String),
   preheader: Schema.NullOr(Schema.String),
   ab: Schema.NullOr(AbSchema),
+  trackOpens: Schema.Boolean,
+  trackClicks: Schema.Boolean,
   sendAt: Schema.NullOr(Schema.Number),
   audienceSize: Schema.NullOr(Schema.Number),
   pausedReason: Schema.NullOr(Schema.String),
@@ -2052,6 +2067,8 @@ const CampaignFields = {
   subjectB: Schema.optionalKey(Schema.NullOr(Schema.String)),
   preheader: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(200)))),
   ab: Schema.optionalKey(Schema.NullOr(AbSchema)),
+  trackOpens: Schema.optionalKey(Schema.Boolean),
+  trackClicks: Schema.optionalKey(Schema.Boolean),
 }
 
 const CheckSchema = Schema.Struct({
@@ -2059,6 +2076,13 @@ const CheckSchema = Schema.Struct({
   status: Schema.Literals(["pass", "warn", "fail"]),
   title: Schema.String,
   detail: Schema.String,
+})
+
+const ComplianceSchema = Schema.Struct({
+  postalAddress: Schema.NullOr(Schema.String),
+  linkAllowlist: Schema.Array(Schema.String),
+  seedAddresses: Schema.Array(Schema.String),
+  trackingOrigin: Schema.optionalKey(Schema.NullOr(Schema.String)),
 })
 
 export class CampaignsApi extends HttpApiGroup.make("campaigns")
@@ -2189,11 +2213,7 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
       error: [Forbidden, NotFound, GovernorUnreachable],
     }),
     HttpApiEndpoint.get("getCompliance", "/v1/settings/compliance", {
-      success: Schema.Struct({
-        postalAddress: Schema.NullOr(Schema.String),
-        linkAllowlist: Schema.Array(Schema.String),
-        seedAddresses: Schema.Array(Schema.String),
-      }),
+      success: ComplianceSchema,
       error: Forbidden,
     }),
     HttpApiEndpoint.put("putCompliance", "/v1/settings/compliance", {
@@ -2203,12 +2223,11 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         seedAddresses: Schema.Array(
           Schema.String.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
         ).check(Schema.isMaxLength(5)),
+        trackingOrigin: Schema.optionalKey(
+          Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/[a-z0-9.-]+$/i))),
+        ),
       }),
-      success: Schema.Struct({
-        postalAddress: Schema.NullOr(Schema.String),
-        linkAllowlist: Schema.Array(Schema.String),
-        seedAddresses: Schema.Array(Schema.String),
-      }),
+      success: ComplianceSchema,
       error: [Forbidden, InvalidRequest],
     }),
   )

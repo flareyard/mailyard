@@ -43,6 +43,8 @@ export const describeCampaign = (c: CampaignRow) => ({
   subjectB: c.subjectB,
   preheader: c.preheader,
   ab: c.ab ?? null,
+  trackOpens: c.trackOpens,
+  trackClicks: c.trackClicks,
   sendAt: c.sendAt,
   audienceSize: c.audienceSize,
   pausedReason: c.pausedReason,
@@ -76,6 +78,8 @@ export interface CampaignInput {
   readonly subjectB?: string | null | undefined
   readonly preheader?: string | null | undefined
   readonly ab?: AbTest | null | undefined
+  readonly trackOpens?: boolean | undefined
+  readonly trackClicks?: boolean | undefined
 }
 
 const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/
@@ -138,8 +142,12 @@ const validate = (next: Omit<CampaignRow, "id" | "status" | "createdAt">) =>
         return yield* bad("ab.percent", "Test with 5% to 50% of the audience.")
       if (next.ab.waitHours < 1 || next.ab.waitHours > 72)
         return yield* bad("ab.waitHours", "Pick the winner after 1 to 72 hours.")
-      if (next.ab.metric === "opens")
-        return yield* bad("ab.metric", "Opens need tracking, which is off; pick the winner on clicks.")
+      if (next.ab.metric === "opens" && !next.trackOpens) {
+        return yield* bad("ab.metric", "Picking the winner on opens needs open tracking on.")
+      }
+      if (next.ab.metric === "clicks" && !next.trackClicks) {
+        return yield* bad("ab.metric", "Picking the winner on clicks needs click tracking on.")
+      }
     }
   })
 
@@ -162,6 +170,8 @@ export const createCampaign = Effect.fn("campaigns.create")(function* (
     subjectB: input.subjectB ?? null,
     preheader: input.preheader ?? null,
     ab: input.ab ?? null,
+    trackOpens: input.trackOpens ?? true,
+    trackClicks: input.trackClicks ?? true,
     sendAt: null,
     workflowId: null,
     audienceSize: null,

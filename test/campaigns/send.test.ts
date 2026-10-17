@@ -276,7 +276,7 @@ describe("CampaignSend", () => {
         .run()
     }
     const result = await runtimeFor(env).runPromise(pickWinner(id))
-    expect(result).toEqual({ winner: "b", clicks: { a: 1, b: 2 } })
+    expect(result).toEqual({ winner: "b", metric: "clicks", tally: { a: 1, b: 2 } })
     expect((await campaignRow(id))?.ab_winner).toBe("b")
   })
 

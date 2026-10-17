@@ -38,6 +38,7 @@ type Faults = {
     | "ConsentKeyMissing"
     | "SenderError"
     | "GovernorUnavailable"
+    | "TrackingKeyMissing"
 }
 type CampaignHttp<E> = E extends CampaignNotFound | { readonly _tag: "SegmentNotFound" }
   ? NotFound
@@ -53,6 +54,7 @@ type CampaignHttp<E> = E extends CampaignNotFound | { readonly _tag: "SegmentNot
         : E
 
 const FAULTS = new Set([
+  "TrackingKeyMissing",
   "DatabaseError",
   "BlobStoreError",
   "ConsentKeyMissing",

@@ -135,7 +135,7 @@ export const ActionsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
-      send: p(({ payload, headers }) =>
+      send: p(({ payload, headers, request }) =>
         Effect.gen(function* () {
           const caller = yield* requireScope("send")
           const from =
@@ -155,6 +155,13 @@ export const ActionsHandlers = HttpApiBuilder.group(
             template: payload.template,
             subscribed: payload.subscribed,
             attachments: payload.attachments,
+            track: payload.track
+              ? {
+                  opens: payload.track.opens ?? false,
+                  clicks: payload.track.clicks ?? false,
+                  origin: originOfUrl(request.originalUrl),
+                }
+              : undefined,
             apiKeyId: caller.keyId,
             idempotencyKey: headers["idempotency-key"],
           }).pipe(
@@ -169,7 +176,11 @@ export const ActionsHandlers = HttpApiBuilder.group(
                 Effect.fail(new NotFound({ message: `Template ${e.template}: ${e.reason}.` })),
               InvalidMessage: (e) => Effect.fail(new Unprocessable({ message: e.reason })),
             }),
-            Effect.catchTags({ DatabaseError: Effect.die, BlobStoreError: Effect.die }),
+            Effect.catchTags({
+              DatabaseError: Effect.die,
+              BlobStoreError: Effect.die,
+              TrackingKeyMissing: Effect.die,
+            }),
           )
           return yield* idempotent(caller, "send", headers["idempotency-key"], payload, run)
         }),
@@ -274,9 +285,25 @@ const summarizeMessage = (row: typeof messagesOut.$inferSelect) => ({
   cfMessageId: row.cfMessageId,
   templateId: row.templateId,
   apiKeyId: row.apiKeyId,
+  campaignId: row.campaignId,
+  tracked: row.tracked,
+  firstOpenedAt: row.firstOpenedAt,
+  firstClickedAt: row.firstClickedAt,
+  opens: row.opens,
+  clicks: row.clicks,
+  machineOpens: row.machineOpens,
+  machineClicks: row.machineClicks,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
+
+const originOfUrl = (url: string) => {
+  try {
+    return new URL(url).origin
+  } catch {
+    return ""
+  }
+}
 
 const party = (p: { email: string; name?: string }) => (p.name ? `${p.name} <${p.email}>` : p.email)
 

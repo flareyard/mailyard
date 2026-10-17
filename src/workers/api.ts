@@ -44,6 +44,7 @@ import { handleEmail } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
 import { CONFIRM_PATH, FORM_SUBMIT_PATH, handleConfirm, handleFormSubmit } from "./public.ts"
 import { handleQueue } from "./queue.ts"
+import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleUnsubscribe } from "./unsubscribe.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
@@ -85,7 +86,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
 const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 
 export default {
-  fetch: (request, env) => {
+  fetch: (request, env, ctx) => {
     // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
     const path = new URL(request.url).pathname
     const d = (s: string | undefined) => decodeURIComponent(s ?? "")
@@ -102,6 +103,11 @@ export default {
     if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
     const confirm = CONFIRM_PATH.exec(path)
     if (confirm && request.method === "GET") return handleConfirm(env, d(confirm[1]))
+    const open = OPEN_PATH.exec(path)
+    if (open && request.method === "GET") return handleOpen(request, env, d(open[1]), ctx)
+    const click = CLICK_PATH.exec(path)
+    if (click && (request.method === "GET" || request.method === "HEAD"))
+      return handleClick(request, env, d(click[1]))
     const unsubscribe = UNSUBSCRIBE_PATH.exec(path)
     if (unsubscribe) return handleUnsubscribe(request, env, d(unsubscribe[1]))
     const form = FORM_SUBMIT_PATH.exec(path)

@@ -13,6 +13,7 @@ import { Governor } from "../services/Governor.ts"
 import { audiencePreview, audienceSql } from "./audience.ts"
 import { CampaignInvalid, CampaignLocked, describeCampaign, findCampaign } from "./campaigns.ts"
 import { checkCampaign } from "./checks.ts"
+import { trackingOrigin } from "./compliance.ts"
 import { prepareRender, renderWith } from "./content.ts"
 
 /**
@@ -377,6 +378,11 @@ export const sendChunk = Effect.fn("campaignSend.chunk")(function* (
   if (grant.reason === "paused" && grant.granted.length === 0)
     return { state: "paused", sent: 0, skipped } satisfies ChunkResult
   const ctx = yield* prepareRender(campaign)
+  const track = {
+    opens: campaign.trackOpens,
+    clicks: campaign.trackClicks,
+    origin: trackingOrigin(ctx.compliance, options.origin),
+  }
   const winner = campaign.abWinner ?? "a"
   const byId = new Map(pending.map((e) => [e.contactId, e]))
   let sent = 0
@@ -403,6 +409,7 @@ export const sendChunk = Effect.fn("campaignSend.chunk")(function* (
       templateId: ctx.templateId,
       templateVersion: ctx.templateVersion,
       variant: campaign.ab ? variant : null,
+      track,
       idempotencyKey: `campaign:${id}:${contactId}`,
     })
     sent++
@@ -412,28 +419,27 @@ export const sendChunk = Effect.fn("campaignSend.chunk")(function* (
   return { state: "wait", retryAt: grant.retryAt ?? now + 60_000, sent, skipped } satisfies ChunkResult
 })
 
-/** The subject with more clicks in the test group wins; a tie goes to the first. */
+/**
+ * The subject with more human opens or clicks in the test group wins, by the campaign's metric;
+ * a tie goes to the first.
+ */
 export const pickWinner = Effect.fn("campaignSend.pickWinner")(function* (id: string) {
+  const campaign = yield* findCampaign(id)
   const database = yield* Database
-  const rows = yield* database.query("campaignSend.clicks", (db) =>
+  const column = campaign.ab?.metric === "opens" ? messagesOut.firstOpenedAt : messagesOut.firstClickedAt
+  const rows = yield* database.query("campaignSend.engaged", (db) =>
     db
-      .select({ variant: messagesOut.variant, clicks: count() })
+      .select({ variant: messagesOut.variant, n: count() })
       .from(messagesOut)
-      .where(
-        and(
-          eq(messagesOut.campaignId, id),
-          isNotNull(messagesOut.firstClickedAt),
-          isNotNull(messagesOut.variant),
-        ),
-      )
+      .where(and(eq(messagesOut.campaignId, id), isNotNull(column), isNotNull(messagesOut.variant)))
       .groupBy(messagesOut.variant)
       .all(),
   )
-  const clicks = { a: 0, b: 0 }
-  for (const r of rows) if (r.variant === "a" || r.variant === "b") clicks[r.variant] = r.clicks
-  const winner: "a" | "b" = clicks.b > clicks.a ? "b" : "a"
+  const tally = { a: 0, b: 0 }
+  for (const r of rows) if (r.variant === "a" || r.variant === "b") tally[r.variant] = r.n
+  const winner: "a" | "b" = tally.b > tally.a ? "b" : "a"
   yield* recordWinner(id, winner)
-  return { winner, clicks }
+  return { winner, metric: campaign.ab?.metric ?? "clicks", tally }
 })
 
 export const recordWinner = (id: string, winner: "a" | "b") =>

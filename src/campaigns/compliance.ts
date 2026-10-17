@@ -16,6 +16,13 @@ export const ComplianceSettings = Schema.Struct({
   seedAddresses: Schema.Array(Schema.String.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))).check(
     Schema.isMaxLength(5),
   ),
+  /**
+   * Where tracking links point: a hostname on your own sending domain (a custom domain on this
+   * Worker), so links don't lead off to workers.dev. The request's own origin when unset.
+   */
+  trackingOrigin: Schema.optionalKey(
+    Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/[a-z0-9.-]+$/i))),
+  ),
 })
 export type ComplianceSettings = typeof ComplianceSettings.Type
 
@@ -23,7 +30,12 @@ export const DEFAULT_COMPLIANCE: ComplianceSettings = {
   postalAddress: null,
   linkAllowlist: [],
   seedAddresses: [],
+  trackingOrigin: null,
 }
+
+/** The origin tracking links use: the configured one, else the API's own. */
+export const trackingOrigin = (settings: ComplianceSettings, requestOrigin: string) =>
+  settings.trackingOrigin ?? requestOrigin
 
 export const getCompliance = Effect.fn("compliance.get")(function* () {
   const database = yield* Database
@@ -42,6 +54,7 @@ export const putCompliance = Effect.fn("compliance.put")(function* (value: Compl
     postalAddress: value.postalAddress?.trim() || null,
     linkAllowlist: [...new Set(value.linkAllowlist.map((d) => d.toLowerCase()))],
     seedAddresses: [...new Set(value.seedAddresses.map((a) => a.trim().toLowerCase()))],
+    trackingOrigin: value.trackingOrigin?.replace(/\/$/, "").toLowerCase() ?? null,
   }
   yield* database.query("compliance.put", (db) =>
     db
