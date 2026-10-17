@@ -3,6 +3,11 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Schema from "effect/Schema"
+import {
+  Graph as AutomationGraph,
+  Settings as AutomationSettings,
+  TriggerConfig,
+} from "../automations/graph.ts"
 import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
 import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
@@ -113,6 +118,18 @@ export class IdempotencyConflict extends Schema.TaggedError<IdempotencyConflict>
 export class Conflict extends Schema.TaggedError<Conflict>()(
   "Conflict",
   { message: Schema.String },
+  { httpApiStatus: 409 },
+) {}
+
+/** An automation can't publish yet: what's wrong, per node. */
+export class NotReady extends Schema.TaggedError<NotReady>()(
+  "NotReady",
+  {
+    message: Schema.String,
+    issues: Schema.Array(
+      Schema.Struct({ nodeId: Schema.NullOr(Schema.String), code: Schema.String, message: Schema.String }),
+    ),
+  },
   { httpApiStatus: 409 },
 ) {}
 
@@ -2370,6 +2387,146 @@ export class ExportsApi extends HttpApiGroup.make("exports")
   )
   .middleware(ApiKeyAuth) {}
 
+const AutomationStatus = Schema.Literals(["draft", "live", "paused"])
+const AutomationRunCounts = {
+  activeRuns: Schema.Number,
+  entered: Schema.Number,
+  completed: Schema.Number,
+  exited: Schema.Number,
+  failed: Schema.Number,
+}
+const AutomationListItem = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  status: AutomationStatus,
+  trigger: Schema.NullOr(TriggerConfig),
+  version: Schema.Number,
+  publishedVersion: Schema.NullOr(Schema.Number),
+  createdAt: Schema.Number,
+  updatedAt: Schema.NullOr(Schema.Number),
+  updatedBy: Schema.NullOr(Schema.String),
+  ...AutomationRunCounts,
+})
+const AutomationIssue = Schema.Struct({
+  nodeId: Schema.NullOr(Schema.String),
+  code: Schema.String,
+  message: Schema.String,
+})
+const AutomationDetail = Schema.Struct({
+  ...AutomationListItem.fields,
+  graph: AutomationGraph,
+  settings: AutomationSettings,
+  /** What stops it publishing; empty when it can. */
+  issues: Schema.Array(AutomationIssue),
+  /** Per node: runs waiting there now, runs that passed through, and failures. */
+  counts: Schema.Record(
+    Schema.String,
+    Schema.Struct({ here: Schema.Number, passed: Schema.Number, failed: Schema.Number }),
+  ),
+})
+const AutomationRange = Schema.Literals(["24h", "7d", "30d"])
+
+/** Automations: a trigger and a graph of steps, edited as a draft and published as frozen versions. */
+export class AutomationsApi extends HttpApiGroup.make("automations")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/automations", {
+      query: { range: Schema.optionalKey(AutomationRange) },
+      success: Schema.Struct({
+        range: AutomationRange,
+        summary: Schema.Struct({
+          live: Schema.Number,
+          activeRuns: Schema.Number,
+          entered: Schema.Number,
+          completed: Schema.Number,
+          failed: Schema.Number,
+        }),
+        automations: Schema.Array(AutomationListItem),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("summary", "/v1/automations/summary", {
+      success: Schema.Struct({ live: Schema.Number, activeRuns: Schema.Number, sends7d: Schema.Number }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/automations", {
+      payload: Schema.Struct({
+        name: Schema.String,
+        graph: Schema.optionalKey(AutomationGraph),
+        settings: Schema.optionalKey(AutomationSettings),
+      }),
+      success: AutomationDetail,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("get", "/v1/automations/:id", {
+      params: { id: Schema.String },
+      success: AutomationDetail,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/automations/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String),
+        graph: Schema.optionalKey(AutomationGraph),
+        settings: Schema.optionalKey(AutomationSettings),
+      }),
+      success: AutomationDetail,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/automations/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ id: Schema.String, deleted: Schema.Boolean }),
+      error: [Forbidden, NotFound, Conflict],
+    }),
+    HttpApiEndpoint.post("publish", "/v1/automations/:id/publish", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        note: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(500)))),
+      }),
+      success: Schema.Struct({
+        version: Schema.Number,
+        runsByVersion: Schema.Array(Schema.Struct({ version: Schema.Number, active: Schema.Number })),
+      }),
+      error: [Forbidden, NotFound, NotReady],
+    }),
+    HttpApiEndpoint.get("versions", "/v1/automations/:id/versions", {
+      params: { id: Schema.String },
+      success: Schema.Struct({
+        draft: Schema.Struct({
+          version: Schema.Number,
+          updatedAt: Schema.NullOr(Schema.Number),
+          updatedBy: Schema.NullOr(Schema.String),
+        }),
+        versions: Schema.Array(
+          Schema.Struct({
+            version: Schema.Number,
+            status: Schema.Literals(["live", "paused", "finishing", "retired"]),
+            note: Schema.NullOr(Schema.String),
+            publishedAt: Schema.Number,
+            publishedBy: Schema.String,
+            activeRuns: Schema.Number,
+          }),
+        ),
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("restore", "/v1/automations/:id/versions/:version/restore", {
+      params: { id: Schema.String, version: Schema.NumberFromString },
+      success: AutomationDetail,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("pause", "/v1/automations/:id/pause", {
+      params: { id: Schema.String },
+      success: AutomationDetail,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("resume", "/v1/automations/:id/resume", {
+      params: { id: Schema.String },
+      success: AutomationDetail,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class CampaignsApi extends HttpApiGroup.make("campaigns")
   .add(
     HttpApiEndpoint.get("list", "/v1/campaigns", {
@@ -2567,4 +2724,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(CampaignsApi)
   .add(ImportsApi)
   .add(ExportsApi)
+  .add(AutomationsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}
