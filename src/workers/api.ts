@@ -21,6 +21,7 @@ import {
   MessagesHandlers,
   SystemHandlers,
 } from "../http/handlers.ts"
+import { ImportsHandlers } from "../http/importHandlers.ts"
 import { InboundHandlers } from "../http/inboundHandlers.ts"
 import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { MailHandlers } from "../http/mailHandlers.ts"
@@ -47,10 +48,12 @@ import { handleQueue } from "./queue.ts"
 import { handleScheduled } from "./scheduled.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleUnsubscribe } from "./unsubscribe.ts"
+import { handleUploads, UPLOADS_PATH } from "./uploads.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
 export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
 export { CampaignSendWorkflow } from "../workflows/campaign.ts"
+export { ContactImportWorkflow } from "../workflows/contactImport.ts"
 export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
@@ -77,6 +80,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     SendingHandlers,
     AlertsHandlers,
     CampaignsHandlers,
+    ImportsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
@@ -93,6 +97,7 @@ export default {
     const d = (s: string | undefined) => decodeURIComponent(s ?? "")
     const live = LIVE_PATH.exec(path)
     if (live) return handleLive(request, env, d(live[1]))
+    if (UPLOADS_PATH.test(path)) return handleUploads(request, env)
     const upload = UPLOAD_PATH.exec(path)
     if (upload) return handleUpload(request, env, d(upload[1]))
     const raw = RAW_PATH.exec(path)

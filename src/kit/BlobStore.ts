@@ -23,6 +23,12 @@ export class BlobStore extends Context.Service<
   {
     put(key: string, body: Uint8Array, contentType?: string): Effect.Effect<void, BlobStoreError>
     get(key: string): Effect.Effect<Option.Option<Blob>, BlobStoreError>
+    /** `length` bytes from `offset` (fewer at the end of the object), without reading the rest. */
+    getRange(
+      key: string,
+      offset: number,
+      length: number,
+    ): Effect.Effect<Option.Option<Uint8Array>, BlobStoreError>
     delete(key: string): Effect.Effect<void, BlobStoreError>
   }
 >()("mailyard/kit/BlobStore") {
@@ -49,6 +55,16 @@ export class BlobStore extends Context.Service<
             },
             catch: (cause) => new BlobStoreError({ operation: "get", key, cause }),
           }),
+        getRange: (key, offset, length) =>
+          Effect.tryPromise({
+            try: async () => {
+              const object = await bucket.get(key, { range: { offset, length } })
+              return object
+                ? Option.some(new Uint8Array(await object.arrayBuffer()))
+                : Option.none<Uint8Array>()
+            },
+            catch: (cause) => new BlobStoreError({ operation: "get", key, cause }),
+          }),
         delete: (key) =>
           Effect.tryPromise({
             try: () => bucket.delete(key),
@@ -65,6 +81,12 @@ export class BlobStore extends Context.Service<
         put: (key, body, contentType) =>
           Ref.update(store, (m) => new Map(m).set(key, { body, contentType, size: body.length })),
         get: (key) => Ref.get(store).pipe(Effect.map((m) => Option.fromNullishOr(m.get(key)))),
+        getRange: (key, offset, length) =>
+          Ref.get(store).pipe(
+            Effect.map((m) =>
+              Option.map(Option.fromNullishOr(m.get(key)), (b) => b.body.slice(offset, offset + length)),
+            ),
+          ),
         delete: (key) =>
           Ref.update(store, (m) => {
             const next = new Map(m)

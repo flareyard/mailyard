@@ -37,6 +37,8 @@ export interface Env {
   readonly IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Sends a campaign: snapshot, then governor-paced chunks (src/workflows/campaign.ts). */
   readonly CAMPAIGN_WORKFLOW: Workflow<{ readonly campaignId: string; readonly origin: string }>
+  /** Imports a contact CSV in 5,000-row steps (src/workflows/contactImport.ts). */
+  readonly CONTACT_IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Exports a mailbox to an mbox and a zip of .eml files. */
   readonly EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** One Durable Object per mailbox: its messages, threads and search. */
