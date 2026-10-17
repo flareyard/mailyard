@@ -2035,6 +2035,7 @@ export const CampaignSchema = Schema.Struct({
   sendAt: Schema.NullOr(Schema.Number),
   audienceSize: Schema.NullOr(Schema.Number),
   pausedReason: Schema.NullOr(Schema.String),
+  abWinner: Schema.NullOr(Schema.Literals(["a", "b"])),
   startedAt: Schema.NullOr(Schema.Number),
   finishedAt: Schema.NullOr(Schema.Number),
   createdAt: Schema.Number,
@@ -2150,6 +2151,42 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         }),
       }),
       error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("schedule", "/v1/campaigns/:id/schedule", {
+      params: { id: Schema.String },
+      /** When to start; now when absent. */
+      payload: Schema.Struct({ sendAt: Schema.optionalKey(Schema.Number) }),
+      success: CampaignSchema,
+      error: [Forbidden, NotFound, InvalidRequest, Conflict],
+    }),
+    HttpApiEndpoint.post("pause", "/v1/campaigns/:id/pause", {
+      params: { id: Schema.String },
+      success: CampaignSchema,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+    HttpApiEndpoint.post("resume", "/v1/campaigns/:id/resume", {
+      params: { id: Schema.String },
+      success: CampaignSchema,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+    HttpApiEndpoint.post("cancel", "/v1/campaigns/:id/cancel", {
+      params: { id: Schema.String },
+      success: CampaignSchema,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+    HttpApiEndpoint.get("pace", "/v1/campaigns/:id/pace", {
+      params: { id: Schema.String },
+      success: Schema.Struct({
+        paused: Schema.Boolean,
+        reason: Schema.NullOr(Schema.String),
+        sent: Schema.Number,
+        delivered: Schema.Number,
+        bounced: Schema.Number,
+        complained: Schema.Number,
+        remaining: Schema.Number,
+        eta: Schema.Struct({ days: Schema.NullOr(Schema.Number), at: Schema.NullOr(Schema.Number) }),
+      }),
+      error: [Forbidden, NotFound, GovernorUnreachable],
     }),
     HttpApiEndpoint.get("getCompliance", "/v1/settings/compliance", {
       success: Schema.Struct({

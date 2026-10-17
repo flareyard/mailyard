@@ -32,6 +32,8 @@ export interface Env {
   readonly CLASSIFIER_API_KEY?: string
   /** Imports a mailbox from IMAP or an mbox (src/workflows/mailbox.ts). */
   readonly IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
+  /** Sends a campaign: snapshot, then governor-paced chunks (src/workflows/campaign.ts). */
+  readonly CAMPAIGN_WORKFLOW: Workflow<{ readonly campaignId: string; readonly origin: string }>
   /** Exports a mailbox to an mbox and a zip of .eml files. */
   readonly EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** One Durable Object per mailbox: its messages, threads and search. */

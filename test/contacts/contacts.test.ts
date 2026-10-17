@@ -495,17 +495,25 @@ describe("signup forms", () => {
 
   it("rate-limits submissions per IP and form", async () => {
     const { form } = await makeForm(false)
-    const statuses: Array<number> = []
-    for (let i = 0; i < 12; i++) {
+    // The limiter counts per fixed window, so a burst that straddles a window boundary can get up to
+    // twice the limit through before it's stopped: assert that range, not an exact 10.
+    let successes = 0
+    let limited = false
+    for (let i = 0; i < 25 && !limited; i++) {
       const response = await call(`/v1/forms/${form.id}/submit`, {
         method: "POST",
         headers: { "cf-connecting-ip": "203.0.113.9" },
         json: { email: `burst-${i}-${uid()}@example.net` },
       })
-      statuses.push(response.status)
+      if (response.status === 429) limited = true
+      else {
+        expect(response.status).toBe(200)
+        successes++
+      }
     }
-    expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true)
-    expect(statuses.slice(10)).toEqual([429, 429])
+    expect(limited).toBe(true)
+    expect(successes).toBeGreaterThanOrEqual(10)
+    expect(successes).toBeLessThanOrEqual(20)
   })
 
   it("validates forms when they are made", async () => {

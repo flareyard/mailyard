@@ -17,8 +17,17 @@ import {
 } from "../campaigns/campaigns.ts"
 import { getCompliance, putCompliance } from "../campaigns/compliance.ts"
 import type { CampaignContentInvalid } from "../campaigns/content.ts"
+import {
+  campaignSentCount,
+  cancelCampaign,
+  pauseCampaign,
+  resumeCampaign,
+  scheduleCampaign,
+} from "../campaigns/send.ts"
 import { recordAudit } from "../domain/audit.ts"
-import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
+import { parseParty } from "../domain/outbox.ts"
+import { Governor } from "../services/Governor.ts"
+import { Conflict, GovernorUnreachable, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
 
@@ -146,6 +155,56 @@ export const CampaignsHandlers = HttpApiBuilder.group(
       ),
       audiencePreview: p(({ params }) =>
         requireScope("read").pipe(Effect.andThen(campaignAudience(params.id)), campaignErrors),
+      ),
+      schedule: p(({ params, payload, request }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) =>
+            scheduleCampaign(params.id, payload, caller.keyId, originOf(request) ?? ""),
+          ),
+          campaignErrors,
+        ),
+      ),
+      pause: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => pauseCampaign(params.id, caller.keyId)),
+          campaignErrors,
+        ),
+      ),
+      resume: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => resumeCampaign(params.id, caller.keyId)),
+          campaignErrors,
+        ),
+      ),
+      cancel: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => cancelCampaign(params.id, caller.keyId)),
+          campaignErrors,
+        ),
+      ),
+      pace: p(({ params }) =>
+        Effect.gen(function* () {
+          yield* requireScope("read")
+          const campaign = yield* findCampaign(params.id)
+          const sent = yield* campaignSentCount(params.id)
+          const remaining = Math.max(0, (campaign.audienceSize ?? 0) - sent)
+          const from = parseParty(campaign.fromAddress).email
+          const pace = yield* Governor.use((g) =>
+            g.campaign({
+              campaignId: params.id,
+              sendingDomain: from.slice(from.lastIndexOf("@") + 1),
+              remaining,
+            }),
+          )
+          return { ...pace, remaining }
+        }).pipe(
+          Effect.catchTag("GovernorUnavailable", () =>
+            Effect.fail(
+              new GovernorUnreachable({ message: "The send scheduler didn't answer; try again shortly." }),
+            ),
+          ),
+          campaignErrors,
+        ),
       ),
       getCompliance: p(() => requireScope("read").pipe(Effect.andThen(getCompliance()), campaignErrors)),
       putCompliance: p(({ payload }) =>

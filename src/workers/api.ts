@@ -48,6 +48,7 @@ import { handleUnsubscribe } from "./unsubscribe.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
 export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
+export { CampaignSendWorkflow } from "../workflows/campaign.ts"
 export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(

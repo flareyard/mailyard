@@ -253,6 +253,7 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
   readonly automationRunId?: string | null
   readonly templateId?: string | null
   readonly templateVersion?: number | null
+  readonly variant?: "a" | "b" | null
   readonly idempotencyKey: string
 }) {
   const database = yield* Database
@@ -283,6 +284,7 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
         automationRunId: input.automationRunId ?? null,
         templateId: input.templateId ?? null,
         templateVersion: input.templateVersion ?? null,
+        variant: input.variant ?? null,
         idempotencyKey: input.idempotencyKey,
         recipient,
         sender: message.from.email,
