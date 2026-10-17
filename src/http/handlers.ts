@@ -13,6 +13,7 @@ import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
 import type { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
+import type { Dns } from "../services/Dns.ts"
 import type { Mailboxes } from "../services/Mailboxes.ts"
 import type { SendQueue } from "../services/SendQueue.ts"
 import {
@@ -63,6 +64,7 @@ export const appContext = Effect.context<
   | CloudflareEmail
   | Mailboxes
   | InboundQueue
+  | Dns
 >()
 
 export const requireScope = (scope: Scope) =>

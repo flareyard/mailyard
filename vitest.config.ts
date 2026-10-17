@@ -4,7 +4,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin"
 import { defineConfig } from "vitest/config"
 
 /** Pure functions (sender mapping, retry policy, email blocks) don't need the Workers runtime. */
-const UNIT = ["test/kit/**/*.test.ts", "test/templates/kit.test.ts"]
+const UNIT = ["test/kit/**/*.test.ts", "test/templates/kit.test.ts", "test/live/**/*.test.ts"]
 
 /**
  * wrangler.jsonc without its queue consumers. Tests drive consumers by hand with createMessageBatch;

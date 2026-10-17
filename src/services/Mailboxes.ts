@@ -15,6 +15,10 @@ export class Mailboxes extends Context.Service<
       mailboxId: string,
       delivery: InboundDelivery,
     ): Effect.Effect<{ readonly id: string; readonly stored: boolean }, MailboxUnavailable>
+    /** How many messages the mailbox holds. */
+    count(mailboxId: string): Effect.Effect<number, MailboxUnavailable>
+    /** Deletes everything the mailbox stores. Only after an export (src/domain/mailboxes.ts). */
+    erase(mailboxId: string): Effect.Effect<void, MailboxUnavailable>
   }
 >()("mailyard/Mailboxes") {
   static readonly layer = Layer.effect(
@@ -28,6 +32,16 @@ export class Mailboxes extends Context.Service<
               const result = await MAILBOX.get(MAILBOX.idFromName(mailboxId)).deliver(delivery)
               return { id: result.id, stored: result.stored }
             },
+            catch: (cause) => new MailboxUnavailable({ mailboxId, cause }),
+          }),
+        count: (mailboxId) =>
+          Effect.tryPromise({
+            try: () => MAILBOX.get(MAILBOX.idFromName(mailboxId)).count(),
+            catch: (cause) => new MailboxUnavailable({ mailboxId, cause }),
+          }),
+        erase: (mailboxId) =>
+          Effect.tryPromise({
+            try: () => MAILBOX.get(MAILBOX.idFromName(mailboxId)).erase(),
             catch: (cause) => new MailboxUnavailable({ mailboxId, cause }),
           }),
       })

@@ -26,6 +26,8 @@ Mailyard (founder, 2026-10-17). It was Mailflare, then Flaremail was considered;
   - The schema is versioned in `src/mailbox/schema.ts`. Append a migration; never edit a shipped one.
   - Threads are connected components over shared message-ids, plus a symmetric subject fallback. They must not depend on arrival order; `test/mailbox/threading.test.ts` checks this with fast-check.
   - Refusals are thrown as `Error("<code>: …")`; map them with `mailboxErrorCode`.
+- D1 is deployed (since 2026-10-17): migrations are append-only. Run `bun run db:generate --name <change>`, then `wrangler d1 migrations apply mailyard --remote` before deploying code that needs it. Never edit or regenerate a shipped migration.
+- DNS checks (`src/domain/dnsChecks.ts`) go through the `Dns` service over DoH. In tests, `test/dns.ts` answers DoH from a table, and `LIVE_DNS=1` runs the read-only check against bridgehook.dev.
 - Tests never bind queue consumers: `vitest.config.ts` strips them from the generated Wrangler config, and tests drive consumers with `createMessageBatch` (HAL-3218).
 - Tests: two Vitest projects. `worker` runs inside workerd via `@cloudflare/vitest-plugin` (not the deprecated `vitest-pool-workers`), with `MAILYARD_SENDER=memory` swapping Email Service out; `unit` runs pure functions (kit, email blocks) in Node. Keep pure tests in `unit`: a workerd worker crashed with "Message is too large" when the kit test shared it with the send and template tests (2026-10-16).
 - The app holds no Cloudflare API token. Cloudflare-side config is declared and applied by the platform's OAuth deploy.

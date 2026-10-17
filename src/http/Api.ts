@@ -103,6 +103,12 @@ export class IdempotencyConflict extends Schema.TaggedError<IdempotencyConflict>
   { httpApiStatus: 409 },
 ) {}
 
+export class Conflict extends Schema.TaggedError<Conflict>()(
+  "Conflict",
+  { message: Schema.String },
+  { httpApiStatus: 409 },
+) {}
+
 export class Unprocessable extends Schema.TaggedError<Unprocessable>()(
   "Unprocessable",
   { message: Schema.String },
@@ -706,6 +712,244 @@ export class InboundApi extends HttpApiGroup.make("inbound")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Domains, mailboxes and identities (docs/email-ui.html: Domain detail, Mailboxes and addresses)
+// ---------------------------------------------------------------------------------------------
+
+const CheckStatus = Schema.Literals(["pass", "warn", "fail", "error"])
+const CatchAll = Schema.Literals(["bounce", "keep"])
+
+export const RecordCheckSchema = Schema.Struct({
+  id: Schema.Literals(["mx", "spf", "dkim", "dmarc", "bounce-mx", "bounce-spf", "bounce-dkim"]),
+  purpose: Schema.Literals(["receiving", "sending"]),
+  name: Schema.String,
+  type: Schema.Literals(["MX", "TXT", "CNAME"]),
+  expected: Schema.String,
+  actual: Schema.Array(Schema.String),
+  status: CheckStatus,
+  detail: Schema.String,
+})
+
+export const DomainSummarySchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  zoneId: Schema.NullOr(Schema.String),
+  receiving: Schema.Boolean,
+  sending: Schema.Boolean,
+  catchAll: CatchAll,
+  mailboxCount: Schema.Number,
+  lastCheckedAt: Schema.NullOr(Schema.Number),
+  checkStatus: Schema.NullOr(CheckStatus),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+const MailboxKindSchema = Schema.Literals(["user", "shared", "group", "alias", "catch_all"])
+
+export const DomainDetailSchema = Schema.Struct({
+  ...DomainSummarySchema.fields,
+  checks: Schema.Array(RecordCheckSchema),
+  expectedRecords: Schema.Array(
+    Schema.Struct({
+      purpose: Schema.String,
+      type: Schema.Literals(["MX", "TXT", "CNAME"]),
+      name: Schema.String,
+      value: Schema.String,
+    }),
+  ),
+  mailboxes: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      address: Schema.String,
+      kind: MailboxKindSchema,
+      displayName: Schema.NullOr(Schema.String),
+    }),
+  ),
+})
+
+const SignatureSchema = Schema.Struct({ text: Schema.String, html: Schema.NullOr(Schema.String) })
+const AutoReplySchema = Schema.Struct({
+  enabled: Schema.Boolean,
+  subject: Schema.String.check(Schema.isMaxLength(998)),
+  body: Schema.String.check(Schema.isMaxLength(20_000)),
+  startsAt: Schema.NullOr(Schema.Number),
+  endsAt: Schema.NullOr(Schema.Number),
+})
+const ForwardingSchema = Schema.Struct({
+  enabled: Schema.Boolean,
+  to: Schema.Array(Schema.String),
+  keepCopy: Schema.Boolean,
+})
+const MemberRoleSchema = Schema.Literals(["owner", "member", "viewer"])
+
+export const MailboxSummarySchema = Schema.Struct({
+  id: Schema.String,
+  address: Schema.String,
+  domainId: Schema.String,
+  kind: MailboxKindSchema,
+  displayName: Schema.NullOr(Schema.String),
+  holdsMail: Schema.Boolean,
+  targetIds: Schema.Array(Schema.String),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
+export const MailboxDetailSchema = Schema.Struct({
+  ...MailboxSummarySchema.fields,
+  targets: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      address: Schema.NullOr(Schema.String),
+      kind: Schema.NullOr(MailboxKindSchema),
+    }),
+  ),
+  signature: Schema.NullOr(SignatureSchema),
+  autoReply: Schema.NullOr(AutoReplySchema),
+  forwarding: Schema.NullOr(ForwardingSchema),
+  members: Schema.Array(
+    Schema.Struct({
+      apiKeyId: Schema.String,
+      name: Schema.String,
+      role: MemberRoleSchema,
+      revoked: Schema.Boolean,
+    }),
+  ),
+  /** Messages held; null for aliases and groups, which hold none. */
+  messageCount: Schema.NullOr(Schema.Number),
+  lastExport: Schema.NullOr(
+    Schema.Struct({
+      id: Schema.String,
+      status: Schema.Literals(["pending", "running", "complete", "failed"]),
+      format: Schema.Literals(["mbox", "eml-zip"]),
+      messageCount: Schema.Number,
+      size: Schema.Number,
+      createdAt: Schema.Number,
+      completedAt: Schema.NullOr(Schema.Number),
+    }),
+  ),
+})
+
+export class DomainsApi extends HttpApiGroup.make("domains")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/domains", {
+      success: Schema.Struct({ domains: Schema.Array(DomainSummarySchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/domains", {
+      payload: Schema.Struct({
+        name: Schema.String,
+        receiving: Schema.optionalKey(Schema.Boolean),
+        sending: Schema.optionalKey(Schema.Boolean),
+        catchAll: Schema.optionalKey(CatchAll),
+        zoneId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: DomainDetailSchema,
+      error: [Forbidden, NotFound, InvalidRequest, Conflict],
+    }),
+    HttpApiEndpoint.get("get", "/v1/domains/:id", {
+      params: { id: Schema.String },
+      success: DomainDetailSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/domains/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        receiving: Schema.optionalKey(Schema.Boolean),
+        sending: Schema.optionalKey(Schema.Boolean),
+        catchAll: Schema.optionalKey(CatchAll),
+        zoneId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: DomainDetailSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/domains/:id", {
+      params: { id: Schema.String },
+      success: DomainSummarySchema,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+    HttpApiEndpoint.post("recheck", "/v1/domains/:id/recheck", {
+      params: { id: Schema.String },
+      success: DomainDetailSchema,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+const MailboxSettings = {
+  displayName: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(200)))),
+  signature: Schema.optionalKey(Schema.NullOr(SignatureSchema)),
+  autoReply: Schema.optionalKey(Schema.NullOr(AutoReplySchema)),
+  forwarding: Schema.optionalKey(Schema.NullOr(ForwardingSchema)),
+}
+
+export class MailboxesApi extends HttpApiGroup.make("mailboxes")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/mailboxes", {
+      query: { domainId: Schema.optionalKey(Schema.String), kind: Schema.optionalKey(MailboxKindSchema) },
+      success: Schema.Struct({ mailboxes: Schema.Array(MailboxSummarySchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.post("create", "/v1/mailboxes", {
+      payload: Schema.Struct({
+        address: Schema.String,
+        kind: MailboxKindSchema,
+        targets: Schema.optionalKey(Schema.Array(Schema.String)),
+        ...MailboxSettings,
+      }),
+      success: MailboxDetailSchema,
+      error: [Forbidden, NotFound, InvalidRequest, Conflict],
+    }),
+    HttpApiEndpoint.get("get", "/v1/mailboxes/:id", {
+      params: { id: Schema.String },
+      success: MailboxDetailSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.patch("update", "/v1/mailboxes/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        targets: Schema.optionalKey(Schema.Array(Schema.String)),
+        ...MailboxSettings,
+      }),
+      success: MailboxDetailSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.put("setMembers", "/v1/mailboxes/:id/members", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        members: Schema.Array(Schema.Struct({ apiKeyId: Schema.String, role: MemberRoleSchema })),
+      }),
+      success: MailboxDetailSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("remove", "/v1/mailboxes/:id", {
+      params: { id: Schema.String },
+      success: MailboxSummarySchema,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+export class IdentitiesApi extends HttpApiGroup.make("identities")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/identities", {
+      success: Schema.Struct({
+        identities: Schema.Array(
+          Schema.Struct({
+            address: Schema.String,
+            displayName: Schema.NullOr(Schema.String),
+            mailboxId: Schema.String,
+            kind: MailboxKindSchema,
+            via: Schema.Literals(["admin", "member", "alias"]),
+          }),
+        ),
+        /** Domains on which this key may send as any address (root and admin keys). */
+        anyAddressOn: Schema.Array(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailyard's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
@@ -717,4 +961,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(WebhooksApi)
   .add(InsightsApi)
   .add(InboundApi)
+  .add(DomainsApi)
+  .add(MailboxesApi)
+  .add(IdentitiesApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}
