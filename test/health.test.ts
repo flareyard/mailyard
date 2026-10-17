@@ -22,6 +22,7 @@ describe("D1 schema", () => {
       "select name from sqlite_master where type = 'table' and name not like '\\_%' escape '\\' and name not like 'sqlite%' and name != 'd1_migrations' order by name",
     ).all<{ name: string }>()
     expect(results.map((r) => r.name)).toEqual([
+      "alerts",
       "api_keys",
       "audit",
       "auto_replies",
@@ -65,6 +66,8 @@ describe("GET /openapi.json", () => {
     expect(doc.info.title).toBe("Mailyard API")
     expect(Object.keys(doc.paths).sort()).toEqual([
       "/healthz",
+      "/v1/alerts",
+      "/v1/alerts/{id}/resolve",
       "/v1/api-keys",
       "/v1/api-keys/{id}",
       "/v1/contacts",
@@ -118,7 +121,9 @@ describe("GET /openapi.json", () => {
       "/v1/segments/preview",
       "/v1/segments/{id}",
       "/v1/send",
+      "/v1/sending/governor",
       "/v1/settings/brand",
+      "/v1/settings/sending",
       "/v1/stats/delivery",
       "/v1/stats/providers",
       "/v1/stats/volume",

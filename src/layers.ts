@@ -9,6 +9,7 @@ import { Classifier } from "./services/Classifier.ts"
 import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { Database } from "./services/Database.ts"
 import { Dns } from "./services/Dns.ts"
+import { Governor } from "./services/Governor.ts"
 import { Mailboxes } from "./services/Mailboxes.ts"
 import { SendQueue } from "./services/SendQueue.ts"
 
@@ -46,6 +47,7 @@ export const appLayer = (env: Env) => {
     ImapConnector.layer,
     SecretBox.layer,
     CloudflareEmail.layer,
+    Governor.layer.pipe(Layer.provide(CloudflareEmail.layer)),
     BlobStore.layerR2(env.STORE),
     senderLayer(env).pipe(Layer.provideMerge(Ids.layer)),
   ).pipe(Layer.provideMerge(bindings))

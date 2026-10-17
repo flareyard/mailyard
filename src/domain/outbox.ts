@@ -16,6 +16,7 @@ import {
   validate,
 } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { Governor } from "../services/Governor.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { SendQueue } from "../services/SendQueue.ts"
 import { renderTemplate, type TemplateSource } from "../templates/render.ts"
@@ -224,10 +225,20 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
       continue
     }
     const status = yield* attempt(id, message, 0)
+    yield* counted("transactional")(status)
     results.push({ contact, email: id, status })
   }
   return results
 })
+
+/**
+ * Tells the governor about a send it didn't grant, once Email Service has taken it, so bulk mail
+ * knows how much of the day's quota is left. Bulk streams were counted when granted.
+ */
+const counted = (stream: string) => (status: string) =>
+  status === "sent" && (stream === "transactional" || stream === "mailbox" || stream === "reply")
+    ? Governor.use((g) => g.consume(stream === "transactional" ? "transactional" : "mailbox", 1))
+    : Effect.void
 
 /** One delivery attempt; records the outcome on the row and returns the new status. */
 export const attempt = Effect.fn("outbox.attempt")(function* (
@@ -379,7 +390,9 @@ export const retryDeferred = Effect.fn("outbox.retryDeferred")(function* (id: st
     return yield* new InvalidMessage({ reason: `Rendered copy ${row.renderedKey} is missing from storage.` })
   }
   const message = decodeRendered(new TextDecoder().decode(blob.value.body))
-  return yield* attempt(id, message, row.attempts)
+  const status = yield* attempt(id, message, row.attempts)
+  yield* counted(row.stream)(status)
+  return status
 })
 
 /** Counts for the message log's filters. */
@@ -483,6 +496,7 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
   )
   yield* insert("queued", null)
   const status = yield* attempt(id, message, 0)
+  yield* counted("mailbox")(status)
   const row = yield* database.query("messagesOut.cfId", (db) =>
     db
       .select({ cfMessageId: messagesOut.cfMessageId, error: messagesOut.error })

@@ -157,6 +157,28 @@ export const forms = sqliteTable("forms", {
   createdAt: createdAt(),
 })
 
+/**
+ * Things that need a person: a campaign paused for its bounce rate, a domain failing its checks.
+ * One open alert per `key`, so a condition that persists doesn't pile up duplicates.
+ */
+export const alerts = sqliteTable(
+  "alerts",
+  {
+    id: text("id").primaryKey(),
+    /** What the alert is about, unique among open alerts: `campaign.paused:<id>`. */
+    key: text("key").notNull(),
+    kind: text("kind").notNull(),
+    severity: text("severity", { enum: ["info", "warning", "critical"] }).notNull(),
+    title: text("title").notNull(),
+    detail: text("detail").notNull(),
+    subject: text("subject", { mode: "json" }).$type<{ readonly type: string; readonly id: string } | null>(),
+    createdAt: createdAt(),
+    resolvedAt: integer("resolved_at"),
+    resolvedBy: text("resolved_by"),
+  },
+  (t) => [index("alerts_open").on(t.resolvedAt, t.createdAt), index("alerts_key").on(t.key, t.resolvedAt)],
+)
+
 /** Events a contact did, sent through `track()`, used by segments and automation triggers. */
 export const events = sqliteTable(
   "events",

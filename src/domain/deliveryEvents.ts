@@ -1,9 +1,19 @@
 import { eq, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-import { contacts, dailyStats, events, messagesOut, processedEvents, suppressions } from "../db/schema.ts"
+import {
+  campaigns,
+  contacts,
+  dailyStats,
+  events,
+  messagesOut,
+  processedEvents,
+  suppressions,
+} from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { Governor } from "../services/Governor.ts"
+import { raiseAlert } from "./alerts.ts"
 import { emitSafely } from "./webhooks.ts"
 
 /**
@@ -134,6 +144,58 @@ export type Outcome = "duplicate" | "applied" | "applied-unmatched"
  * — for a hard bounce or a complaint — the suppression list and the contact's status. Each event id
  * is applied once, however often the queue redelivers it.
  */
+/** The outcomes that move a campaign's rates; a deferral or a send says nothing about the list yet. */
+const GOVERNED: Partial<Record<string, "delivered" | "bounced" | "complained">> = {
+  delivered: "delivered",
+  bounced: "bounced",
+  complained: "complained",
+}
+
+/**
+ * Tells the governor how a bulk message landed. A campaign it pauses is marked paused and raised as
+ * an alert. A governor that can't be reached is logged: the event itself is already recorded.
+ */
+const feedGovernor = (
+  row: typeof messagesOut.$inferSelect,
+  outcome: "delivered" | "bounced" | "complained",
+  at: number,
+) =>
+  Effect.gen(function* () {
+    const governor = yield* Governor
+    const sendingDomain = row.sender.slice(row.sender.lastIndexOf("@") + 1)
+    const result = yield* governor.record({ campaignId: row.campaignId, sendingDomain, outcome, now: at })
+    if (!result.paused || !row.campaignId) return
+    const database = yield* Database
+    const campaign = yield* database.query("campaigns.get", (db) =>
+      db
+        .select({ id: campaigns.id, name: campaigns.name, status: campaigns.status })
+        .from(campaigns)
+        .where(eq(campaigns.id, row.campaignId as string))
+        .get(),
+    )
+    if (
+      !campaign ||
+      campaign.status === "paused" ||
+      campaign.status === "cancelled" ||
+      campaign.status === "sent"
+    )
+      return
+    yield* database.query("campaigns.autoPause", (db) =>
+      db.update(campaigns).set({ status: "paused" }).where(eq(campaigns.id, campaign.id)).run(),
+    )
+    yield* raiseAlert({
+      key: `campaign.paused:${campaign.id}`,
+      kind: "campaign.paused",
+      severity: "critical",
+      title: `Campaign "${campaign.name}" paused itself`,
+      detail: `${result.reason ?? "Its delivery rates crossed the line."} Fix the list, then resume it.`,
+      subject: { type: "campaign", id: campaign.id },
+    })
+    yield* emitSafely("campaign.paused", { campaignId: campaign.id, reason: result.reason })
+  }).pipe(
+    Effect.catchCause((cause) => Effect.logError("governor: could not record a delivery outcome", cause)),
+  )
+
 export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: EmailSendingEvent) {
   const database = yield* Database
   const { payload } = event
@@ -168,6 +230,10 @@ export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: Em
         .where(eq(messagesOut.id, row.id))
         .run(),
     )
+  }
+
+  if (row && (row.stream === "campaign" || row.stream === "automation") && GOVERNED[kind]) {
+    yield* feedGovernor(row, GOVERNED[kind], at)
   }
 
   yield* bumpDailyStat({

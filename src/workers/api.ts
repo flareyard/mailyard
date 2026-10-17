@@ -23,6 +23,7 @@ import { InboundHandlers } from "../http/inboundHandlers.ts"
 import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { MailHandlers } from "../http/mailHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
+import { AlertsHandlers, SendingHandlers } from "../http/sendingHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
 import { TransfersHandlers } from "../http/transferHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
@@ -43,6 +44,7 @@ import { CONFIRM_PATH, FORM_SUBMIT_PATH, handleConfirm, handleFormSubmit } from 
 import { handleQueue } from "./queue.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
+export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
 export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
@@ -66,6 +68,8 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     TopicsHandlers,
     FormsHandlers,
     SegmentsHandlers,
+    SendingHandlers,
+    AlertsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
