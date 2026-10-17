@@ -821,7 +821,7 @@ export const MailboxDetailSchema = Schema.Struct({
     Schema.Struct({
       id: Schema.String,
       status: Schema.Literals(["pending", "running", "complete", "failed"]),
-      format: Schema.Literals(["mbox", "eml-zip"]),
+      format: Schema.Literals(["mbox", "eml-zip", "both"]),
       messageCount: Schema.Number,
       size: Schema.Number,
       createdAt: Schema.Number,
@@ -1401,6 +1401,118 @@ export class RulesApi extends HttpApiGroup.make("rules")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Imports and exports (docs/email-ui.html: Import mailbox, Export)
+// ---------------------------------------------------------------------------------------------
+
+const ImportFolderSchema = Schema.Struct({
+  name: Schema.String,
+  folder: Schema.String,
+  label: Schema.NullOr(Schema.String),
+  uidValidity: Schema.NullOr(Schema.Number),
+  source: Schema.Number,
+  imported: Schema.Number,
+  duplicates: Schema.Number,
+  failed: Schema.Number,
+  skipped: Schema.optionalKey(Schema.Number),
+  lastUid: Schema.Number,
+  batches: Schema.Number,
+  batchesDone: Schema.Number,
+})
+
+export const ImportSchema = Schema.Struct({
+  id: Schema.String,
+  source: Schema.Literals(["imap", "mbox"]),
+  mode: Schema.Literals(["full", "catchup"]),
+  host: Schema.NullOr(Schema.String),
+  port: Schema.NullOr(Schema.Number),
+  username: Schema.NullOr(Schema.String),
+  status: Schema.Literals(["pending", "running", "complete", "failed", "cancelled"]),
+  error: Schema.NullOr(Schema.String),
+  folders: Schema.Array(ImportFolderSchema),
+  totals: Schema.Struct({
+    source: Schema.Number,
+    imported: Schema.Number,
+    duplicates: Schema.Number,
+    failed: Schema.Number,
+    skipped: Schema.Number,
+  }),
+  accountedFor: Schema.Boolean,
+  credentialsHeld: Schema.Boolean,
+  createdAt: Schema.Number,
+  finishedAt: Schema.NullOr(Schema.Number),
+})
+
+export const ExportSchema = Schema.Struct({
+  id: Schema.String,
+  status: Schema.Literals(["pending", "running", "complete", "failed"]),
+  format: Schema.Literals(["mbox", "eml-zip", "both"]),
+  messageCount: Schema.Number,
+  size: Schema.Number,
+  zipSize: Schema.Number,
+  error: Schema.NullOr(Schema.String),
+  /** Signed links valid for a week; null until the export is complete. */
+  downloads: Schema.Struct({ mbox: Schema.NullOr(Schema.String), zip: Schema.NullOr(Schema.String) }),
+  createdAt: Schema.Number,
+  completedAt: Schema.NullOr(Schema.Number),
+})
+
+export class TransfersApi extends HttpApiGroup.make("transfers")
+  .add(
+    HttpApiEndpoint.post("createImport", "/v1/mailboxes/:id/imports", {
+      params: { id: Schema.String },
+      payload: Schema.Union([
+        Schema.Struct({
+          source: Schema.Literal("imap"),
+          host: Schema.String,
+          port: Schema.optionalKey(Schema.Number),
+          username: Schema.String,
+          password: Schema.String,
+          folders: Schema.optionalKey(Schema.Array(Schema.String)),
+          mode: Schema.optionalKey(Schema.Literals(["full", "catchup"])),
+        }),
+        Schema.Struct({
+          source: Schema.Literal("mbox"),
+          uploadKey: Schema.optionalKey(Schema.String),
+          exportId: Schema.optionalKey(Schema.String),
+        }),
+      ]),
+      success: ImportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("imports", "/v1/mailboxes/:id/imports", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ imports: Schema.Array(ImportSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("import", "/v1/mailboxes/:id/imports/:importId", {
+      params: { id: Schema.String, importId: Schema.String },
+      success: ImportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("cancelImport", "/v1/mailboxes/:id/imports/:importId/cancel", {
+      params: { id: Schema.String, importId: Schema.String },
+      success: ImportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.post("createExport", "/v1/mailboxes/:id/exports", {
+      params: { id: Schema.String },
+      success: ExportSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("exports", "/v1/mailboxes/:id/exports", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ exports: Schema.Array(ExportSchema) }),
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.get("export", "/v1/mailboxes/:id/exports/:exportId", {
+      params: { id: Schema.String, exportId: Schema.String },
+      success: ExportSchema,
+      error: MailErrors,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /** Mailyard's HTTP API. The UI contract (docs/plans/email-ui.html#contract) grows here, group by group. */
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
@@ -1417,4 +1529,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(IdentitiesApi)
   .add(MailApiGroup)
   .add(RulesApi)
+  .add(TransfersApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

@@ -2,6 +2,7 @@ import { inArray } from "drizzle-orm"
 import { Effect } from "effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { mailboxes } from "../db/schema.ts"
+import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
 import { BlobStore } from "../kit/index.ts"
 import { type Access, type MailboxAccessDenied, type MailboxMissing, requireMailbox } from "../mail/access.ts"
 import { bodyTextOf, type ComposeInvalid, checkDraftAttachments, draftFromMessage } from "../mail/compose.ts"
@@ -17,13 +18,13 @@ import { appContext, provideTo } from "./handlers.ts"
 
 const tagOf = (e: unknown) => (typeof e === "object" && e !== null && "_tag" in e ? String(e._tag) : "")
 
-type MailHttp<E> = E extends MailboxMissing | RuleNotFound
+type MailHttp<E> = E extends MailboxMissing | RuleNotFound | TransferNotFound
   ? NotFound
   : E extends MailboxAccessDenied
     ? Forbidden
     : E extends MailboxRefused
       ? NotFound | InvalidRequest | Conflict
-      : E extends ComposeInvalid | SendInvalid | RuleInvalid
+      : E extends ComposeInvalid | SendInvalid | RuleInvalid | TransferInvalid
         ? InvalidRequest
         : E extends {
               readonly _tag: "DatabaseError" | "MailboxUnavailable" | "BlobStoreError" | "FileLinkInvalid"
@@ -50,6 +51,8 @@ export const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
           return new NotFound({ message: `Mailbox ${err.id} not found.` })
         case "RuleNotFound":
           return new NotFound({ message: `Rule ${err.id} not found.` })
+        case "TransferNotFound":
+          return new NotFound({ message: `${err.id} not found.` })
         case "MailboxAccessDenied":
           return new Forbidden({ message: err.message ?? "Forbidden" })
         case "MailboxRefused":
@@ -58,6 +61,7 @@ export const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
             return new Conflict({ message: err.message ?? "Conflict." })
           return new InvalidRequest({ field: "request", message: err.message ?? "Invalid request." })
         case "RuleInvalid":
+        case "TransferInvalid":
         case "ComposeInvalid":
         case "SendInvalid":
           return new InvalidRequest({
@@ -96,7 +100,7 @@ const ownAddresses = (mailboxId: string, address: string) =>
     return [address, ...aliases.filter((a) => a.targets?.includes(mailboxId)).map((a) => a.address)]
   })
 
-const originOf = (request: { readonly originalUrl: string }) => {
+export const originOf = (request: { readonly originalUrl: string }) => {
   try {
     return new URL(request.originalUrl).origin
   } catch {

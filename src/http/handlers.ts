@@ -9,6 +9,7 @@ import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
 import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
 import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
+import type { ImapConnector } from "../imports/importer.ts"
 import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
 import type { Classifier } from "../services/Classifier.ts"
@@ -67,6 +68,7 @@ export const appContext = Effect.context<
   | InboundQueue
   | Dns
   | Classifier
+  | ImapConnector
 >()
 
 export const requireScope = (scope: Scope) =>

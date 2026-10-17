@@ -29,6 +29,10 @@ export interface Env {
   readonly CLASSIFIER_URL?: string
   readonly CLASSIFIER_MODEL?: string
   readonly CLASSIFIER_API_KEY?: string
+  /** Imports a mailbox from IMAP or an mbox (src/workflows/mailbox.ts). */
+  readonly IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
+  /** Exports a mailbox to an mbox and a zip of .eml files. */
+  readonly EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   /** One Durable Object per mailbox: its messages, threads and search. */
   readonly MAILBOX: DurableObjectNamespace<MailboxDO>
   /** Deploy-time secret that encrypts webhook endpoint secrets at rest (manifest secret). */

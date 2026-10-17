@@ -33,6 +33,11 @@ Mailyard (founder, 2026-10-17). It was Mailflare, then Flaremail was considered;
 - Inbox rules and spam (`src/rules/`): `planFiling` decides per mailbox, from its rules (literal matching only, no regex, so a rule can't hang the pipeline), its sender lists (block always spam, allow never), the auth score, and the `Classifier`.
   - The classifier is off by default and runs only on doubtful scores, from 1 to 5 points.
   - Forwards, auto-replies and rule webhooks run only for a newly stored copy, so retries never repeat them. Auto-replies follow RFC 3834's guards.
+- Imports and exports run as Workflows (`src/workflows/mailbox.ts`). Every step reconnects (a socket can't outlive one) and is idempotent.
+  - Imported messages get a content-derived id and are de-duplicated by Message-ID.
+  - IMAP is read-only: `EXAMINE` and `BODY.PEEK[]`.
+  - The password is sealed while the Workflow runs and wiped when it ends.
+  - Exports write R2 multipart parts of exactly 8 MiB, because R2 needs equal non-final parts.
 - D1 is deployed (since 2026-10-17): migrations are append-only. Run `bun run db:generate --name <change>`, then `wrangler d1 migrations apply mailyard --remote` before deploying code that needs it. Never edit or regenerate a shipped migration.
 - DNS checks (`src/domain/dnsChecks.ts`) go through the `Dns` service over DoH. In tests, `test/dns.ts` answers DoH from a table, and `LIVE_DNS=1` runs the read-only check against bridgehook.dev.
 - Tests never bind queue consumers: `vitest.config.ts` strips them from the generated Wrangler config, and tests drive consumers with `createMessageBatch` (HAL-3218).

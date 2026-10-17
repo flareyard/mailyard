@@ -18,6 +18,7 @@ import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { MailHandlers } from "../http/mailHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
+import { TransfersHandlers } from "../http/transferHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { appLayer } from "../layers.ts"
 import {
@@ -35,6 +36,7 @@ import { handleLive, LIVE_PATH } from "./live.ts"
 import { handleQueue } from "./queue.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
+export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide([
@@ -52,6 +54,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     IdentitiesHandlers,
     MailHandlers,
     RulesHandlers,
+    TransfersHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),

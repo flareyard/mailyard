@@ -70,6 +70,7 @@ export interface FilingOptions {
   readonly labelIds?: ReadonlyArray<string> | undefined
   readonly seen?: boolean | undefined
   readonly starred?: boolean | undefined
+  readonly answered?: boolean | undefined
 }
 
 export const BODY_TEXT_LIMIT = 256 * 1024

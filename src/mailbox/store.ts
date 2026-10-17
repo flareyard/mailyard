@@ -191,11 +191,12 @@ export class MailboxStore {
         )
       })
       this.sql.exec(
-        "UPDATE messages SET spam_score = ?, spam_reasons = ?, rules_matched = ?, starred = ? WHERE id = ?",
+        "UPDATE messages SET spam_score = ?, spam_reasons = ?, rules_matched = ?, starred = ?, answered = ? WHERE id = ?",
         delivery.spam?.score ?? null,
         json(delivery.spam?.reasons ?? []),
         json(delivery.rulesMatched ?? []),
         options.starred ? 1 : 0,
+        options.answered ? 1 : 0,
         delivery.id,
       )
       // Labels a rule applied; one that no longer exists is skipped rather than failing the delivery.
@@ -1360,5 +1361,52 @@ export class MailboxStore {
   /** Whether an R2 attachment key belongs to a message in this mailbox, so a draft may reuse it. */
   hasAttachmentKey(key: string): boolean {
     return this.sql.exec("SELECT 1 FROM attachments WHERE r2_key = ? LIMIT 1", key).toArray().length > 0
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Import support
+  // ---------------------------------------------------------------------------------------------
+
+  /** The message holding this Message-ID, so an import doesn't store a message twice. */
+  messageIdHolder(messageId: string): string | null {
+    const row = this.sql.exec("SELECT id FROM messages WHERE message_id = ? LIMIT 1", messageId).toArray()[0]
+    return row ? String(row.id) : null
+  }
+
+  /** The label with this name, created if it doesn't exist yet. Names compare case-insensitively. */
+  ensureLabel(name: string) {
+    return this.transaction(() => {
+      const trimmed = name.trim().slice(0, 100)
+      const found = this.sql.exec("SELECT id FROM labels WHERE name = ? COLLATE NOCASE", trimmed).toArray()[0]
+      if (found) return { id: String(found.id), created: false, events: [] as Array<MailboxEvent> }
+      const id = newId("lbl")
+      this.sql.exec(
+        "INSERT INTO labels (id, name, color, created_at) VALUES (?, ?, NULL, ?)",
+        id,
+        trimmed,
+        this.now(),
+      )
+      return {
+        id,
+        created: true,
+        events: [{ type: "labels.changed", labels: this.labels() } as MailboxEvent],
+      }
+    })
+  }
+
+  /** Adds labels to an existing message: the same message found in another imported folder. */
+  addLabelsToMessage(id: string, labelIds: ReadonlyArray<string>) {
+    return this.transaction(() => {
+      const row = this.sql.exec("SELECT thread_id FROM messages WHERE id = ?", id).toArray()[0]
+      if (!row || labelIds.length === 0) return { events: [] as Array<MailboxEvent> }
+      for (const labelId of labelIds) {
+        this.sql.exec(
+          "INSERT OR IGNORE INTO message_labels (message_id, label_id) SELECT ?, id FROM labels WHERE id = ?",
+          id,
+          labelId,
+        )
+      }
+      return { events: [this.changed([String(row.thread_id)])] }
+    })
   }
 }
