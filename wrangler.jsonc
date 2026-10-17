@@ -13,7 +13,11 @@
   // Raw open and click hits; D1 keeps the per-message rollups.
   "analytics_engine_datasets": [{ "binding": "TRACK_EVENTS", "dataset": "mailyard_tracking" }],
   // Public signup forms: 10 submissions a minute per IP and form.
-  "ratelimits": [{ "name": "FORM_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
+  "ratelimits": [
+    { "name": "FORM_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
+    // Failed authentications per address.
+    { "name": "AUTH_LIMITER", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } }
+  ],
   "durable_objects": {
     "bindings": [
       { "name": "MAILBOX", "class_name": "MailboxDO" },

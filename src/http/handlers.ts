@@ -1,6 +1,7 @@
 import { and, desc, eq, lt, or } from "drizzle-orm"
 import type * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
+import * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
@@ -33,7 +34,7 @@ import {
   Unhealthy,
   Unprocessable,
 } from "./Api.ts"
-import { ApiKeyAuth, CurrentCaller, Forbidden, Unauthorized } from "./Auth.ts"
+import { ApiKeyAuth, CurrentCaller, Forbidden, RateLimited, Unauthorized } from "./Auth.ts"
 
 export const ApiKeyAuthLive = Layer.effect(
   ApiKeyAuth,
@@ -45,7 +46,27 @@ export const ApiKeyAuthLive = Layer.effect(
         authenticate(Redacted.value(credential)).pipe(
           Effect.provideService(Database, database),
           Effect.provideService(Bindings, bindings),
-          Effect.catchTag("InvalidKey", (e) => Effect.fail(new Unauthorized({ message: e.reason }))),
+          Effect.catchTag("InvalidKey", (e) =>
+            Effect.gen(function* () {
+              // Failed attempts count against the caller's address; past the limit, they wait.
+              const request = yield* HttpServerRequest.HttpServerRequest
+              const ip = request.headers["cf-connecting-ip"] ?? "unknown"
+              const limiter = bindings.AUTH_LIMITER
+              if (limiter) {
+                const { success } = yield* Effect.promise(() => limiter.limit({ key: `auth:${ip}` }))
+                if (!success)
+                  return yield* new RateLimited({
+                    message: "Too many failed attempts from your address. Wait a minute and try again.",
+                    retryAfter: 60,
+                  })
+              }
+              return yield* new Unauthorized({
+                message: e.reason,
+                reason: e.code,
+                ...(e.revokedAt !== undefined ? { revokedAt: e.revokedAt } : {}),
+              })
+            }),
+          ),
           Effect.flatMap((caller) => Effect.provideService(httpEffect, CurrentCaller, caller)),
         ),
     })
@@ -81,7 +102,21 @@ export const requireScope = (scope: Scope) =>
   Effect.gen(function* () {
     const caller = yield* CurrentCaller
     if (!caller.scopes.includes(scope)) {
-      return yield* new Forbidden({ message: `This key lacks the "${scope}" scope.` })
+      return yield* new Forbidden(
+        caller.kind === "public"
+          ? {
+              message: "Public keys (pk_) can only track events; use a secret key (sk_).",
+              reason: "public-key",
+              required: scope,
+              scopes: [...caller.scopes],
+            }
+          : {
+              message: `This key lacks the "${scope}" scope.`,
+              reason: "insufficient-scope",
+              required: scope,
+              scopes: [...caller.scopes],
+            },
+      )
     }
     return caller
   })

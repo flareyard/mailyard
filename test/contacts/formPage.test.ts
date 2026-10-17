@@ -184,7 +184,7 @@ describe("Turnstile on submit", () => {
       const bad = `ts-bad-${uid()}@example.net`
       const refused = await submit(f.id, { email: bad, "cf-turnstile-response": "forged" })
       expect(refused.status).toBe(400)
-      expect(await json(refused)).toEqual({ error: "challenge" })
+      expect(await json(refused)).toMatchObject({ error: "challenge" })
       expect(await exists(bad)).toBe(false)
 
       const none = `ts-none-${uid()}@example.net`

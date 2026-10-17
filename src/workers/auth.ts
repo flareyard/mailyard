@@ -6,8 +6,11 @@ import { runtimeFor } from "./inbound.ts"
 /** The subprotocol a browser asks for on a WebSocket; it carries the key as a second one, `bearer.<key>`. */
 export const LIVE_PROTOCOL = "mailyard.v1"
 
-export const problem = (status: number, message: string) =>
-  Response.json({ error: { status, message } }, { status, headers: { "cache-control": "no-store" } })
+export const problem = (status: number, message: string, extra: Readonly<Record<string, unknown>> = {}) =>
+  Response.json(
+    { error: { status, message, ...extra } },
+    { status, headers: { "cache-control": "no-store" } },
+  )
 
 /**
  * The key on a request outside the JSON API: `Authorization: Bearer`, or for WebSockets (which can't
@@ -33,8 +36,18 @@ export const authorize = async (
 ): Promise<{ caller: Caller; protocol: string | null } | Response> => {
   const auth = credentials(request)
   if (!auth)
-    return problem(401, `Send Authorization: Bearer, or the subprotocols ${LIVE_PROTOCOL} and bearer.<key>.`)
+    return problem(
+      401,
+      `Send Authorization: Bearer, or the subprotocols ${LIVE_PROTOCOL} and bearer.<key>.`,
+      {
+        reason: "missing",
+      },
+    )
   const result = await runtimeFor(env).runPromise(Effect.result(authenticate(auth.token)))
-  if (result._tag === "Failure") return problem(401, result.failure.reason)
+  if (result._tag === "Failure")
+    return problem(401, result.failure.reason, {
+      reason: result.failure.code,
+      ...(result.failure.revokedAt !== undefined ? { revokedAt: result.failure.revokedAt } : {}),
+    })
   return { caller: result.success, protocol: auth.protocol }
 }
