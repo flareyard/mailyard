@@ -11043,6 +11043,414 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/automations/{id}/dry-run": {
+      "post": {
+        "operationId": "automations.dryRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "assume": {
+                    "additionalProperties": {
+                      "enum": [
+                        "yes",
+                        "no",
+                        "happens",
+                        "times-out",
+                      ],
+                      "type": "string",
+                    },
+                    "type": "object",
+                  },
+                  "contact": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                      },
+                      "fields": {
+                        "type": "object",
+                      },
+                      "name": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
+                      },
+                      "status": {
+                        "enum": [
+                          "subscribed",
+                          "unconfirmed",
+                        ],
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "email",
+                    ],
+                    "type": "object",
+                  },
+                  "contactId": {
+                    "type": "string",
+                  },
+                  "events": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "afterMinutes": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "data": {
+                          "type": "object",
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "name",
+                        "afterMinutes",
+                      ],
+                      "type": "object",
+                    },
+                    "maxItems": 50,
+                    "type": "array",
+                  },
+                  "triggerData": {
+                    "type": "object",
+                  },
+                  "version": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "draft",
+                        ],
+                        "type": "string",
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                          },
+                          {
+                            "enum": [
+                              "Infinity",
+                              "-Infinity",
+                              "NaN",
+                            ],
+                            "type": "string",
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "contact": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                        },
+                        "id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                      ],
+                      "type": "object",
+                    },
+                    "endedBy": {
+                      "enum": [
+                        "exit",
+                        "stop",
+                        "limit",
+                      ],
+                      "type": "string",
+                    },
+                    "endsAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "path": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "at": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "detail": {
+                            "type": "string",
+                          },
+                          "label": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "nodeId": {
+                            "type": "string",
+                          },
+                          "outcome": {
+                            "enum": [
+                              "would-run",
+                              "would-wait",
+                              "yes",
+                              "no",
+                              "event",
+                              "timed-out",
+                              "would-send",
+                              "skipped",
+                              "deferred",
+                              "exited",
+                              "stopped",
+                            ],
+                            "type": "string",
+                          },
+                          "send": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "preview": {
+                                "type": "string",
+                              },
+                              "subject": {
+                                "type": "string",
+                              },
+                              "to": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "to",
+                              "subject",
+                              "preview",
+                            ],
+                            "type": "object",
+                          },
+                          "type": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "nodeId",
+                          "label",
+                          "type",
+                          "at",
+                          "outcome",
+                          "detail",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "sends": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "version": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "draft",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "version",
+                    "contact",
+                    "startedAt",
+                    "endsAt",
+                    "endedBy",
+                    "sends",
+                    "path",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotReadyEncoded",
+                },
+              },
+            },
+            "description": "NotReady",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "automations",
+        ],
+      },
+    },
     "/v1/automations/{id}/enter": {
       "post": {
         "operationId": "automations.enter",

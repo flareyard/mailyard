@@ -80,6 +80,7 @@ describe("GET /openapi.json", () => {
       "/v1/automations",
       "/v1/automations/summary",
       "/v1/automations/{id}",
+      "/v1/automations/{id}/dry-run",
       "/v1/automations/{id}/enter",
       "/v1/automations/{id}/pause",
       "/v1/automations/{id}/publish",
