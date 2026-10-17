@@ -1,7 +1,7 @@
-import { inArray } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
-import { mailboxes } from "../db/schema.ts"
+import { mailboxes, messagesOut } from "../db/schema.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
 import { BlobStore } from "../kit/index.ts"
 import { type Access, type MailboxAccessDenied, type MailboxMissing, requireMailbox } from "../mail/access.ts"
@@ -317,7 +317,28 @@ export const MailHandlers = HttpApiBuilder.group(
               a.related ? "inline" : "attachment",
             )
           }
-          return { ...toMessage(message), body: { text, html }, rawUrl, attachmentUrls }
+          const database = yield* Database
+          const sent = yield* database.query("mail.sentDelivery", (db) =>
+            db
+              .select()
+              .from(messagesOut)
+              .where(and(eq(messagesOut.mailboxId, params.id), eq(messagesOut.mailboxMessageId, message.id)))
+              .get(),
+          )
+          const delivery = sent
+            ? {
+                messageId: sent.id,
+                status: sent.status,
+                tracked: sent.tracked,
+                opens: sent.opens,
+                clicks: sent.clicks,
+                machineOpens: sent.machineOpens,
+                machineClicks: sent.machineClicks,
+                firstOpenedAt: sent.firstOpenedAt,
+                firstClickedAt: sent.firstClickedAt,
+              }
+            : null
+          return { ...toMessage(message), body: { text, html }, rawUrl, attachmentUrls, delivery }
         }).pipe(mailErrors),
       ),
       updateMessage: p(({ params, payload }) =>
@@ -443,6 +464,7 @@ export const MailHandlers = HttpApiBuilder.group(
             draftId: params.draftId,
             sendAt: payload.sendAt,
             undoSeconds: payload.undoSeconds,
+            track: payload.track,
             origin: originOf(request),
           })
         }).pipe(mailErrors),

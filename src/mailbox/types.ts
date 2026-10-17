@@ -170,6 +170,11 @@ export interface DraftInput {
 /** `scheduled` waits for its alarm; `due` has reached it and waits for the sender (HAL-3152). */
 export type DraftStatus = "draft" | "scheduled" | "due"
 
+export interface DraftTracking {
+  readonly opens: boolean
+  readonly clicks: boolean
+}
+
 export interface Draft {
   readonly id: string
   readonly threadId: string | null
@@ -189,6 +194,8 @@ export interface Draft {
   readonly sourceMessageId: string | null
   /** Why the last attempt to send it failed; cleared when the draft is edited. */
   readonly lastError: string | null
+  /** Opens and clicks to track, chosen for this send; null (never tracked) unless the sender asked. */
+  readonly track: DraftTracking | null
   readonly createdAt: number
   readonly updatedAt: number
 }

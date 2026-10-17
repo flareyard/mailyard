@@ -271,12 +271,13 @@ export class MailboxDO extends DurableObject<Env> {
     id: string,
     sendAt: number,
     context?: { readonly mailboxId: string; readonly origin: string | null },
+    track?: { readonly opens: boolean; readonly clicks: boolean } | null,
   ) {
     if (context) {
       this.store.setMeta("mailboxId", context.mailboxId)
       if (context.origin) this.store.setMeta("origin", context.origin)
     }
-    return await this.apply(this.store.scheduleDraft(id, sendAt))
+    return await this.apply(this.store.scheduleDraft(id, sendAt, track ?? null))
   }
 
   async assign(threadIds: ReadonlyArray<string>, assignee: string | null) {

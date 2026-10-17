@@ -1056,6 +1056,25 @@ export const MessageDetailSchema = Schema.Struct({
   /** Signed links that work without a key for an hour: for <img> tags and download buttons. */
   rawUrl: Schema.String,
   attachmentUrls: Schema.Record(Schema.String, Schema.String),
+  /**
+   * For a message this mailbox sent: how its delivery went, and its opens and clicks when the sender
+   * asked for tracking. Null for received mail.
+   */
+  delivery: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.Struct({
+        messageId: Schema.String,
+        status: Schema.String,
+        tracked: Schema.Boolean,
+        opens: Schema.Number,
+        clicks: Schema.Number,
+        machineOpens: Schema.Number,
+        machineClicks: Schema.Number,
+        firstOpenedAt: Schema.NullOr(Schema.Number),
+        firstClickedAt: Schema.NullOr(Schema.Number),
+      }),
+    ),
+  ),
 })
 
 const DraftAttachmentSchema = Schema.Struct({
@@ -1084,6 +1103,8 @@ export const DraftSchema = Schema.Struct({
   replyMode: Schema.NullOr(ReplyModeSchema),
   sourceMessageId: Schema.NullOr(Schema.String),
   lastError: Schema.NullOr(Schema.String),
+  /** Opens and clicks tracked on this send, when the sender asked; null otherwise. */
+  track: Schema.NullOr(Schema.Struct({ opens: Schema.Boolean, clicks: Schema.Boolean })),
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
 })
@@ -1299,6 +1320,13 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
         sendAt: Schema.optionalKey(Schema.Number),
         /** How long the send can be undone, when it goes now: 0 to 30 s, else the account's default. */
         undoSeconds: Schema.optionalKey(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 30 }))),
+        /** Track opens and clicks on this message only. Off unless asked, replies included. */
+        track: Schema.optionalKey(
+          Schema.Struct({
+            opens: Schema.optionalKey(Schema.Boolean),
+            clicks: Schema.optionalKey(Schema.Boolean),
+          }),
+        ),
       }),
       success: Schema.Struct({
         draft: DraftSchema,

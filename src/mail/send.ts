@@ -58,6 +58,8 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
   readonly sendAt?: number | undefined
   /** Overrides the account's undo window for this send. */
   readonly undoSeconds?: number | undefined
+  /** Track opens and clicks on this one message; never on unless asked (HAL-3335). */
+  readonly track?: { readonly opens?: boolean | undefined; readonly clicks?: boolean | undefined } | undefined
   readonly origin: string | null
 }) {
   const env = yield* Bindings
@@ -82,7 +84,12 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
   if (!undoable && at <= now)
     return yield* new SendInvalid({ field: "sendAt", message: "A scheduled send is in the future." })
   const result = yield* callMailbox(input.mailboxId, (stub) =>
-    stub.scheduleDraft(input.draftId, at, { mailboxId: input.mailboxId, origin: input.origin }),
+    stub.scheduleDraft(
+      input.draftId,
+      at,
+      { mailboxId: input.mailboxId, origin: input.origin },
+      input.track ? { opens: input.track.opens === true, clicks: input.track.clicks === true } : null,
+    ),
   )
   return { draft: result.draft, sendAt: at, undoUntil: undoable ? at : null }
 })
@@ -264,6 +271,7 @@ export const dispatchDraft = Effect.fn("mail.dispatchDraft")(function* (job: Mai
     sentCopyId,
     apiKeyId: null,
     message: prepared.success.message,
+    track: draft.track ? { ...draft.track, origin: job.origin } : undefined,
   }).pipe(Effect.result)
   if (sent._tag === "Failure" || sent.success.status === "failed" || sent.success.status === "rejected") {
     const reason =
