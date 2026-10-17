@@ -41,8 +41,21 @@ const judge = (
   subscribed: boolean | null,
   withEvents: number,
   silent: number,
+  /** Newest send with a delivery event (any age), and newest send still silent past 6 hours. */
+  lastWithEventAt: number | null = null,
+  lastSilentAt: number | null = null,
 ): DomainCoverage => {
   const base = { domainId, domain, subscribed, withEvents, silent }
+  // Mail sent after the newest silent message has its events: they flow again (the subscription
+  // was fixed), and the silent ones predate the fix (HAL-3390).
+  const recovered =
+    silent > 0 && lastWithEventAt !== null && lastSilentAt !== null && lastWithEventAt > lastSilentAt
+  if (recovered && subscribed !== false)
+    return {
+      ...base,
+      status: "ok",
+      detail: `Delivery events are arriving for ${domain} again. ${silent} earlier message${silent === 1 ? "" : "s"} never had one, most likely sent before its subscription existed.`,
+    }
   if (subscribed === false)
     return {
       ...base,
@@ -54,6 +67,13 @@ const judge = (
       ...base,
       status: "warn",
       detail: `${silent} message${silent === 1 ? "" : "s"} from ${domain} sent over 6 hours ago ${silent === 1 ? "has" : "have"} had no delivery event. Check that the events queue is subscribed to ${domain}.`,
+    }
+  // Events used to arrive, but nothing sent since the newest silent message has had one: they stopped.
+  if (silent > 0 && lastSilentAt !== null && lastWithEventAt !== null && lastSilentAt > lastWithEventAt)
+    return {
+      ...base,
+      status: "warn",
+      detail: `Delivery events for ${domain} stopped: nothing sent since ${new Date(lastWithEventAt).toISOString().slice(0, 16).replace("T", " ")} UTC has had one. Check that the events queue is still subscribed to ${domain}.`,
     }
   if (subscribed === true)
     return { ...base, status: "ok", detail: `Delivery events for ${domain} are subscribed.` }
@@ -83,12 +103,20 @@ export const eventCoverage = Effect.fn("events.coverage")(function* (only?: stri
   const now = Date.now()
   // The sender's domain is everything after the last @ of `sender`, the bare From address.
   const rows = yield* database.query("events.ledger", (db) =>
-    db.all<{ domain: string; with_events: number; silent: number }>(sql`
+    db.all<{
+      domain: string
+      with_events: number
+      silent: number
+      last_with_event_at: number | null
+      last_silent_at: number | null
+    }>(sql`
       select lower(substr(sender, instr(sender, '@') + 1)) as domain,
-        sum(status in ('delivered', 'deferred', 'bounced', 'complained')) as with_events,
-        sum(status = 'sent') as silent
+        sum(created_at <= ${now - SILENT_AFTER_MS} and status in ('delivered', 'deferred', 'bounced', 'complained')) as with_events,
+        sum(created_at <= ${now - SILENT_AFTER_MS} and status = 'sent') as silent,
+        max(case when status in ('delivered', 'deferred', 'bounced', 'complained') then created_at end) as last_with_event_at,
+        max(case when created_at <= ${now - SILENT_AFTER_MS} and status = 'sent' then created_at end) as last_silent_at
       from messages_out
-      where created_at between ${now - WINDOW_MS} and ${now - SILENT_AFTER_MS}
+      where created_at >= ${now - WINDOW_MS}
       group by domain`),
   )
   const ledger = new Map(rows.map((r) => [r.domain, r]))
@@ -100,6 +128,8 @@ export const eventCoverage = Effect.fn("events.coverage")(function* (only?: stri
       Option.match(subscribed, { onNone: () => null, onSome: (set) => set.has(name) }),
       Number(ledger.get(name)?.with_events ?? 0),
       Number(ledger.get(name)?.silent ?? 0),
+      ledger.get(name)?.last_with_event_at ?? null,
+      ledger.get(name)?.last_silent_at ?? null,
     ),
   )
 })

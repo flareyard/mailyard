@@ -96,6 +96,31 @@ describe("delivery-events coverage from the ledger", () => {
     expect(checks.checks.find((c) => c.id === "delivery_events")?.status).toBe("warn")
   })
 
+  it("trusts a domain again once mail sent after the silent ones has its events (HAL-3390)", async () => {
+    // Mail from before the subscription existed stays silent; what's sent after it is delivered.
+    const name = await domainWith(["sent", "sent", "sent"], 20)
+    expect(await coverageOf(name)).toMatchObject({ status: "warn", silent: 3 })
+    await env.DB.prepare(
+      "insert into messages_out (id, stream, recipient, sender, subject, status, created_at) values (?, 'transactional', 'a@example.net', ?, 's', 'delivered', ?)",
+    )
+      .bind(`msg_${uid()}${uid()}`, `news@${name}`, Date.now() - HOUR)
+      .run()
+    const after = await coverageOf(name)
+    expect(after).toMatchObject({ status: "ok", silent: 3, withEvents: 0 })
+    expect(after?.detail).toContain("again")
+
+    // A newer silent message than the last one with events still warns.
+    const other = await domainWith(["delivered"], 30)
+    await env.DB.prepare(
+      "insert into messages_out (id, stream, recipient, sender, subject, status, created_at) values (?, 'transactional', 'a@example.net', ?, 's', 'sent', ?)",
+    )
+      .bind(`msg_${uid()}${uid()}`, `news@${other}`, Date.now() - 8 * HOUR)
+      .run()
+    const stopped = await coverageOf(other)
+    expect(stopped).toMatchObject({ status: "warn", silent: 1, withEvents: 1 })
+    expect(stopped?.detail).toContain("stopped")
+  })
+
   it("the hourly cron opens a critical alert, keeps one per domain, and closes it once events arrive", async () => {
     const silent = await domainWith(["sent"])
     await runCron()
