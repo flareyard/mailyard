@@ -1,5 +1,5 @@
 import { and, eq, lt } from "drizzle-orm"
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import { idempotencyKeys } from "../db/schema.ts"
 import { Database } from "../services/Database.ts"
 import { sha256 } from "./crypto.ts"

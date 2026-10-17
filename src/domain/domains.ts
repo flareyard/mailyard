@@ -1,5 +1,6 @@
 import { and, asc, count, eq } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { domains, mailboxes } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"

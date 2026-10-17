@@ -1,5 +1,8 @@
 import { eq, inArray, sql } from "drizzle-orm"
-import { Effect, Option, Schedule, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
+import * as Schedule from "effect/Schedule"
+import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { contacts, messagesOut, suppressions } from "../db/schema.ts"
 import {

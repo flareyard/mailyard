@@ -1,4 +1,7 @@
-import { Effect, type Layer, Option, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import type * as Layer from "effect/Layer"
+import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import type { Env } from "../Bindings.ts"
 import { applyEvent, EmailSendingEvent } from "../domain/deliveryEvents.ts"
 import { retryDeferred } from "../domain/outbox.ts"

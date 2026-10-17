@@ -1,5 +1,6 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers"
-import type { Effect, Layer } from "effect"
+import type * as Effect from "effect/Effect"
+import type * as Layer from "effect/Layer"
 import type { Env } from "../Bindings.ts"
 import { exportChunk, failExport, finishExport, planExport } from "../exports/exporter.ts"
 import { failImport, finishImport, planImport, runBatch } from "../imports/importer.ts"

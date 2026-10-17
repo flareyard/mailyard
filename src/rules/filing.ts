@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm"
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import { mailboxes, mailboxRules, mailboxSenders } from "../db/schema.ts"
 import type { ParsedMessage } from "../inbound/parse.ts"
 import type { FilingOptions } from "../mailbox/types.ts"

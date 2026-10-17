@@ -1,4 +1,5 @@
-import { Effect, Option } from "effect"
+import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import type { Env } from "../Bindings.ts"
 import { sha256Hex } from "../inbound/parse.ts"
 import { BlobStore, Ids } from "../kit/index.ts"

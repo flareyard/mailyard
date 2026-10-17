@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import * as Schema from "effect/Schema"
 
 /** A link in a block: http(s) URLs only, so a template can't carry `javascript:` into a message. */
 const Url = Schema.String.check(Schema.isPattern(/^(https?:\/\/|\{\{)/))

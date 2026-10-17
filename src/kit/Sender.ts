@@ -1,4 +1,8 @@
-import { Context, Effect, Layer, Ref, Schema } from "effect"
+import * as Context from "effect/Context"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
+import * as Ref from "effect/Ref"
+import * as Schema from "effect/Schema"
 import { Ids } from "./Ids.ts"
 
 /** Cloudflare Email Service accepts at most 50 recipients across to, cc and bcc (limits page, 2026-09-25). */

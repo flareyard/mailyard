@@ -1,4 +1,5 @@
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { type MailboxErrorCode, mailboxErrorCode } from "../mailbox/types.ts"
 import type { MailboxDO } from "../objects/MailboxDO.ts"

@@ -1,6 +1,7 @@
 import { and, eq, gte, sql } from "drizzle-orm"
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core"
-import { Effect, Option } from "effect"
+import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import { Bindings } from "../Bindings.ts"
 import { dailyStats, domains, webhookDeliveries } from "../db/schema.ts"
 import { CloudflareEmail } from "../services/CloudflareEmail.ts"

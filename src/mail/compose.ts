@@ -1,4 +1,6 @@
-import { Effect, Option, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
+import * as Schema from "effect/Schema"
 import { BlobStore } from "../kit/index.ts"
 import { subjectKey } from "../mailbox/threading.ts"
 import type { DraftAttachment, DraftInput, Party, ReplyMode, StoredMessage } from "../mailbox/types.ts"

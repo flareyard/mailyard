@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import { Dns, type DnsResult, type RecordType } from "../services/Dns.ts"
 
 /**

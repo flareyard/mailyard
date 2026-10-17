@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers"
-import { Effect, Layer } from "effect"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import { beforeAll, describe, expect, it } from "vitest"
 import { SecretBox } from "../../src/domain/webhooks.ts"
 import { finishImport, ImapConnector, planImport, runBatch } from "../../src/imports/importer.ts"

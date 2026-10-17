@@ -1,4 +1,4 @@
-import { Schedule } from "effect"
+import * as Schedule from "effect/Schedule"
 
 /**
  * The default policy for calls to other people's systems: exponential backoff from 250 ms with each

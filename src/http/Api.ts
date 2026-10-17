@@ -1,8 +1,8 @@
-import { Schema } from "effect"
 import * as HttpApi from "effect/http-api/HttpApi"
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
 import * as OpenApi from "effect/http-api/OpenApi"
+import * as Schema from "effect/Schema"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 

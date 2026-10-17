@@ -1,4 +1,4 @@
-import { Layer } from "effect"
+import * as Layer from "effect/Layer"
 import { Bindings, type Env } from "./Bindings.ts"
 import { SecretBox, WebhookQueue } from "./domain/webhooks.ts"
 import { ImapConnector } from "./imports/importer.ts"

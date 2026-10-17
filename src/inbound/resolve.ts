@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { domains, mailboxes } from "../db/schema.ts"
 import { Database } from "../services/Database.ts"
 import { parseRecipient } from "./address.ts"

@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
 import { authenticate, type Caller } from "../domain/apiKeys.ts"
 import { runtimeFor } from "./inbound.ts"

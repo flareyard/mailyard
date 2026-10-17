@@ -1,5 +1,5 @@
 import { inArray } from "drizzle-orm"
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { mailboxes } from "../db/schema.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"

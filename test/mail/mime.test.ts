@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import * as Effect from "effect/Effect"
 import { describe, expect, it } from "vitest"
 import { parseMessage } from "../../src/inbound/parse.ts"
 import { buildMime, foldHeader, quotedPrintable } from "../../src/mail/mime.ts"
