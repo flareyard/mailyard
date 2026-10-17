@@ -1622,6 +1622,12 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
         status: Schema.optionalKey(ContactStatusSchema),
         topicId: Schema.optionalKey(Schema.String),
         engagement: Schema.optionalKey(EngagementSchema),
+        /** A saved segment's rules. */
+        segmentId: Schema.optionalKey(Schema.String),
+        /** `key:op:value`, as a segment field rule; repeat it to AND several. */
+        field: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+        /** `[!]name[:days]`: did (or with `!` didn't) the event, within the last `days`. */
+        event: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
         sort: Schema.optionalKey(
           Schema.Literals([
             "createdAt",
@@ -1642,7 +1648,7 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
         count: Schema.Number,
         nextCursor: Schema.NullOr(Schema.String),
       }),
-      error: [Forbidden, InvalidRequest],
+      error: [Forbidden, InvalidRequest, NotFound],
     }),
     HttpApiEndpoint.post("create", "/v1/contacts", {
       payload: Schema.Struct({
@@ -2230,6 +2236,59 @@ export class ImportsApi extends HttpApiGroup.make("imports")
   )
   .middleware(ApiKeyAuth) {}
 
+const ContactExportSchema = Schema.Struct({
+  id: Schema.String,
+  kind: Schema.Literal("contacts"),
+  status: Schema.Literals(["running", "completed", "failed"]),
+  rows: Schema.Number,
+  fields: Schema.Array(Schema.String),
+  filename: Schema.String,
+  /** A signed link to the CSV, good for a day; null until it's written. */
+  url: Schema.NullOr(Schema.String),
+  error: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  finishedAt: Schema.NullOr(Schema.Number),
+})
+
+/** CSV exports of the contacts list, with the list's filters. */
+export class ExportsApi extends HttpApiGroup.make("exports")
+  .add(
+    HttpApiEndpoint.post("create", "/v1/exports", {
+      payload: Schema.Struct({
+        kind: Schema.Literal("contacts"),
+        filter: Schema.optionalKey(
+          Schema.Struct({
+            q: Schema.optionalKey(Schema.String),
+            status: Schema.optionalKey(ContactStatusSchema),
+            topicId: Schema.optionalKey(Schema.String),
+            engagement: Schema.optionalKey(EngagementSchema),
+            segmentId: Schema.optionalKey(Schema.String),
+            field: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+            event: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+          }),
+        ),
+        /** Custom fields to add as columns, in this order. */
+        fields: Schema.optionalKey(Schema.Array(Schema.String)),
+      }),
+      success: ContactExportSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("list", "/v1/exports", {
+      query: { cursor: Schema.optionalKey(Schema.String), limit: Limit },
+      success: Schema.Struct({
+        exports: Schema.Array(ContactExportSchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("get", "/v1/exports/:id", {
+      params: { id: Schema.String },
+      success: ContactExportSchema,
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class CampaignsApi extends HttpApiGroup.make("campaigns")
   .add(
     HttpApiEndpoint.get("list", "/v1/campaigns", {
@@ -2426,4 +2485,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(AlertsApi)
   .add(CampaignsApi)
   .add(ImportsApi)
+  .add(ExportsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API" })) {}

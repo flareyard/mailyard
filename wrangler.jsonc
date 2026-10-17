@@ -44,6 +44,11 @@
       "name": "mailyard-contact-import",
       "binding": "CONTACT_IMPORT_WORKFLOW",
       "class_name": "ContactImportWorkflow"
+    },
+    {
+      "name": "mailyard-contact-export",
+      "binding": "CONTACT_EXPORT_WORKFLOW",
+      "class_name": "ContactExportWorkflow"
     }
   ],
   "queues": {

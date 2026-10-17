@@ -797,3 +797,37 @@ export const contactImports = sqliteTable(
   },
   (t) => [index("contact_imports_created").on(t.createdAt)],
 )
+
+/**
+ * A CSV export of contacts (`POST /v1/exports`). Small ones are written at once; past 10,000 rows
+ * ContactExportWorkflow pages through by contact id and uploads to R2 in multipart parts.
+ */
+export const exports = sqliteTable(
+  "exports",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: ["contacts"] }).notNull(),
+    status: text("status", { enum: ["running", "completed", "failed"] })
+      .notNull()
+      .default("running"),
+    /** The list's filters: q, status, topicId, engagement, segmentId, field, event. */
+    filter: text("filter", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    /** Custom fields to add as columns, in order. */
+    fields: text("fields", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    key: text("key").notNull(),
+    filename: text("filename").notNull(),
+    rows: integer("rows").notNull().default(0),
+    /** Multipart progress for large exports: the upload id, the parts so far, the last contact id written. */
+    uploadId: text("upload_id"),
+    parts: text("parts", { mode: "json" })
+      .$type<ReadonlyArray<{ readonly partNumber: number; readonly etag: string }>>()
+      .notNull()
+      .default(sql`'[]'`),
+    after: text("after"),
+    error: text("error"),
+    createdBy: text("created_by").notNull(),
+    createdAt: createdAt(),
+    finishedAt: integer("finished_at"),
+  },
+  (t) => [index("exports_created").on(t.createdAt)],
+)

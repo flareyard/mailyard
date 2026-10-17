@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import { filterCondition } from "../domain/contactFilters.ts"
 import {
   type ContactConflict,
   type ContactInvalid,
@@ -127,7 +128,13 @@ export const ContactsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
-      list: p(({ query }) => requireScope("read").pipe(Effect.andThen(listContacts(query)), audienceErrors)),
+      list: p(({ query }) =>
+        requireScope("read").pipe(
+          Effect.andThen(filterCondition(query)),
+          Effect.flatMap((extra) => listContacts(query, extra)),
+          audienceErrors,
+        ),
+      ),
       create: p(({ payload }) =>
         requireScope("admin").pipe(
           Effect.flatMap((caller) => createContact(payload, caller.keyId)),
