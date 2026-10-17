@@ -71,6 +71,8 @@ export interface FilingOptions {
   readonly seen?: boolean | undefined
   readonly starred?: boolean | undefined
   readonly answered?: boolean | undefined
+  /** Assign the conversation to this key, unless someone already has it (a rule's assign action). */
+  readonly assignee?: string | null | undefined
 }
 
 export const BODY_TEXT_LIMIT = 256 * 1024

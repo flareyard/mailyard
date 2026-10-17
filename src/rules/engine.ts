@@ -46,6 +46,8 @@ export const Action = Schema.Union([
     body: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(20_000)),
   }),
   Schema.Struct({ type: Schema.Literal("webhook"), endpointId: Schema.String }),
+  /** Hands the conversation to an API key (the shared-inbox assignee); people come with HAL-3361. */
+  Schema.Struct({ type: Schema.Literal("assign"), assignee: Schema.String }),
 ])
 export type Action = typeof Action.Type
 
@@ -88,6 +90,10 @@ export interface RuleOutcome {
     readonly body: string
   }>
   readonly webhooks: ReadonlyArray<{ readonly ruleId: string; readonly endpointId: string }>
+  /** The last matching assign action's assignee, or null. */
+  readonly assignee: string | null
+  /** The rule that stopped later ones from running, or null when every rule was considered. */
+  readonly stoppedAt: string | null
 }
 
 const party = (p: { readonly name: string | null; readonly address: string }) =>
@@ -162,6 +168,8 @@ export const evaluate = (rules: ReadonlyArray<Rule>, m: RuleInput): RuleOutcome 
   const forwards: Array<RuleOutcome["forwards"][number]> = []
   const autoReplies: Array<RuleOutcome["autoReplies"][number]> = []
   const webhooks: Array<RuleOutcome["webhooks"][number]> = []
+  let assignee: string | null = null
+  let stoppedAt: string | null = null
   for (const rule of rules) {
     if (!ruleMatches(rule, m)) continue
     matched.push(rule.id)
@@ -193,9 +201,15 @@ export const evaluate = (rules: ReadonlyArray<Rule>, m: RuleInput): RuleOutcome 
         case "webhook":
           webhooks.push({ ruleId: rule.id, endpointId: action.endpointId })
           break
+        case "assign":
+          assignee = action.assignee
+          break
       }
     }
-    if (rule.stop) break
+    if (rule.stop) {
+      stoppedAt = rule.id
+      break
+    }
   }
   return {
     matched,
@@ -207,5 +221,7 @@ export const evaluate = (rules: ReadonlyArray<Rule>, m: RuleInput): RuleOutcome 
     forwards,
     autoReplies,
     webhooks,
+    assignee,
+    stoppedAt,
   }
 }

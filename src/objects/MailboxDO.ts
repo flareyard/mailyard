@@ -10,6 +10,7 @@ import type {
   MessagePatch,
   ThreadFilter,
 } from "../mailbox/types.ts"
+import type { Rule } from "../rules/engine.ts"
 
 export type { InboundDelivery } from "../mailbox/types.ts"
 export { BODY_TEXT_LIMIT } from "../mailbox/types.ts"
@@ -286,6 +287,13 @@ export class MailboxDO extends DurableObject<Env> {
       if (context.origin) this.store.setMeta("origin", context.origin)
     }
     return await this.apply(this.store.scheduleDraft(id, sendAt, track ?? null))
+  }
+
+  async applyRule(
+    rule: Rule,
+    options: { readonly folder?: Folder | null; readonly cursor?: string | null; readonly limit?: number },
+  ) {
+    return await this.apply(this.store.applyRule(rule, options))
   }
 
   async assign(threadIds: ReadonlyArray<string>, assignee: string | null) {

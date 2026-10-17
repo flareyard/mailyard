@@ -478,3 +478,117 @@ describe("/v1/mailboxes/{id}/rules", () => {
     await bad({ name: " ", actions: [{ type: "archive" }] })
   })
 })
+
+describe("rule counts, assign and apply (HAL-3368)", () => {
+  it("counts matches as mail arrives, assigns the conversation, and types the test outcome", async () => {
+    const { sam, base } = await setup()
+    const created = await call(`${base}/rules`, {
+      method: "POST",
+      key: owner.key,
+      json: {
+        name: "Invoices to the member",
+        conditions: [{ field: "subject", op: "contains", value: "invoice" }],
+        actions: [{ type: "assign", assignee: member.id }],
+        stop: true,
+      },
+    })
+    expect(created.status).toBe(200)
+    const rule = await json<{ id: string; matchCount: number; lastMatchedAt: number | null }>(created)
+    expect(rule).toMatchObject({ matchCount: 0, lastMatchedAt: null })
+    const id = await deliver(
+      simpleMessage({ to: sam.address, subject: "Invoice 42", headers: auth("pass", "pass", "pass") }),
+      sam.address,
+    )
+    await deliver(
+      simpleMessage({ to: sam.address, subject: "Hello", headers: auth("pass", "pass", "pass") }),
+      sam.address,
+    )
+    const message = (await stored(sam.id, id)) as { threadId: string }
+    const thread = await json<{ thread: { assignee: string | null } }>(
+      await call(`${base}/threads/${message.threadId}`, { key: owner.key }),
+    )
+    expect(thread.thread.assignee).toBe(member.id)
+    const listed = await json<{
+      rules: Array<{ id: string; matchCount: number; lastMatchedAt: number | null }>
+    }>(await call(`${base}/rules`, { key: owner.key }))
+    expect(listed.rules.find((r) => r.id === rule.id)).toMatchObject({ matchCount: 1 })
+    expect(listed.rules.find((r) => r.id === rule.id)?.lastMatchedAt).not.toBeNull()
+
+    const tested = await json<{
+      outcome: { assignee: string | null; stoppedAt: string | null; folder: string | null }
+      filedWith: { folder: string; rulesMatched: Array<string> }
+    }>(await call(`${base}/rules/test`, { method: "POST", key: owner.key, json: { messageId: id } }))
+    expect(tested.outcome).toMatchObject({ assignee: member.id, stoppedAt: rule.id, folder: null })
+    expect(tested.filedWith).toMatchObject({ folder: "inbox", rulesMatched: [rule.id] })
+
+    // Assigning to a key that doesn't exist is refused.
+    const bad = await call(`${base}/rules`, {
+      method: "POST",
+      key: owner.key,
+      json: { name: "x", conditions: [], actions: [{ type: "assign", assignee: "key_nope" }] },
+    })
+    expect(bad.status).toBe(400)
+  })
+
+  it("applies a rule to mail already there, in pages, and never sends", async () => {
+    const { sam, base } = await setup()
+    const ids: Array<string> = []
+    for (const subject of ["Receipt A", "Receipt B", "Receipt C", "Party"])
+      ids.push(
+        await deliver(
+          simpleMessage({ to: sam.address, subject, headers: auth("pass", "pass", "pass") }),
+          sam.address,
+        ),
+      )
+    const label = await json<{ id: string }>(
+      await call(`${base}/labels`, { method: "POST", key: owner.key, json: { name: "Receipts" } }),
+    )
+    const rule = await json<{ id: string }>(
+      await call(`${base}/rules`, {
+        method: "POST",
+        key: owner.key,
+        json: {
+          name: "Receipts",
+          conditions: [{ field: "subject", op: "startsWith", value: "receipt" }],
+          actions: [
+            { type: "label", labelId: label.id },
+            { type: "archive" },
+            { type: "forward", to: ["else@example.net"] },
+          ],
+        },
+      }),
+    )
+    const apply = (cursor?: string) =>
+      call(`${base}/rules/${rule.id}/apply`, {
+        method: "POST",
+        key: owner.key,
+        json: { folder: "inbox", limit: 2, ...(cursor ? { cursor } : {}) },
+      }).then((r) =>
+        json<{
+          examined: number
+          matched: number
+          changed: number
+          skippedActions: Array<string>
+          nextCursor: string | null
+        }>(r),
+      )
+    const first = await apply()
+    expect(first).toMatchObject({ examined: 2, skippedActions: ["forward"] })
+    expect(first.nextCursor).not.toBeNull()
+    const second = await apply(first.nextCursor ?? undefined)
+    expect(first.matched + second.matched).toBe(3)
+    for (const id of ids.slice(0, 3))
+      expect(await stored(sam.id, id)).toMatchObject({ folder: "archive", labelIds: [label.id] })
+    expect(await stored(sam.id, ids[3] as string)).toMatchObject({ folder: "inbox" })
+    // Nothing was forwarded, and apply runs don't count as matches.
+    expect((await outgoing(sam.id)).length).toBe(0)
+    const listed = await json<{ rules: Array<{ id: string; matchCount: number }> }>(
+      await call(`${base}/rules`, { key: owner.key }),
+    )
+    expect(listed.rules.find((r) => r.id === rule.id)?.matchCount).toBe(0)
+    // Members can't apply rules.
+    expect(
+      (await call(`${base}/rules/${rule.id}/apply`, { method: "POST", key: member.key, json: {} })).status,
+    ).toBe(403)
+  })
+})

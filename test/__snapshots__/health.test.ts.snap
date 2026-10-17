@@ -45105,6 +45105,25 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   ],
                                   "type": "object",
                                 },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "assignee": {
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "assign",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "assignee",
+                                  ],
+                                  "type": "object",
+                                },
                               ],
                             },
                             "type": "array",
@@ -45214,12 +45233,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "id": {
                             "type": "string",
                           },
+                          "lastMatchedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "match": {
                             "enum": [
                               "all",
                               "any",
                             ],
                             "type": "string",
+                          },
+                          "matchCount": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "name": {
                             "type": "string",
@@ -45267,6 +45323,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "actions",
                           "stop",
                           "position",
+                          "matchCount",
+                          "lastMatchedAt",
                           "createdAt",
                           "updatedAt",
                         ],
@@ -45481,6 +45539,25 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "required": [
                             "type",
                             "endpointId",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "assignee": {
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "assign",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "assignee",
                           ],
                           "type": "object",
                         },
@@ -45719,6 +45796,25 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "object",
                           },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "assignee": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "assign",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "assignee",
+                            ],
+                            "type": "object",
+                          },
                         ],
                       },
                       "type": "array",
@@ -45828,12 +45924,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "id": {
                       "type": "string",
                     },
+                    "lastMatchedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "match": {
                       "enum": [
                         "all",
                         "any",
                       ],
                       "type": "string",
+                    },
+                    "matchCount": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
                     },
                     "name": {
                       "type": "string",
@@ -45881,6 +46014,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "actions",
                     "stop",
                     "position",
+                    "matchCount",
+                    "lastMatchedAt",
                     "createdAt",
                     "updatedAt",
                   ],
@@ -46119,6 +46254,25 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   ],
                                   "type": "object",
                                 },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "assignee": {
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "assign",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "assignee",
+                                  ],
+                                  "type": "object",
+                                },
                               ],
                             },
                             "type": "array",
@@ -46228,12 +46382,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "id": {
                             "type": "string",
                           },
+                          "lastMatchedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "match": {
                             "enum": [
                               "all",
                               "any",
                             ],
                             "type": "string",
+                          },
+                          "matchCount": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "name": {
                             "type": "string",
@@ -46281,6 +46472,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "actions",
                           "stop",
                           "position",
+                          "matchCount",
+                          "lastMatchedAt",
                           "createdAt",
                           "updatedAt",
                         ],
@@ -46464,7 +46657,81 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "object",
                     },
-                    "filedWith": {},
+                    "filedWith": {
+                      "additionalProperties": false,
+                      "description": "How the message was actually filed when it arrived.",
+                      "properties": {
+                        "folder": {
+                          "type": "string",
+                        },
+                        "rulesMatched": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "spamReasons": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "points": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "rule": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "rule",
+                              "points",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "spamScore": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "folder",
+                        "spamScore",
+                        "spamReasons",
+                        "rulesMatched",
+                      ],
+                      "type": "object",
+                    },
                     "matched": {
                       "items": {
                         "additionalProperties": false,
@@ -46484,7 +46751,146 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
-                    "outcome": {},
+                    "outcome": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "assignee": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "autoReplies": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "body": {
+                                "type": "string",
+                              },
+                              "ruleId": {
+                                "type": "string",
+                              },
+                              "subject": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "ruleId",
+                              "subject",
+                              "body",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "folder": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "archive",
+                                "trash",
+                                "spam",
+                              ],
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "forwards": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "ruleId": {
+                                "type": "string",
+                              },
+                              "to": {
+                                "items": {
+                                  "type": "string",
+                                },
+                                "type": "array",
+                              },
+                            },
+                            "required": [
+                              "ruleId",
+                              "to",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "labelIds": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "markRead": {
+                          "type": "boolean",
+                        },
+                        "matched": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "skipSpamCheck": {
+                          "type": "boolean",
+                        },
+                        "star": {
+                          "type": "boolean",
+                        },
+                        "stoppedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "The rule that stopped the ones after it.",
+                        },
+                        "webhooks": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "endpointId": {
+                                "type": "string",
+                              },
+                              "ruleId": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "ruleId",
+                              "endpointId",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "matched",
+                        "folder",
+                        "labelIds",
+                        "markRead",
+                        "star",
+                        "skipSpamCheck",
+                        "forwards",
+                        "autoReplies",
+                        "webhooks",
+                        "assignee",
+                        "stoppedAt",
+                      ],
+                      "type": "object",
+                    },
                   },
                   "required": [
                     "matched",
@@ -46818,6 +47224,25 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           ],
                           "type": "object",
                         },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "assignee": {
+                              "type": "string",
+                            },
+                            "type": {
+                              "enum": [
+                                "assign",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "type",
+                            "assignee",
+                          ],
+                          "type": "object",
+                        },
                       ],
                     },
                     "type": "array",
@@ -47048,6 +47473,25 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "object",
                           },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "assignee": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "assign",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "assignee",
+                            ],
+                            "type": "object",
+                          },
                         ],
                       },
                       "type": "array",
@@ -47157,12 +47601,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "id": {
                       "type": "string",
                     },
+                    "lastMatchedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "match": {
                       "enum": [
                         "all",
                         "any",
                       ],
                       "type": "string",
+                    },
+                    "matchCount": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
                     },
                     "name": {
                       "type": "string",
@@ -47210,8 +47691,229 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "actions",
                     "stop",
                     "position",
+                    "matchCount",
+                    "lastMatchedAt",
                     "createdAt",
                     "updatedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "rules",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/rules/{ruleId}/apply": {
+      "post": {
+        "operationId": "rules.apply",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "ruleId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "cursor": {
+                    "type": "string",
+                  },
+                  "folder": {
+                    "description": "Only mail in this folder; by default everything but trash, spam and sent.",
+                    "enum": [
+                      "inbox",
+                      "archive",
+                      "sent",
+                      "trash",
+                      "spam",
+                      "snoozed",
+                    ],
+                    "type": "string",
+                  },
+                  "limit": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                      },
+                      {
+                        "enum": [
+                          "Infinity",
+                          "-Infinity",
+                          "NaN",
+                        ],
+                        "type": "string",
+                      },
+                    ],
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "changed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "examined": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "matched": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Call again with it to go on to older mail.",
+                    },
+                    "skippedActions": {
+                      "description": "Actions that only run as mail arrives (forward, autoReply, webhook): applying a rule never sends.",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "examined",
+                    "matched",
+                    "changed",
+                    "skippedActions",
+                    "nextCursor",
                   ],
                   "type": "object",
                 },

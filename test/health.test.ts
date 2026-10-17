@@ -155,6 +155,7 @@ describe("GET /openapi.json", () => {
       "/v1/mailboxes/{id}/rules/order",
       "/v1/mailboxes/{id}/rules/test",
       "/v1/mailboxes/{id}/rules/{ruleId}",
+      "/v1/mailboxes/{id}/rules/{ruleId}/apply",
       "/v1/mailboxes/{id}/search",
       "/v1/mailboxes/{id}/senders",
       "/v1/mailboxes/{id}/senders/{value}",

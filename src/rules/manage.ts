@@ -1,11 +1,11 @@
 import { and, asc, eq, inArray, max } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-import { mailboxes, mailboxRules, mailboxSenders, webhookEndpoints } from "../db/schema.ts"
+import { apiKeys, mailboxes, mailboxRules, mailboxSenders, webhookEndpoints } from "../db/schema.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { Ids } from "../kit/index.ts"
 import { callMailbox } from "../mail/rpc.ts"
-import type { StoredMessage } from "../mailbox/types.ts"
+import type { Folder, StoredMessage } from "../mailbox/types.ts"
 import { Database } from "../services/Database.ts"
 import { type Action, type Condition, evaluate, type Rule } from "./engine.ts"
 import { authScore } from "./spam.ts"
@@ -31,6 +31,8 @@ const describe = (r: RuleRow) => ({
   actions: r.actions,
   stop: r.stop,
   position: r.position,
+  matchCount: r.matchCount,
+  lastMatchedAt: r.lastMatchedAt,
   createdAt: r.createdAt,
   updatedAt: r.updatedAt,
 })
@@ -69,6 +71,22 @@ const checkActions = Effect.fn("rules.checkActions")(function* (
       return yield* new RuleInvalid({
         field: "actions",
         message: `No webhook endpoint ${missing.join(", ")}.`,
+      })
+  }
+  const assignees = actions.flatMap((a) => (a.type === "assign" ? [a.assignee] : []))
+  for (const assignee of assignees) {
+    if (assignee === "root") continue
+    const key = yield* database.query("rules.assignee", (db) =>
+      db
+        .select({ id: apiKeys.id, revokedAt: apiKeys.revokedAt })
+        .from(apiKeys)
+        .where(eq(apiKeys.id, assignee))
+        .get(),
+    )
+    if (!key || key.revokedAt !== null)
+      return yield* new RuleInvalid({
+        field: "actions",
+        message: `No active API key ${assignee} to assign to.`,
       })
   }
   const mailbox = yield* database.query("rules.mailboxAddress", (db) =>
@@ -262,6 +280,35 @@ export const reorderRules = Effect.fn("rules.reorder")(function* (
   return yield* listRules(mailboxId)
 })
 
+/** Runs one rule over mail already in the mailbox, a page at a time; never sends anything. */
+export const applyRule = Effect.fn("rules.apply")(function* (
+  mailboxId: string,
+  ruleId: string,
+  options: {
+    readonly folder?: Folder | undefined
+    readonly cursor?: string | undefined
+    readonly limit?: number | undefined
+  },
+  actor: string,
+) {
+  const row = yield* findRule(mailboxId, ruleId)
+  const rule: Rule = { ...describe(row), enabled: true }
+  const result = yield* callMailbox(mailboxId, (s) =>
+    s.applyRule(rule, {
+      folder: options.folder ?? null,
+      cursor: options.cursor ?? null,
+      limit: options.limit ?? 200,
+    }),
+  )
+  yield* recordAudit({
+    actor,
+    action: "rule.applied",
+    target: ruleId,
+    after: { mailboxId, examined: result.examined, matched: result.matched, changed: result.changed },
+  })
+  return result
+})
+
 /** Which rules would match a message already in the mailbox, and what they'd do: "why did this happen?". */
 export const testRules = Effect.fn("rules.test")(function* (
   mailboxId: string,
@@ -286,6 +333,7 @@ export const testRules = Effect.fn("rules.test")(function* (
     outcome,
     authScore: authScore(message.auth, { fromDomain }),
     filedWith: {
+      folder: message.folder,
       spamScore: message.spamScore,
       spamReasons: message.spamReasons,
       rulesMatched: message.rulesMatched,

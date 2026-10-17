@@ -145,7 +145,13 @@ export const planFiling = Effect.fn("rules.planFiling")(function* (input: {
       : []
 
   return {
-    filing: { folder, labelIds: outcome.labelIds, seen: outcome.markRead, starred: outcome.star },
+    filing: {
+      folder,
+      labelIds: outcome.labelIds,
+      seen: outcome.markRead,
+      starred: outcome.star,
+      assignee: isSpam ? null : outcome.assignee,
+    },
     spam: { score, reasons, isSpam },
     rulesMatched: outcome.matched,
     effects: isSpam
