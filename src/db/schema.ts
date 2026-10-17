@@ -126,6 +126,18 @@ export const subscriptions = sqliteTable(
   ],
 )
 
+/** Clicks per link per campaign, people and machines apart, for the report's link table. */
+export const campaignLinks = sqliteTable(
+  "campaign_links",
+  {
+    campaignId: text("campaign_id").notNull(),
+    url: text("url").notNull(),
+    clicks: integer("clicks").notNull().default(0),
+    machineClicks: integer("machine_clicks").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.campaignId, t.url] })],
+)
+
 /** Every change to a contact's subscription to a topic, for the timeline and for consent records. */
 export const subscriptionChanges = sqliteTable(
   "subscription_changes",
@@ -542,6 +554,8 @@ export const inboundMessages = sqliteTable(
     envelopeFrom: text("envelope_from").notNull(),
     envelopeTo: text("envelope_to").notNull(),
     messageId: text("message_id"),
+    /** The Message-ID it answers, so a campaign report can count the replies its mail drew. */
+    inReplyTo: text("in_reply_to"),
     subject: text("subject"),
     fromAddress: text("from_address"),
     /**

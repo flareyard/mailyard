@@ -4742,6 +4742,284 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/campaigns/{id}/recipients": {
+      "get": {
+        "operationId": "campaigns.recipients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "delivered",
+                "bounced",
+                "complained",
+                "failed",
+                "pending",
+                "opened",
+                "clicked",
+                "unsubscribed",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "recipients": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "bounceType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "clickedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "clicks": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "contactId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "machineOpens": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "messageId": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "openedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "opens": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "provider": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "sentAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "status": {
+                            "type": "string",
+                          },
+                          "unsubscribed": {
+                            "type": "boolean",
+                          },
+                          "variant": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "messageId",
+                          "contactId",
+                          "email",
+                          "name",
+                          "status",
+                          "bounceType",
+                          "provider",
+                          "variant",
+                          "openedAt",
+                          "clickedAt",
+                          "opens",
+                          "clicks",
+                          "machineOpens",
+                          "unsubscribed",
+                          "sentAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "recipients",
+                    "nextCursor",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "campaigns",
+        ],
+      },
+    },
     "/v1/campaigns/{id}/render": {
       "post": {
         "operationId": "campaigns.render",
@@ -4826,6 +5104,945 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "headers",
                     "size",
                     "footerAdded",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "campaigns",
+        ],
+      },
+    },
+    "/v1/campaigns/{id}/report": {
+      "get": {
+        "operationId": "campaigns.report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ab": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "metric": {
+                              "enum": [
+                                "clicks",
+                                "opens",
+                              ],
+                              "type": "string",
+                            },
+                            "variants": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "clicked": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer",
+                                  },
+                                  "opened": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer",
+                                  },
+                                  "sent": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer",
+                                  },
+                                  "subject": {
+                                    "type": "string",
+                                  },
+                                  "variant": {
+                                    "enum": [
+                                      "a",
+                                      "b",
+                                    ],
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "variant",
+                                  "subject",
+                                  "sent",
+                                  "opened",
+                                  "clicked",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
+                            "winner": {
+                              "anyOf": [
+                                {
+                                  "enum": [
+                                    "a",
+                                    "b",
+                                  ],
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "metric",
+                            "winner",
+                            "variants",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "activity": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "clicks": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "hour": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "opens": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                        },
+                        "required": [
+                          "hour",
+                          "opens",
+                          "clicks",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "audience": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "bounced": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "hard": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer",
+                        },
+                        "soft": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer",
+                        },
+                      },
+                      "required": [
+                        "hard",
+                        "soft",
+                      ],
+                      "type": "object",
+                    },
+                    "campaignId": {
+                      "type": "string",
+                    },
+                    "clicked": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "complained": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "delivered": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "failed": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "links": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "clicks": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "machineClicks": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "url": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "url",
+                          "clicks",
+                          "machineClicks",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "machineOnlyOpens": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "machineOpenShare": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "opened": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "pending": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "providers": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "bounced": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "complained": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "delivered": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "opened": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                          "provider": {
+                            "type": "string",
+                          },
+                          "sent": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer",
+                          },
+                        },
+                        "required": [
+                          "provider",
+                          "sent",
+                          "delivered",
+                          "bounced",
+                          "complained",
+                          "opened",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "rates": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bounce": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "click": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "clickToOpen": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "complaint": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "delivery": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "open": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "unsubscribe": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "delivery",
+                        "open",
+                        "click",
+                        "clickToOpen",
+                        "bounce",
+                        "complaint",
+                        "unsubscribe",
+                      ],
+                      "type": "object",
+                    },
+                    "replied": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "sent": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "scheduled",
+                        "sending",
+                        "paused",
+                        "sent",
+                        "cancelled",
+                      ],
+                      "type": "string",
+                    },
+                    "tracked": {
+                      "type": "boolean",
+                    },
+                    "unsubscribed": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer",
+                    },
+                  },
+                  "required": [
+                    "campaignId",
+                    "status",
+                    "audience",
+                    "sent",
+                    "delivered",
+                    "pending",
+                    "tracked",
+                    "opened",
+                    "machineOnlyOpens",
+                    "machineOpenShare",
+                    "clicked",
+                    "replied",
+                    "unsubscribed",
+                    "bounced",
+                    "complained",
+                    "failed",
+                    "rates",
+                    "providers",
+                    "links",
+                    "activity",
+                    "ab",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "campaigns",
+        ],
+      },
+    },
+    "/v1/campaigns/{id}/resend-non-openers": {
+      "post": {
+        "operationId": "campaigns.resendNonOpeners",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ab": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "metric": {
+                              "enum": [
+                                "clicks",
+                                "opens",
+                              ],
+                              "type": "string",
+                            },
+                            "percent": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "waitHours": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "percent",
+                            "waitHours",
+                            "metric",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "abWinner": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "a",
+                            "b",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "audienceSize": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "bodyHtml": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "bodyText": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fromAddress": {
+                      "type": "string",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "pausedReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "preheader": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "replyTo": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "segmentId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "sendAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "scheduled",
+                        "sending",
+                        "paused",
+                        "sent",
+                        "cancelled",
+                      ],
+                      "type": "string",
+                    },
+                    "subject": {
+                      "type": "string",
+                    },
+                    "subjectB": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "templateId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "templateVersion": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "topicId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackClicks": {
+                      "type": "boolean",
+                    },
+                    "trackOpens": {
+                      "type": "boolean",
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "status",
+                    "segmentId",
+                    "topicId",
+                    "templateId",
+                    "templateVersion",
+                    "bodyHtml",
+                    "bodyText",
+                    "fromAddress",
+                    "replyTo",
+                    "subject",
+                    "subjectB",
+                    "preheader",
+                    "ab",
+                    "trackOpens",
+                    "trackClicks",
+                    "sendAt",
+                    "audienceSize",
+                    "pausedReason",
+                    "abWinner",
+                    "startedAt",
+                    "finishedAt",
+                    "createdAt",
+                    "updatedAt",
                   ],
                   "type": "object",
                 },

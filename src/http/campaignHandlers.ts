@@ -17,6 +17,7 @@ import {
 } from "../campaigns/campaigns.ts"
 import { getCompliance, putCompliance } from "../campaigns/compliance.ts"
 import type { CampaignContentInvalid } from "../campaigns/content.ts"
+import { campaignRecipients, campaignReport, resendToNonOpeners } from "../campaigns/report.ts"
 import {
   campaignSentCount,
   cancelCampaign,
@@ -207,6 +208,25 @@ export const CampaignsHandlers = HttpApiBuilder.group(
           ),
           campaignErrors,
         ),
+      ),
+      report: p(({ params }) =>
+        requireScope("read").pipe(Effect.andThen(campaignReport(params.id)), campaignErrors),
+      ),
+      recipients: p(({ params, query }) =>
+        requireScope("read").pipe(Effect.andThen(campaignRecipients(params.id, query)), campaignErrors),
+      ),
+      resendNonOpeners: p(({ params }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin")
+          const draft = yield* resendToNonOpeners(params.id, caller.keyId)
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "campaign.resend",
+            target: draft.id,
+            after: { from: params.id, segmentId: draft.segmentId },
+          })
+          return draft
+        }).pipe(campaignErrors),
       ),
       getCompliance: p(() => requireScope("read").pipe(Effect.andThen(getCompliance()), campaignErrors)),
       putCompliance: p(({ payload }) =>
