@@ -428,6 +428,9 @@ describe("schema migrations", () => {
         "attachments",
         "messages",
         "meta",
+        "live_events",
+        "thread_folders",
+        "folder_counts",
       ]) {
         sql.exec(`DROP TABLE IF EXISTS ${table}`)
       }

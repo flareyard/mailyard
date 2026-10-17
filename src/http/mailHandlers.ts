@@ -12,9 +12,9 @@ import { cancelSend, type SendInvalid, sendDraft } from "../mail/send.ts"
 import type { MessagePatch, Party, StoredMessage } from "../mailbox/types.ts"
 import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.ts"
 import { Database } from "../services/Database.ts"
-import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
+import { Conflict, type CreateDraftPayload, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"
-import { appContext, provideTo } from "./handlers.ts"
+import { appContext, idempotent, provideTo } from "./handlers.ts"
 
 const tagOf = (e: unknown) => (typeof e === "object" && e !== null && "_tag" in e ? String(e._tag) : "")
 
@@ -160,6 +160,44 @@ const BULK: Record<
   unlabel: (b) => (b.labelId ? { removeLabels: [b.labelId] } : null),
   move: (b) => (b.folder ? { folder: b.folder as MessagePatch["folder"] } : null),
 }
+
+/** Builds and saves a new draft: blank, or a reply or forward of a message in the mailbox. */
+const createDraftNow = (
+  mailboxId: string,
+  mailbox: { readonly address: string },
+  payload: CreateDraftPayload,
+) =>
+  Effect.gen(function* () {
+    const params = { id: mailboxId }
+    const { replyTo, ...fields } = payload
+    const base = replyTo
+      ? yield* draftFromMessage({
+          mailboxId: params.id,
+          sourceMessageId: replyTo.messageId,
+          mode: replyTo.mode,
+          ownAddresses: yield* ownAddresses(params.id, mailbox.address),
+          from: fields.from ?? mailbox.address,
+          bodyText: fields.bodyText,
+        })
+      : { from: mailbox.address }
+    const attachments = yield* checkDraftAttachments(
+      params.id,
+      fields.attachments ?? ("attachments" in base ? base.attachments : undefined),
+    )
+    const input = {
+      ...base,
+      ...(fields.threadId !== undefined ? { threadId: fields.threadId } : {}),
+      ...(fields.from !== undefined ? { from: fields.from } : {}),
+      ...(fields.to ? { to: fields.to.map(party) } : {}),
+      ...(fields.cc ? { cc: fields.cc.map(party) } : {}),
+      ...(fields.bcc ? { bcc: fields.bcc.map(party) } : {}),
+      ...(fields.subject !== undefined ? { subject: fields.subject } : {}),
+      ...(fields.bodyText !== undefined && !replyTo ? { bodyText: fields.bodyText } : {}),
+      ...(fields.bodyHtml !== undefined ? { bodyHtml: fields.bodyHtml } : {}),
+      ...(attachments ? { attachments } : {}),
+    }
+    return (yield* callMailbox(params.id, (s) => s.saveDraft(input))).draft
+  })
 
 export const MailHandlers = HttpApiBuilder.group(
   MailApi,
@@ -385,37 +423,17 @@ export const MailHandlers = HttpApiBuilder.group(
           }
         }).pipe(mailErrors),
       ),
-      createDraft: p(({ params, payload }) =>
+      createDraft: p(({ params, payload, headers }) =>
         Effect.gen(function* () {
-          const { mailbox } = yield* access(params.id, "write")
-          const { replyTo, ...fields } = payload
-          const base = replyTo
-            ? yield* draftFromMessage({
-                mailboxId: params.id,
-                sourceMessageId: replyTo.messageId,
-                mode: replyTo.mode,
-                ownAddresses: yield* ownAddresses(params.id, mailbox.address),
-                from: fields.from ?? mailbox.address,
-                bodyText: fields.bodyText,
-              })
-            : { from: mailbox.address }
-          const attachments = yield* checkDraftAttachments(
-            params.id,
-            fields.attachments ?? ("attachments" in base ? base.attachments : undefined),
+          const { caller, mailbox } = yield* access(params.id, "write")
+          // An offline composer retries with the same key: it gets the same draft, not a second one.
+          return yield* idempotent(
+            caller,
+            `draft:${params.id}`,
+            headers["idempotency-key"],
+            payload,
+            createDraftNow(params.id, mailbox, payload),
           )
-          const input = {
-            ...base,
-            ...(fields.threadId !== undefined ? { threadId: fields.threadId } : {}),
-            ...(fields.from !== undefined ? { from: fields.from } : {}),
-            ...(fields.to ? { to: fields.to.map(party) } : {}),
-            ...(fields.cc ? { cc: fields.cc.map(party) } : {}),
-            ...(fields.bcc ? { bcc: fields.bcc.map(party) } : {}),
-            ...(fields.subject !== undefined ? { subject: fields.subject } : {}),
-            ...(fields.bodyText !== undefined && !replyTo ? { bodyText: fields.bodyText } : {}),
-            ...(fields.bodyHtml !== undefined ? { bodyHtml: fields.bodyHtml } : {}),
-            ...(attachments ? { attachments } : {}),
-          }
-          return (yield* callMailbox(params.id, (s) => s.saveDraft(input))).draft
         }).pipe(mailErrors),
       ),
       draft: p(({ params }) =>
@@ -454,19 +472,25 @@ export const MailHandlers = HttpApiBuilder.group(
           return { deleted: params.draftId }
         }).pipe(mailErrors),
       ),
-      send: p(({ params, payload, request }) =>
+      send: p(({ params, payload, request, headers }) =>
         Effect.gen(function* () {
           const { caller, mailbox } = yield* access(params.id, "send")
-          return yield* sendDraft({
+          return yield* idempotent(
             caller,
-            mailboxId: params.id,
-            mailboxAddress: mailbox.address,
-            draftId: params.draftId,
-            sendAt: payload.sendAt,
-            undoSeconds: payload.undoSeconds,
-            track: payload.track,
-            origin: originOf(request),
-          })
+            `send:${params.id}:${params.draftId}`,
+            headers["idempotency-key"],
+            payload,
+            sendDraft({
+              caller,
+              mailboxId: params.id,
+              mailboxAddress: mailbox.address,
+              draftId: params.draftId,
+              sendAt: payload.sendAt,
+              undoSeconds: payload.undoSeconds,
+              track: payload.track,
+              origin: originOf(request),
+            }),
+          )
         }).pipe(mailErrors),
       ),
       cancelSend: p(({ params }) =>

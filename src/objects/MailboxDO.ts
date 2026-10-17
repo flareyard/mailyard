@@ -61,10 +61,14 @@ export class MailboxDO extends DurableObject<Env> {
       JSON.stringify({
         type: "hello",
         schemaVersion: this.store.schemaVersion(),
+        seq: this.store.latestSeq(),
         counts: this.store.folderCounts(),
         labels: this.store.labels(),
       }),
     )
+    // `?since=<seq>`: catch up on what was missed while away (HAL-3397).
+    const since = url.searchParams.get("since")
+    if (since !== null) this.replay(server, Number(since))
     const protocol = request.headers.get("x-mailyard-protocol")
     return new Response(null, {
       status: 101,
@@ -84,7 +88,16 @@ export class MailboxDO extends DurableObject<Env> {
       ws.send(JSON.stringify({ type: "counts", counts: this.store.folderCounts() }))
       return
     }
-    ws.send(JSON.stringify({ type: "error", message: 'Send "ping", or {"type":"counts"}' }))
+    if (request?.type === "resume") {
+      this.replay(ws, Number((request as { since?: unknown }).since))
+      return
+    }
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        message: 'Send "ping", {"type":"counts"} or {"type":"resume","since":<seq>}',
+      }),
+    )
   }
 
   override async webSocketClose(ws: WebSocket, code: number, reason: string) {
@@ -96,11 +109,29 @@ export class MailboxDO extends DurableObject<Env> {
     return this.ctx.getWebSockets(LIVE).length
   }
 
+  /** Sends what came after `since`, each with its seq, or `reset` when that's no longer kept. */
+  private replay(ws: WebSocket, since: number) {
+    if (!Number.isFinite(since) || since < 0) {
+      ws.send(JSON.stringify({ type: "error", message: "since is a seq from an earlier frame." }))
+      return
+    }
+    const missed = this.store.eventsSince(since)
+    if (missed === null) {
+      ws.send(
+        JSON.stringify({ type: "reset", seq: this.store.latestSeq(), counts: this.store.folderCounts() }),
+      )
+      return
+    }
+    for (const m of missed) ws.send(m.frame)
+    ws.send(JSON.stringify({ type: "resumed", since, seq: this.store.latestSeq(), replayed: missed.length }))
+  }
+
   private broadcast(events: ReadonlyArray<MailboxEvent>) {
     if (events.length === 0) return
     const sockets = this.ctx.getWebSockets(LIVE)
-    for (const event of events) {
-      const frame = JSON.stringify(event)
+    // Numbered and kept first, so a client that was away can ask for exactly what it missed.
+    const logged = this.store.logEvents(events.map((e) => JSON.stringify(e)))
+    for (const { frame } of logged) {
       for (const ws of sockets) {
         try {
           ws.send(frame)
@@ -300,8 +331,8 @@ export class MailboxDO extends DurableObject<Env> {
     return await this.apply(this.store.assign(threadIds, assignee))
   }
 
-  async failDraft(id: string, error: string) {
-    return await this.apply(this.store.failDraft(id, error))
+  async failDraft(id: string, error: string, blockedReason: string | null = null) {
+    return await this.apply(this.store.failDraft(id, error, blockedReason))
   }
 
   messageIdHolder(messageId: string) {

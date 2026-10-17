@@ -28,7 +28,9 @@ export const handleLive = async (request: Request, env: Env, mailboxId: string) 
         : problem(500, "Could not check access.")
   }
   const stub = env.MAILBOX.get(env.MAILBOX.idFromName(mailboxId))
-  return stub.fetch("https://mailbox/live", {
+  // `?since=<seq>` carries through, so the mailbox replays what this client missed.
+  const since = new URL(request.url).searchParams.get("since")
+  return stub.fetch(`https://mailbox/live${since !== null ? `?since=${encodeURIComponent(since)}` : ""}`, {
     headers: { upgrade: "websocket", ...(auth.protocol ? { "x-mailyard-protocol": auth.protocol } : {}) },
   })
 }

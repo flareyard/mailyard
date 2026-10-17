@@ -12,6 +12,7 @@ import {
 import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
 import { ALERT_KINDS } from "../domain/alerts.ts"
 import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
+import { SendBlocked } from "../mail/send.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 
@@ -1139,6 +1140,12 @@ export const DraftSchema = Schema.Struct({
   replyMode: Schema.NullOr(ReplyModeSchema),
   sourceMessageId: Schema.NullOr(Schema.String),
   lastError: Schema.NullOr(Schema.String),
+  blockedReason: Schema.NullOr(
+    Schema.Literals(["quota_exhausted", "domain_unhealthy", "all_recipients_suppressed"]),
+  ).annotate({
+    description:
+      "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+  }),
   /** Opens and clicks tracked on this send, when the sender asked; null otherwise. */
   track: Schema.NullOr(Schema.Struct({ opens: Schema.Boolean, clicks: Schema.Boolean })),
   createdAt: Schema.Number,
@@ -1200,6 +1207,14 @@ const Limit = Schema.optionalKey(
   Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
 )
 const MailErrors = [Forbidden, NotFound, InvalidRequest, Conflict] as const
+
+export const CreateDraftPayload = Schema.Struct({
+  /** Start from a message in this mailbox: a reply, a reply to all, or a forward. */
+  replyTo: Schema.optionalKey(Schema.Struct({ messageId: Schema.String, mode: ReplyModeSchema })),
+  threadId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  ...DraftFields,
+})
+export type CreateDraftPayload = typeof CreateDraftPayload.Type
 
 export class MailApiGroup extends HttpApiGroup.make("mail")
   .add(
@@ -1325,14 +1340,10 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
     }),
     HttpApiEndpoint.post("createDraft", "/v1/mailboxes/:id/drafts", {
       params: MailboxParam,
-      payload: Schema.Struct({
-        /** Start from a message in this mailbox: a reply, a reply to all, or a forward. */
-        replyTo: Schema.optionalKey(Schema.Struct({ messageId: Schema.String, mode: ReplyModeSchema })),
-        threadId: Schema.optionalKey(Schema.NullOr(Schema.String)),
-        ...DraftFields,
-      }),
+      headers: IdempotencyHeader,
+      payload: CreateDraftPayload,
       success: DraftSchema,
-      error: MailErrors,
+      error: [...MailErrors, IdempotencyConflict],
     }),
     HttpApiEndpoint.get("draft", "/v1/mailboxes/:id/drafts/:draftId", {
       params: { id: Schema.String, draftId: Schema.String },
@@ -1352,6 +1363,7 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
     }),
     HttpApiEndpoint.post("send", "/v1/mailboxes/:id/drafts/:draftId/send", {
       params: { id: Schema.String, draftId: Schema.String },
+      headers: IdempotencyHeader,
       payload: Schema.Struct({
         sendAt: Schema.optionalKey(Schema.Number),
         /** How long the send can be undone, when it goes now: 0 to 30 s, else the account's default. */
@@ -1369,7 +1381,7 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
         sendAt: Schema.Number,
         undoUntil: Schema.NullOr(Schema.Number),
       }),
-      error: MailErrors,
+      error: [...MailErrors, IdempotencyConflict, SendBlocked],
     }),
     HttpApiEndpoint.post("cancelSend", "/v1/mailboxes/:id/drafts/:draftId/cancel", {
       params: { id: Schema.String, draftId: Schema.String },

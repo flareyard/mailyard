@@ -144,7 +144,7 @@ const normalizeRecipients = (to: SendPayload["to"]) =>
   (Array.isArray(to) ? to : [to]).map((r) => (typeof r === "string" ? { email: r } : r))
 
 /** Runs `body` under an Idempotency-Key when the client sent one: first use runs, a repeat replays. */
-const idempotent = <A, E, R>(
+export const idempotent = <A, E, R>(
   caller: Caller,
   route: string,
   key: string | undefined,

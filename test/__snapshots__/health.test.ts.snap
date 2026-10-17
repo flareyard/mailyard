@@ -554,6 +554,66 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "type": "object",
       },
+      "SendBlockedEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "SendBlocked",
+            ],
+            "type": "string",
+          },
+          "domainId": {
+            "anyOf": [
+              {
+                "type": "string",
+              },
+              {
+                "type": "null",
+              },
+            ],
+          },
+          "message": {
+            "type": "string",
+          },
+          "reason": {
+            "enum": [
+              "quota_exhausted",
+              "domain_unhealthy",
+              "all_recipients_suppressed",
+            ],
+            "type": "string",
+          },
+          "resetsAt": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "number",
+                  },
+                  {
+                    "enum": [
+                      "Infinity",
+                      "-Infinity",
+                      "NaN",
+                    ],
+                    "type": "string",
+                  },
+                ],
+              },
+              {
+                "type": "null",
+              },
+            ],
+          },
+        },
+        "required": [
+          "_tag",
+          "reason",
+          "message",
+        ],
+        "type": "object",
+      },
       "UnauthorizedEncoded": {
         "additionalProperties": false,
         "properties": {
@@ -36051,6 +36111,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                             "type": "array",
                           },
+                          "blockedReason": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "quota_exhausted",
+                                  "domain_unhealthy",
+                                  "all_recipients_suppressed",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+                          },
                           "bodyHtml": {
                             "anyOf": [
                               {
@@ -36295,6 +36371,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "replyMode",
                           "sourceMessageId",
                           "lastError",
+                          "blockedReason",
                           "track",
                           "createdAt",
                           "updatedAt",
@@ -36391,6 +36468,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "name": "id",
             "required": true,
             "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "maxLength": 255,
               "type": "string",
             },
           },
@@ -36654,6 +36740,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "blockedReason": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota_exhausted",
+                            "domain_unhealthy",
+                            "all_recipients_suppressed",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+                    },
                     "bodyHtml": {
                       "anyOf": [
                         {
@@ -36898,6 +37000,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "replyMode",
                     "sourceMessageId",
                     "lastError",
+                    "blockedReason",
                     "track",
                     "createdAt",
                     "updatedAt",
@@ -36952,11 +37055,18 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictEncoded",
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictEncoded",
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyConflictEncoded",
+                    },
+                  ],
                 },
               },
             },
-            "description": "Conflict",
+            "description": "Conflict | IdempotencyConflict",
           },
           "429": {
             "content": {
@@ -37182,6 +37292,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "blockedReason": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota_exhausted",
+                            "domain_unhealthy",
+                            "all_recipients_suppressed",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+                    },
                     "bodyHtml": {
                       "anyOf": [
                         {
@@ -37426,6 +37552,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "replyMode",
                     "sourceMessageId",
                     "lastError",
+                    "blockedReason",
                     "track",
                     "createdAt",
                     "updatedAt",
@@ -37754,6 +37881,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "blockedReason": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota_exhausted",
+                            "domain_unhealthy",
+                            "all_recipients_suppressed",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+                    },
                     "bodyHtml": {
                       "anyOf": [
                         {
@@ -37998,6 +38141,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "replyMode",
                     "sourceMessageId",
                     "lastError",
+                    "blockedReason",
                     "track",
                     "createdAt",
                     "updatedAt",
@@ -38172,6 +38316,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "blockedReason": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota_exhausted",
+                            "domain_unhealthy",
+                            "all_recipients_suppressed",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+                    },
                     "bodyHtml": {
                       "anyOf": [
                         {
@@ -38416,6 +38576,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "replyMode",
                     "sourceMessageId",
                     "lastError",
+                    "blockedReason",
                     "track",
                     "createdAt",
                     "updatedAt",
@@ -38514,6 +38675,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "name": "draftId",
             "required": true,
             "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "maxLength": 255,
               "type": "string",
             },
           },
@@ -38647,6 +38817,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "type": "object",
                           },
                           "type": "array",
+                        },
+                        "blockedReason": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "quota_exhausted",
+                                "domain_unhealthy",
+                                "all_recipients_suppressed",
+                              ],
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
                         },
                         "bodyHtml": {
                           "anyOf": [
@@ -38892,6 +39078,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "replyMode",
                         "sourceMessageId",
                         "lastError",
+                        "blockedReason",
                         "track",
                         "createdAt",
                         "updatedAt",
@@ -38991,11 +39178,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictEncoded",
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictEncoded",
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyConflictEncoded",
+                    },
+                    {
+                      "$ref": "#/components/schemas/SendBlockedEncoded",
+                    },
+                  ],
                 },
               },
             },
-            "description": "Conflict",
+            "description": "Conflict | IdempotencyConflict | SendBlocked",
           },
           "429": {
             "content": {
@@ -49523,6 +49720,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                             "type": "array",
                           },
+                          "blockedReason": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "quota_exhausted",
+                                  "domain_unhealthy",
+                                  "all_recipients_suppressed",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+                          },
                           "bodyHtml": {
                             "anyOf": [
                               {
@@ -49767,6 +49980,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "replyMode",
                           "sourceMessageId",
                           "lastError",
+                          "blockedReason",
                           "track",
                           "createdAt",
                           "updatedAt",
