@@ -442,6 +442,7 @@ export const MailHandlers = HttpApiBuilder.group(
             mailboxAddress: mailbox.address,
             draftId: params.draftId,
             sendAt: payload.sendAt,
+            undoSeconds: payload.undoSeconds,
             origin: originOf(request),
           })
         }).pipe(mailErrors),

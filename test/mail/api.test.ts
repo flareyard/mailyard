@@ -387,16 +387,27 @@ describe("composing and sending", () => {
         json: { to: [{ address: "ada@example.org" }], subject: "Oops", bodyText: "Wrong" },
       }),
     )
+    // A 5 s window, so the cancel can't lose a race with the alarm however loaded the machine is.
     const sent = await json<{ draft: { status: string }; undoUntil: number | null; sendAt: number }>(
-      await call(`${base}/drafts/${draft.id}/send`, { method: "POST", key: member.key, json: {} }),
+      await call(`${base}/drafts/${draft.id}/send`, {
+        method: "POST",
+        key: member.key,
+        json: { undoSeconds: 5 },
+      }),
     )
     expect(sent.draft.status).toBe("scheduled")
     expect(sent.undoUntil).toBe(sent.sendAt)
+    expect(sent.sendAt - Date.now()).toBeGreaterThan(3_000)
     const undone = await json<{ status: string; sendAt: number | null }>(
       await call(`${base}/drafts/${draft.id}/cancel`, { method: "POST", key: member.key }),
     )
     expect(undone).toMatchObject({ status: "draft", sendAt: null })
-    await sleep(900)
+    const tooLong = await call(`${base}/drafts/${draft.id}/send`, {
+      method: "POST",
+      key: member.key,
+      json: { undoSeconds: 31 },
+    })
+    expect(tooLong.status).toBe(400)
     const stub = env.MAILBOX.get(env.MAILBOX.idFromName(sam.id))
     expect(await stub.draft(draft.id)).toMatchObject({ status: "draft" })
     expect(await stub.alarmAt()).toBeNull()

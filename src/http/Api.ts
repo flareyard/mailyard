@@ -1281,7 +1281,11 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
     }),
     HttpApiEndpoint.post("send", "/v1/mailboxes/:id/drafts/:draftId/send", {
       params: { id: Schema.String, draftId: Schema.String },
-      payload: Schema.Struct({ sendAt: Schema.optionalKey(Schema.Number) }),
+      payload: Schema.Struct({
+        sendAt: Schema.optionalKey(Schema.Number),
+        /** How long the send can be undone, when it goes now: 0 to 30 s, else the account's default. */
+        undoSeconds: Schema.optionalKey(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 30 }))),
+      }),
       success: Schema.Struct({
         draft: DraftSchema,
         sendAt: Schema.Number,
