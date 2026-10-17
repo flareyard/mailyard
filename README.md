@@ -44,4 +44,13 @@ Until the Flareyard platform deploys it with your OAuth token, Mailyard deploys 
      --zone-id <zone id> --domain <sending domain> \
      --events message.delivered,message.deferred,message.bounced,message.failed,message.rejected,message.complained
    ```
-6. **Inbound.** Routing a domain's mail to the Worker turns on Email Routing for that zone, and that replaces the domain's MX records. Do it only for a domain whose mail should move to Mailyard.
+6. **Inbound.** Route a domain's mail to the Worker with Email Routing, then add the domain in Mailyard (`POST /v1/domains`).
+   - **A subdomain leaves the apex alone.** `POST /zones/<zone id>/email/routing/dns` with `{"name": "in.example.com"}` adds MX and SPF records on that subdomain only. Routing's DKIM key `cf2024-1._domainkey` goes on the apex, beside any existing provider's records, and the apex MX is not touched. Measured 2026-10-17 on in.flareyard.dev, with flareyard.dev's mail still on Spacemail.
+   - **The apex moves its mail.** The same call without a subdomain adds and locks Cloudflare's MX on the apex, so the current provider stops receiving. Import the mailbox first (`POST /v1/mailboxes/:id/imports`), then switch.
+   - **Point the catch-all at the Worker:**
+     ```sh
+     PUT /zones/<zone id>/email/routing/rules/catch_all
+     {"matchers":[{"type":"all"}],"actions":[{"type":"worker","value":["mailyard-api"]}],"enabled":true}
+     ```
+   - **To send from the same domain,** onboard it for Email Sending (`POST /zones/<zone id>/email/sending/subdomains` with `{"name": "in.example.com"}`). That adds `cf-bounce.<domain>` records and `_dmarc.<domain>`.
+   - **A throw in `email()` is a temporary failure.** Measured 2026-10-17 with a build that threw for one address: Gmail neither bounced nor delivered, then delivered 7.5 minutes after sending, once the real build was back. Until the raw message is in R2, the handler throws rather than accepting.
