@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { Bindings } from "../Bindings.ts"
 import { suppressionImports, suppressions, uploads } from "../db/schema.ts"
+import { raiseAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { EMAIL, normalizeEmail } from "../domain/contacts.ts"
 import type { Reason } from "../domain/suppressions.ts"
@@ -219,6 +220,14 @@ const fail = (id: string, message: string) =>
         .where(eq(suppressionImports.id, id))
         .run(),
     )
+    yield* raiseAlert({
+      key: `import_failed:${id}`,
+      kind: "import_failed",
+      severity: "warning",
+      title: "A suppression import failed",
+      detail: message.slice(0, 500),
+      subject: { type: "suppression_import", id },
+    })
     return { done: true as const, failed: true, offset: -1 }
   })
 

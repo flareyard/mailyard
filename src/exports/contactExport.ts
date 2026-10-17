@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { contacts, exports } from "../db/schema.ts"
+import { raiseAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { type ContactFilters, filterCondition } from "../domain/contactFilters.ts"
 import { type ContactQuery, describeContact, filterOf, membershipsOf } from "../domain/contacts.ts"
@@ -353,6 +354,15 @@ export const finishLargeExport = Effect.fn("exports.finish")(function* (id: stri
   yield* database.query("exports.complete", (db) =>
     db.update(exports).set({ status: "completed", finishedAt: Date.now() }).where(eq(exports.id, id)).run(),
   )
+  // Small exports are ready in the response that asked; a large one finishes later, so say so.
+  yield* raiseAlert({
+    key: `export_ready:${id}`,
+    kind: "export_ready",
+    severity: "info",
+    title: "A contact export is ready",
+    detail: `${row.rows} contact${row.rows === 1 ? "" : "s"} in ${row.filename}. Its download link lasts a day.`,
+    subject: { type: "export", id },
+  })
   return { rows: row.rows }
 })
 

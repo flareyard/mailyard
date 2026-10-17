@@ -734,6 +734,44 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           },
           {
             "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "description": "What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).",
+              "enum": [
+                "delivery_events_missing",
+                "campaign_paused",
+                "dns_drift",
+                "reputation_warning",
+                "reputation_at_risk",
+                "bounce_spike",
+                "complaint_spike",
+                "quota_80",
+                "quota_100",
+                "webhook_dead_letter",
+                "import_failed",
+                "export_ready",
+                "domain_activated",
+                "automation_failed",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "enum": [
+                "info",
+                "warning",
+                "critical",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
             "name": "cursor",
             "required": false,
             "schema": {
@@ -760,6 +798,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "count": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
                           "createdAt": {
                             "anyOf": [
                               {
@@ -782,6 +835,23 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "type": "string",
                           },
                           "kind": {
+                            "description": "What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).",
+                            "enum": [
+                              "delivery_events_missing",
+                              "campaign_paused",
+                              "dns_drift",
+                              "reputation_warning",
+                              "reputation_at_risk",
+                              "bounce_spike",
+                              "complaint_spike",
+                              "quota_80",
+                              "quota_100",
+                              "webhook_dead_letter",
+                              "import_failed",
+                              "export_ready",
+                              "domain_activated",
+                              "automation_failed",
+                            ],
                             "type": "string",
                           },
                           "resolvedAt": {
@@ -815,6 +885,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "null",
                               },
                             ],
+                            "description": "Who resolved it: an API key id, or the system (sweep, expired, watchdog, …) when its condition cleared.",
                           },
                           "severity": {
                             "enum": [
@@ -850,6 +921,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "title": {
                             "type": "string",
                           },
+                          "updatedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
                         },
                         "required": [
                           "id",
@@ -858,7 +944,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "title",
                           "detail",
                           "subject",
+                          "count",
                           "createdAt",
+                          "updatedAt",
                           "resolvedAt",
                           "resolvedBy",
                         ],
@@ -876,9 +964,83 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "open": {
+                      "additionalProperties": false,
+                      "description": "Open alerts by severity, whatever the filters: the badge on the bell.",
+                      "properties": {
+                        "critical": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "info": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "total": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "warning": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "total",
+                        "critical",
+                        "warning",
+                        "info",
+                      ],
+                      "type": "object",
+                    },
                   },
                   "required": [
                     "alerts",
+                    "open",
                     "nextCursor",
                   ],
                   "type": "object",
@@ -948,6 +1110,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "count": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -970,6 +1147,23 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "type": "string",
                     },
                     "kind": {
+                      "description": "What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).",
+                      "enum": [
+                        "delivery_events_missing",
+                        "campaign_paused",
+                        "dns_drift",
+                        "reputation_warning",
+                        "reputation_at_risk",
+                        "bounce_spike",
+                        "complaint_spike",
+                        "quota_80",
+                        "quota_100",
+                        "webhook_dead_letter",
+                        "import_failed",
+                        "export_ready",
+                        "domain_activated",
+                        "automation_failed",
+                      ],
                       "type": "string",
                     },
                     "resolvedAt": {
@@ -1003,6 +1197,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                      "description": "Who resolved it: an API key id, or the system (sweep, expired, watchdog, …) when its condition cleared.",
                     },
                     "severity": {
                       "enum": [
@@ -1038,6 +1233,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "title": {
                       "type": "string",
                     },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                   },
                   "required": [
                     "id",
@@ -1046,7 +1256,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "title",
                     "detail",
                     "subject",
+                    "count",
                     "createdAt",
+                    "updatedAt",
                     "resolvedAt",
                     "resolvedBy",
                   ],

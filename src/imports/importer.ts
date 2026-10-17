@@ -6,6 +6,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { type ImportFolderProgress, mailboxes, mailboxImports } from "../db/schema.ts"
+import { raiseAlert } from "../domain/alerts.ts"
 import { SecretBox } from "../domain/webhooks.ts"
 import { ImapClient, type Transport } from "../imap/client.ts"
 import { tlsTransport } from "../imap/transport.ts"
@@ -474,5 +475,13 @@ export const failImport = Effect.fn("imports.fail")(function* (importId: string,
     error: message.slice(0, 1000),
     secretCiphertext: null,
     finishedAt: Date.now(),
+  })
+  yield* raiseAlert({
+    key: `import_failed:${importId}`,
+    kind: "import_failed",
+    severity: "warning",
+    title: "A mailbox import failed",
+    detail: message.slice(0, 500),
+    subject: { type: "mailbox_import", id: importId },
   })
 })

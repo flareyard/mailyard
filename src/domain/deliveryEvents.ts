@@ -187,7 +187,7 @@ const feedGovernor = (
     )
     yield* raiseAlert({
       key: `campaign.paused:${campaign.id}`,
-      kind: "campaign.paused",
+      kind: "campaign_paused",
       severity: "critical",
       title: `Campaign "${campaign.name}" paused itself`,
       detail: `${result.reason ?? "Its delivery rates crossed the line."} Fix the list, then resume it.`,

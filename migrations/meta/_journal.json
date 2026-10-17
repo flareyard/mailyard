@@ -127,6 +127,13 @@
       "when": 1792266162446,
       "tag": "0017_suppressions",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1792268076010,
+      "tag": "0018_alert_kinds",
+      "breakpoints": true
     }
   ]
 }

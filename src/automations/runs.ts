@@ -14,6 +14,7 @@ import {
   segments,
   subscriptions,
 } from "../db/schema.ts"
+import { clearAlert, raiseAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { findContact, isBlocked, writeSubscription } from "../domain/contacts.ts"
 import { parseParty, sendBulkMessage } from "../domain/outbox.ts"
@@ -556,8 +557,68 @@ export const finishRun = Effect.fn("runs.finish")(function* (
     waitingEvent: null,
     finishedAt: Date.now(),
   })
+  if (state === "failed") yield* syncFailedAlert(run.automationId)
   return state
 })
+
+const DAY_MS = 86_400_000
+
+/**
+ * `automation_failed:<automation>`: open while the automation has runs that failed in the last day,
+ * with their count and the step most of them failed on. Retrying them, or a quiet day, clears it.
+ */
+export const syncFailedAlert = (automationId: string) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const since = Date.now() - DAY_MS
+    const failed = yield* database.query("runs.failedToday", (db) =>
+      db
+        .select({ n: count() })
+        .from(automationRuns)
+        .where(
+          and(
+            eq(automationRuns.automationId, automationId),
+            eq(automationRuns.state, "failed"),
+            gte(automationRuns.finishedAt, since),
+          ),
+        )
+        .get(),
+    )
+    const n = failed?.n ?? 0
+    const key = `automation_failed:${automationId}`
+    if (n === 0) return yield* clearAlert(key, "automations")
+    const automation = yield* database.query("runs.failedAutomation", (db) =>
+      db.select({ name: automations.name }).from(automations).where(eq(automations.id, automationId)).get(),
+    )
+    const step = yield* database.query("runs.failedStep", (db) =>
+      db
+        .select({ nodeId: automationRunSteps.nodeId, detail: automationRunSteps.detail, n: count() })
+        .from(automationRunSteps)
+        .where(
+          and(
+            eq(automationRunSteps.automationId, automationId),
+            eq(automationRunSteps.outcome, "failed"),
+            gte(automationRunSteps.at, since),
+          ),
+        )
+        .groupBy(automationRunSteps.nodeId)
+        .orderBy(desc(count()))
+        .get(),
+    )
+    yield* raiseAlert({
+      key,
+      kind: "automation_failed",
+      severity: "warning",
+      title: `${n} run${n === 1 ? "" : "s"} of "${automation?.name ?? automationId}" failed today`,
+      detail: step
+        ? `Most failed at step ${step.nodeId}: ${step.detail.slice(0, 300)} Retry them from the run list once it's fixed.`
+        : "Retry them from the run list once it's fixed.",
+      subject: { type: "automation", id: automationId },
+      count: n,
+    })
+  }).pipe(
+    Effect.catchCause((cause) => Effect.logError("automations: could not update the failure alert", cause)),
+  )
 
 /** Marks a run waiting (paused automation), so the run list says why it's still. */
 export const holdRun = Effect.fn("runs.hold")(function* (runId: string, until: number) {
@@ -944,6 +1005,7 @@ export const retryRun = Effect.fn("runs.retry")(function* (runId: string, actor:
     catch: (cause) => new RunInvalid({ message: `The retry didn't start: ${String(cause).slice(0, 200)}` }),
   })
   yield* recordAudit({ actor, action: "automation.run.retry", target: runId })
+  yield* syncFailedAlert(run.automationId)
   return yield* getRun(runId)
 })
 

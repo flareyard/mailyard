@@ -4,6 +4,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { mailboxExports } from "../db/schema.ts"
+import { raiseAlert } from "../domain/alerts.ts"
 import { mboxEntry } from "../imports/mbox.ts"
 import { BlobStore } from "../kit/index.ts"
 import { callMailbox } from "../mail/rpc.ts"
@@ -272,6 +273,14 @@ export const finishExport = Effect.fn("exports.finish")(function* (exportId: str
         : null,
     completedAt: Date.now(),
     state: null,
+  })
+  yield* raiseAlert({
+    key: `export_ready:${exportId}`,
+    kind: "export_ready",
+    severity: "info",
+    title: "A mailbox export is ready",
+    detail: `${state.messages} message${state.messages === 1 ? "" : "s"}, as mbox and zip. Download them from the mailbox's export screen.`,
+    subject: { type: "mailbox_export", id: exportId },
   })
   return { messages: state.messages, missing: state.missing, size: mbox.size, zipSize: zip.size }
 })
