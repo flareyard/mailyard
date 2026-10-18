@@ -189,6 +189,8 @@ export class Conflict extends Schema.TaggedError<Conflict>()(
     ruleId: Schema.optionalKey(Schema.String),
     /** With `reason: "alias-targets"` on a mailbox removal: the aliases and groups that still deliver there. */
     aliasIds: Schema.optionalKey(Schema.Array(Schema.String)),
+    /** With `reason: "workspace-deleting"` (HAL-3448): when the workspace will be deleted. */
+    deletesAt: Schema.optionalKey(Schema.Number),
     /** With `reason: "already-claimed"` (HAL-3361): who claimed the workspace, and when. */
     claimedBy: Schema.optionalKey(Schema.String),
     claimedAt: Schema.optionalKey(Schema.Number),
@@ -265,7 +267,7 @@ export class ActionsApi extends HttpApiGroup.make("actions")
       headers: IdempotencyHeader,
       payload: SendPayload,
       success: SendResponse,
-      error: [InvalidRequest, NotFound, IdempotencyConflict, Unprocessable, Forbidden],
+      error: [InvalidRequest, NotFound, IdempotencyConflict, Unprocessable, Forbidden, Conflict],
     }),
     HttpApiEndpoint.post("track", "/v1/track", {
       headers: IdempotencyHeader,
@@ -639,7 +641,7 @@ export class TemplatesApi extends HttpApiGroup.make("templates")
           Schema.Struct({ email: Schema.String, messageId: Schema.String, status: Schema.String }),
         ),
       }),
-      error: [Forbidden, NotFound, InvalidRequest],
+      error: [Conflict, Forbidden, NotFound, InvalidRequest],
     }),
     HttpApiEndpoint.post("preview", "/v1/templates/preview", {
       payload: Schema.Struct({ kind: TemplateKind, ...TemplateBody, data: RenderData }),
@@ -3252,7 +3254,7 @@ export class SendingApi extends HttpApiGroup.make("sending")
     HttpApiEndpoint.post("startTestSend", "/v1/test-send", {
       payload: Schema.Struct({ from: Schema.String, to: Schema.optionalKey(Schema.String) }),
       success: TestSendSchema,
-      error: [Forbidden, InvalidRequest],
+      error: [Conflict, Forbidden, InvalidRequest],
     }),
     HttpApiEndpoint.get("getTestSend", "/v1/test-send/:id", {
       params: { id: Schema.String },
@@ -4272,7 +4274,7 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
           Schema.Struct({ email: Schema.String, messageId: Schema.String, status: Schema.String }),
         ),
       }),
-      error: [Forbidden, NotFound, InvalidRequest],
+      error: [Conflict, Forbidden, NotFound, InvalidRequest],
     }),
     HttpApiEndpoint.get("checks", "/v1/campaigns/:id/checks", {
       params: { id: Schema.String },
@@ -4374,7 +4376,7 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         Schema.Null,
       ],
       success: CampaignSchema,
-      error: [Forbidden, NotFound, InvalidRequest],
+      error: [Conflict, Forbidden, NotFound, InvalidRequest],
     }),
     /** What a resend would reach, creating nothing: who didn't open, and who of them can still be mailed. */
     HttpApiEndpoint.get("resendNonOpenersDryRun", "/v1/campaigns/:id/resend-non-openers", {
@@ -5242,6 +5244,57 @@ export class PeopleApi extends HttpApiGroup.make("people")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Deleting the workspace (HAL-3448)
+// ---------------------------------------------------------------------------------------------
+
+const DeletionSchema = Schema.Struct({
+  requestedAt: Schema.Number,
+  /** The member (or `root`, the admin key) who asked. */
+  requestedBy: Schema.String,
+  /** When everything is deleted: 7 days after the request. */
+  deletesAt: Schema.Number,
+  /** The full export started with the request; its files outlive the deletion. */
+  exportId: Schema.String,
+  startedAt: Schema.optionalKey(Schema.Number),
+  completedAt: Schema.optionalKey(Schema.Number),
+})
+
+/**
+ * Deleting the workspace: the owner (or the admin key, before anyone owns it) types its name, an
+ * export starts at once, and everything is deleted 7 days later unless restored. Meanwhile sending
+ * answers `409 { reason: "workspace-deleting", deletesAt }`, mail still arrives, and every response
+ * carries `x-workspace-deleting: <deletesAt>`.
+ */
+export class WorkspaceApi extends HttpApiGroup.make("workspace")
+  .add(
+    HttpApiEndpoint.delete("delete", "/v1/workspace", {
+      payload: Schema.Struct({
+        /** The workspace's name, exactly as `GET /v1/me` shows it. */
+        confirm: Schema.String.check(Schema.isMaxLength(200)),
+      }),
+      success: DeletionSchema.pipe(HttpApiSchema.status(202)),
+      error: [Forbidden, Conflict, InvalidRequest],
+    }),
+    /** Calls the deletion off while its 7 days run. */
+    HttpApiEndpoint.post("restore", "/v1/workspace/restore", {
+      payload: [Schema.Struct({}), Schema.Null],
+      success: Schema.Struct({ restored: Schema.Literal(true) }),
+      error: [Forbidden, Conflict, InvalidRequest],
+    }),
+    /** `none`, `scheduled`, `deleting` or `deleted`; after the deletion, the owner gets fresh links
+     * (a day each) to the export it kept. */
+    HttpApiEndpoint.get("deletion", "/v1/workspace/deletion", {
+      success: Schema.Struct({
+        status: Schema.Literals(["none", "scheduled", "deleting", "deleted"]),
+        deletion: Schema.NullOr(DeletionSchema),
+        files: Schema.Array(Schema.Struct({ name: Schema.String, url: Schema.String })),
+      }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -5279,4 +5332,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(SignInLinkApi)
   .add(InviteLinkApi)
   .add(PeopleApi)
+  .add(WorkspaceApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}

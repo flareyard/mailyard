@@ -37,7 +37,7 @@ import {
 } from "../templates/render.ts"
 import { InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller } from "./Auth.ts"
-import { appContext, provideTo, requireScope } from "./handlers.ts"
+import { appContext, notWhileDeleting, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
 
 const summary = (t: {
@@ -166,6 +166,7 @@ export const TemplatesHandlers = HttpApiBuilder.group(
       test: p(({ params, payload }) =>
         Effect.gen(function* () {
           yield* requireScope("send", "templates.write")
+          yield* notWhileDeleting
           return yield* testTemplate(params.id, payload)
         }).pipe(
           Effect.catchTags({

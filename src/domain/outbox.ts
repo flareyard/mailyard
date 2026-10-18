@@ -27,6 +27,7 @@ import { isBlocked, upsertContact } from "./contacts.ts"
 import { bumpDailyStat } from "./deliveryEvents.ts"
 import { resolveForSend } from "./templates.ts"
 import { emitSafely } from "./webhooks.ts"
+import { DELETING_ERROR, pendingDeletion } from "./workspaceDeletion.ts"
 
 export interface Party {
   readonly email: string
@@ -185,6 +186,7 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
 
   const store = yield* BlobStore
   const ids = yield* Ids
+  const deleting = (yield* pendingDeletion()) !== null
   const results: Array<{ contact: { id: string; email: string }; email: string; status: string }> = []
   const tracking = request.track && (request.track.opens || request.track.clicks) ? request.track : undefined
   const trackOrigin = tracking ? trackingOrigin(yield* getCompliance(), tracking.origin) : ""
@@ -222,6 +224,18 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
         })
         .run(),
     )
+    if (deleting) {
+      // The workspace is being deleted (HAL-3448): nothing more goes out.
+      yield* database.query("messagesOut.deleting", (db) =>
+        db
+          .update(messagesOut)
+          .set({ status: "rejected", error: DELETING_ERROR, updatedAt: Date.now() })
+          .where(eq(messagesOut.id, id))
+          .run(),
+      )
+      results.push({ contact, email: id, status: "rejected" })
+      continue
+    }
     if (suppressed.has(contact.email)) {
       // Don't spend a send (or reputation) on an address that bounced or complained.
       yield* database.query("messagesOut.suppressed", (db) =>
@@ -351,13 +365,15 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
       )
       .get(),
   )
-  if (suppressed) {
+  // The workspace is being deleted (HAL-3448): only Mailyard's own mail still goes out.
+  const deleting = input.stream !== "system" && (yield* pendingDeletion()) !== null
+  if (suppressed || deleting) {
     yield* database.query("messagesOut.suppressedBulk", (db) =>
       db
         .update(messagesOut)
         .set({
           status: "rejected",
-          error: "SendSuppressed: recipient is on the suppression list",
+          error: deleting ? DELETING_ERROR : "SendSuppressed: recipient is on the suppression list",
           updatedAt: Date.now(),
         })
         .where(eq(messagesOut.id, id))
@@ -656,6 +672,19 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
           .run(),
       )
     })
+  // The workspace is being deleted (HAL-3448): people's sends stop; the mailbox's own forwards and
+  // auto-replies are part of receiving, which goes on.
+  if (input.sentCopyId !== null && (yield* pendingDeletion()) !== null) {
+    yield* insert("rejected", DELETING_ERROR)
+    return {
+      id,
+      status: "rejected" as const,
+      cfMessageId: null,
+      error: DELETING_ERROR,
+      suppressed: [...suppressed],
+      message: input.message,
+    }
+  }
   const [first, ...restTo] = envelope.to
   if (!first) {
     const error = "SendSuppressed: every recipient is on the suppression list"

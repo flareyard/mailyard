@@ -7,6 +7,7 @@ import type { Env } from "../Bindings.ts"
 import { VIEW_PATH } from "../campaigns/content.ts"
 import { BRAND_LOGO_PATH } from "../domain/brand.ts"
 import { UNSUBSCRIBE_PATH } from "../domain/unsubscribe.ts"
+import { pendingDeletion } from "../domain/workspaceDeletion.ts"
 import { MailApi } from "../http/Api.ts"
 import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
 import {
@@ -41,6 +42,7 @@ import { SuppressionsHandlers } from "../http/suppressionHandlers.ts"
 import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts"
 import { TransfersHandlers } from "../http/transferHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
+import { WorkspaceHandlers } from "../http/workspaceHandlers.ts"
 import { appLayer } from "../layers.ts"
 import { handleMcp, MCP_PATH } from "../mcp/handler.ts"
 import { canonicalRedirect, configurePublicOrigin, isWorkerPath } from "../public/origin.ts"
@@ -56,7 +58,7 @@ import {
   RAW_PATH,
   UPLOAD_PATH,
 } from "./files.ts"
-import { handleEmail } from "./inbound.ts"
+import { handleEmail, runtimeFor } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
 import {
   CONFIRM_PATH,
@@ -85,6 +87,7 @@ export { ContactExportWorkflow } from "../workflows/contactExport.ts"
 export { ContactImportWorkflow } from "../workflows/contactImport.ts"
 export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
 export { SuppressionImportWorkflow } from "../workflows/suppressionImport.ts"
+export { WorkspaceDeletionWorkflow } from "../workflows/workspaceDeletion.ts"
 export { WorkspaceExportWorkflow } from "../workflows/workspaceExport.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
@@ -125,6 +128,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     SignInLinkHandlers,
     InviteLinkHandlers,
     PeopleHandlers,
+    WorkspaceHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
@@ -195,13 +199,18 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
  * body (`{ _tag, … }` from the API, `{ error }` from the raw routes) the same `requestId`, so a
  * person can quote it and the logs can find it.
  */
-const withRequestId = async (request: Request, respond: () => Response | Promise<Response>) => {
+const withRequestId = async (request: Request, env: Env, respond: () => Response | Promise<Response>) => {
   const requestId = request.headers.get("cf-ray") ?? crypto.randomUUID()
   const response = await respond()
   // A WebSocket upgrade's response can't be rebuilt.
   if (response.status === 101 || response.webSocket) return response
   const headers = new Headers(response.headers)
   headers.set("x-request-id", requestId)
+  // While the workspace is being deleted, every answer says when (HAL-3448). Cached per isolate.
+  const deleting = await runtimeFor(env)
+    .runPromise(pendingDeletion())
+    .catch(() => null)
+  if (deleting) headers.set("x-workspace-deleting", new Date(deleting.deletesAt).toISOString())
   if (response.status >= 400 && (headers.get("content-type") ?? "").includes("application/json")) {
     const body = (await response.json().catch(() => null)) as Record<string, unknown> | null
     if (body && typeof body === "object") {
@@ -222,7 +231,7 @@ const withRequestId = async (request: Request, respond: () => Response | Promise
 }
 
 export default {
-  fetch: (request, env, ctx) => withRequestId(request, () => route(request, env, ctx)),
+  fetch: (request, env, ctx) => withRequestId(request, env, () => route(request, env, ctx)),
   queue: (batch, env) => handleQueue(batch, env),
   scheduled: (_controller, env, ctx) => {
     ctx.waitUntil(handleScheduled(env))

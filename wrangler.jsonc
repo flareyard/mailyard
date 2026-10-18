@@ -75,6 +75,12 @@
       "name": "mailyard-workspace-export",
       "binding": "WORKSPACE_EXPORT_WORKFLOW",
       "class_name": "WorkspaceExportWorkflow"
+    },
+    {
+      // Deleting the workspace after its 7-day grace window (HAL-3448).
+      "name": "mailyard-workspace-deletion",
+      "binding": "WORKSPACE_DELETION_WORKFLOW",
+      "class_name": "WorkspaceDeletionWorkflow"
     }
   ],
   "queues": {

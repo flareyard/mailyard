@@ -7,7 +7,7 @@ import { getTestSend, startTestSend } from "../domain/testSend.ts"
 import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Governor } from "../services/Governor.ts"
 import { GovernorUnreachable, InvalidRequest, MailApi, NotFound } from "./Api.ts"
-import { appContext, provideTo, requireScope } from "./handlers.ts"
+import { appContext, notWhileDeleting, provideTo, requireScope } from "./handlers.ts"
 
 /** The governor being unreachable is a 503 the caller can retry, not a 500. */
 const reachable = <A, E, R>(self: Effect.Effect<A, E, R>) =>
@@ -29,6 +29,7 @@ export const SendingHandlers = HttpApiBuilder.group(
       startTestSend: p(({ payload }) =>
         Effect.gen(function* () {
           const caller = yield* requireScope("send", "email.send")
+          yield* notWhileDeleting
           const result = yield* startTestSend(payload, caller.keyId)
           yield* recordAudit({
             actor: caller.keyId,
