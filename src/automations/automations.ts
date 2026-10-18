@@ -71,7 +71,7 @@ export const STARTER_GRAPH: Graph = {
 
 const decodeGraph = Schema.decodeUnknownSync(Graph)
 const decodeSettings = Schema.decodeUnknownSync(Settings)
-const graphOf = (row: { readonly graph: unknown }): Graph => decodeGraph(row.graph)
+export const graphOf = (row: { readonly graph: unknown }): Graph => decodeGraph(row.graph)
 const settingsOf = (row: { readonly settings: unknown }): Settings =>
   row.settings ? decodeSettings(row.settings) : DEFAULT_SETTINGS
 
@@ -272,7 +272,7 @@ export const issuesOf = Effect.fn("automations.issues")(function* (graph: Graph,
   return issues
 })
 
-const findAutomation = (id: string) =>
+export const findAutomation = (id: string) =>
   Effect.gen(function* () {
     const database = yield* Database
     const row = yield* database.query("automations.get", (db) =>

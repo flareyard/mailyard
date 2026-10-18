@@ -203,6 +203,15 @@ describe("automation runs", () => {
     await instance.waitForStatus("complete")
     expect(await stepsOf(runId)).toEqual(["t:passed", "s:skipped", "x:exited"])
     expect((await sends(runId)).results).toEqual([])
+    // The run log names the missing field, so it can link to it (HAL-3417).
+    const logged = await json<{ steps: Array<{ nodeId: string; missing: string[] }> }>(
+      await admin(`/v1/runs/${runId}`),
+    )
+    expect(logged.steps.map((step) => [step.nodeId, step.missing])).toEqual([
+      ["t", []],
+      ["s", ["first_name"]],
+      ["x", []],
+    ])
     const detail = await json<{ steps: Array<{ nodeId: string; detail: string }> }>(
       await admin(`/v1/runs/${runId}`),
     )

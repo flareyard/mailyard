@@ -683,6 +683,8 @@ export const automationRunSteps = sqliteTable(
     port: text("port"),
     detail: text("detail").notNull(),
     messageId: text("message_id"),
+    /** A send skipped for missing merge data: the fields it needed (HAL-3417). */
+    missing: text("missing", { mode: "json" }).$type<ReadonlyArray<string>>(),
     at: integer("at").notNull(),
   },
   (t) => [

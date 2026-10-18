@@ -80,6 +80,7 @@ export type DryRunStep = {
     | "exited"
     | "stopped"
   readonly detail: string
+  readonly missing?: ReadonlyArray<string>
   readonly send?: { readonly to: string; readonly subject: string; readonly preview: string }
 }
 
@@ -404,6 +405,7 @@ export const dryRun = Effect.fn("automations.dryRun")(function* (automationId: s
               status: "skipped",
               reason: "missing_data",
               detail: missingDetail(e.missing),
+              missing: e.missing,
             } satisfies SendResult,
           }),
         ),
@@ -479,6 +481,7 @@ export const dryRun = Effect.fn("automations.dryRun")(function* (automationId: s
         ...base,
         outcome: outcome.messageId ? "would-send" : "skipped",
         detail: outcome.detail,
+        ...(outcome.missing ? { missing: outcome.missing } : {}),
         ...(outcome.messageId && pendingSend ? { send: pendingSend } : {}),
       })
     else path.push({ ...base, outcome: "would-run", detail: outcome.detail })
