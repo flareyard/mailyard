@@ -57,15 +57,20 @@ export const toBrand = (s: BrandSettings): Brand => {
   return { theme, siteUrl: s.siteUrl, tagline: s.tagline }
 }
 
-export const getBrandSettings = Effect.fn("brand.get")(function* () {
+/** The workspace's own brand, or null when it hasn't set one (public pages then use Flareyard's look). */
+export const customBrandSettings = Effect.fn("brand.custom")(function* () {
   const database = yield* Database
   const row = yield* database.query("settings.brand", (db) =>
     db.select().from(settings).where(eq(settings.key, "brand")).get(),
   )
-  if (!row) return DEFAULT_BRAND
+  if (!row) return null
   return Schema.decodeUnknownOption(BrandSettings)(row.value).pipe((o) =>
-    o._tag === "Some" ? o.value : DEFAULT_BRAND,
+    o._tag === "Some" ? o.value : null,
   )
+})
+
+export const getBrandSettings = Effect.fn("brand.get")(function* () {
+  return (yield* customBrandSettings()) ?? DEFAULT_BRAND
 })
 
 export const getBrand = Effect.fn("brand.resolve")(function* () {

@@ -27,12 +27,13 @@ const esc = (s: string) =>
 export const confirmUrl = (origin: string, token: string) => `${origin}/c/${encodeURIComponent(token)}`
 
 /** Sends the double opt-in mail for one topic, as a transactional message from the topic's sender or DEFAULT_FROM. */
-const sendConfirmation = (contact: ContactRow, topic: TopicRow, origin: string) =>
+const sendConfirmation = (contact: ContactRow, topic: TopicRow, origin: string, formId: string | null) =>
   Effect.gen(function* () {
     const token = yield* signConsent({
       kind: "confirm",
       contactId: contact.id,
       topicId: topic.id,
+      ...(formId ? { formId } : {}),
       issuedAt: Date.now(),
     })
     const url = confirmUrl(origin, token)
@@ -96,7 +97,9 @@ export const subscribe = Effect.fn("subscriptions.subscribe")(function* (
   const { changed, from } = yield* writeSubscription(contact, topicId, "unconfirmed", options.source)
   // Already confirmed earlier: nothing to send. Already pending: send again, it may have been lost.
   if (!changed && from === "subscribed") return { state: "subscribed" as const, confirmationSent: false }
-  yield* sendConfirmation(contact, topic, options.origin)
+  // A signup form's source is `form:<id>`; the confirm page then follows that form's redirect.
+  const formId = options.source.startsWith("form:") ? options.source.slice("form:".length) : null
+  yield* sendConfirmation(contact, topic, options.origin, formId)
   return { state: "unconfirmed" as const, confirmationSent: true }
 })
 
@@ -119,7 +122,12 @@ export const confirmSubscription = Effect.fn("subscriptions.confirm")(function* 
   const topic = yield* findTopic(payload.topicId)
   if (!isBlocked(contact.status))
     yield* writeSubscription(contact, topic.id, "subscribed", "confirmation link")
-  return { contact: contact.email, topic: topic.name, blocked: isBlocked(contact.status) }
+  return {
+    contact: contact.email,
+    topic: topic.name,
+    blocked: isBlocked(contact.status),
+    formId: payload.formId ?? null,
+  }
 })
 
 export type BulkAction =

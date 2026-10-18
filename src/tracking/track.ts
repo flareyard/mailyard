@@ -101,8 +101,8 @@ export const verifyToken = Effect.fn("tracking.verify")(function* (token: string
 export const clickableHrefs = () => /(<(?:a|area)\b[^>]*?\shref\s*=\s*)(["'])([^"']*)\2/gi
 
 /**
- * Adds the pixel and points every clickable http(s) link through the click redirect. Unsubscribe and
- * preference links are left as they are: one-click unsubscribing must not depend on tracking.
+ * Adds the pixel and points every clickable http(s) link through the click redirect. Unsubscribe,
+ * preference and view-in-browser links are left as they are: one-click unsubscribing must not depend on tracking.
  */
 export const instrument = Effect.fn("tracking.instrument")(function* (
   message: Outgoing,
@@ -125,7 +125,8 @@ export const instrument = Effect.fn("tracking.instrument")(function* (
       const skip =
         !/^https?:\/\//i.test(raw) ||
         raw.startsWith(`${input.origin}/u/`) ||
-        raw.startsWith(`${input.origin}/c/`)
+        raw.startsWith(`${input.origin}/c/`) ||
+        raw.startsWith(`${input.origin}/v/`)
       parts.push(html.slice(last, m.index))
       if (skip) parts.push(m[0])
       else {

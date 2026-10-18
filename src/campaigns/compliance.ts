@@ -23,6 +23,8 @@ export const ComplianceSettings = Schema.Struct({
   trackingOrigin: Schema.optionalKey(
     Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/[a-z0-9.-]+$/i))),
   ),
+  /** The sender's privacy policy, linked in the footer of the preference and signup pages (HAL-3377). */
+  privacyUrl: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/\S+$/)))),
 })
 export type ComplianceSettings = typeof ComplianceSettings.Type
 
@@ -31,6 +33,7 @@ export const DEFAULT_COMPLIANCE: ComplianceSettings = {
   linkAllowlist: [],
   seedAddresses: [],
   trackingOrigin: null,
+  privacyUrl: null,
 }
 
 /** The origin tracking links use: the configured one, else the API's own. */
@@ -55,6 +58,7 @@ export const putCompliance = Effect.fn("compliance.put")(function* (value: Compl
     linkAllowlist: [...new Set(value.linkAllowlist.map((d) => d.toLowerCase()))],
     seedAddresses: [...new Set(value.seedAddresses.map((a) => a.trim().toLowerCase()))],
     trackingOrigin: value.trackingOrigin?.replace(/\/$/, "").toLowerCase() ?? null,
+    privacyUrl: value.privacyUrl?.trim() || null,
   }
   yield* database.query("compliance.put", (db) =>
     db

@@ -4,6 +4,7 @@ import * as HttpServer from "effect/http/HttpServer"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Layer from "effect/Layer"
 import type { Env } from "../Bindings.ts"
+import { VIEW_PATH } from "../campaigns/content.ts"
 import { UNSUBSCRIBE_PATH } from "../domain/unsubscribe.ts"
 import { MailApi } from "../http/Api.ts"
 import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
@@ -63,8 +64,9 @@ import { handleQueue } from "./queue.ts"
 import { handleScheduled } from "./scheduled.ts"
 import { handleStatsCsv, STATS_CSV_PATH } from "./statsCsv.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
-import { handleUnsubscribe } from "./unsubscribe.ts"
+import { handleRequestLink, handleUnsubscribe, REQUEST_LINK_PATH } from "./unsubscribe.ts"
 import { handleUploads, UPLOADS_PATH } from "./uploads.ts"
+import { handleView } from "./view.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
 export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
@@ -147,6 +149,9 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
     return handleClick(request, env, d(click[1]))
   const unsubscribe = UNSUBSCRIBE_PATH.exec(path)
   if (unsubscribe) return handleUnsubscribe(request, env, d(unsubscribe[1]))
+  if (REQUEST_LINK_PATH.test(path)) return handleRequestLink(request, env)
+  const view = VIEW_PATH.exec(path)
+  if (view) return handleView(request, env, d(view[1]))
   const formPage = FORM_PAGE_PATH.exec(path)
   if (formPage) return handleFormPage(request, env, d(formPage[1]))
   const form = FORM_SUBMIT_PATH.exec(path)

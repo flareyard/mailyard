@@ -55,13 +55,13 @@ const SHORTENERS = new Set([
   "lnkd.in",
 ])
 
-/** Every clickable http(s) link in the message, minus our own unsubscribe and preference links. */
+/** Every clickable http(s) link in the message, minus our own unsubscribe, preference and view links. */
 export const linksIn = (html: string, ownOrigin: string) => {
   const found = new Set<string>()
   for (const m of html.matchAll(clickableHrefs())) {
     const href = (m[3] ?? "").replaceAll("&amp;", "&").trim()
     if (!/^https?:\/\//i.test(href)) continue
-    if (href.startsWith(`${ownOrigin}/u/`) || href.startsWith(`${ownOrigin}/c/`)) continue
+    if (["/u/", "/c/", "/v/"].some((own) => href.startsWith(`${ownOrigin}${own}`))) continue
     found.add(href)
   }
   return [...found]
