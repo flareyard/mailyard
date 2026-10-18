@@ -101,7 +101,7 @@
     },
     {
       "name": "CLOUDFLARE_DNS_TOKEN",
-      "ask": "A token for your zones (Zone, DNS and Email Sending: Read; Email Routing, Email Routing Rules and Email Sending: Edit to fix records and repoint routing rules), for zone status, DNSSEC, complaints and routing-rule conflicts on new mailboxes",
+      "ask": "A zone token (Zone, DNS, Email Sending: Read; Email Routing, Email Routing Rules, Email Sending: Edit) for zone status, record fixes and routing-rule conflicts",
       "optional": true
     }
   ],
