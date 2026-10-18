@@ -308,6 +308,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.getAssistant"];
+        put: operations["settings.putAssistant"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/audit": {
         parameters: {
             query?: never;
@@ -878,6 +894,38 @@ export interface paths {
         get: operations["mail.thread"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mailboxes/{id}/threads/{threadId}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mail.summarizeThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mailboxes/{id}/threads/{threadId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mail.draftReply"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1662,6 +1710,22 @@ export interface paths {
         get: operations["segments.list"];
         put?: never;
         post: operations["segments.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/segments/from-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["segments.fromText"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3596,6 +3660,14 @@ export interface components {
             _tag: "GovernorUnreachable";
             /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
             requestId?: string;
+            message: string;
+        };
+        AssistantRefusedEncoded: {
+            /** @enum {string} */
+            _tag: "AssistantRefused";
+            requestId?: string;
+            /** @enum {string} */
+            reason: "off" | "disabled" | "cap" | "no_answer" | "invalid";
             message: string;
         };
         SendBlockedEncoded: {
@@ -5794,6 +5866,161 @@ export interface operations {
                         queue: string;
                         version: number | ("Infinity" | "-Infinity" | "NaN");
                         available: boolean;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.getAssistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summaries: boolean;
+                        drafts: boolean;
+                        categories: boolean;
+                        segments: boolean;
+                        dailyCallsPerMailbox: number | ("Infinity" | "-Infinity" | "NaN");
+                        /** @enum {string} */
+                        provider: "off" | "workers-ai" | "openai" | "fixed";
+                        model: string | null;
+                        available: boolean;
+                        today: {
+                            day: string;
+                            byFeature: {
+                                /** @enum {string} */
+                                feature: "summary" | "draft" | "category" | "segment";
+                                calls: number | ("Infinity" | "-Infinity" | "NaN");
+                                inputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                outputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                neurons: number | ("Infinity" | "-Infinity" | "NaN");
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.putAssistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    summaries: boolean;
+                    drafts: boolean;
+                    categories: boolean;
+                    segments: boolean;
+                    dailyCallsPerMailbox: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summaries: boolean;
+                        drafts: boolean;
+                        categories: boolean;
+                        segments: boolean;
+                        dailyCallsPerMailbox: number | ("Infinity" | "-Infinity" | "NaN");
+                        /** @enum {string} */
+                        provider: "off" | "workers-ai" | "openai" | "fixed";
+                        model: string | null;
+                        available: boolean;
+                        today: {
+                            day: string;
+                            byFeature: {
+                                /** @enum {string} */
+                                feature: "summary" | "draft" | "category" | "segment";
+                                calls: number | ("Infinity" | "-Infinity" | "NaN");
+                                inputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                outputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                neurons: number | ("Infinity" | "-Infinity" | "NaN");
+                            }[];
+                        };
                     };
                 };
             };
@@ -9895,6 +10122,7 @@ export interface operations {
                             lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                             snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
                             /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
@@ -10007,6 +10235,7 @@ export interface operations {
                             lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                             snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
                             /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
@@ -10198,6 +10427,229 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.summarizeThread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    refresh?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summary: string;
+                        bullets: string[];
+                        version: string;
+                        cached: boolean;
+                        model: string | null;
+                        generatedAt: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict | AssistantRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"] | components["schemas"]["AssistantRefusedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.draftReply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    instructions?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        draft: {
+                            id: string;
+                            threadId: string | null;
+                            inReplyTo: string | null;
+                            references: string[];
+                            from: string | null;
+                            to: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            cc: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            bcc: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            subject: string;
+                            bodyText: string;
+                            bodyHtml: string | null;
+                            attachments: {
+                                /** @description The `key` POST /v1/mailboxes/{id}/uploads answered with. */
+                                key: string;
+                                filename: string;
+                                mimeType: string;
+                                size: number | ("Infinity" | "-Infinity" | "NaN");
+                                /**
+                                 * @description How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.
+                                 * @enum {string}
+                                 */
+                                delivery?: "inline" | "link";
+                            }[];
+                            /** @enum {string} */
+                            status: "draft" | "scheduled" | "due";
+                            sendAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            replyMode: ("reply" | "replyAll" | "forward") | null;
+                            sourceMessageId: string | null;
+                            lastError: string | null;
+                            /** @description Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited. */
+                            blockedReason: ("quota_exhausted" | "domain_unhealthy" | "all_recipients_suppressed") | null;
+                            track: {
+                                opens: boolean;
+                                clicks: boolean;
+                            } | null;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        };
+                        model: string | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict | AssistantRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"] | components["schemas"]["AssistantRefusedEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -10529,6 +10981,7 @@ export interface operations {
                             lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                             snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
                             /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
@@ -17408,7 +17861,8 @@ export interface operations {
             content: {
                 "application/json": {
                     name: string;
-                    filter: unknown;
+                    /** @description A SegmentRule tree. A tree that can't work is a 400 with the rule's path in `field`. */
+                    filter: components["schemas"]["SegmentRule"];
                 };
             };
         };
@@ -17474,6 +17928,73 @@ export interface operations {
             };
         };
     };
+    "segments.fromText": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    text: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        rule: components["schemas"]["SegmentRule"];
+                        explanation: string | null;
+                        count: number | ("Infinity" | "-Infinity" | "NaN");
+                        model: string | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description AssistantRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantRefusedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "segments.preview": {
         parameters: {
             query?: never;
@@ -17484,7 +18005,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    filter: unknown;
+                    /** @description A SegmentRule tree. A tree that can't work is a 400 with the rule's path in `field`. */
+                    filter: components["schemas"]["SegmentRule"];
                 };
             };
         };
@@ -17743,7 +18265,8 @@ export interface operations {
             content: {
                 "application/json": {
                     name?: string;
-                    filter?: unknown;
+                    /** @description A SegmentRule tree. A tree that can't work is a 400 with the rule's path in `field`. */
+                    filter?: components["schemas"]["SegmentRule"];
                 };
             };
         };
@@ -24195,6 +24718,7 @@ export interface operations {
                                 answered: number | ("Infinity" | "-Infinity" | "NaN");
                                 firstResponseMedianMin: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                                 firstResponseP90Min: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                resolved: number | ("Infinity" | "-Infinity" | "NaN");
                                 resolutionMedianHours: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             }[];
                         }[];
@@ -24448,6 +24972,7 @@ export interface operations {
                                 lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                                 sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                                 snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                                 /** @description The API key id handling it; see assignedTo for the name. */
                                 assignee: string | null;
                                 /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
