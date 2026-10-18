@@ -44,10 +44,10 @@ const unfold = (text: string) =>
     .replace(/\n[ \t]/g, "")
     .split("\n")
 
-const unescape = (v: string) =>
+const unescapeText = (v: string) =>
   v.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\")
 
-const escape = (v: string) =>
+const escapeText = (v: string) =>
   v.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n")
 
 const parseLine = (line: string): Property | null => {
@@ -141,9 +141,9 @@ export const parseInvite = (text: string): Invite | null => {
     method,
     uid,
     sequence: Number(one("SEQUENCE")?.value ?? "0") || 0,
-    summary: one("SUMMARY") ? unescape(one("SUMMARY")?.value ?? "") : null,
-    description: one("DESCRIPTION") ? unescape(one("DESCRIPTION")?.value ?? "").slice(0, 2_000) : null,
-    location: one("LOCATION") ? unescape(one("LOCATION")?.value ?? "") : null,
+    summary: one("SUMMARY") ? unescapeText(one("SUMMARY")?.value ?? "") : null,
+    description: one("DESCRIPTION") ? unescapeText(one("DESCRIPTION")?.value ?? "").slice(0, 2_000) : null,
+    location: one("LOCATION") ? unescapeText(one("LOCATION")?.value ?? "") : null,
     start: s?.iso ?? null,
     end: e?.iso ?? null,
     allDay: s?.allDay ?? false,
@@ -220,7 +220,7 @@ export const buildReply = (input: {
         ]
       : []),
     `ATTENDEE;PARTSTAT=${partstat}${input.attendee.name ? `;CN="${input.attendee.name.replace(/"/g, "'")}"` : ""}:mailto:${input.attendee.address}`,
-    ...(invite.summary ? [`SUMMARY:${escape(invite.summary)}`] : []),
+    ...(invite.summary ? [`SUMMARY:${escapeText(invite.summary)}`] : []),
     "END:VEVENT",
     "END:VCALENDAR",
   ]
