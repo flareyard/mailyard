@@ -4,6 +4,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { alerts, domains, mailboxes, suppressions } from "../db/schema.ts"
+import { checkSend, holdSend } from "../domain/agents.ts"
 import type { Caller } from "../domain/apiKeys.ts"
 import { canSendAs } from "../domain/mailboxes.ts"
 import { sendFromMailbox } from "../domain/outbox.ts"
@@ -150,6 +151,8 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
   /** Track opens and clicks on this one message; never on unless asked (HAL-3335). */
   readonly track?: { readonly opens?: boolean | undefined; readonly clicks?: boolean | undefined } | undefined
   readonly origin: string | null
+  /** Set when a person approved this send (HAL-3460): the key's limits were checked when it was held. */
+  readonly approved?: boolean | undefined
 }) {
   const env = yield* Bindings
   const draft = yield* callMailbox(input.mailboxId, (stub) => stub.draft(input.draftId))
@@ -171,6 +174,33 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
     recipients: [...draft.to, ...draft.cc, ...draft.bcc].map((p) => p.address),
   })
   if (blocked) return yield* blocked
+  // The key's guardrails (HAL-3460): its allow-list and daily cap, or a hold for a person's yes.
+  if (!input.approved) {
+    const everyone = [...draft.to, ...draft.cc, ...draft.bcc].map((p) => p.address)
+    const decision = yield* checkSend(input.caller, {
+      recipients: everyone,
+      messages: 1,
+      holdable: true,
+      what: "this draft",
+    })
+    if (decision === "hold") {
+      const approval = yield* holdSend(input.caller, {
+        kind: "draft",
+        mailboxId: input.mailboxId,
+        draftId: input.draftId,
+        request: {
+          ...(input.sendAt !== undefined ? { sendAt: input.sendAt } : {}),
+          ...(input.undoSeconds !== undefined ? { undoSeconds: input.undoSeconds } : {}),
+          ...(input.track ? { track: input.track } : {}),
+          origin: input.origin,
+        },
+        recipients: everyone,
+        subject: draft.subject,
+        from,
+      })
+      return { draft, sendAt: null, undoUntil: null, approval }
+    }
+  }
   const now = Date.now()
   const undoable = input.sendAt === undefined
   // An undo window of 0 means "at once": a quarter-second ahead, so the mailbox, which refuses a
@@ -188,7 +218,7 @@ export const sendDraft = Effect.fn("mail.sendDraft")(function* (input: {
       input.track ? { opens: input.track.opens === true, clicks: input.track.clicks === true } : null,
     ),
   )
-  return { draft: result.draft, sendAt: at, undoUntil: undoable ? at : null }
+  return { draft: result.draft, sendAt: at as number | null, undoUntil: undoable ? at : null, approval: null }
 })
 
 /** Undoes a send inside its window, or cancels a scheduled one: the draft goes back to drafts. */

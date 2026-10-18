@@ -49,6 +49,10 @@ export const PERMISSIONS = {
   "events.track": { roles: SENDERS, scope: "track" },
   /** The whole workspace in one export, settings and audit log included. */
   "exports.workspace": { roles: MANAGERS, scope: "admin" },
+  /** Create agents (a mailbox and an MCP key) and set any key's send limits (HAL-3460). */
+  "agents.manage": { roles: MANAGERS, scope: "admin" },
+  /** Approve or reject sends held for approval (HAL-3460). */
+  "approvals.manage": { roles: MANAGERS, scope: "admin" },
   /** Invite people, change roles, remove people. */
   "members.manage": { roles: MANAGERS, scope: "admin" },
   /** Hand ownership on; delete the workspace. */

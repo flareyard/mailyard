@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
+import type { AgentLimited } from "../domain/agents.ts"
 import { recipientsOf } from "../domain/deliveryEvents.ts"
 import { isManager } from "../domain/permissions.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
@@ -17,23 +18,25 @@ import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.
 import { Database } from "../services/Database.ts"
 import { Conflict, type CreateDraftPayload, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"
-import { appContext, idempotent, notWhileDeleting, provideTo } from "./handlers.ts"
+import { agentConflict, appContext, idempotent, notWhileDeleting, provideTo } from "./handlers.ts"
 
 const tagOf = (e: unknown) => (typeof e === "object" && e !== null && "_tag" in e ? String(e._tag) : "")
 
 type MailHttp<E> = E extends MailboxMissing | RuleNotFound | TransferNotFound
   ? NotFound
-  : E extends MailboxAccessDenied
-    ? Forbidden
-    : E extends MailboxRefused
-      ? NotFound | InvalidRequest | Conflict | Forbidden
-      : E extends ComposeInvalid | SendInvalid | RuleInvalid | TransferInvalid
-        ? InvalidRequest
-        : E extends {
-              readonly _tag: "DatabaseError" | "MailboxUnavailable" | "BlobStoreError" | "FileLinkInvalid"
-            }
-          ? never
-          : E
+  : E extends AgentLimited
+    ? Conflict
+    : E extends MailboxAccessDenied
+      ? Forbidden
+      : E extends MailboxRefused
+        ? NotFound | InvalidRequest | Conflict | Forbidden
+        : E extends ComposeInvalid | SendInvalid | RuleInvalid | TransferInvalid
+          ? InvalidRequest
+          : E extends {
+                readonly _tag: "DatabaseError" | "MailboxUnavailable" | "BlobStoreError" | "FileLinkInvalid"
+              }
+            ? never
+            : E
 
 /**
  * Maps mail errors to HTTP: a missing mailbox is 404, no access is 403, the mailbox's own refusals by
@@ -64,6 +67,10 @@ export const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
             ...(denied.role ? { role: denied.role } : {}),
             ...(denied.owners ? { owners: [...denied.owners] } : {}),
           })
+        }
+        case "AgentLimited": {
+          const limited = e as unknown as AgentLimited
+          return agentConflict(limited)
         }
         case "MailboxRefused":
           if (err.code === "not_found") return new NotFound({ message: err.message ?? "Not found." })

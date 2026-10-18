@@ -26,12 +26,13 @@ import {
   resumeCampaign,
   scheduleCampaign,
 } from "../campaigns/send.ts"
+import { refuseCampaignForLimitedKey } from "../domain/agents.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { campaignRatePerHour } from "../domain/insights.ts"
 import { parseParty } from "../domain/outbox.ts"
 import { Governor } from "../services/Governor.ts"
 import { Conflict, GovernorUnreachable, InvalidRequest, MailApi, NotFound } from "./Api.ts"
-import { appContext, notWhileDeleting, provideTo, requireScope } from "./handlers.ts"
+import { agentConflict, appContext, notWhileDeleting, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
 
 type Faults = {
@@ -173,6 +174,11 @@ export const CampaignsHandlers = HttpApiBuilder.group(
       test: p(({ params, payload, request }) =>
         requireScope("admin", "campaigns.write").pipe(
           Effect.tap(() => notWhileDeleting),
+          Effect.tap((caller) =>
+            refuseCampaignForLimitedKey(caller).pipe(
+              Effect.catchTag("AgentLimited", (e) => Effect.fail(agentConflict(e))),
+            ),
+          ),
           Effect.andThen(testCampaign(params.id, payload.to, originOf(request) ?? "")),
           campaignErrors,
         ),
@@ -192,6 +198,11 @@ export const CampaignsHandlers = HttpApiBuilder.group(
       schedule: p(({ params, payload, request }) =>
         requireScope("admin", "campaigns.write").pipe(
           Effect.tap(() => notWhileDeleting),
+          Effect.tap((caller) =>
+            refuseCampaignForLimitedKey(caller).pipe(
+              Effect.catchTag("AgentLimited", (e) => Effect.fail(agentConflict(e))),
+            ),
+          ),
           Effect.flatMap((caller) =>
             scheduleCampaign(params.id, payload, caller.keyId, originOf(request) ?? ""),
           ),
@@ -258,6 +269,9 @@ export const CampaignsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const caller = yield* requireScope("admin", "campaigns.write")
           yield* notWhileDeleting
+          yield* refuseCampaignForLimitedKey(caller).pipe(
+            Effect.catchTag("AgentLimited", (e) => Effect.fail(agentConflict(e))),
+          )
           const options = payload ?? {}
           const draft = yield* resendToNonOpeners(params.id, caller.keyId, options)
           yield* recordAudit({

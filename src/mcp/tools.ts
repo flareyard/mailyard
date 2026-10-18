@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema"
 
 import { campaignReport } from "../campaigns/report.ts"
 import { contacts } from "../db/schema.ts"
+import { checkSend, holdSend } from "../domain/agents.ts"
 import type { Caller, Scope } from "../domain/apiKeys.ts"
 import { getContact, normalizeEmail } from "../domain/contacts.ts"
 import { track } from "../domain/events.ts"
@@ -203,7 +204,7 @@ export const TOOLS: ReadonlyArray<Tool> = [
   {
     name: "send_draft",
     description:
-      "Sends a draft from the mailbox. It waits the account's undo window first (10 s by default), so it can still be cancelled in the app. Needs confirm: true.",
+      "Sends a draft from the mailbox. It waits the account's undo window first (10 s by default), so it can still be cancelled in the app. Needs confirm: true. If this key's sends need approval, it is held instead (held: true) until a person approves it; a refusal says why (agent_limit, recipient_not_allowed).",
     scope: "send",
     input: Schema.Struct({ mailboxId: Schema.String, draftId: Schema.String, confirm: Confirm }),
     annotations: sends("Send a draft"),
@@ -218,13 +219,21 @@ export const TOOLS: ReadonlyArray<Tool> = [
           draftId: input.draftId,
           origin: null,
         })
+        // A key whose sends wait for approval gets the approval to report back, not a send time.
+        if (sent.approval)
+          return {
+            draftId: input.draftId,
+            held: true,
+            approvalId: sent.approval.id,
+            note: "This key's sends wait for a person's approval; it goes out once someone approves it.",
+          }
         return { draftId: input.draftId, sendAt: sent.sendAt, undoUntil: sent.undoUntil }
       }),
   },
   {
     name: "send_email",
     description:
-      "Sends one transactional email (a receipt, a sign-in code, a notice) from an address on a sending domain. Not for newsletters: use a campaign. Needs confirm: true.",
+      "Sends one transactional email (a receipt, a sign-in code, a notice) from an address on a sending domain. Not for newsletters: use a campaign. Needs confirm: true. If this key's sends need approval, it is held instead (held: true) until a person approves it; a refusal says why (agent_limit, recipient_not_allowed).",
     scope: "send",
     input: Schema.Struct({
       to: Schema.String,
@@ -239,13 +248,35 @@ export const TOOLS: ReadonlyArray<Tool> = [
     run: (input: { to: string; subject: string; body: string; from?: string; confirm: true }, caller) =>
       Effect.gen(function* () {
         yield* requireConfirm(input)
-        const sent = yield* sendTransactional({
+        const request = {
           recipients: [{ email: input.to }],
           subject: input.subject,
           body: input.body,
           ...(input.from ? { from: { email: input.from } } : {}),
           apiKeyId: caller.keyId,
+        }
+        // The key's guardrails (HAL-3460): refused with a reason, or held for a person's yes.
+        const decision = yield* checkSend(caller, {
+          recipients: [input.to],
+          messages: 1,
+          holdable: true,
+          what: "this email",
         })
+        if (decision === "hold") {
+          const approval = yield* holdSend(caller, {
+            kind: "transactional",
+            request,
+            recipients: [input.to],
+            subject: input.subject,
+            from: input.from ?? null,
+          })
+          return {
+            held: true,
+            approvalId: approval.id,
+            note: "This key's sends wait for a person's approval; it goes out once someone approves it.",
+          }
+        }
+        const sent = yield* sendTransactional(request)
         return { emails: sent.map((e) => ({ id: e.email, to: e.contact.email, status: e.status })) }
       }),
   },

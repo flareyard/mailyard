@@ -99,6 +99,8 @@ export const SendResponse = Schema.Struct({
       }),
     ),
     timestamp: Schema.String,
+    /** Mailyard addition (HAL-3460): set, with `emails` empty, when the key's sends wait for approval. */
+    approval: Schema.optionalKey(Schema.Struct({ id: Schema.String, status: Schema.Literal("pending") })),
   }),
 })
 
@@ -189,6 +191,12 @@ export class Conflict extends Schema.TaggedError<Conflict>()(
     ruleId: Schema.optionalKey(Schema.String),
     /** With `reason: "alias-targets"` on a mailbox removal: the aliases and groups that still deliver there. */
     aliasIds: Schema.optionalKey(Schema.Array(Schema.String)),
+    /** With `reason: "agent_limit"` (HAL-3460): the key's daily cap, what it sent today, and when it resets. */
+    limit: Schema.optionalKey(Schema.Number),
+    sentToday: Schema.optionalKey(Schema.Number),
+    resetsAt: Schema.optionalKey(Schema.Number),
+    /** With `reason: "recipient_not_allowed"`: the addresses outside the key's allow-list. */
+    notAllowed: Schema.optionalKey(Schema.Array(Schema.String)),
     /** With `reason: "workspace-deleting"` (HAL-3448): when the workspace will be deleted. */
     deletesAt: Schema.optionalKey(Schema.Number),
     /** With `reason: "already-claimed"` (HAL-3361): who claimed the workspace, and when. */
@@ -2078,8 +2086,11 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
       }),
       success: Schema.Struct({
         draft: DraftSchema,
-        sendAt: Schema.Number,
+        /** When it goes; null while it waits for approval. */
+        sendAt: Schema.NullOr(Schema.Number),
         undoUntil: Schema.NullOr(Schema.Number),
+        /** Set when the key's limits hold its sends for a person's yes (HAL-3460). */
+        approval: Schema.NullOr(Schema.Struct({ id: Schema.String, status: Schema.Literal("pending") })),
       }),
       error: [...MailErrors, IdempotencyConflict, SendBlocked],
     }),
@@ -5297,6 +5308,159 @@ export class WorkspaceApi extends HttpApiGroup.make("workspace")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Agents, send limits and approvals (HAL-3460)
+// ---------------------------------------------------------------------------------------------
+
+export const LimitsSchema = Schema.Struct({
+  /** Messages a UTC day; null for no cap. Over it: `409 { reason: "agent_limit", limit, sentToday, resetsAt }`. */
+  sendsPerDay: Schema.NullOr(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 100_000 }))),
+  /** Who it may write to: anyone, people already in contacts, or the listed domains (subdomains too).
+   * Outside it: `409 { reason: "recipient_not_allowed", notAllowed }`. */
+  recipients: Schema.Literals(["any", "contacts", "domains"]),
+  allowDomains: Schema.Array(Schema.String.check(Schema.isMaxLength(253))).check(Schema.isMaxLength(100)),
+  /** Every send waits in `GET /v1/approvals` for a person's yes. */
+  requireApproval: Schema.Boolean,
+})
+
+const AgentSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  mailbox: Schema.Struct({ id: Schema.String, address: Schema.NullOr(Schema.String) }),
+  key: Schema.NullOr(
+    Schema.Struct({
+      id: Schema.String,
+      prefix: Schema.String,
+      scopes: Schema.Array(Scope),
+      lastUsedAt: Schema.NullOr(Schema.Number),
+      revoked: Schema.Boolean,
+    }),
+  ),
+  limits: Schema.NullOr(LimitsSchema),
+  sentToday: Schema.Number,
+  pendingApprovals: Schema.Number,
+  createdAt: Schema.Number,
+  removedAt: Schema.NullOr(Schema.Number),
+})
+
+/**
+ * Agents: an AI agent's own mailbox and the MCP key that uses it, made together, with limits on
+ * what the key may send. Managing them needs `agents.manage` (owners and admins; the admin scope).
+ */
+export class AgentsApi extends HttpApiGroup.make("agents")
+  .add(
+    /** The mailbox, a `purpose: mcp` key that owns it, and its limits. The key is shown once, here,
+     * with the `claude mcp add` command that uses it. */
+    HttpApiEndpoint.post("create", "/v1/agents", {
+      payload: Schema.Struct({
+        name: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(80)),
+        address: Schema.String.check(Schema.isMaxLength(254)),
+        displayName: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(120))),
+        /** `read` and `send` unless given; never `admin`. */
+        scopes: Schema.optionalKey(Schema.Array(Scope)),
+        limits: Schema.optionalKey(LimitsSchema),
+      }),
+      success: Schema.Struct({
+        agent: AgentSchema,
+        key: Schema.String,
+        mcp: Schema.Struct({ url: Schema.String, command: Schema.String }),
+      }),
+      error: [Forbidden, InvalidRequest, Conflict, NotFound],
+    }),
+    HttpApiEndpoint.get("list", "/v1/agents", {
+      success: Schema.Struct({ agents: Schema.Array(AgentSchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("get", "/v1/agents/:id", {
+      params: { id: Schema.String },
+      success: AgentSchema,
+      error: [Forbidden, NotFound],
+    }),
+    /** Its name, and its limits (null removes them). */
+    HttpApiEndpoint.patch("update", "/v1/agents/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(80))),
+        limits: Schema.optionalKey(Schema.NullOr(LimitsSchema)),
+      }),
+      success: AgentSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /** Revokes its key at once; its mailbox and mail stay. Its pending sends are rejected. */
+    HttpApiEndpoint.delete("remove", "/v1/agents/:id", {
+      params: { id: Schema.String },
+      success: AgentSchema,
+      error: [Forbidden, NotFound],
+    }),
+    /** Any key's limits (an agent's or not). */
+    HttpApiEndpoint.get("getLimits", "/v1/api-keys/:id/limits", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ limits: Schema.NullOr(LimitsSchema), sentToday: Schema.Number }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.put("putLimits", "/v1/api-keys/:id/limits", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ limits: Schema.NullOr(LimitsSchema) }),
+      success: Schema.Struct({ limits: Schema.NullOr(LimitsSchema), sentToday: Schema.Number }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+const ApprovalSchema = Schema.Struct({
+  id: Schema.String,
+  /** The key that asked to send. */
+  keyId: Schema.String,
+  kind: Schema.Literals(["transactional", "draft"]),
+  mailboxId: Schema.NullOr(Schema.String),
+  draftId: Schema.NullOr(Schema.String),
+  recipients: Schema.Array(Schema.String),
+  subject: Schema.String,
+  from: Schema.NullOr(Schema.String),
+  status: Schema.Literals(["pending", "approved", "rejected", "failed"]),
+  createdAt: Schema.Number,
+  decidedAt: Schema.NullOr(Schema.Number),
+  decidedBy: Schema.NullOr(Schema.String),
+  reason: Schema.NullOr(Schema.String),
+  /** What approving it did: the emails sent, or the draft's send time (it still waits the undo window). */
+  result: Schema.NullOr(Schema.Record(Schema.String, Schema.Unknown)),
+})
+
+/**
+ * Sends held for a person's yes, from keys whose limits say `requireApproval`. Raises the
+ * `approval_pending` alert and the `approval.pending` webhook. Deciding needs `approvals.manage`.
+ */
+export class ApprovalsApi extends HttpApiGroup.make("approvals")
+  .add(
+    HttpApiEndpoint.get("list", "/v1/approvals", {
+      query: { status: Schema.optionalKey(Schema.Literals(["pending", "approved", "rejected", "failed"])) },
+      success: Schema.Struct({ approvals: Schema.Array(ApprovalSchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("get", "/v1/approvals/:id", {
+      params: { id: Schema.String },
+      success: ApprovalSchema,
+      error: [Forbidden, NotFound],
+    }),
+    /** Sends it through the path it was held on, as the key that asked. */
+    HttpApiEndpoint.post("approve", "/v1/approvals/:id/approve", {
+      params: { id: Schema.String },
+      payload: [Schema.Struct({}), Schema.Null],
+      success: ApprovalSchema,
+      error: [Forbidden, NotFound, Conflict, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("reject", "/v1/approvals/:id/reject", {
+      params: { id: Schema.String },
+      payload: [
+        Schema.Struct({ reason: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(500))) }),
+        Schema.Null,
+      ],
+      success: ApprovalSchema,
+      error: [Forbidden, NotFound, Conflict],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -5335,4 +5499,6 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(InviteLinkApi)
   .add(PeopleApi)
   .add(WorkspaceApi)
+  .add(AgentsApi)
+  .add(ApprovalsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}

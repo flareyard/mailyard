@@ -29,6 +29,7 @@ export const ALERT_KINDS = [
   "export_ready",
   "domain_activated",
   "automation_failed",
+  "approval_pending",
 ] as const
 export type AlertKind = (typeof ALERT_KINDS)[number]
 

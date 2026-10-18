@@ -10,6 +10,7 @@ import { UNSUBSCRIBE_PATH } from "../domain/unsubscribe.ts"
 import { pendingDeletion } from "../domain/workspaceDeletion.ts"
 import { MailApi } from "../http/Api.ts"
 import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
+import { AgentsHandlers, ApprovalsHandlers } from "../http/agentHandlers.ts"
 import {
   ContactsHandlers,
   FormsHandlers,
@@ -129,6 +130,8 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     InviteLinkHandlers,
     PeopleHandlers,
     WorkspaceHandlers,
+    AgentsHandlers,
+    ApprovalsHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),

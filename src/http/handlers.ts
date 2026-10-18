@@ -11,6 +11,7 @@ import * as Redacted from "effect/Redacted"
 import pkg from "../../package.json" with { type: "json" }
 import { Bindings } from "../Bindings.ts"
 import { messageEvents, messagesOut } from "../db/schema.ts"
+import { type AgentLimited, checkSend, holdSend } from "../domain/agents.ts"
 import {
   authenticate,
   type Caller,
@@ -188,6 +189,17 @@ export const appContext = Effect.context<
   | ImapConnector
 >()
 
+/** A send a key's limits refused (HAL-3460), as the 409 the caller reads. */
+export const agentConflict = (e: AgentLimited) =>
+  new Conflict({
+    reason: e.reason,
+    message: e.message,
+    ...(e.limit !== undefined ? { limit: e.limit } : {}),
+    ...(e.sentToday !== undefined ? { sentToday: e.sentToday } : {}),
+    ...(e.resetsAt !== undefined ? { resetsAt: e.resetsAt } : {}),
+    ...(e.notAllowed !== undefined ? { notAllowed: [...e.notAllowed] } : {}),
+  })
+
 /**
  * The endpoints that send call this first: while the workspace is being deleted (HAL-3448) they
  * answer `409 { reason: "workspace-deleting", deletesAt }` instead.
@@ -304,7 +316,7 @@ export const ActionsHandlers = HttpApiBuilder.group(
               : typeof payload.from === "string"
                 ? { email: payload.from, name: payload.name }
                 : { email: payload.from.email, name: payload.from.name ?? payload.name }
-          const run = sendTransactional({
+          const outgoing = {
             recipients: normalizeRecipients(payload.to),
             subject: payload.subject,
             body: payload.body,
@@ -324,12 +336,34 @@ export const ActionsHandlers = HttpApiBuilder.group(
               : undefined,
             apiKeyId: caller.keyId,
             idempotencyKey: headers["idempotency-key"],
+          }
+          const run = Effect.gen(function* () {
+            // The key's guardrails (HAL-3460): allow-list, daily cap, or a hold for a person's yes.
+            const recipients = outgoing.recipients.map((r) => r.email)
+            const decision = yield* checkSend(caller, {
+              recipients,
+              messages: recipients.length,
+              holdable: true,
+              what: "this email",
+            })
+            if (decision === "hold") {
+              const approval = yield* holdSend(caller, {
+                kind: "transactional",
+                request: JSON.parse(JSON.stringify(outgoing)) as Record<string, unknown>,
+                recipients,
+                subject: payload.subject ?? `Template ${payload.template ?? ""}`.trim(),
+                from: from?.email ?? null,
+              })
+              return {
+                success: true as const,
+                data: { emails: [], timestamp: new Date().toISOString(), approval },
+              }
+            }
+            const emails = yield* sendTransactional(outgoing)
+            return { success: true as const, data: { emails, timestamp: new Date().toISOString() } }
           }).pipe(
-            Effect.map((emails) => ({
-              success: true as const,
-              data: { emails, timestamp: new Date().toISOString() },
-            })),
             Effect.catchTags({
+              AgentLimited: (e) => Effect.fail(agentConflict(e)),
               SendRequestInvalid: (e) =>
                 Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
               TemplateMissing: (e) =>

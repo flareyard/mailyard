@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Schema from "effect/Schema"
+import { checkSend } from "../domain/agents.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { listAudit } from "../domain/auditLog.ts"
 import {
@@ -37,7 +38,7 @@ import {
 } from "../templates/render.ts"
 import { InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller } from "./Auth.ts"
-import { appContext, notWhileDeleting, provideTo, requireScope } from "./handlers.ts"
+import { agentConflict, appContext, notWhileDeleting, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
 
 const summary = (t: {
@@ -165,8 +166,14 @@ export const TemplatesHandlers = HttpApiBuilder.group(
       ),
       test: p(({ params, payload }) =>
         Effect.gen(function* () {
-          yield* requireScope("send", "templates.write")
+          const caller = yield* requireScope("send", "templates.write")
           yield* notWhileDeleting
+          yield* checkSend(caller, {
+            recipients: payload.to,
+            messages: payload.to.length,
+            holdable: false,
+            what: "a test send",
+          }).pipe(Effect.catchTag("AgentLimited", (e) => Effect.fail(agentConflict(e))))
           return yield* testTemplate(params.id, payload)
         }).pipe(
           Effect.catchTags({
