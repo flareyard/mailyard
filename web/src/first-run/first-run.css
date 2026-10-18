@@ -30,3 +30,15 @@
     border: 0;
   }
 }
+
+/* The chosen file: on narrow screens its status pill drops under the name, which otherwise shrank to 68 px and
+   broke a file name over four lines (responsive audit, a 390 px phone at 130% zoom). */
+@media (max-width: 480px) {
+  .file-choice {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+  .file-choice > :nth-child(3) {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

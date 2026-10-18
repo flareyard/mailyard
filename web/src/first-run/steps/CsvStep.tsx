@@ -208,7 +208,7 @@ function FileCard({
   pill: ReactNode
 }) {
   return (
-    <div className="choice is-selected" style={{ gridTemplateColumns: "20px minmax(0,1fr) auto" }}>
+    <div className="choice is-selected file-choice">
       <Icon name="csv" />
       <span className="c-name" style={{ overflowWrap: "anywhere" }}>
         {name}

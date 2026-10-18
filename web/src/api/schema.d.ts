@@ -2737,7 +2737,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["me.updateMe"];
         trace?: never;
     };
     "/v1/sessions": {
@@ -2767,6 +2767,198 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["me.endSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/session/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["signInLink.request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/session/link/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["signInLink.verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invites/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["inviteLink.describe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invites/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["inviteLink.accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspace/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["people.claim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspace/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["people.transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["people.listMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/members/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["people.getMember"];
+        put?: never;
+        post?: never;
+        delete: operations["people.removeMember"];
+        options?: never;
+        head?: never;
+        patch: operations["people.updateMember"];
+        trace?: never;
+    };
+    "/v1/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["people.listInvites"];
+        put?: never;
+        post: operations["people.createInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invites/{id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["people.sendInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invites/{id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["people.resendInvite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invites/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["people.revokeInvite"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2869,6 +3061,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/session/link/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The page a sign-in link opens (HAL-3361)
+         * @description An HTML page with one button: opening the link signs nobody in, so a mail scanner that fetches it can't use it up. The button POSTs to the same path.
+         */
+        get: operations["signInLink.page"];
+        put?: never;
+        /**
+         * Use a sign-in link from its page
+         * @description Uses the link (once, within 15 minutes), sets the session cookie and redirects to the app (303 to /). Needs this site's Origin. The app's own screen can call POST /v1/session/link/verify instead.
+         */
+        post: operations["signInLink.use"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2881,18 +3097,6 @@ export interface components {
             message: string;
             retryAfter: number | ("Infinity" | "-Infinity" | "NaN");
         };
-        ForbiddenEncoded: {
-            /** @enum {string} */
-            _tag: "Forbidden";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            message: string;
-            /** @enum {string} */
-            reason?: "public-key" | "insufficient-scope" | "csrf";
-            required?: string;
-            scopes?: string[];
-            keyName?: string | null;
-        };
         UnauthorizedEncoded: {
             /** @enum {string} */
             _tag: "Unauthorized";
@@ -2903,9 +3107,40 @@ export interface components {
             reason?: "missing" | "format" | "unknown" | "revoked" | "session-expired";
             revokedAt?: number | ("Infinity" | "-Infinity" | "NaN");
         };
+        GoneEncoded: {
+            /** @enum {string} */
+            _tag: "Gone";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+            /** @enum {string} */
+            reason: "expired" | "used" | "revoked";
+        };
         NotFoundEncoded: {
             /** @enum {string} */
             _tag: "NotFound";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+        };
+        ForbiddenEncoded: {
+            /** @enum {string} */
+            _tag: "Forbidden";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+            /** @enum {string} */
+            reason?: "public-key" | "insufficient-scope" | "csrf" | "role" | "owner" | "mailbox_role";
+            required?: string;
+            scopes?: string[];
+            keyName?: string | null;
+            role?: string;
+            allowedRoles?: string[];
+            owners?: string[];
+        };
+        NoSystemSenderEncoded: {
+            /** @enum {string} */
+            _tag: "NoSystemSender";
             /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
             requestId?: string;
             message: string;
@@ -2923,6 +3158,8 @@ export interface components {
             ruleAction?: string;
             ruleId?: string;
             aliasIds?: string[];
+            claimedBy?: string;
+            claimedAt?: number | ("Infinity" | "-Infinity" | "NaN");
         };
         InvalidRequestEncoded: {
             /** @enum {string} */
@@ -3684,7 +3921,7 @@ export interface operations {
             query?: {
                 status?: "queued" | "sent" | "delivered" | "deferred" | "bounced" | "failed" | "rejected" | "complained";
                 recipient?: string;
-                stream?: "transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test";
+                stream?: "transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system";
                 templateId?: string;
                 q?: string;
                 from?: string;
@@ -3709,7 +3946,7 @@ export interface operations {
                             id: string;
                             stream: string;
                             /** @enum {string} */
-                            source: "api" | "campaign" | "automation" | "mailbox" | "test";
+                            source: "api" | "campaign" | "automation" | "mailbox" | "test" | "system";
                             recipient: string;
                             sender: string;
                             subject: string;
@@ -3788,7 +4025,7 @@ export interface operations {
                         id: string;
                         stream: string;
                         /** @enum {string} */
-                        source: "api" | "campaign" | "automation" | "mailbox" | "test";
+                        source: "api" | "campaign" | "automation" | "mailbox" | "test" | "system";
                         recipient: string;
                         sender: string;
                         subject: string;
@@ -7726,6 +7963,15 @@ export interface operations {
                             role: "owner" | "member" | "viewer";
                             revoked: boolean;
                         }[];
+                        people: {
+                            memberId: string;
+                            name: string;
+                            email: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                            /** @enum {string} */
+                            role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                        }[];
                         messageCount: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastExport: {
                             id: string;
@@ -7856,6 +8102,15 @@ export interface operations {
                             /** @enum {string} */
                             role: "owner" | "member" | "viewer";
                             revoked: boolean;
+                        }[];
+                        people: {
+                            memberId: string;
+                            name: string;
+                            email: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                            /** @enum {string} */
+                            role: "owner" | "admin" | "sender" | "agent" | "viewer";
                         }[];
                         messageCount: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastExport: {
@@ -8071,6 +8326,15 @@ export interface operations {
                             role: "owner" | "member" | "viewer";
                             revoked: boolean;
                         }[];
+                        people: {
+                            memberId: string;
+                            name: string;
+                            email: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                            /** @enum {string} */
+                            role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                        }[];
                         messageCount: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastExport: {
                             id: string;
@@ -8145,11 +8409,15 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    members: {
+                    members: ({
                         apiKeyId: string;
                         /** @enum {string} */
                         role: "owner" | "member" | "viewer";
-                    }[];
+                    } | {
+                        memberId: string;
+                        /** @enum {string} */
+                        access: "owner" | "member" | "viewer";
+                    })[];
                 };
             };
         };
@@ -8200,6 +8468,15 @@ export interface operations {
                             /** @enum {string} */
                             role: "owner" | "member" | "viewer";
                             revoked: boolean;
+                        }[];
+                        people: {
+                            memberId: string;
+                            name: string;
+                            email: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                            /** @enum {string} */
+                            role: "owner" | "admin" | "sender" | "agent" | "viewer";
                         }[];
                         messageCount: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastExport: {
@@ -26394,15 +26671,23 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        user: null;
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            timeZone: string;
+                        } | null;
                         workspace: {
                             id: string;
                             name: string;
                             logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
                         };
-                        role: null;
+                        role: ("owner" | "admin" | "sender" | "agent" | "viewer") | null;
                         /** @enum {string} */
-                        via: "session-key" | "admin-key" | "api-key";
+                        via: "session-member" | "session-key" | "admin-key" | "api-key";
                         key: {
                             id: string;
                             name: string;
@@ -26410,10 +26695,18 @@ export interface operations {
                         } | null;
                         scopes: ("send" | "track" | "read" | "admin")[];
                         permissions: string[];
+                        mailboxes: {
+                            id: string;
+                            address: string;
+                            access: ("owner" | "member" | "viewer") | null;
+                        }[] | null;
                         workspaces: {
                             id: string;
                             name: string;
                             logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
                         }[];
                         session: {
                             id: string;
@@ -26495,15 +26788,23 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        user: null;
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            timeZone: string;
+                        } | null;
                         workspace: {
                             id: string;
                             name: string;
                             logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
                         };
-                        role: null;
+                        role: ("owner" | "admin" | "sender" | "agent" | "viewer") | null;
                         /** @enum {string} */
-                        via: "session-key" | "admin-key" | "api-key";
+                        via: "session-member" | "session-key" | "admin-key" | "api-key";
                         key: {
                             id: string;
                             name: string;
@@ -26511,10 +26812,18 @@ export interface operations {
                         } | null;
                         scopes: ("send" | "track" | "read" | "admin")[];
                         permissions: string[];
+                        mailboxes: {
+                            id: string;
+                            address: string;
+                            access: ("owner" | "member" | "viewer") | null;
+                        }[] | null;
                         workspaces: {
                             id: string;
                             name: string;
                             logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
                         }[];
                         session: {
                             id: string;
@@ -26522,6 +26831,112 @@ export interface operations {
                             absoluteExpiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                         } | null;
                     };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "me.updateMe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    timeZone?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            timeZone: string;
+                        } | null;
+                        workspace: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        };
+                        role: ("owner" | "admin" | "sender" | "agent" | "viewer") | null;
+                        /** @enum {string} */
+                        via: "session-member" | "session-key" | "admin-key" | "api-key";
+                        key: {
+                            id: string;
+                            name: string;
+                            prefix: string;
+                        } | null;
+                        scopes: ("send" | "track" | "read" | "admin")[];
+                        permissions: string[];
+                        mailboxes: {
+                            id: string;
+                            address: string;
+                            access: ("owner" | "member" | "viewer") | null;
+                        }[] | null;
+                        workspaces: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        }[];
+                        session: {
+                            id: string;
+                            expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            absoluteExpiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        } | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -26573,7 +26988,7 @@ export interface operations {
                             id: string;
                             current: boolean;
                             /** @enum {string} */
-                            via: "session-key" | "admin-key";
+                            via: "session-key" | "admin-key" | "session-member";
                             key: {
                                 id: string;
                                 name: string;
@@ -26712,6 +27127,1283 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "signInLink.request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        sent: boolean;
+                    };
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description NoSystemSender */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoSystemSenderEncoded"];
+                };
+            };
+        };
+    };
+    "signInLink.verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            timeZone: string;
+                        } | null;
+                        workspace: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        };
+                        role: ("owner" | "admin" | "sender" | "agent" | "viewer") | null;
+                        /** @enum {string} */
+                        via: "session-member" | "session-key" | "admin-key" | "api-key";
+                        key: {
+                            id: string;
+                            name: string;
+                            prefix: string;
+                        } | null;
+                        scopes: ("send" | "track" | "read" | "admin")[];
+                        permissions: string[];
+                        mailboxes: {
+                            id: string;
+                            address: string;
+                            access: ("owner" | "member" | "viewer") | null;
+                        }[] | null;
+                        workspaces: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        }[];
+                        session: {
+                            id: string;
+                            expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            absoluteExpiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        } | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoneEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "inviteLink.describe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        email: string;
+                        /** @enum {string} */
+                        role: "admin" | "sender" | "agent" | "viewer";
+                        workspace: string;
+                        invitedBy: string | null;
+                        message: string | null;
+                        expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                            address: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoneEncoded"];
+                };
+            };
+        };
+    };
+    "inviteLink.accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            timeZone: string;
+                        } | null;
+                        workspace: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        };
+                        role: ("owner" | "admin" | "sender" | "agent" | "viewer") | null;
+                        /** @enum {string} */
+                        via: "session-member" | "session-key" | "admin-key" | "api-key";
+                        key: {
+                            id: string;
+                            name: string;
+                            prefix: string;
+                        } | null;
+                        scopes: ("send" | "track" | "read" | "admin")[];
+                        permissions: string[];
+                        mailboxes: {
+                            id: string;
+                            address: string;
+                            access: ("owner" | "member" | "viewer") | null;
+                        }[] | null;
+                        workspaces: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        }[];
+                        session: {
+                            id: string;
+                            expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            absoluteExpiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        } | null;
+                    };
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoneEncoded"];
+                };
+            };
+        };
+    };
+    "people.claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    workspaceName: string;
+                    name: string;
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        member: {
+                            id: string;
+                            email: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                            timeZone: string;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            lastActiveAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        };
+                        signInLinkSent: boolean;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    memberId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        name: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                        timeZone: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        lastActiveAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.listMembers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        members: {
+                            id: string;
+                            email: string;
+                            name: string;
+                            /** @enum {string} */
+                            role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                            timeZone: string;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            lastActiveAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            mailboxes: {
+                                mailboxId: string;
+                                /** @enum {string} */
+                                access: "owner" | "member" | "viewer";
+                                address: string;
+                            }[];
+                        }[];
+                        invites: {
+                            id: string;
+                            email: string;
+                            /** @enum {string} */
+                            role: "admin" | "sender" | "agent" | "viewer";
+                            mailboxes: {
+                                mailboxId: string;
+                                /** @enum {string} */
+                                access: "owner" | "member" | "viewer";
+                            }[];
+                            message: string | null;
+                            invitedBy: string;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            sendCount: number | ("Infinity" | "-Infinity" | "NaN");
+                            /** @enum {string} */
+                            status: "draft" | "sent" | "expired" | "accepted" | "revoked";
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.getMember": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        name: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                        timeZone: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        lastActiveAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                            address: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.removeMember": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        name: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                        timeZone: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        lastActiveAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.updateMember": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    role?: "admin" | "sender" | "agent" | "viewer";
+                    name?: string;
+                    timeZone?: string;
+                    mailboxes?: {
+                        mailboxId: string;
+                        /** @enum {string} */
+                        access: "owner" | "member" | "viewer";
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        name: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "sender" | "agent" | "viewer";
+                        timeZone: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        lastActiveAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                            address: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.listInvites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        invites: {
+                            id: string;
+                            email: string;
+                            /** @enum {string} */
+                            role: "admin" | "sender" | "agent" | "viewer";
+                            mailboxes: {
+                                mailboxId: string;
+                                /** @enum {string} */
+                                access: "owner" | "member" | "viewer";
+                            }[];
+                            message: string | null;
+                            invitedBy: string;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            sendCount: number | ("Infinity" | "-Infinity" | "NaN");
+                            /** @enum {string} */
+                            status: "draft" | "sent" | "expired" | "accepted" | "revoked";
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.createInvite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email: string;
+                    /** @enum {string} */
+                    role: "admin" | "sender" | "agent" | "viewer";
+                    mailboxes?: {
+                        mailboxId: string;
+                        /** @enum {string} */
+                        access: "owner" | "member" | "viewer";
+                    }[];
+                    message?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        invite: {
+                            id: string;
+                            email: string;
+                            /** @enum {string} */
+                            role: "admin" | "sender" | "agent" | "viewer";
+                            mailboxes: {
+                                mailboxId: string;
+                                /** @enum {string} */
+                                access: "owner" | "member" | "viewer";
+                            }[];
+                            message: string | null;
+                            invitedBy: string;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            sendCount: number | ("Infinity" | "-Infinity" | "NaN");
+                            /** @enum {string} */
+                            status: "draft" | "sent" | "expired" | "accepted" | "revoked";
+                        };
+                        draft: {
+                            from: string | null;
+                            to: string;
+                            subject: string;
+                            html: string;
+                            text: string;
+                        };
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "people.sendInvite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        /** @enum {string} */
+                        role: "admin" | "sender" | "agent" | "viewer";
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                        }[];
+                        message: string | null;
+                        invitedBy: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        sendCount: number | ("Infinity" | "-Infinity" | "NaN");
+                        /** @enum {string} */
+                        status: "draft" | "sent" | "expired" | "accepted" | "revoked";
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoneEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description NoSystemSender */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoSystemSenderEncoded"];
+                };
+            };
+        };
+    };
+    "people.resendInvite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        /** @enum {string} */
+                        role: "admin" | "sender" | "agent" | "viewer";
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                        }[];
+                        message: string | null;
+                        invitedBy: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        sendCount: number | ("Infinity" | "-Infinity" | "NaN");
+                        /** @enum {string} */
+                        status: "draft" | "sent" | "expired" | "accepted" | "revoked";
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoneEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+            /** @description NoSystemSender */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoSystemSenderEncoded"];
+                };
+            };
+        };
+    };
+    "people.revokeInvite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        email: string;
+                        /** @enum {string} */
+                        role: "admin" | "sender" | "agent" | "viewer";
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            access: "owner" | "member" | "viewer";
+                        }[];
+                        message: string | null;
+                        invitedBy: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        sendCount: number | ("Infinity" | "-Infinity" | "NaN");
+                        /** @enum {string} */
+                        status: "draft" | "sent" | "expired" | "accepted" | "revoked";
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoneEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -27089,6 +28781,77 @@ export interface operations {
                             reason?: string;
                         };
                     };
+                };
+            };
+        };
+    };
+    "signInLink.page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the emailed link. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+        };
+    };
+    "signInLink.use": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the emailed link. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed in; Set-Cookie carries the session. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The link isn't valid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description The request didn't come from this site. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description The link was used or has expired. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
         };
