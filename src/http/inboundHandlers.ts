@@ -21,7 +21,7 @@ export const InboundHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(
             listInbound({ status: query.status, cursor: query.cursor, limit: query.limit ?? 50 }),
           ),
@@ -29,10 +29,10 @@ export const InboundHandlers = HttpApiBuilder.group(
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getInbound(params.id)), notFound, dbDies),
+        requireScope("read", "settings.read").pipe(Effect.andThen(getInbound(params.id)), notFound, dbDies),
       ),
       reprocess: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(reprocess(params.id)), notFound, dbDies),
+        requireScope("admin", "mail.manage").pipe(Effect.andThen(reprocess(params.id)), notFound, dbDies),
       ),
     })
   }),

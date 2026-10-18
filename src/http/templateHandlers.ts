@@ -103,7 +103,7 @@ export const TemplatesHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "templates.read").pipe(
           Effect.andThen(listTemplates(query.archived === "true")),
           Effect.flatMap((rows) =>
             query.include === "usage"
@@ -122,7 +122,7 @@ export const TemplatesHandlers = HttpApiBuilder.group(
       ),
       create: p(({ payload }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "templates.write")
           return yield* createTemplate({
             name: payload.name,
             kind: payload.kind,
@@ -135,29 +135,37 @@ export const TemplatesHandlers = HttpApiBuilder.group(
         }).pipe(notFound, rejected, dbDies),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getTemplate(params.id)), notFound, dbDies),
+        requireScope("read", "templates.read").pipe(Effect.andThen(getTemplate(params.id)), notFound, dbDies),
       ),
       saveDraft: p(({ params, payload }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "templates.write")
           return yield* saveDraft(params.id, { ...payload, by: caller.keyId })
         }).pipe(notFound, rejected, dbDies),
       ),
       publish: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(publishTemplate(params.id)), notFound, dbDies),
+        requireScope("admin", "templates.write").pipe(
+          Effect.andThen(publishTemplate(params.id)),
+          notFound,
+          dbDies,
+        ),
       ),
       rollback: p(({ params, payload }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "templates.write")
           return yield* rollbackTemplate(params.id, payload.version, caller.keyId)
         }).pipe(notFound, dbDies),
       ),
       archive: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(archiveTemplate(params.id)), notFound, dbDies),
+        requireScope("admin", "templates.write").pipe(
+          Effect.andThen(archiveTemplate(params.id)),
+          notFound,
+          dbDies,
+        ),
       ),
       test: p(({ params, payload }) =>
         Effect.gen(function* () {
-          yield* requireScope("send")
+          yield* requireScope("send", "templates.write")
           return yield* testTemplate(params.id, payload)
         }).pipe(
           Effect.catchTags({
@@ -174,14 +182,14 @@ export const TemplatesHandlers = HttpApiBuilder.group(
       ),
       render: p(({ params, payload }) =>
         Effect.gen(function* () {
-          yield* requireScope("read")
+          yield* requireScope("read", "templates.read")
           const { source } = yield* resolveForSend(params.id, payload.version ?? "published")
           return yield* renderReport(source, payload.data ?? {})
         }).pipe(notFound, rejected, dbDies),
       ),
       preview: p(({ payload }) =>
         Effect.gen(function* () {
-          yield* requireScope("read")
+          yield* requireScope("read", "templates.read")
           const source: TemplateSource = {
             kind: payload.kind,
             subject: payload.subject,
@@ -203,10 +211,12 @@ export const SettingsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
-      getBrand: p(() => requireScope("read").pipe(Effect.andThen(getBrandSettings()), dbDies)),
+      getBrand: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(getBrandSettings()), dbDies),
+      ),
       putBrand: p(({ payload, request }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "settings.write")
           const { logoUploadId, ...fields } = payload
           const value = yield* Schema.decodeUnknownEffect(BrandSettings)(fields).pipe(
             Effect.mapError((e) => new InvalidRequest({ field: "brand", message: e.message })),
@@ -233,7 +243,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
         }).pipe(Effect.catchTag("BlobStoreError", Effect.die), dbDies),
       ),
       audit: p(({ query }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "settings.write").pipe(
           Effect.andThen(
             listAudit({
               actor: query.actor,

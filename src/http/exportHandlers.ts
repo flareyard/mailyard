@@ -17,7 +17,7 @@ export const ExportsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           if (payload.kind === "workspace") {
             // Everything, including settings and the audit log: the admin's to take.
-            const caller = yield* requireScope("admin")
+            const caller = yield* requireScope("admin", "exports.workspace")
             if (payload.filter || payload.fields)
               return yield* new InvalidRequest({
                 field: payload.filter ? "filter" : "fields",
@@ -33,7 +33,7 @@ export const ExportsHandlers = HttpApiBuilder.group(
             })
             return yield* getExport(id, originOf(request))
           }
-          const caller = yield* requireScope("read")
+          const caller = yield* requireScope("read", "contacts.read")
           const { CONTACT_EXPORT_WORKFLOW } = yield* Bindings
           return yield* createContactExport(
             {
@@ -64,13 +64,13 @@ export const ExportsHandlers = HttpApiBuilder.group(
         ),
       ),
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(listExports(query)),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       get: p(({ params, request }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(getExport(params.id, originOf(request))),
           Effect.catchTags({
             ExportNotFound: (e) => Effect.fail(new NotFound({ message: `Export ${e.id} not found.` })),

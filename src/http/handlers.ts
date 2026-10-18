@@ -25,6 +25,7 @@ import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
 import { sentHeaders } from "../domain/messageRaw.ts"
 import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
+import { allowedRoles, can, type Permission } from "../domain/permissions.ts"
 import { resolveSession, SESSION_COOKIE } from "../domain/sessions.ts"
 import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
 import type { ImapConnector } from "../imports/importer.ts"
@@ -185,9 +186,27 @@ export const appContext = Effect.context<
   | ImapConnector
 >()
 
-export const requireScope = (scope: Scope) =>
+/** The refusal for a person whose role doesn't hold a permission (HAL-3361). */
+export const roleRefusal = (caller: Caller, permission: Permission) =>
+  new Forbidden({
+    message: `Your role (${caller.member?.role}) can't do this. Ask an owner or admin.`,
+    reason: "role",
+    required: permission,
+    ...(caller.member ? { role: caller.member.role } : {}),
+    allowedRoles: [...allowedRoles(permission)],
+  })
+
+/**
+ * The caller, if it may do this: a key needs `scope` (as it always has), a signed-in person needs
+ * `permission` from their role (src/domain/permissions.ts).
+ */
+export const requireScope = (scope: Scope, permission: Permission) =>
   Effect.gen(function* () {
     const caller = yield* CurrentCaller
+    if (caller.member) {
+      if (!can(caller, permission)) return yield* roleRefusal(caller, permission)
+      return caller
+    }
     if (!caller.scopes.includes(scope)) {
       return yield* new Forbidden(
         caller.kind === "public"
@@ -259,7 +278,7 @@ export const ActionsHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       send: p(({ payload, headers, request }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("send")
+          const caller = yield* requireScope("send", "email.send")
           const from =
             payload.from === undefined
               ? undefined
@@ -309,7 +328,7 @@ export const ActionsHandlers = HttpApiBuilder.group(
       ),
       track: p(({ payload, headers }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("track")
+          const caller = yield* requireScope("track", "events.track")
           const run = track(payload).pipe(
             Effect.map((data) => ({ success: true as const, data })),
             Effect.catchTag("ReservedEvent", (e) =>
@@ -360,7 +379,7 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "keys.manage").pipe(
           Effect.andThen(listKeys(query.purpose)),
           Effect.flatMap((rows) =>
             query.include === "usage"
@@ -375,7 +394,7 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
         ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "keys.manage").pipe(
           Effect.tap(() =>
             payload.kind === "public" && payload.purpose === "mcp"
               ? Effect.fail(
@@ -400,7 +419,7 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
         ),
       ),
       rotate: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "keys.manage").pipe(
           Effect.flatMap((caller) => rotateKey(params.id, payload.graceSeconds ?? 0, caller.keyId)),
           Effect.map(({ key, record, previous }) => ({ key, apiKey: summarizeKey(record), previous })),
           Effect.catchTags({
@@ -410,7 +429,7 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
         ),
       ),
       revoke: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "keys.manage").pipe(
           Effect.andThen(revokeKey(params.id)),
           Effect.flatMap((row) =>
             row
@@ -431,6 +450,7 @@ const SOURCE = {
   reply: "mailbox",
   mailbox: "mailbox",
   test: "test",
+  system: "system",
 } as const
 
 /** An API send's key is stored as `apiKeyId:key:recipientIndex` to keep rows unique; show the caller's own. */
@@ -487,7 +507,7 @@ export const MessagesHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       list: p(({ query }) =>
         Effect.gen(function* () {
-          yield* requireScope("read")
+          yield* requireScope("read", "analytics.read")
           const limit = query.limit ?? 50
           const [cursorAt, cursorId] = query.cursor ? query.cursor.split(":") : []
           const rows = yield* database
@@ -537,7 +557,7 @@ export const MessagesHandlers = HttpApiBuilder.group(
       ),
       get: p(({ params }) =>
         Effect.gen(function* () {
-          yield* requireScope("read")
+          yield* requireScope("read", "analytics.read")
           const row = yield* database
             .query("messages.get", (db) =>
               db.select().from(messagesOut).where(eq(messagesOut.id, params.id)).get(),

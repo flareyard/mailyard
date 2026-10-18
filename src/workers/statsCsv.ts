@@ -3,7 +3,7 @@ import type { Env } from "../Bindings.ts"
 import { engagementStats } from "../domain/engagement.ts"
 import { deferralStats, deliveryStats, providerStats, type Range, volumeStats } from "../domain/insights.ts"
 import { audienceStats, inboundStats } from "../domain/overview.ts"
-import { authorize, problem } from "./auth.ts"
+import { authorize, problem, refuseUnless } from "./auth.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /**
@@ -186,11 +186,8 @@ export const handleStatsCsv = async (request: Request, env: Env, chart: string) 
     return problem(404, `No chart ${chart}. Charts: ${CSV_CHARTS.join(", ")}.`)
   const auth = await authorize(request, env)
   if (auth instanceof Response) return auth
-  if (auth.caller.kind !== "secret" || !auth.caller.scopes.includes("read"))
-    return problem(403, "This needs a secret key with the read scope.", {
-      reason: auth.caller.kind === "public" ? "public-key" : "insufficient-scope",
-      required: "read",
-    })
+  const refused = refuseUnless(auth.caller, "read", "analytics.read")
+  if (refused) return refused
   const url = new URL(request.url)
   const table = await runtimeFor(env).runPromise(tableFor(chart as Chart, url).pipe(Effect.orDie))
   const range = url.searchParams.get("range") ?? "30d"

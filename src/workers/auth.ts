@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
-import { authenticate, type Caller } from "../domain/apiKeys.ts"
+import { authenticate, type Caller, type Scope } from "../domain/apiKeys.ts"
+import { allowedRoles, can, type Permission } from "../domain/permissions.ts"
 import { resolveSession, SESSION_COOKIE } from "../domain/sessions.ts"
 import { runtimeFor } from "./inbound.ts"
 
@@ -99,4 +100,25 @@ export const authorize = async (
       ...(result.failure.revokedAt !== undefined ? { revokedAt: result.failure.revokedAt } : {}),
     })
   return { caller: result.success, protocol: auth.protocol }
+}
+
+/**
+ * The raw routes' version of `requireScope`: a key needs `scope`, a signed-in person needs
+ * `permission` from their role (HAL-3361). Null when allowed, else the 403 to send back.
+ */
+export const refuseUnless = (caller: Caller, scope: Scope, permission: Permission): Response | null => {
+  if (caller.member)
+    return can(caller, permission)
+      ? null
+      : problem(403, `Your role (${caller.member.role}) can't do this. Ask an owner or admin.`, {
+          reason: "role",
+          required: permission,
+          role: caller.member.role,
+          allowedRoles: [...allowedRoles(permission)],
+        })
+  if (caller.kind === "secret" && caller.scopes.includes(scope)) return null
+  return problem(403, `This needs a secret key with the "${scope}" scope.`, {
+    reason: caller.kind === "public" ? "public-key" : "insufficient-scope",
+    required: scope,
+  })
 }

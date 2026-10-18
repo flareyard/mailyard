@@ -1,9 +1,12 @@
 import * as Effect from "effect/Effect"
 import * as HttpEffect from "effect/http/HttpEffect"
+import type * as HttpServerRequest from "effect/http/HttpServerRequest"
 import * as HttpServerResponse from "effect/http/HttpServerResponse"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { Bindings } from "../Bindings.ts"
-import { authenticate } from "../domain/apiKeys.ts"
+import { authenticate, type Caller } from "../domain/apiKeys.ts"
+import { updateSelf } from "../domain/people.ts"
+import { ROLE_SCOPES } from "../domain/permissions.ts"
 import {
   clientOf,
   describeCaller,
@@ -15,12 +18,37 @@ import {
   SESSION_COOKIE,
   SESSION_MAX_MS,
 } from "../domain/sessions.ts"
-import { MailApi, NotFound } from "./Api.ts"
+import { InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden, Unauthorized } from "./Auth.ts"
 import { appContext, clearSessionCookie, provideTo, sameOrigin, throttle } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
 
-const crossSite = () =>
+/**
+ * Opens a browser session for a caller that has just proved who it is (a key, a sign-in link, an
+ * accepted invitation), sets the cookie on the response, and answers like `GET /v1/me`.
+ */
+export const startSession = (caller: Caller, request: HttpServerRequest.HttpServerRequest) =>
+  Effect.gen(function* () {
+    const { token, session } = yield* openSession(caller, clientOf(request.headers))
+    yield* HttpEffect.appendPreResponseHandler((_req, response) =>
+      Effect.orDie(
+        HttpServerResponse.setCookie(response, SESSION_COOKIE, token, {
+          secure: true,
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          // The browser may keep it to the absolute cap; the server ends it sooner when idle.
+          maxAge: `${Math.floor(SESSION_MAX_MS / 1000)} seconds`,
+        }),
+      ),
+    )
+    const signedIn: Caller = caller.member
+      ? { ...caller, scopes: ROLE_SCOPES[caller.member.role], sessionId: session.id }
+      : { ...caller, sessionId: session.id }
+    return yield* describeCaller(signedIn, originOf(request) ?? "https://localhost")
+  })
+
+export const crossSite = () =>
   new Forbidden({
     message: "Sign-in and sign-out must come from this site. Reload the page and try again.",
     reason: "csrf",
@@ -67,23 +95,7 @@ export const SessionHandlers = HttpApiBuilder.group(
               required: "read",
               scopes: [...caller.scopes],
             })
-          const { token, session } = yield* openSession(caller, clientOf(request.headers))
-          yield* HttpEffect.appendPreResponseHandler((_req, response) =>
-            Effect.orDie(
-              HttpServerResponse.setCookie(response, SESSION_COOKIE, token, {
-                secure: true,
-                httpOnly: true,
-                sameSite: "lax",
-                path: "/",
-                // The browser may keep it to the absolute cap; the server ends it sooner when idle.
-                maxAge: `${Math.floor(SESSION_MAX_MS / 1000)} seconds`,
-              }),
-            ),
-          )
-          return yield* describeCaller(
-            { ...caller, sessionId: session.id },
-            originOf(request) ?? "https://localhost",
-          )
+          return yield* startSession(caller, request)
         }).pipe(Effect.catchTag("DatabaseError", Effect.die)),
       ),
       signOut: p(({ request }) =>
@@ -107,6 +119,21 @@ export const MeHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
+      updateMe: p(({ payload, request }) =>
+        Effect.gen(function* () {
+          const caller = yield* CurrentCaller
+          yield* updateSelf(caller, payload)
+          return yield* describeCaller(caller, originOf(request) ?? "https://localhost")
+        }).pipe(
+          Effect.catchTags({
+            PeopleForbidden: (e) => Effect.fail(new Forbidden({ message: e.message })),
+            PeopleInvalid: (e) => Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            MemberNotFound: Effect.die,
+            OwnerProtected: Effect.die,
+            DatabaseError: Effect.die,
+          }),
+        ),
+      ),
       me: p(({ request }) =>
         Effect.flatMap(CurrentCaller, (caller) =>
           describeCaller(caller, originOf(request) ?? "https://localhost"),

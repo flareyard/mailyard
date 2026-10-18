@@ -11,7 +11,7 @@ import { type Access, requireMailbox } from "../mail/access.ts"
 import { verifyFileToken } from "../mail/files.ts"
 import { callMailbox } from "../mail/rpc.ts"
 import { Database } from "../services/Database.ts"
-import { authorize, problem } from "./auth.ts"
+import { authorize, problem, refuseUnless } from "./auth.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /** Uploads larger than this are refused; Email Service sends at most 5 MiB, bigger files go as links. */
@@ -119,11 +119,8 @@ export const handleRaw = async (request: Request, env: Env, mailboxId: string, m
 export const handleMessageRaw = async (request: Request, env: Env, messageId: string) => {
   const auth = await authorize(request, env)
   if (auth instanceof Response) return auth
-  if (auth.caller.kind !== "secret" || !auth.caller.scopes.includes("read"))
-    return problem(403, "This needs a secret key with the read scope.", {
-      reason: auth.caller.kind === "public" ? "public-key" : "insufficient-scope",
-      required: "read",
-    })
+  const refused = refuseUnless(auth.caller, "read", "analytics.read")
+  if (refused) return refused
   const row = await runtimeFor(env).runPromise(
     Effect.gen(function* () {
       const database = yield* Database

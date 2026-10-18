@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
 import { recipientsOf } from "../domain/deliveryEvents.ts"
+import { isManager } from "../domain/permissions.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
 import { BlobStore } from "../kit/index.ts"
 import { type Access, type MailboxAccessDenied, type MailboxMissing, requireMailbox } from "../mail/access.ts"
@@ -55,8 +56,15 @@ export const mailErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
           return new NotFound({ message: `Rule ${err.id} not found.` })
         case "TransferNotFound":
           return new NotFound({ message: `${err.id} not found.` })
-        case "MailboxAccessDenied":
-          return new Forbidden({ message: err.message ?? "Forbidden" })
+        case "MailboxAccessDenied": {
+          const denied = e as unknown as MailboxAccessDenied
+          return new Forbidden({
+            message: denied.message,
+            ...(denied.reason ? { reason: denied.reason } : {}),
+            ...(denied.role ? { role: denied.role } : {}),
+            ...(denied.owners ? { owners: [...denied.owners] } : {}),
+          })
+        }
         case "MailboxRefused":
           if (err.code === "not_found") return new NotFound({ message: err.message ?? "Not found." })
           if (err.code === "label_exists" || err.code === "draft_locked")
@@ -351,7 +359,7 @@ export const MailHandlers = HttpApiBuilder.group(
               assignee !== null &&
               assignee !== caller.keyId &&
               caller.keyId !== "root" &&
-              !caller.scopes.includes("admin")
+              !isManager(caller)
             ) {
               // Anyone with write access may take a conversation or let it go; assigning others is for admins.
               return yield* new Forbidden({

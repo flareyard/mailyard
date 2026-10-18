@@ -189,8 +189,40 @@ export class Conflict extends Schema.TaggedError<Conflict>()(
     ruleId: Schema.optionalKey(Schema.String),
     /** With `reason: "alias-targets"` on a mailbox removal: the aliases and groups that still deliver there. */
     aliasIds: Schema.optionalKey(Schema.Array(Schema.String)),
+    /** With `reason: "already-claimed"` (HAL-3361): who claimed the workspace, and when. */
+    claimedBy: Schema.optionalKey(Schema.String),
+    claimedAt: Schema.optionalKey(Schema.Number),
   },
   { httpApiStatus: 409 },
+) {}
+
+/** A link that worked once and doesn't any more: `expired`, `used` or `revoked` (HAL-3361). */
+export class Gone extends Schema.TaggedError<Gone>()(
+  "Gone",
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+    reason: Schema.Literals(["expired", "used", "revoked"]),
+  },
+  { httpApiStatus: 410 },
+) {}
+
+/** Mailyard has no address to send its own mail from: set MAILYARD_SYSTEM_FROM or DEFAULT_FROM. */
+export class NoSystemSender extends Schema.TaggedError<NoSystemSender>()(
+  "NoSystemSender",
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+  },
+  { httpApiStatus: 503 },
 ) {}
 
 /** An automation can't publish yet: what's wrong, per node. */
@@ -332,9 +364,17 @@ export const MessageStatus = Schema.Literals([
   "complained",
 ])
 
-const MessageStream = Schema.Literals(["transactional", "campaign", "automation", "reply", "mailbox", "test"])
+const MessageStream = Schema.Literals([
+  "transactional",
+  "campaign",
+  "automation",
+  "reply",
+  "mailbox",
+  "test",
+  "system",
+])
 /** What sent it: `api` (POST /v1/send), a campaign, an automation, a mailbox, or a campaign test send. */
-const MessageSource = Schema.Literals(["api", "campaign", "automation", "mailbox", "test"])
+const MessageSource = Schema.Literals(["api", "campaign", "automation", "mailbox", "test", "system"])
 
 export const MessageEvent = Schema.Struct({
   type: Schema.Literals([
@@ -1262,6 +1302,16 @@ export const MailboxDetailSchema = Schema.Struct({
       revoked: Schema.Boolean,
     }),
   ),
+  /** People given this mailbox (HAL-3361): their access in it, and their role in the workspace. */
+  people: Schema.Array(
+    Schema.Struct({
+      memberId: Schema.String,
+      name: Schema.String,
+      email: Schema.String,
+      access: MemberRoleSchema,
+      role: Schema.Literals(["owner", "admin", "sender", "agent", "viewer"]),
+    }),
+  ),
   /** Messages held; null for aliases and groups, which hold none. */
   messageCount: Schema.NullOr(Schema.Number),
   lastExport: Schema.NullOr(
@@ -1420,7 +1470,14 @@ export class MailboxesApi extends HttpApiGroup.make("mailboxes")
     HttpApiEndpoint.put("setMembers", "/v1/mailboxes/:id/members", {
       params: { id: Schema.String },
       payload: Schema.Struct({
-        members: Schema.Array(Schema.Struct({ apiKeyId: Schema.String, role: MemberRoleSchema })),
+        /** Keys (`{ apiKeyId, role }`) and people (`{ memberId, access }`, HAL-3361); both lists are
+         * replaced. */
+        members: Schema.Array(
+          Schema.Union([
+            Schema.Struct({ apiKeyId: Schema.String, role: MemberRoleSchema }),
+            Schema.Struct({ memberId: Schema.String, access: MemberRoleSchema }),
+          ]),
+        ),
       }),
       success: MailboxDetailSchema,
       error: [Forbidden, NotFound, InvalidRequest],
@@ -4883,22 +4940,46 @@ const Workspace = Schema.Struct({
   url: Schema.String,
   /** `url`'s hostname, e.g. `mail.flareyard.dev`. */
   host: Schema.String,
+  /** Whether someone has claimed the workspace and become its owner (HAL-3361). */
+  claimed: Schema.Boolean,
 })
 
+export const MemberRole = Schema.Literals(["owner", "admin", "sender", "agent", "viewer"])
+
 export const Me = Schema.Struct({
-  /** The signed-in person. Null until people and roles exist (HAL-3361): every caller is a key. */
-  user: Schema.Null,
+  /** The signed-in person; null for a key or the admin key (HAL-3361). */
+  user: Schema.NullOr(
+    Schema.Struct({
+      id: Schema.String,
+      name: Schema.String,
+      email: Schema.String,
+      /** IANA time zone for the snooze and schedule pickers; UTC until they choose. */
+      timeZone: Schema.String,
+    }),
+  ),
   workspace: Workspace,
-  role: Schema.Null,
-  /** `session-key`: a browser session opened with an API key. `admin-key`: the ADMIN_KEY, by session
-   * or Bearer. `api-key`: a Bearer API key. */
-  via: Schema.Literals(["session-key", "admin-key", "api-key"]),
-  /** The key behind the request; null for the admin key. */
+  /** The person's role; null for keys, which are checked by scopes. */
+  role: Schema.NullOr(MemberRole),
+  /** `session-member`: a person signed in by email link. `session-key`: a browser session opened with
+   * an API key. `admin-key`: the ADMIN_KEY, by session or Bearer. `api-key`: a Bearer API key. */
+  via: Schema.Literals(["session-member", "session-key", "admin-key", "api-key"]),
+  /** The key behind the request; null for the admin key and for people. */
   key: Schema.NullOr(Schema.Struct({ id: Schema.String, name: Schema.String, prefix: Schema.String })),
   scopes: Schema.Array(Scope),
-  /** What the scopes let the app show (`mail.read`, `campaigns.write`, …), so screens hide what the
-   * caller can't do. The scopes stay the source of truth. */
+  /** What the caller may do (`mail.read`, `campaigns.write`, `members.manage`, …), from the role for
+   * a person and the scopes for a key, so screens hide what the API would refuse. */
   permissions: Schema.Array(Schema.String),
+  /** For a person: the mailboxes they can open, with their access where they've been given one
+   * (null where their role reads every mailbox). Null for keys. */
+  mailboxes: Schema.NullOr(
+    Schema.Array(
+      Schema.Struct({
+        id: Schema.String,
+        address: Schema.String,
+        access: Schema.NullOr(Schema.Literals(["owner", "member", "viewer"])),
+      }),
+    ),
+  ),
   workspaces: Schema.Array(Workspace),
   /** The browser session, when the request came with one. */
   session: Schema.NullOr(
@@ -4916,7 +4997,7 @@ export const SessionSummary = Schema.Struct({
   id: Schema.String,
   /** The session this request came with. */
   current: Schema.Boolean,
-  via: Schema.Literals(["session-key", "admin-key"]),
+  via: Schema.Literals(["session-key", "admin-key", "session-member"]),
   key: Schema.NullOr(
     Schema.Struct({
       id: Schema.String,
@@ -4957,6 +5038,15 @@ export class SessionApi extends HttpApiGroup.make("session").add(
 export class MeApi extends HttpApiGroup.make("me")
   .add(
     HttpApiEndpoint.get("me", "/v1/me", { success: Me }),
+    /** A signed-in person changes their own name and time zone. */
+    HttpApiEndpoint.patch("updateMe", "/v1/me", {
+      payload: Schema.Struct({
+        name: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(120))),
+        timeZone: Schema.optionalKey(Schema.String),
+      }),
+      success: Me,
+      error: [Forbidden, InvalidRequest],
+    }),
     HttpApiEndpoint.get("listSessions", "/v1/sessions", {
       success: Schema.Struct({ sessions: Schema.Array(SessionSummary) }),
     }),
@@ -4968,6 +5058,186 @@ export class MeApi extends HttpApiGroup.make("me")
       params: { id: Schema.String },
       success: HttpApiSchema.NoContent,
       error: NotFound,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+// ---------------------------------------------------------------------------------------------
+// People: members, roles, invitations and claiming the workspace (HAL-3361)
+// ---------------------------------------------------------------------------------------------
+
+const InviteRole = Schema.Literals(["admin", "sender", "agent", "viewer"])
+const MailboxAccess = Schema.Literals(["owner", "member", "viewer"])
+const MailboxGrant = Schema.Struct({ mailboxId: Schema.String, access: MailboxAccess })
+
+export const MemberSchema = Schema.Struct({
+  id: Schema.String,
+  email: Schema.String,
+  name: Schema.String,
+  role: MemberRole,
+  timeZone: Schema.String,
+  createdAt: Schema.Number,
+  lastActiveAt: Schema.NullOr(Schema.Number),
+})
+
+export const MemberDetail = Schema.Struct({
+  ...MemberSchema.fields,
+  /** Mailboxes they've been given. Owners, admins, senders and viewers read the rest by role. */
+  mailboxes: Schema.Array(Schema.Struct({ ...MailboxGrant.fields, address: Schema.String })),
+})
+
+export const InviteSchema = Schema.Struct({
+  id: Schema.String,
+  email: Schema.String,
+  role: InviteRole,
+  mailboxes: Schema.Array(MailboxGrant),
+  message: Schema.NullOr(Schema.String),
+  /** The member (or key) who invited. */
+  invitedBy: Schema.String,
+  createdAt: Schema.Number,
+  expiresAt: Schema.Number,
+  /** When the invitation email last went out; null while it's a draft. */
+  sentAt: Schema.NullOr(Schema.Number),
+  sendCount: Schema.Number,
+  status: Schema.Literals(["draft", "sent", "expired", "accepted", "revoked"]),
+})
+
+/** Signing in without a key: a link mailed to a member (no sign-in needed to ask for one). */
+export class SignInLinkApi extends HttpApiGroup.make("signInLink").add(
+  /** Mails a sign-in link if the address belongs to a member. The answer never says whether it does. */
+  HttpApiEndpoint.post("request", "/v1/session/link", {
+    payload: Schema.Struct({ email: Schema.String.check(Schema.isMaxLength(254)) }),
+    success: Schema.Struct({ sent: Schema.Boolean }).pipe(HttpApiSchema.status(202)),
+    error: [RateLimited, NoSystemSender, Forbidden],
+  }),
+  /** Uses a link's token (the app's own sign-in screen); sets the session cookie like `POST /v1/session`.
+   * Opening the link itself shows a page with the same button (`GET /v1/session/link/{token}`). */
+  HttpApiEndpoint.post("verify", "/v1/session/link/verify", {
+    payload: Schema.Struct({ token: Schema.NonEmptyString.check(Schema.isMaxLength(256)) }),
+    success: Me,
+    error: [InvalidRequest, Gone, RateLimited, Forbidden],
+  }),
+) {}
+
+/** An invitation, seen and accepted by the person invited: the token is the credential. */
+export class InviteLinkApi extends HttpApiGroup.make("inviteLink").add(
+  HttpApiEndpoint.get("describe", "/v1/invites/:token", {
+    params: { token: Schema.String },
+    success: Schema.Struct({
+      email: Schema.String,
+      role: InviteRole,
+      workspace: Schema.String,
+      invitedBy: Schema.NullOr(Schema.String),
+      message: Schema.NullOr(Schema.String),
+      expiresAt: Schema.Number,
+      mailboxes: Schema.Array(
+        Schema.Struct({ ...MailboxGrant.fields, address: Schema.NullOr(Schema.String) }),
+      ),
+    }),
+    error: [NotFound, Gone],
+  }),
+  /** Joins and signs in (sets the session cookie). `409 email-mismatch` when signed in as someone else. */
+  HttpApiEndpoint.post("accept", "/v1/invites/:token/accept", {
+    params: { token: Schema.String },
+    payload: [
+      Schema.Struct({ name: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(120))) }),
+      Schema.Null,
+    ],
+    success: Me,
+    error: [NotFound, Gone, Conflict, Forbidden],
+  }),
+) {}
+
+/** Members, invitations and the workspace itself. Managing people needs `members.manage`. */
+export class PeopleApi extends HttpApiGroup.make("people")
+  .add(
+    /** The person holding the admin key names the workspace and becomes its owner; a sign-in link is
+     * mailed to them. Once only: `409 already-claimed` with `claimedBy` and `claimedAt`. */
+    HttpApiEndpoint.post("claim", "/v1/workspace/claim", {
+      payload: Schema.Struct({
+        workspaceName: Schema.String.check(Schema.isMaxLength(120)),
+        name: Schema.String.check(Schema.isMaxLength(120)),
+        email: Schema.String.check(Schema.isMaxLength(254)),
+      }),
+      success: Schema.Struct({ member: MemberSchema, signInLinkSent: Schema.Boolean }),
+      error: [Forbidden, Conflict, InvalidRequest],
+    }),
+    /** The owner hands ownership on, and becomes an admin. */
+    HttpApiEndpoint.post("transfer", "/v1/workspace/transfer", {
+      payload: Schema.Struct({ memberId: Schema.String }),
+      success: MemberSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("listMembers", "/v1/members", {
+      success: Schema.Struct({ members: Schema.Array(MemberDetail), invites: Schema.Array(InviteSchema) }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("getMember", "/v1/members/:id", {
+      params: { id: Schema.String },
+      success: MemberDetail,
+      error: [Forbidden, NotFound],
+    }),
+    /** Role, name, time zone and mailboxes. The owner can't be demoted (`403 owner`); a new role ends
+     * their sessions so it applies at once. */
+    HttpApiEndpoint.patch("updateMember", "/v1/members/:id", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        role: Schema.optionalKey(InviteRole),
+        name: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(120))),
+        timeZone: Schema.optionalKey(Schema.String),
+        mailboxes: Schema.optionalKey(Schema.Array(MailboxGrant)),
+      }),
+      success: MemberDetail,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /** Removes someone: their sessions end and their mailboxes are taken back. Not the owner. */
+    HttpApiEndpoint.delete("removeMember", "/v1/members/:id", {
+      params: { id: Schema.String },
+      success: MemberSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("listInvites", "/v1/invites", {
+      success: Schema.Struct({ invites: Schema.Array(InviteSchema) }),
+      error: Forbidden,
+    }),
+    /** Drafts an invitation and returns the email it would send. Nothing goes out until `…/send`. */
+    HttpApiEndpoint.post("createInvite", "/v1/invites", {
+      payload: Schema.Struct({
+        email: Schema.String.check(Schema.isMaxLength(254)),
+        role: InviteRole,
+        mailboxes: Schema.optionalKey(Schema.Array(MailboxGrant)),
+        message: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(1000))),
+      }),
+      success: Schema.Struct({
+        invite: InviteSchema,
+        draft: Schema.Struct({
+          /** Null when no system sender is set: sending will answer 503 until one is. */
+          from: Schema.NullOr(Schema.String),
+          to: Schema.String,
+          subject: Schema.String,
+          html: Schema.String,
+          text: Schema.String,
+        }),
+      }),
+      error: [Forbidden, Conflict, InvalidRequest],
+    }),
+    /** Sends the invitation: a fresh link (any earlier one stops working) for another 7 days. */
+    HttpApiEndpoint.post("sendInvite", "/v1/invites/:id/send", {
+      params: { id: Schema.String },
+      payload: [Schema.Struct({}), Schema.Null],
+      success: InviteSchema,
+      error: [Forbidden, NotFound, Gone, Conflict, NoSystemSender],
+    }),
+    HttpApiEndpoint.post("resendInvite", "/v1/invites/:id/resend", {
+      params: { id: Schema.String },
+      payload: [Schema.Struct({}), Schema.Null],
+      success: InviteSchema,
+      error: [Forbidden, NotFound, Gone, Conflict, NoSystemSender],
+    }),
+    HttpApiEndpoint.delete("revokeInvite", "/v1/invites/:id", {
+      params: { id: Schema.String },
+      success: InviteSchema,
+      error: [Forbidden, NotFound, Gone],
     }),
   )
   .middleware(ApiKeyAuth) {}
@@ -5006,4 +5276,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(RunsApi)
   .add(SessionApi)
   .add(MeApi)
+  .add(SignInLinkApi)
+  .add(InviteLinkApi)
+  .add(PeopleApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}

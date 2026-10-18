@@ -31,6 +31,7 @@ import { InboundHandlers } from "../http/inboundHandlers.ts"
 import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { MailHandlers } from "../http/mailHandlers.ts"
 import { OverviewHandlers } from "../http/overviewHandlers.ts"
+import { InviteLinkHandlers, PeopleHandlers, SignInLinkHandlers } from "../http/peopleHandlers.ts"
 import { PublicFormsHandlers } from "../http/publicFormsHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
 import { SearchHandlers } from "../http/searchHandlers.ts"
@@ -68,6 +69,7 @@ import {
 import { handleQueue } from "./queue.ts"
 import { handleScheduled } from "./scheduled.ts"
 import { handleAuditCsv, handleBrandLogo } from "./settingsFiles.ts"
+import { handleSignInLink, SIGN_IN_LINK_PATH } from "./signInLink.ts"
 import { handleStatsCsv, STATS_CSV_PATH } from "./statsCsv.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleRequestLink, handleUnsubscribe, REQUEST_LINK_PATH } from "./unsubscribe.ts"
@@ -120,6 +122,9 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     RunsHandlers,
     SessionHandlers,
     MeHandlers,
+    SignInLinkHandlers,
+    InviteLinkHandlers,
+    PeopleHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
@@ -176,6 +181,8 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   if (REQUEST_LINK_PATH.test(path)) return handleRequestLink(request, env)
   const view = VIEW_PATH.exec(path)
   if (view) return handleView(request, env, d(view[1]))
+  const signInLink = SIGN_IN_LINK_PATH.exec(path)
+  if (signInLink) return handleSignInLink(request, env, d(signInLink[1]))
   const formPage = FORM_PAGE_PATH.exec(path)
   if (formPage) return handleFormPage(request, env, d(formPage[1]))
   const form = FORM_SUBMIT_PATH.exec(path)

@@ -137,29 +137,29 @@ export const ContactsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(filterCondition(query)),
           Effect.flatMap((extra) => listContacts(query, extra)),
           audienceErrors,
         ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => createContact(payload, caller.keyId)),
           audienceErrors,
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getContact(params.id)), audienceErrors),
+        requireScope("read", "contacts.read").pipe(Effect.andThen(getContact(params.id)), audienceErrors),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => updateContact(params.id, payload, caller.keyId)),
           audienceErrors,
         ),
       ),
       remove: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => deleteContacts([params.id], caller.keyId)),
           Effect.flatMap((n) =>
             n === 0
@@ -170,11 +170,14 @@ export const ContactsHandlers = HttpApiBuilder.group(
         ),
       ),
       timeline: p(({ params, query }) =>
-        requireScope("read").pipe(Effect.andThen(contactTimeline(params.id, query)), audienceErrors),
+        requireScope("read", "contacts.read").pipe(
+          Effect.andThen(contactTimeline(params.id, query)),
+          audienceErrors,
+        ),
       ),
       setTopic: p(({ params, payload, request }) =>
         Effect.gen(function* () {
-          yield* requireScope("admin")
+          yield* requireScope("admin", "contacts.write")
           const result =
             payload.state === "subscribed"
               ? yield* subscribe(params.id, params.topicId, {
@@ -189,7 +192,7 @@ export const ContactsHandlers = HttpApiBuilder.group(
       ),
       bulk: p(({ payload, request }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "contacts.write")
           if (payload.ids && payload.filter)
             return yield* new ContactInvalid({ field: "ids", message: "Give ids or a filter, not both." })
           if (payload.filter)
@@ -204,21 +207,26 @@ export const ContactsHandlers = HttpApiBuilder.group(
         }).pipe(audienceErrors),
       ),
       bulkJob: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getBulkJob(params.id)), audienceErrors),
+        requireScope("read", "contacts.read").pipe(Effect.andThen(getBulkJob(params.id)), audienceErrors),
       ),
-      fields: p(() => requireScope("read").pipe(Effect.andThen(listContactFields()), audienceErrors)),
+      fields: p(() =>
+        requireScope("read", "contacts.read").pipe(Effect.andThen(listContactFields()), audienceErrors),
+      ),
       updateField: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => updateContactField(params.key, payload, caller.keyId)),
           audienceErrors,
         ),
       ),
       export: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(exportContact(params.id)), audienceErrors),
+        requireScope("admin", "contacts.write").pipe(
+          Effect.andThen(exportContact(params.id)),
+          audienceErrors,
+        ),
       ),
       preferencesLink: p(({ params, query, request }) =>
         Effect.gen(function* () {
-          yield* requireScope("admin")
+          yield* requireScope("admin", "contacts.write")
           yield* getContact(params.id)
           const token = yield* unsubscribeToken({
             contactId: params.id,
@@ -229,7 +237,7 @@ export const ContactsHandlers = HttpApiBuilder.group(
         }).pipe(audienceErrors),
       ),
       erase: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.erase").pipe(
           Effect.flatMap((caller) => eraseContact(params.id, caller.keyId)),
           audienceErrors,
         ),
@@ -245,24 +253,29 @@ export const TopicsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       stats: p(({ query }) =>
-        requireScope("read").pipe(Effect.andThen(topicStats(query.range ?? "30d")), audienceErrors),
+        requireScope("read", "contacts.read").pipe(
+          Effect.andThen(topicStats(query.range ?? "30d")),
+          audienceErrors,
+        ),
       ),
       list: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(listTopics()),
           Effect.map((topics) => ({ topics })),
           audienceErrors,
         ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => createTopic(payload, caller.keyId)),
           audienceErrors,
         ),
       ),
-      get: p(({ params }) => requireScope("read").pipe(Effect.andThen(getTopic(params.id)), audienceErrors)),
+      get: p(({ params }) =>
+        requireScope("read", "contacts.read").pipe(Effect.andThen(getTopic(params.id)), audienceErrors),
+      ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => updateTopic(params.id, payload, caller.keyId)),
           audienceErrors,
         ),
@@ -278,22 +291,24 @@ export const FormsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(listForms()),
           Effect.map((forms) => ({ forms })),
           audienceErrors,
         ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => createForm(payload, caller.keyId)),
           audienceErrors,
         ),
       ),
-      get: p(({ params }) => requireScope("read").pipe(Effect.andThen(getForm(params.id)), audienceErrors)),
+      get: p(({ params }) =>
+        requireScope("read", "contacts.read").pipe(Effect.andThen(getForm(params.id)), audienceErrors),
+      ),
       embed: p(({ params, request }) =>
         Effect.gen(function* () {
-          yield* requireScope("read")
+          yield* requireScope("read", "contacts.read")
           const form = yield* getForm(params.id)
           // The live topics, for a form whose visitors pick them; an archived form has none.
           const page = yield* formPage(params.id).pipe(
@@ -308,10 +323,13 @@ export const FormsHandlers = HttpApiBuilder.group(
         }).pipe(audienceErrors),
       ),
       stats: p(({ params, query }) =>
-        requireScope("read").pipe(Effect.andThen(formStats(params.id, query.range ?? "30d")), audienceErrors),
+        requireScope("read", "contacts.read").pipe(
+          Effect.andThen(formStats(params.id, query.range ?? "30d")),
+          audienceErrors,
+        ),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => updateForm(params.id, payload, caller.keyId)),
           audienceErrors,
         ),
@@ -327,32 +345,35 @@ export const SegmentsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(listSegments()),
           Effect.map((segments) => ({ segments })),
           audienceErrors,
         ),
       ),
       preview: p(({ payload }) =>
-        requireScope("read").pipe(Effect.andThen(previewSegment(payload.filter)), audienceErrors),
+        requireScope("read", "contacts.read").pipe(
+          Effect.andThen(previewSegment(payload.filter)),
+          audienceErrors,
+        ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => createSegment(payload, caller.keyId)),
           audienceErrors,
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getSegment(params.id)), audienceErrors),
+        requireScope("read", "contacts.read").pipe(Effect.andThen(getSegment(params.id)), audienceErrors),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => updateSegment(params.id, payload, caller.keyId)),
           audienceErrors,
         ),
       ),
       remove: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => deleteSegment(params.id, caller.keyId)),
           audienceErrors,
         ),

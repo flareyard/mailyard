@@ -22,6 +22,7 @@ import {
   retryRun,
 } from "../automations/runs.ts"
 import { redactGraph } from "../automations/secrets.ts"
+import { can } from "../domain/permissions.ts"
 import { Conflict, InvalidRequest, MailApi, NotFound, NotReady } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
@@ -38,19 +39,19 @@ export const AutomationsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "automations.read").pipe(
           Effect.andThen(listAutomations(query.range ?? "7d")),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       summary: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "automations.read").pipe(
           Effect.andThen(automationSummary()),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => createAutomation(payload, caller.keyId)),
           Effect.catchTags({
             AutomationInvalid: invalid,
@@ -60,18 +61,18 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "automations.read").pipe(
           Effect.flatMap((caller) =>
             getAutomation(params.id).pipe(
               // Secrets in step configs are for admins, who can change them (HAL-3412).
-              Effect.map((a) => (caller.scopes.includes("admin") ? a : { ...a, ...redactGraph(a.graph) })),
+              Effect.map((a) => (can(caller, "automations.write") ? a : { ...a, ...redactGraph(a.graph) })),
             ),
           ),
           Effect.catchTags({ AutomationNotFound: notFound, DatabaseError: Effect.die }),
         ),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => updateAutomation(params.id, payload, caller.keyId)),
           Effect.catchTags({
             AutomationNotFound: notFound,
@@ -81,7 +82,7 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       remove: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => deleteAutomation(params.id, caller.keyId)),
           Effect.catchTags({
             AutomationNotFound: notFound,
@@ -91,7 +92,7 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       publish: p(({ params, payload, request }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) =>
             publishAutomation(params.id, payload.note ?? null, caller.keyId, originOf(request)),
           ),
@@ -109,13 +110,13 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       versions: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "automations.read").pipe(
           Effect.andThen(listVersions(params.id)),
           Effect.catchTags({ AutomationNotFound: notFound, DatabaseError: Effect.die }),
         ),
       ),
       restore: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => restoreVersion(params.id, params.version, caller.keyId)),
           Effect.catchTags({
             AutomationNotFound: notFound,
@@ -125,7 +126,7 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       pause: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => setPaused(params.id, true, caller.keyId)),
           Effect.catchTags({
             AutomationNotFound: notFound,
@@ -135,7 +136,7 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       dryRun: p(({ params, payload }) =>
-        requireScope("read").pipe(
+        requireScope("read", "automations.read").pipe(
           Effect.andThen(dryRun(params.id, payload)),
           Effect.catchTags({
             AutomationNotFound: notFound,
@@ -156,7 +157,7 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       enter: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.andThen(getAutomation(params.id)),
           Effect.andThen(enterAutomation(params.id, payload.contactId, payload.data ?? null)),
           Effect.map((result) => ({ result })),
@@ -164,14 +165,14 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       runs: p(({ params, query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "automations.read").pipe(
           Effect.andThen(getAutomation(params.id)),
           Effect.andThen(listRuns(params.id, query)),
           Effect.catchTags({ AutomationNotFound: notFound, DatabaseError: Effect.die }),
         ),
       ),
       webhookSecret: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.andThen(getAutomation(params.id)),
           Effect.andThen(automationWebhookSecret(params.id)),
           Effect.map((secret) => ({ secret })),
@@ -179,7 +180,7 @@ export const AutomationsHandlers = HttpApiBuilder.group(
         ),
       ),
       resume: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => setPaused(params.id, false, caller.keyId)),
           Effect.catchTags({
             AutomationNotFound: notFound,
@@ -202,13 +203,13 @@ export const RunsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       get: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "automations.read").pipe(
           Effect.andThen(getRun(params.id)),
           Effect.catchTags({ RunNotFound: runNotFound, DatabaseError: Effect.die }),
         ),
       ),
       exit: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => exitRun(params.id, caller.keyId)),
           Effect.catchTags({
             RunNotFound: runNotFound,
@@ -218,7 +219,7 @@ export const RunsHandlers = HttpApiBuilder.group(
         ),
       ),
       retry: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "automations.write").pipe(
           Effect.flatMap((caller) => retryRun(params.id, caller.keyId)),
           Effect.catchTags({
             RunNotFound: runNotFound,

@@ -81,6 +81,24 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "type": "array",
           },
+          "claimedAt": {
+            "anyOf": [
+              {
+                "type": "number",
+              },
+              {
+                "enum": [
+                  "Infinity",
+                  "-Infinity",
+                  "NaN",
+                ],
+                "type": "string",
+              },
+            ],
+          },
+          "claimedBy": {
+            "type": "string",
+          },
           "message": {
             "type": "string",
           },
@@ -180,6 +198,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "allowedRoles": {
+            "items": {
+              "type": "string",
+            },
+            "type": "array",
+          },
           "keyName": {
             "anyOf": [
               {
@@ -193,11 +217,20 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "message": {
             "type": "string",
           },
+          "owners": {
+            "items": {
+              "type": "string",
+            },
+            "type": "array",
+          },
           "reason": {
             "enum": [
               "public-key",
               "insufficient-scope",
               "csrf",
+              "role",
+              "owner",
+              "mailbox_role",
             ],
             "type": "string",
           },
@@ -206,6 +239,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "required": {
+            "type": "string",
+          },
+          "role": {
             "type": "string",
           },
           "scopes": {
@@ -218,6 +254,38 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         "required": [
           "_tag",
           "message",
+        ],
+        "type": "object",
+      },
+      "GoneEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "Gone",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+          "reason": {
+            "enum": [
+              "expired",
+              "used",
+              "revoked",
+            ],
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "message",
+          "reason",
         ],
         "type": "object",
       },
@@ -290,6 +358,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         "required": [
           "_tag",
           "field",
+          "message",
+        ],
+        "type": "object",
+      },
+      "NoSystemSenderEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "NoSystemSender",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
           "message",
         ],
         "type": "object",
@@ -44711,6 +44802,1843 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/invites": {
+      "get": {
+        "operationId": "people.listInvites",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "invites": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "invitedBy": {
+                            "type": "string",
+                          },
+                          "mailboxes": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "access": {
+                                  "enum": [
+                                    "owner",
+                                    "member",
+                                    "viewer",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxId": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "mailboxId",
+                                "access",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                          "message": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "role": {
+                            "enum": [
+                              "admin",
+                              "sender",
+                              "agent",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "sendCount": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "sentAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "status": {
+                            "enum": [
+                              "draft",
+                              "sent",
+                              "expired",
+                              "accepted",
+                              "revoked",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "email",
+                          "role",
+                          "mailboxes",
+                          "message",
+                          "invitedBy",
+                          "createdAt",
+                          "expiresAt",
+                          "sentAt",
+                          "sendCount",
+                          "status",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "invites",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+      "post": {
+        "operationId": "people.createInvite",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "maxLength": 254,
+                    "type": "string",
+                  },
+                  "mailboxes": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "access": {
+                          "enum": [
+                            "owner",
+                            "member",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        "mailboxId": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "mailboxId",
+                        "access",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "message": {
+                    "maxLength": 1000,
+                    "type": "string",
+                  },
+                  "role": {
+                    "enum": [
+                      "admin",
+                      "sender",
+                      "agent",
+                      "viewer",
+                    ],
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "email",
+                  "role",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "draft": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "from": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "html": {
+                          "type": "string",
+                        },
+                        "subject": {
+                          "type": "string",
+                        },
+                        "text": {
+                          "type": "string",
+                        },
+                        "to": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "subject",
+                        "html",
+                        "text",
+                      ],
+                      "type": "object",
+                    },
+                    "invite": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "email": {
+                          "type": "string",
+                        },
+                        "expiresAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "invitedBy": {
+                          "type": "string",
+                        },
+                        "mailboxes": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "access": {
+                                "enum": [
+                                  "owner",
+                                  "member",
+                                  "viewer",
+                                ],
+                                "type": "string",
+                              },
+                              "mailboxId": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "mailboxId",
+                              "access",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "role": {
+                          "enum": [
+                            "admin",
+                            "sender",
+                            "agent",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        "sendCount": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "sentAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "status": {
+                          "enum": [
+                            "draft",
+                            "sent",
+                            "expired",
+                            "accepted",
+                            "revoked",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "role",
+                        "mailboxes",
+                        "message",
+                        "invitedBy",
+                        "createdAt",
+                        "expiresAt",
+                        "sentAt",
+                        "sendCount",
+                        "status",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "invite",
+                    "draft",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+    },
+    "/v1/invites/{id}": {
+      "delete": {
+        "operationId": "people.revokeInvite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "invitedBy": {
+                      "type": "string",
+                    },
+                    "mailboxes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "access",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "message": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "sendCount": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "sentAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "sent",
+                        "expired",
+                        "accepted",
+                        "revoked",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "role",
+                    "mailboxes",
+                    "message",
+                    "invitedBy",
+                    "createdAt",
+                    "expiresAt",
+                    "sentAt",
+                    "sendCount",
+                    "status",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoneEncoded",
+                },
+              },
+            },
+            "description": "Gone",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+    },
+    "/v1/invites/{id}/resend": {
+      "post": {
+        "operationId": "people.resendInvite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "not": {
+                      "type": "null",
+                    },
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "invitedBy": {
+                      "type": "string",
+                    },
+                    "mailboxes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "access",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "message": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "sendCount": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "sentAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "sent",
+                        "expired",
+                        "accepted",
+                        "revoked",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "role",
+                    "mailboxes",
+                    "message",
+                    "invitedBy",
+                    "createdAt",
+                    "expiresAt",
+                    "sentAt",
+                    "sendCount",
+                    "status",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoneEncoded",
+                },
+              },
+            },
+            "description": "Gone",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoSystemSenderEncoded",
+                },
+              },
+            },
+            "description": "NoSystemSender",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+    },
+    "/v1/invites/{id}/send": {
+      "post": {
+        "operationId": "people.sendInvite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "not": {
+                      "type": "null",
+                    },
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "invitedBy": {
+                      "type": "string",
+                    },
+                    "mailboxes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "access",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "message": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "sendCount": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "sentAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "draft",
+                        "sent",
+                        "expired",
+                        "accepted",
+                        "revoked",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "role",
+                    "mailboxes",
+                    "message",
+                    "invitedBy",
+                    "createdAt",
+                    "expiresAt",
+                    "sentAt",
+                    "sendCount",
+                    "status",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoneEncoded",
+                },
+              },
+            },
+            "description": "Gone",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoSystemSenderEncoded",
+                },
+              },
+            },
+            "description": "NoSystemSender",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+    },
+    "/v1/invites/{token}": {
+      "get": {
+        "operationId": "inviteLink.describe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "invitedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "mailboxes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "address": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "access",
+                          "address",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "message": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "workspace": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "email",
+                    "role",
+                    "workspace",
+                    "invitedBy",
+                    "message",
+                    "expiresAt",
+                    "mailboxes",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoneEncoded",
+                },
+              },
+            },
+            "description": "Gone",
+          },
+        },
+        "security": [],
+        "tags": [
+          "inviteLink",
+        ],
+      },
+    },
+    "/v1/invites/{token}/accept": {
+      "post": {
+        "operationId": "inviteLink.accept",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "maxLength": 120,
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "key": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "prefix": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "prefix",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "mailboxes": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "access": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "owner",
+                                      "member",
+                                      "viewer",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "address": {
+                                "type": "string",
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "address",
+                              "access",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "permissions": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "sender",
+                            "agent",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "scopes": {
+                      "items": {
+                        "enum": [
+                          "send",
+                          "track",
+                          "read",
+                          "admin",
+                        ],
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "session": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "absoluteExpiresAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "expiresAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "expiresAt",
+                            "absoluteExpiresAt",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "user": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "timeZone": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "timeZone",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "via": {
+                      "enum": [
+                        "session-member",
+                        "session-key",
+                        "admin-key",
+                        "api-key",
+                      ],
+                      "type": "string",
+                    },
+                    "workspace": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "claimed": {
+                          "type": "boolean",
+                        },
+                        "host": {
+                          "type": "string",
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "logoUrl": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "logoUrl",
+                        "url",
+                        "host",
+                        "claimed",
+                      ],
+                      "type": "object",
+                    },
+                    "workspaces": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "claimed": {
+                            "type": "boolean",
+                          },
+                          "host": {
+                            "type": "string",
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "logoUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "url": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "logoUrl",
+                          "url",
+                          "host",
+                          "claimed",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "user",
+                    "workspace",
+                    "role",
+                    "via",
+                    "key",
+                    "scopes",
+                    "permissions",
+                    "mailboxes",
+                    "workspaces",
+                    "session",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoneEncoded",
+                },
+              },
+            },
+            "description": "Gone",
+          },
+        },
+        "security": [],
+        "tags": [
+          "inviteLink",
+        ],
+      },
+    },
     "/v1/mail/attention": {
       "get": {
         "operationId": "overview.attention",
@@ -45741,6 +47669,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "people": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "memberId": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "sender",
+                              "agent",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "memberId",
+                          "name",
+                          "email",
+                          "access",
+                          "role",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "routing": {
                       "enum": [
                         "clear",
@@ -45880,6 +47851,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "spamThreshold",
                     "spamThresholdIsDefault",
                     "members",
+                    "people",
                     "messageCount",
                     "lastExport",
                     "routing",
@@ -46461,6 +48433,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "people": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "memberId": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "sender",
+                              "agent",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "memberId",
+                          "name",
+                          "email",
+                          "access",
+                          "role",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "signature": {
                       "anyOf": [
                         {
@@ -46592,6 +48607,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "spamThreshold",
                     "spamThresholdIsDefault",
                     "members",
+                    "people",
                     "messageCount",
                     "lastExport",
                   ],
@@ -47173,6 +49189,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "people": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "memberId": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "sender",
+                              "agent",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "memberId",
+                          "name",
+                          "email",
+                          "access",
+                          "role",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "signature": {
                       "anyOf": [
                         {
@@ -47304,6 +49363,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "spamThreshold",
                     "spamThresholdIsDefault",
                     "members",
+                    "people",
                     "messageCount",
                     "lastExport",
                   ],
@@ -58216,25 +60276,50 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "properties": {
                   "members": {
                     "items": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "apiKeyId": {
-                          "type": "string",
-                        },
-                        "role": {
-                          "enum": [
-                            "owner",
-                            "member",
-                            "viewer",
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "apiKeyId": {
+                              "type": "string",
+                            },
+                            "role": {
+                              "enum": [
+                                "owner",
+                                "member",
+                                "viewer",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "apiKeyId",
+                            "role",
                           ],
-                          "type": "string",
+                          "type": "object",
                         },
-                      },
-                      "required": [
-                        "apiKeyId",
-                        "role",
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "access": {
+                              "enum": [
+                                "owner",
+                                "member",
+                                "viewer",
+                              ],
+                              "type": "string",
+                            },
+                            "memberId": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "memberId",
+                            "access",
+                          ],
+                          "type": "object",
+                        },
                       ],
-                      "type": "object",
                     },
                     "type": "array",
                   },
@@ -58570,6 +60655,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "people": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "memberId": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "sender",
+                              "agent",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "memberId",
+                          "name",
+                          "email",
+                          "access",
+                          "role",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "signature": {
                       "anyOf": [
                         {
@@ -58701,6 +60829,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "spamThreshold",
                     "spamThresholdIsDefault",
                     "members",
+                    "people",
                     "messageCount",
                     "lastExport",
                   ],
@@ -67826,6 +69955,48 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "mailboxes": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "access": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "owner",
+                                      "member",
+                                      "viewer",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "address": {
+                                "type": "string",
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "address",
+                              "access",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "permissions": {
                       "items": {
                         "type": "string",
@@ -67833,7 +70004,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "type": "array",
                     },
                     "role": {
-                      "type": "null",
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "sender",
+                            "agent",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "scopes": {
                       "items": {
@@ -67899,10 +70084,39 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                     },
                     "user": {
-                      "type": "null",
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "timeZone": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "timeZone",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "via": {
                       "enum": [
+                        "session-member",
                         "session-key",
                         "admin-key",
                         "api-key",
@@ -67912,6 +70126,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "workspace": {
                       "additionalProperties": false,
                       "properties": {
+                        "claimed": {
+                          "type": "boolean",
+                        },
                         "host": {
                           "type": "string",
                         },
@@ -67941,6 +70158,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "logoUrl",
                         "url",
                         "host",
+                        "claimed",
                       ],
                       "type": "object",
                     },
@@ -67948,6 +70166,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "claimed": {
+                            "type": "boolean",
+                          },
                           "host": {
                             "type": "string",
                           },
@@ -67977,6 +70198,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "logoUrl",
                           "url",
                           "host",
+                          "claimed",
                         ],
                         "type": "object",
                       },
@@ -67991,6 +70213,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "key",
                     "scopes",
                     "permissions",
+                    "mailboxes",
                     "workspaces",
                     "session",
                   ],
@@ -68040,6 +70263,1256 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "me",
         ],
       },
+      "patch": {
+        "operationId": "me.updateMe",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "maxLength": 120,
+                    "type": "string",
+                  },
+                  "timeZone": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "key": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "prefix": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "prefix",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "mailboxes": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "access": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "owner",
+                                      "member",
+                                      "viewer",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "address": {
+                                "type": "string",
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "address",
+                              "access",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "permissions": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "sender",
+                            "agent",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "scopes": {
+                      "items": {
+                        "enum": [
+                          "send",
+                          "track",
+                          "read",
+                          "admin",
+                        ],
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "session": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "absoluteExpiresAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "expiresAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "expiresAt",
+                            "absoluteExpiresAt",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "user": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "timeZone": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "timeZone",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "via": {
+                      "enum": [
+                        "session-member",
+                        "session-key",
+                        "admin-key",
+                        "api-key",
+                      ],
+                      "type": "string",
+                    },
+                    "workspace": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "claimed": {
+                          "type": "boolean",
+                        },
+                        "host": {
+                          "type": "string",
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "logoUrl": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "logoUrl",
+                        "url",
+                        "host",
+                        "claimed",
+                      ],
+                      "type": "object",
+                    },
+                    "workspaces": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "claimed": {
+                            "type": "boolean",
+                          },
+                          "host": {
+                            "type": "string",
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "logoUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "url": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "logoUrl",
+                          "url",
+                          "host",
+                          "claimed",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "user",
+                    "workspace",
+                    "role",
+                    "via",
+                    "key",
+                    "scopes",
+                    "permissions",
+                    "mailboxes",
+                    "workspaces",
+                    "session",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "me",
+        ],
+      },
+    },
+    "/v1/members": {
+      "get": {
+        "operationId": "people.listMembers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "invites": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "expiresAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "invitedBy": {
+                            "type": "string",
+                          },
+                          "mailboxes": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "access": {
+                                  "enum": [
+                                    "owner",
+                                    "member",
+                                    "viewer",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxId": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "mailboxId",
+                                "access",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                          "message": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "role": {
+                            "enum": [
+                              "admin",
+                              "sender",
+                              "agent",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "sendCount": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "sentAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "status": {
+                            "enum": [
+                              "draft",
+                              "sent",
+                              "expired",
+                              "accepted",
+                              "revoked",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "email",
+                          "role",
+                          "mailboxes",
+                          "message",
+                          "invitedBy",
+                          "createdAt",
+                          "expiresAt",
+                          "sentAt",
+                          "sendCount",
+                          "status",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "members": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "email": {
+                            "type": "string",
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "lastActiveAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "mailboxes": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "access": {
+                                  "enum": [
+                                    "owner",
+                                    "member",
+                                    "viewer",
+                                  ],
+                                  "type": "string",
+                                },
+                                "address": {
+                                  "type": "string",
+                                },
+                                "mailboxId": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "mailboxId",
+                                "access",
+                                "address",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "role": {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "sender",
+                              "agent",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "timeZone": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "email",
+                          "name",
+                          "role",
+                          "timeZone",
+                          "createdAt",
+                          "lastActiveAt",
+                          "mailboxes",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "members",
+                    "invites",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+    },
+    "/v1/members/{id}": {
+      "delete": {
+        "operationId": "people.removeMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "lastActiveAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "timeZone": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "name",
+                    "role",
+                    "timeZone",
+                    "createdAt",
+                    "lastActiveAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+      "get": {
+        "operationId": "people.getMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "lastActiveAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "mailboxes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "address": {
+                            "type": "string",
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "access",
+                          "address",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "timeZone": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "name",
+                    "role",
+                    "timeZone",
+                    "createdAt",
+                    "lastActiveAt",
+                    "mailboxes",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+      "patch": {
+        "operationId": "people.updateMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "mailboxes": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "access": {
+                          "enum": [
+                            "owner",
+                            "member",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        "mailboxId": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "mailboxId",
+                        "access",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "name": {
+                    "maxLength": 120,
+                    "type": "string",
+                  },
+                  "role": {
+                    "enum": [
+                      "admin",
+                      "sender",
+                      "agent",
+                      "viewer",
+                    ],
+                    "type": "string",
+                  },
+                  "timeZone": {
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "lastActiveAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "mailboxes": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": [
+                              "owner",
+                              "member",
+                              "viewer",
+                            ],
+                            "type": "string",
+                          },
+                          "address": {
+                            "type": "string",
+                          },
+                          "mailboxId": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "mailboxId",
+                          "access",
+                          "address",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "timeZone": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "name",
+                    "role",
+                    "timeZone",
+                    "createdAt",
+                    "lastActiveAt",
+                    "mailboxes",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
     },
     "/v1/messages": {
       "get": {
@@ -68083,6 +71556,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "reply",
                 "mailbox",
                 "test",
+                "system",
               ],
               "type": "string",
             },
@@ -68359,6 +71833,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "automation",
                               "mailbox",
                               "test",
+                              "system",
                             ],
                             "type": "string",
                           },
@@ -69022,6 +72497,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "automation",
                         "mailbox",
                         "test",
+                        "system",
                       ],
                       "type": "string",
                     },
@@ -74416,6 +77892,48 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "mailboxes": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "access": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "owner",
+                                      "member",
+                                      "viewer",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "address": {
+                                "type": "string",
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "address",
+                              "access",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "permissions": {
                       "items": {
                         "type": "string",
@@ -74423,7 +77941,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "type": "array",
                     },
                     "role": {
-                      "type": "null",
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "sender",
+                            "agent",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "scopes": {
                       "items": {
@@ -74489,10 +78021,39 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                     },
                     "user": {
-                      "type": "null",
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "timeZone": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "timeZone",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "via": {
                       "enum": [
+                        "session-member",
                         "session-key",
                         "admin-key",
                         "api-key",
@@ -74502,6 +78063,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "workspace": {
                       "additionalProperties": false,
                       "properties": {
+                        "claimed": {
+                          "type": "boolean",
+                        },
                         "host": {
                           "type": "string",
                         },
@@ -74531,6 +78095,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "logoUrl",
                         "url",
                         "host",
+                        "claimed",
                       ],
                       "type": "object",
                     },
@@ -74538,6 +78103,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "claimed": {
+                            "type": "boolean",
+                          },
                           "host": {
                             "type": "string",
                           },
@@ -74567,6 +78135,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "logoUrl",
                           "url",
                           "host",
+                          "claimed",
                         ],
                         "type": "object",
                       },
@@ -74581,6 +78150,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "key",
                     "scopes",
                     "permissions",
+                    "mailboxes",
                     "workspaces",
                     "session",
                   ],
@@ -74624,6 +78194,552 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         "security": [],
         "tags": [
           "session",
+        ],
+      },
+    },
+    "/v1/session/link": {
+      "post": {
+        "operationId": "signInLink.request",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "maxLength": 254,
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "email",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "sent": {
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "sent",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoSystemSenderEncoded",
+                },
+              },
+            },
+            "description": "NoSystemSender",
+          },
+        },
+        "security": [],
+        "tags": [
+          "signInLink",
+        ],
+      },
+    },
+    "/v1/session/link/verify": {
+      "post": {
+        "operationId": "signInLink.verify",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "token",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "key": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "prefix": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "prefix",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "mailboxes": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "access": {
+                                "anyOf": [
+                                  {
+                                    "enum": [
+                                      "owner",
+                                      "member",
+                                      "viewer",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "address": {
+                                "type": "string",
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "address",
+                              "access",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "permissions": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "sender",
+                            "agent",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "scopes": {
+                      "items": {
+                        "enum": [
+                          "send",
+                          "track",
+                          "read",
+                          "admin",
+                        ],
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "session": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "absoluteExpiresAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "expiresAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "expiresAt",
+                            "absoluteExpiresAt",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "user": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                            "name": {
+                              "type": "string",
+                            },
+                            "timeZone": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "timeZone",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "via": {
+                      "enum": [
+                        "session-member",
+                        "session-key",
+                        "admin-key",
+                        "api-key",
+                      ],
+                      "type": "string",
+                    },
+                    "workspace": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "claimed": {
+                          "type": "boolean",
+                        },
+                        "host": {
+                          "type": "string",
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "logoUrl": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                        "url": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "logoUrl",
+                        "url",
+                        "host",
+                        "claimed",
+                      ],
+                      "type": "object",
+                    },
+                    "workspaces": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "claimed": {
+                            "type": "boolean",
+                          },
+                          "host": {
+                            "type": "string",
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "logoUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "url": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "logoUrl",
+                          "url",
+                          "host",
+                          "claimed",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "user",
+                    "workspace",
+                    "role",
+                    "via",
+                    "key",
+                    "scopes",
+                    "permissions",
+                    "mailboxes",
+                    "workspaces",
+                    "session",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoneEncoded",
+                },
+              },
+            },
+            "description": "Gone",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [],
+        "tags": [
+          "signInLink",
+        ],
+      },
+    },
+    "/v1/session/link/{token}": {
+      "get": {
+        "description": "An HTML page with one button: opening the link signs nobody in, so a mail scanner that fetches it can't use it up. The button POSTs to the same path.",
+        "operationId": "signInLink.page",
+        "parameters": [
+          {
+            "description": "The token from the emailed link.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The page.",
+          },
+        },
+        "summary": "The page a sign-in link opens (HAL-3361)",
+        "tags": [
+          "signInLink",
+        ],
+      },
+      "post": {
+        "description": "Uses the link (once, within 15 minutes), sets the session cookie and redirects to the app (303 to /). Needs this site's Origin. The app's own screen can call POST /v1/session/link/verify instead.",
+        "operationId": "signInLink.use",
+        "parameters": [
+          {
+            "description": "The token from the emailed link.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "303": {
+            "description": "Signed in; Set-Cookie carries the session.",
+          },
+          "400": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The link isn't valid.",
+          },
+          "403": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The request didn't come from this site.",
+          },
+          "410": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The link was used or has expired.",
+          },
+        },
+        "summary": "Use a sign-in link from its page",
+        "tags": [
+          "signInLink",
         ],
       },
     },
@@ -74857,6 +78973,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "enum": [
                               "session-key",
                               "admin-key",
+                              "session-member",
                             ],
                             "type": "string",
                           },
@@ -91104,6 +95221,362 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/workspace/claim": {
+      "post": {
+        "operationId": "people.claim",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "maxLength": 254,
+                    "type": "string",
+                  },
+                  "name": {
+                    "maxLength": 120,
+                    "type": "string",
+                  },
+                  "workspaceName": {
+                    "maxLength": 120,
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "workspaceName",
+                  "name",
+                  "email",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "member": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "email": {
+                          "type": "string",
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "lastActiveAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                        "role": {
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "sender",
+                            "agent",
+                            "viewer",
+                          ],
+                          "type": "string",
+                        },
+                        "timeZone": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "name",
+                        "role",
+                        "timeZone",
+                        "createdAt",
+                        "lastActiveAt",
+                      ],
+                      "type": "object",
+                    },
+                    "signInLinkSent": {
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "member",
+                    "signInLinkSent",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded",
+                },
+              },
+            },
+            "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+    },
+    "/v1/workspace/transfer": {
+      "post": {
+        "operationId": "people.transfer",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "memberId",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "email": {
+                      "type": "string",
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "lastActiveAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "admin",
+                        "sender",
+                        "agent",
+                        "viewer",
+                      ],
+                      "type": "string",
+                    },
+                    "timeZone": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "name",
+                    "role",
+                    "timeZone",
+                    "createdAt",
+                    "lastActiveAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "people",
+        ],
+      },
+    },
   },
   "security": [],
   "tags": [
@@ -91206,6 +95679,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "me",
+    },
+    {
+      "name": "signInLink",
+    },
+    {
+      "name": "inviteLink",
+    },
+    {
+      "name": "people",
     },
   ],
 }

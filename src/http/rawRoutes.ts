@@ -268,6 +268,31 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
       },
     },
   },
+  "/v1/session/link/{token}": {
+    get: {
+      tags: ["signInLink"],
+      operationId: "signInLink.page",
+      summary: "The page a sign-in link opens (HAL-3361)",
+      description:
+        "An HTML page with one button: opening the link signs nobody in, so a mail scanner that fetches it can't use it up. The button POSTs to the same path.",
+      parameters: [idParam("token", "The token from the emailed link.")],
+      responses: { "200": bytes("The page.", "text/html") },
+    },
+    post: {
+      tags: ["signInLink"],
+      operationId: "signInLink.use",
+      summary: "Use a sign-in link from its page",
+      description:
+        "Uses the link (once, within 15 minutes), sets the session cookie and redirects to the app (303 to /). Needs this site's Origin. The app's own screen can call POST /v1/session/link/verify instead.",
+      parameters: [idParam("token", "The token from the emailed link.")],
+      responses: {
+        "303": { description: "Signed in; Set-Cookie carries the session." },
+        "400": bytes("The link isn't valid.", "text/html"),
+        "403": bytes("The request didn't come from this site.", "text/html"),
+        "410": bytes("The link was used or has expired.", "text/html"),
+      },
+    },
+  },
 }
 
 /** Adds the raw routes to the generated document. */

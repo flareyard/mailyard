@@ -127,23 +127,27 @@ export const CampaignsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
-      list: p(({ query }) => requireScope("read").pipe(Effect.andThen(listCampaigns(query)), campaignErrors)),
-      counts: p(() => requireScope("read").pipe(Effect.andThen(campaignCounts()), campaignErrors)),
+      list: p(({ query }) =>
+        requireScope("read", "campaigns.read").pipe(Effect.andThen(listCampaigns(query)), campaignErrors),
+      ),
+      counts: p(() =>
+        requireScope("read", "campaigns.read").pipe(Effect.andThen(campaignCounts()), campaignErrors),
+      ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.flatMap((caller) => createCampaign(payload, caller.keyId)),
           campaignErrors,
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "campaigns.read").pipe(
           Effect.andThen(findCampaign(params.id)),
           Effect.map(describeCampaign),
           campaignErrors,
         ),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.flatMap((caller) =>
             updateCampaign(
               params.id,
@@ -155,34 +159,37 @@ export const CampaignsHandlers = HttpApiBuilder.group(
         ),
       ),
       remove: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.flatMap((caller) => deleteCampaign(params.id, caller.keyId)),
           campaignErrors,
         ),
       ),
       render: p(({ params, payload, request }) =>
-        requireScope("read").pipe(
+        requireScope("read", "campaigns.read").pipe(
           Effect.andThen(renderCampaign(params.id, payload, originOf(request) ?? "")),
           campaignErrors,
         ),
       ),
       test: p(({ params, payload, request }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.andThen(testCampaign(params.id, payload.to, originOf(request) ?? "")),
           campaignErrors,
         ),
       ),
       checks: p(({ params, request }) =>
-        requireScope("read").pipe(
+        requireScope("read", "campaigns.read").pipe(
           Effect.andThen(campaignChecks(params.id, originOf(request) ?? "")),
           campaignErrors,
         ),
       ),
       audiencePreview: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(campaignAudience(params.id)), campaignErrors),
+        requireScope("read", "campaigns.read").pipe(
+          Effect.andThen(campaignAudience(params.id)),
+          campaignErrors,
+        ),
       ),
       schedule: p(({ params, payload, request }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.flatMap((caller) =>
             scheduleCampaign(params.id, payload, caller.keyId, originOf(request) ?? ""),
           ),
@@ -190,26 +197,26 @@ export const CampaignsHandlers = HttpApiBuilder.group(
         ),
       ),
       pause: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.flatMap((caller) => pauseCampaign(params.id, caller.keyId)),
           campaignErrors,
         ),
       ),
       resume: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.flatMap((caller) => resumeCampaign(params.id, caller.keyId)),
           campaignErrors,
         ),
       ),
       cancel: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "campaigns.write").pipe(
           Effect.flatMap((caller) => cancelCampaign(params.id, caller.keyId)),
           campaignErrors,
         ),
       ),
       pace: p(({ params }) =>
         Effect.gen(function* () {
-          yield* requireScope("read")
+          yield* requireScope("read", "campaigns.read")
           const campaign = yield* findCampaign(params.id)
           const sent = yield* campaignSentCount(params.id)
           const remaining = Math.max(0, (campaign.audienceSize ?? 0) - sent)
@@ -234,14 +241,20 @@ export const CampaignsHandlers = HttpApiBuilder.group(
         ),
       ),
       report: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(campaignReport(params.id)), campaignErrors),
+        requireScope("read", "campaigns.read").pipe(
+          Effect.andThen(campaignReport(params.id)),
+          campaignErrors,
+        ),
       ),
       recipients: p(({ params, query }) =>
-        requireScope("read").pipe(Effect.andThen(campaignRecipients(params.id, query)), campaignErrors),
+        requireScope("read", "campaigns.read").pipe(
+          Effect.andThen(campaignRecipients(params.id, query)),
+          campaignErrors,
+        ),
       ),
       resendNonOpeners: p(({ params, payload }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "campaigns.write")
           const options = payload ?? {}
           const draft = yield* resendToNonOpeners(params.id, caller.keyId, options)
           yield* recordAudit({
@@ -258,7 +271,7 @@ export const CampaignsHandlers = HttpApiBuilder.group(
         }).pipe(campaignErrors),
       ),
       resendNonOpenersDryRun: p(({ params, query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "campaigns.read").pipe(
           Effect.andThen(
             resendDryRun(params.id, {
               countMachineOpensAsOpened:
@@ -268,13 +281,15 @@ export const CampaignsHandlers = HttpApiBuilder.group(
           campaignErrors,
         ),
       ),
-      getCompliance: p(() => requireScope("read").pipe(Effect.andThen(getCompliance()), campaignErrors)),
+      getCompliance: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(getCompliance()), campaignErrors),
+      ),
       recheckTracking: p(() =>
-        requireScope("admin").pipe(Effect.andThen(recheckTrackingOrigin()), campaignErrors),
+        requireScope("admin", "settings.write").pipe(Effect.andThen(recheckTrackingOrigin()), campaignErrors),
       ),
       putCompliance: p(({ payload }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "settings.write")
           const before = yield* getCompliance()
           const after = yield* putCompliance(payload)
           yield* recordAudit({

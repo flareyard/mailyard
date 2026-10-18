@@ -21,7 +21,7 @@ export const ImportsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       contacts: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => startContactImport(payload, caller.keyId)),
           Effect.catchTags({
             UploadNotFound: notFound("Upload"),
@@ -32,19 +32,19 @@ export const ImportsHandlers = HttpApiBuilder.group(
         ),
       ),
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(listContactImports(query)),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(getContactImport(params.id)),
           Effect.catchTags({ ImportNotFound: notFound("Import"), DatabaseError: Effect.die }),
         ),
       ),
       errorsCsv: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(importErrorsCsv(params.id)),
           Effect.map((csv) =>
             HttpServerResponse.text(csv, {
@@ -60,7 +60,7 @@ export const ImportsHandlers = HttpApiBuilder.group(
         ),
       ),
       cancel: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => cancelContactImport(params.id, caller.keyId)),
           Effect.catchTags({
             ImportNotFound: notFound("Import"),

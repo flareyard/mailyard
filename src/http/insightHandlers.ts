@@ -15,7 +15,10 @@ import { MailApi } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 
 const read = <A, R>(effect: Effect.Effect<A, { readonly _tag: "DatabaseError" }, R>) =>
-  requireScope("read").pipe(Effect.andThen(effect), Effect.catchTag("DatabaseError", Effect.die))
+  requireScope("read", "analytics.read").pipe(
+    Effect.andThen(effect),
+    Effect.catchTag("DatabaseError", Effect.die),
+  )
 
 export const InsightsHandlers = HttpApiBuilder.group(
   MailApi,
