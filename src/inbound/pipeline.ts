@@ -19,6 +19,7 @@ import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
 import { callMailbox } from "../mail/rpc.ts"
 import { BODY_TEXT_LIMIT, type InboundDelivery } from "../mailbox/types.ts"
+import { notifyNewMail } from "../push/notifications.ts"
 import { runEffects } from "../rules/effects.ts"
 import { type FilingPlan, planFiling } from "../rules/filing.ts"
 import { Assistant } from "../services/Assistant.ts"
@@ -463,6 +464,16 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
           by: "rule",
         })
       // Automations that start on mail (HAL-3467): never for automated, list or spam mail.
+      // Web Push to the people who read this mailbox (HAL-3369), never for spam.
+      if (!plan.spam.isSpam && plan.filing.folder !== "spam")
+        yield* notifyNewMail({
+          mailboxId,
+          threadId: result.threadId,
+          messageId: result.id,
+          from: parsed.from ? (parsed.from.name ?? parsed.from.address) : "(unknown sender)",
+          subject: parsed.subject,
+          assignee: plan.filing.assignee ?? null,
+        })
       yield* fireMailReceived({
         mailboxId,
         mailboxAddress: row.envelopeTo,

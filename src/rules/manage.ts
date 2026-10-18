@@ -19,7 +19,7 @@ export class RuleNotFound extends Schema.TaggedError<RuleNotFound>()("RuleNotFou
 
 export const MAX_RULES = 100
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const SENDER_VALUE = /^(?:[^\s@]+@[^\s@]+\.[^\s@]+|@[a-z0-9.-]+\.[a-z]{2,})$/
+export const SENDER_VALUE = /^(?:[^\s@]+@[^\s@]+\.[^\s@]+|@[a-z0-9.-]+\.[a-z]{2,})$/
 
 type RuleRow = typeof mailboxRules.$inferSelect
 

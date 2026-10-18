@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import * as Option from "effect/Option"
 import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
 import type { AgentLimited } from "../domain/agents.ts"
 import type { Caller } from "../domain/apiKeys.ts"
@@ -13,10 +14,13 @@ import { BlobStore } from "../kit/index.ts"
 import { type Access, type MailboxAccessDenied, type MailboxMissing, requireMailbox } from "../mail/access.ts"
 import { bodyTextOf, type ComposeInvalid, checkDraftAttachments, draftFromMessage } from "../mail/compose.ts"
 import { ATTACHMENT_LINK_TTL_SECONDS, fileUrl, signFileToken } from "../mail/files.ts"
+import { addImageSender, listImageSenders, removeImageSender, showsImagesFrom } from "../mail/imageSenders.ts"
+import { buildReply, parseInvite, RESPONSE_WORDS } from "../mail/invite.ts"
 import { callMailbox, type MailboxRefused } from "../mail/rpc.ts"
 import { cancelSend, type SendInvalid, sendDraft } from "../mail/send.ts"
 import type { MessagePatch, Party, StoredMessage } from "../mailbox/types.ts"
 import { linkOrigin } from "../public/origin.ts"
+import { notifyAssigned } from "../push/notifications.ts"
 import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.ts"
 import { Database } from "../services/Database.ts"
 import {
@@ -116,6 +120,29 @@ const party = (p: { readonly name?: string | null | undefined; readonly address:
 })
 
 /** The mailbox's own addresses (itself and the aliases that reach it), so replies never go to yourself. */
+/**
+ * The invitation in a message's text/calendar part, with what this mailbox may do about it. A
+ * malformed part reads as no invitation.
+ */
+const inviteOf = (message: StoredMessage, own: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const part = message.attachments.find(
+      (a) => /^text\/calendar/i.test(a.mimeType) || /\.ics$/i.test(a.filename ?? ""),
+    )
+    if (!part || part.size > 512 * 1024) return null
+    const blob = yield* (yield* BlobStore).get(part.r2Key).pipe(Effect.orElseSucceed(() => Option.none()))
+    if (Option.isNone(blob)) return null
+    const invite = parseInvite(new TextDecoder().decode(blob.value.body))
+    if (!invite) return null
+    const mine = invite.attendees.find((a) => own.includes(a.address))
+    return {
+      ...invite,
+      myStatus: mine?.partstat ?? null,
+      canRespond: invite.method === "REQUEST" && mine !== undefined && invite.organizer !== null,
+      raw: invite,
+    }
+  })
+
 const ownAddresses = (mailboxId: string, address: string) =>
   Effect.gen(function* () {
     const database = yield* Database
@@ -251,6 +278,20 @@ export const applyThreadAction = (mailboxId: string, caller: Caller, payload: Th
           assignee,
           by: caller.member?.id ?? caller.keyId,
         })
+      // The person it's handed to hears about it on their devices (HAL-3369).
+      if (assignee !== null)
+        for (const threadId of result.threadIds) {
+          const thread = yield* callMailbox(params.id, (s) => s.thread(threadId)).pipe(
+            Effect.orElseSucceed(() => null),
+          )
+          yield* notifyAssigned({
+            mailboxId: params.id,
+            threadId,
+            assignee,
+            by: caller.keyId,
+            subject: thread?.thread.subject ?? "",
+          })
+        }
       return { updated: result.updated }
     }
     const patch = BULK[payload.action]?.(payload)
@@ -605,14 +646,103 @@ export const MailHandlers = HttpApiBuilder.group(
                 recipients: yield* recipientsOf(sent.id),
               }
             : null
+          const own = yield* ownAddresses(params.id, (yield* access(params.id, "read")).mailbox.address)
           return {
             ...toMessage(message),
             body: { text, html },
             rawUrl,
             attachmentUrls,
             delivery,
+            invite: yield* inviteOf(message, own).pipe(
+              Effect.map((invite) => {
+                if (!invite) return null
+                const { raw: _raw, ...shown } = invite
+                return shown
+              }),
+            ),
+            remoteImages: (yield* showsImagesFrom(params.id, message.from?.address ?? null))
+              ? ("show" as const)
+              : ("ask" as const),
             ...(query.include === "headers" ? { headers: headers ?? [] } : {}),
           }
+        }).pipe(mailErrors),
+      ),
+      rsvp: p(({ params, payload, request }) =>
+        Effect.gen(function* () {
+          const { caller, mailbox } = yield* access(params.id, "send")
+          yield* notWhileDeleting
+          const message = yield* callMailbox(params.id, (s) => s.message(params.messageId))
+          if (!message) return yield* new NotFound({ message: `Message ${params.messageId} not found.` })
+          const own = yield* ownAddresses(params.id, mailbox.address)
+          const invite = yield* inviteOf(message, own)
+          if (!invite?.canRespond || !invite.organizer)
+            return yield* new InvalidRequest({
+              field: "messageId",
+              message: invite
+                ? "This invitation doesn't list this mailbox as an attendee, or isn't a request to answer."
+                : "This message has no calendar invitation.",
+            })
+          const me = invite.attendees.find((a) => own.includes(a.address)) ?? {
+            address: mailbox.address,
+            name: null,
+          }
+          const ics = buildReply({ invite: invite.raw, attendee: me, response: payload.response })
+          const bytes = new TextEncoder().encode(ics)
+          const key = `upl/${params.id}/rsvp-${crypto.randomUUID()}.ics`
+          yield* (yield* BlobStore).put(key, bytes, "text/calendar; method=REPLY; charset=utf-8")
+          const word = RESPONSE_WORDS[payload.response]
+          const title = invite.summary ?? "the invitation"
+          const draft = yield* createDraftNow(params.id, mailbox, {
+            replyTo: { messageId: params.messageId, mode: "reply" },
+            to: [
+              {
+                address: invite.organizer.address,
+                ...(invite.organizer.name ? { name: invite.organizer.name } : {}),
+              },
+            ],
+            subject: `${word}: ${title}`,
+            bodyText: `${me.name ?? me.address} has ${payload.response === "tentative" ? "tentatively accepted" : payload.response} ${title}.${
+              payload.comment ? `\n\n${payload.comment}` : ""
+            }`,
+            attachments: [
+              {
+                key,
+                filename: "invite.ics",
+                mimeType: "text/calendar; method=REPLY",
+                size: bytes.byteLength,
+              },
+            ],
+          })
+          const sent = yield* sendDraft({
+            caller,
+            mailboxId: params.id,
+            mailboxAddress: mailbox.address,
+            draftId: draft.id,
+            origin: originOf(request),
+          })
+          return { response: payload.response, ...sent }
+        }).pipe(mailErrors),
+      ),
+      imageSenders: p(({ params }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "read")
+          return { senders: yield* listImageSenders(params.id) }
+        }).pipe(mailErrors),
+      ),
+      addImageSender: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          const { caller } = yield* access(params.id, "write")
+          return yield* addImageSender(params.id, payload.value, caller.member?.id ?? caller.keyId).pipe(
+            Effect.catchTag("ImageSenderInvalid", (e) =>
+              Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            ),
+          )
+        }).pipe(mailErrors),
+      ),
+      removeImageSender: p(({ params }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "write")
+          return yield* removeImageSender(params.id, decodeURIComponent(params.value))
         }).pipe(mailErrors),
       ),
       updateMessage: p(({ params, payload }) =>

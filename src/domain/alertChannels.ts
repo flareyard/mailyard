@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { members, settings, webhookEndpoints } from "../db/schema.ts"
+import { notifyAlertPush } from "../push/notifications.ts"
 import { Database } from "../services/Database.ts"
 import { ALERT_KINDS } from "./alertKinds.ts"
 import { parseParty, sendBulkMessage } from "./outbox.ts"
@@ -175,6 +176,8 @@ export const notifyAlert = (alert: {
     }
     // Every endpoint subscribed to alert.raised, as with any event.
     yield* emitSafely("alert.raised", data)
+    // Managers who turned alerts on get them on their devices too (HAL-3369).
+    yield* notifyAlertPush({ key: alert.key, severity: alert.severity, title: alert.title })
     // Webhook channels: their endpoint gets it even without subscribing, unless it already did.
     const database = yield* Database
     for (const c of value.channels.filter((x) => x.kind === "webhook" && takes(x, alert))) {
