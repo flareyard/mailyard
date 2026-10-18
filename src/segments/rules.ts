@@ -25,6 +25,8 @@ export const FIELD_OPS = [
   "lte",
   "exists",
   "missing",
+  /** One of a list (`value` is an array, at most 50): text compares ignoring case. */
+  "in",
 ] as const
 export type FieldOp = (typeof FIELD_OPS)[number]
 
@@ -39,7 +41,15 @@ export const FieldRule = Schema.Struct({
   /** `email`, `name`, or a custom field name. */
   field: Schema.String,
   op: Schema.Literals(FIELD_OPS),
-  value: Schema.optionalKey(Schema.Union([Schema.String, Schema.Number, Schema.Boolean])),
+  /** A string, number or boolean; for `in`, an array of them. */
+  value: Schema.optionalKey(
+    Schema.Union([
+      Schema.String,
+      Schema.Number,
+      Schema.Boolean,
+      Schema.Array(Schema.Union([Schema.String, Schema.Number, Schema.Boolean])),
+    ]),
+  ),
 })
 export const StatusRule = Schema.Struct({
   type: Schema.Literal("status"),
@@ -68,9 +78,12 @@ export const EngagementRule = Schema.Struct({
 })
 export const CampaignRule = Schema.Struct({
   type: Schema.Literal("campaign"),
-  campaignId: Schema.String,
+  /** Left out: any campaign (HAL-3423). */
+  campaignId: Schema.optionalKey(Schema.String),
   activity: Schema.Literals(["received", "opened", "clicked"]),
   did: Schema.optionalKey(Schema.Boolean),
+  /** Only campaign mail sent in the last `withinDays`. */
+  withinDays: Schema.optionalKey(Days),
 })
 export const CreatedRule = Schema.Struct({
   type: Schema.Literal("created"),
@@ -94,6 +107,11 @@ export type Rule = Group | Leaf
 
 export const isGroup = (rule: Rule): rule is Group => rule.type === "all" || rule.type === "any"
 
+/**
+ * The segment rule tree, published in the OpenAPI document as `SegmentRule` (HAL-3423). A tree that
+ * decodes but can't work (a missing value, a bad field name, too deep) is refused with the path of
+ * the rule at fault in `field`, as `filter.rules[1].rules[0]`.
+ */
 export const Rule: Schema.Codec<Rule> = Schema.Union([
   Schema.Struct({
     type: Schema.Literals(["all", "any"]),
@@ -106,7 +124,11 @@ export const Rule: Schema.Codec<Rule> = Schema.Union([
   EngagementRule,
   CampaignRule,
   CreatedRule,
-])
+]).annotate({
+  identifier: "SegmentRule",
+  description:
+    "A segment: `all` and `any` groups of field, status, topic, event, engagement, campaign and created rules, at most 4 deep and 50 rules.",
+})
 
 export const LIMITS = { depth: 4, leaves: 50, params: 90, fieldIndexes: 20 } as const
 export const BUILTIN_FIELDS = ["email", "name"] as const
@@ -142,6 +164,13 @@ export const validate = (root: Rule): RuleInvalid | null => {
         if (needsValue && rule.value === undefined) {
           return new RuleInvalid({ path, message: `The "${rule.op}" operator needs a value.` })
         }
+        if (rule.op === "in") {
+          if (!Array.isArray(rule.value) || rule.value.length === 0 || rule.value.length > 50)
+            return new RuleInvalid({ path, message: `The "in" operator takes a list of 1 to 50 values.` })
+          return null
+        }
+        if (Array.isArray(rule.value))
+          return new RuleInvalid({ path, message: `Only the "in" operator takes a list.` })
         const textual = ["contains", "notContains", "startsWith", "endsWith"].includes(rule.op)
         if (textual && typeof rule.value !== "string") {
           return new RuleInvalid({ path, message: `The "${rule.op}" operator compares text.` })
@@ -180,7 +209,30 @@ const fieldExpr = (field: string): SQL => {
 
 const compileField = (rule: typeof FieldRule.Type): SQL => {
   const expr = fieldExpr(rule.field)
-  const value = rule.value === undefined ? undefined : bind(rule.value)
+  if (rule.op === "in") {
+    const values = (Array.isArray(rule.value) ? rule.value : []).map(bind)
+    const texts = values.filter((v): v is string => typeof v === "string")
+    const others = values.filter((v) => typeof v !== "string")
+    const parts = [
+      texts.length
+        ? sql`${expr} collate nocase in (${sql.join(
+            texts.map((v) => sql`${v}`),
+            sql`, `,
+          )})`
+        : undefined,
+      others.length
+        ? sql`${expr} in (${sql.join(
+            others.map((v) => sql`${v}`),
+            sql`, `,
+          )})`
+        : undefined,
+    ].filter((p): p is SQL => p !== undefined)
+    return parts.length === 1 ? (parts[0] as SQL) : sql`(${or(...parts)})`
+  }
+  const value =
+    rule.value === undefined || Array.isArray(rule.value)
+      ? undefined
+      : bind(rule.value as string | number | boolean)
   // Text equality ignores case through NOCASE, which an expression index built with NOCASE can serve;
   // LIKE already ignores ASCII case. Numbers and booleans compare as they are.
   const text = typeof value === "string"
@@ -254,7 +306,11 @@ const compileLeaf = (rule: Leaf): SQL => {
           : rule.activity === "opened"
             ? sql`${messagesOut.firstOpenedAt} is not null`
             : sql`${messagesOut.firstClickedAt} is not null`
-      const exists = sql`exists (select 1 from ${messagesOut} where ${messagesOut.contactId} = ${contacts.id} and ${messagesOut.campaignId} = ${rule.campaignId} and ${activity})`
+      const which = rule.campaignId
+        ? sql`${messagesOut.campaignId} = ${rule.campaignId}`
+        : sql`${messagesOut.stream} = 'campaign'`
+      const window = rule.withinDays ? sql` and ${messagesOut.createdAt} >= ${ago(rule.withinDays)}` : sql``
+      const exists = sql`exists (select 1 from ${messagesOut} where ${messagesOut.contactId} = ${contacts.id} and ${which} and ${activity}${window})`
       return rule.did === false ? sql`not ${exists}` : exists
     }
     case "created":
@@ -303,10 +359,13 @@ export const customFields = (rule: Rule): ReadonlyArray<FieldUse> => {
     }
     if (r.type !== "field" || (BUILTIN_FIELDS as ReadonlyArray<string>).includes(r.field)) return
     const use = found.get(r.field) ?? { text: false, plain: false }
+    const list = Array.isArray(r.value) ? r.value : []
     const textual =
-      typeof r.value === "string" || ["contains", "notContains", "startsWith", "endsWith"].includes(r.op)
+      typeof r.value === "string" ||
+      list.some((v) => typeof v === "string") ||
+      ["contains", "notContains", "startsWith", "endsWith"].includes(r.op)
     if (textual) use.text = true
-    else use.plain = true
+    if (!textual || list.some((v) => typeof v !== "string")) use.plain = true
     found.set(r.field, use)
   }
   visit(rule)

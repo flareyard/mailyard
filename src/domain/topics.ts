@@ -1,7 +1,7 @@
-import { and, asc, count, eq } from "drizzle-orm"
+import { and, asc, count, eq, gte, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-import { subscriptions, topics } from "../db/schema.ts"
+import { subscriptionChanges, subscriptions, topics } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
@@ -158,4 +158,68 @@ export const updateTopic = Effect.fn("topics.update")(function* (
   )
   yield* recordAudit({ actor, action: "topic.update", target: id, before, after: row })
   return describe(row ?? before, yield* subscribersOf(id))
+})
+
+// ---------------------------------------------------------------------------------------------
+// Topic stats (HAL-3423)
+// ---------------------------------------------------------------------------------------------
+
+const STATS_DAYS = { "7d": 7, "30d": 30, "90d": 90 } as const
+export type TopicStatsRange = keyof typeof STATS_DAYS
+
+/**
+ * `GET /v1/topics/stats`: per topic, subscribers now, who joined and left in the range, and the
+ * rates against the subscribers at the range's start (null under 100, where one person moves the
+ * rate by a point). Joins and leaves are read from `subscription_changes` by the (to, at) index.
+ */
+export const topicStats = Effect.fn("topics.stats")(function* (range: TopicStatsRange) {
+  const database = yield* Database
+  const since = Date.now() - STATS_DAYS[range] * 86_400_000
+  const rows = yield* database.query("topics.statsList", (db) =>
+    db.select().from(topics).where(eq(topics.archived, false)).orderBy(asc(topics.name)).all(),
+  )
+  const current = yield* database.query("topics.statsCounts", (db) =>
+    db
+      .select({ topicId: subscriptions.topicId, n: count() })
+      .from(subscriptions)
+      .where(eq(subscriptions.state, "subscribed"))
+      .groupBy(subscriptions.topicId)
+      .all(),
+  )
+  const moves = yield* database.query("topics.statsMoves", (db) =>
+    db
+      .select({ topicId: subscriptionChanges.topicId, to: subscriptionChanges.to, n: count() })
+      .from(subscriptionChanges)
+      .where(
+        and(
+          inArray(subscriptionChanges.to, ["subscribed", "unsubscribed"]),
+          gte(subscriptionChanges.at, since),
+        ),
+      )
+      .groupBy(subscriptionChanges.topicId, subscriptionChanges.to)
+      .all(),
+  )
+  const MIN = 100
+  return {
+    range,
+    minimumSubscribers: MIN,
+    topics: rows.map((t) => {
+      const subscribers = current.find((c) => c.topicId === t.id)?.n ?? 0
+      const joined = moves.find((m) => m.topicId === t.id && m.to === "subscribed")?.n ?? 0
+      const left = moves.find((m) => m.topicId === t.id && m.to === "unsubscribed")?.n ?? 0
+      const atStart = Math.max(0, subscribers - joined + left)
+      const enough = atStart >= MIN
+      return {
+        topicId: t.id,
+        name: t.name,
+        subscribers,
+        joined,
+        left,
+        subscribersAtStart: atStart,
+        insufficientData: !enough,
+        growthRate: enough ? (joined - left) / atStart : null,
+        unsubscribeRate: enough ? left / atStart : null,
+      }
+    }),
+  }
 })
