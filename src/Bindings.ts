@@ -47,6 +47,8 @@ export interface Env {
   readonly SUPPRESSION_IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Writes contact exports past 10,000 rows as a multipart CSV (src/workflows/contactExport.ts). */
   readonly CONTACT_EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
+  /** The whole workspace in one export (src/workflows/workspaceExport.ts). */
+  readonly WORKSPACE_EXPORT_WORKFLOW: Workflow<{ readonly exportId: string }>
   readonly CONTACT_BULK_WORKFLOW: Workflow<{ readonly jobId: string }>
   /** Tests only: the multipart part size for contact exports (6 MiB unless set; R2 refuses under 5 MiB). */
   readonly MAILYARD_EXPORT_PART_BYTES?: string

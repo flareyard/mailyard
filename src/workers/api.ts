@@ -79,6 +79,7 @@ export { ContactExportWorkflow } from "../workflows/contactExport.ts"
 export { ContactImportWorkflow } from "../workflows/contactImport.ts"
 export { MailboxExportWorkflow, MailboxImportWorkflow } from "../workflows/mailbox.ts"
 export { SuppressionImportWorkflow } from "../workflows/suppressionImport.ts"
+export { WorkspaceExportWorkflow } from "../workflows/workspaceExport.ts"
 
 const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide([

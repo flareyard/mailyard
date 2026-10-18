@@ -3524,9 +3524,25 @@ export class ImportsApi extends HttpApiGroup.make("imports")
   )
   .middleware(ApiKeyAuth) {}
 
+const ExportPartSchema = Schema.Struct({
+  kind: Schema.Literals(["mail", "contacts", "templates", "lists", "settings", "audit", "manifest"]),
+  format: Schema.Literals(["mbox", "zip", "csv", "json"]),
+  filename: Schema.String,
+  /** Messages, contacts, templates, entries: what the part holds. */
+  items: Schema.Number,
+  bytes: Schema.Number,
+  status: Schema.Literals(["pending", "complete", "failed"]),
+  error: Schema.NullOr(Schema.String),
+  /** For a `mail` part: the mailbox it is. */
+  mailboxId: Schema.NullOr(Schema.String),
+  /** A signed link good for a day, once the part is complete and the export is fetched by id. */
+  url: Schema.NullOr(Schema.String),
+})
+
 const ContactExportSchema = Schema.Struct({
   id: Schema.String,
-  kind: Schema.Literal("contacts"),
+  /** `workspace`: every part of the workspace, listed in `parts` (HAL-3451). */
+  kind: Schema.Literals(["contacts", "workspace"]),
   status: Schema.Literals(["running", "completed", "failed"]),
   rows: Schema.Number,
   fields: Schema.Array(Schema.String),
@@ -3538,14 +3554,21 @@ const ContactExportSchema = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,
   finishedAt: Schema.NullOr(Schema.Number),
+  /** A workspace export's files, each with its own link; null for a contacts export. */
+  parts: Schema.NullOr(Schema.Array(ExportPartSchema)),
 })
 
-/** CSV exports of the contacts list, with the list's filters. */
+/**
+ * Exports: the contacts list as CSV (with the list's filters), or the whole workspace (HAL-3451):
+ * mail per mailbox, contacts, templates, lists, settings without secrets, and the audit log, with
+ * a manifest. A workspace export runs in the background; an `export_ready` alert says when.
+ */
 export class ExportsApi extends HttpApiGroup.make("exports")
   .add(
     HttpApiEndpoint.post("create", "/v1/exports", {
       payload: Schema.Struct({
-        kind: Schema.Literal("contacts"),
+        kind: Schema.Literals(["contacts", "workspace"]),
+        /** Contacts only. */
         filter: Schema.optionalKey(
           Schema.Struct({
             q: Schema.optionalKey(Schema.String),

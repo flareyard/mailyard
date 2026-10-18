@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, lt, type SQL } from "drizzle-orm"
+import { and, asc, count, desc, eq, gt, isNull, lt, type SQL } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
@@ -10,6 +10,7 @@ import { type ContactQuery, describeContact, filterOf, membershipsOf } from "../
 import { BlobStore, Ids } from "../kit/index.ts"
 import { fileUrl, signFileToken } from "../mail/files.ts"
 import { Database } from "../services/Database.ts"
+import { partsWithLinks } from "./workspaceExport.ts"
 
 /**
  * CSV exports of the contacts list (HAL-3316): the same filters as `GET /v1/contacts`, the list's
@@ -125,7 +126,11 @@ const page = (condition: SQL | undefined, after: string | null, size = PAGE) =>
 
 type ExportRow = typeof exports.$inferSelect
 
-const describeExport = (row: ExportRow, url: string | null) => ({
+const describeExport = (
+  row: ExportRow,
+  url: string | null,
+  parts: ReadonlyArray<Effect.Success<ReturnType<typeof partsWithLinks>>[number]> | null = null,
+) => ({
   id: row.id,
   kind: row.kind,
   status: row.status,
@@ -136,6 +141,7 @@ const describeExport = (row: ExportRow, url: string | null) => ({
   error: row.error,
   createdAt: row.createdAt,
   finishedAt: row.finishedAt,
+  parts: row.kind === "workspace" ? (parts ?? (row.bundle ?? []).map(unlinked)) : null,
 })
 export type ExportView = ReturnType<typeof describeExport>
 
@@ -161,7 +167,25 @@ const findExport = (id: string) =>
 
 export const getExport = Effect.fn("exports.get")(function* (id: string, origin: string | null) {
   const row = yield* findExport(id)
+  if (row.kind === "workspace") {
+    const parts = yield* partsWithLinks(row, origin)
+    const manifest = parts.find((p) => p.kind === "manifest")
+    return describeExport(row, manifest?.url ?? null, parts)
+  }
   return describeExport(row, yield* linkFor(row, origin))
+})
+
+/** A part as listed, without a link: links are minted only when an export is fetched by id. */
+const unlinked = (p: NonNullable<ExportRow["bundle"]>[number]) => ({
+  kind: p.kind,
+  format: p.format,
+  filename: p.filename,
+  items: p.items,
+  bytes: p.bytes,
+  status: p.status,
+  error: p.error ?? null,
+  mailboxId: p.mailboxId ?? null,
+  url: null,
 })
 
 export const listExports = Effect.fn("exports.list")(function* (query: {
@@ -174,7 +198,8 @@ export const listExports = Effect.fn("exports.list")(function* (query: {
     db
       .select()
       .from(exports)
-      .where(query.cursor ? lt(exports.id, query.cursor) : undefined)
+      // A workspace export's own contacts file is one of its parts, not an export of its own.
+      .where(and(isNull(exports.parentId), query.cursor ? lt(exports.id, query.cursor) : undefined))
       .orderBy(desc(exports.id))
       .limit(limit + 1)
       .all(),
@@ -355,6 +380,8 @@ export const finishLargeExport = Effect.fn("exports.finish")(function* (id: stri
     db.update(exports).set({ status: "completed", finishedAt: Date.now() }).where(eq(exports.id, id)).run(),
   )
   // Small exports are ready in the response that asked; a large one finishes later, so say so.
+  // A workspace export's contacts part says nothing on its own: the workspace export does.
+  if (row.parentId) return { rows: row.rows }
   yield* raiseAlert({
     key: `export_ready:${id}`,
     kind: "export_ready",

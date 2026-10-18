@@ -38063,8 +38063,128 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "kind": {
                             "enum": [
                               "contacts",
+                              "workspace",
                             ],
                             "type": "string",
+                          },
+                          "parts": {
+                            "anyOf": [
+                              {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "bytes": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    "error": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                        },
+                                        {
+                                          "type": "null",
+                                        },
+                                      ],
+                                    },
+                                    "filename": {
+                                      "type": "string",
+                                    },
+                                    "format": {
+                                      "enum": [
+                                        "mbox",
+                                        "zip",
+                                        "csv",
+                                        "json",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "mail",
+                                        "contacts",
+                                        "templates",
+                                        "lists",
+                                        "settings",
+                                        "audit",
+                                        "manifest",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "mailboxId": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                        },
+                                        {
+                                          "type": "null",
+                                        },
+                                      ],
+                                    },
+                                    "status": {
+                                      "enum": [
+                                        "pending",
+                                        "complete",
+                                        "failed",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "url": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                        },
+                                        {
+                                          "type": "null",
+                                        },
+                                      ],
+                                    },
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "format",
+                                    "filename",
+                                    "items",
+                                    "bytes",
+                                    "status",
+                                    "error",
+                                    "mailboxId",
+                                    "url",
+                                  ],
+                                  "type": "object",
+                                },
+                                "type": "array",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
                           },
                           "rows": {
                             "anyOf": [
@@ -38112,6 +38232,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "error",
                           "createdAt",
                           "finishedAt",
+                          "parts",
                         ],
                         "type": "object",
                       },
@@ -38256,6 +38377,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "kind": {
                     "enum": [
                       "contacts",
+                      "workspace",
                     ],
                     "type": "string",
                   },
@@ -38338,8 +38460,128 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "kind": {
                       "enum": [
                         "contacts",
+                        "workspace",
                       ],
                       "type": "string",
+                    },
+                    "parts": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "bytes": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "error": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "filename": {
+                                "type": "string",
+                              },
+                              "format": {
+                                "enum": [
+                                  "mbox",
+                                  "zip",
+                                  "csv",
+                                  "json",
+                                ],
+                                "type": "string",
+                              },
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "kind": {
+                                "enum": [
+                                  "mail",
+                                  "contacts",
+                                  "templates",
+                                  "lists",
+                                  "settings",
+                                  "audit",
+                                  "manifest",
+                                ],
+                                "type": "string",
+                              },
+                              "mailboxId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "status": {
+                                "enum": [
+                                  "pending",
+                                  "complete",
+                                  "failed",
+                                ],
+                                "type": "string",
+                              },
+                              "url": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "kind",
+                              "format",
+                              "filename",
+                              "items",
+                              "bytes",
+                              "status",
+                              "error",
+                              "mailboxId",
+                              "url",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "rows": {
                       "anyOf": [
@@ -38387,6 +38629,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "error",
                     "createdAt",
                     "finishedAt",
+                    "parts",
                   ],
                   "type": "object",
                 },
@@ -38537,8 +38780,128 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "kind": {
                       "enum": [
                         "contacts",
+                        "workspace",
                       ],
                       "type": "string",
+                    },
+                    "parts": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "bytes": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "error": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "filename": {
+                                "type": "string",
+                              },
+                              "format": {
+                                "enum": [
+                                  "mbox",
+                                  "zip",
+                                  "csv",
+                                  "json",
+                                ],
+                                "type": "string",
+                              },
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "kind": {
+                                "enum": [
+                                  "mail",
+                                  "contacts",
+                                  "templates",
+                                  "lists",
+                                  "settings",
+                                  "audit",
+                                  "manifest",
+                                ],
+                                "type": "string",
+                              },
+                              "mailboxId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "status": {
+                                "enum": [
+                                  "pending",
+                                  "complete",
+                                  "failed",
+                                ],
+                                "type": "string",
+                              },
+                              "url": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "kind",
+                              "format",
+                              "filename",
+                              "items",
+                              "bytes",
+                              "status",
+                              "error",
+                              "mailboxId",
+                              "url",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "rows": {
                       "anyOf": [
@@ -38586,6 +38949,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "error",
                     "createdAt",
                     "finishedAt",
+                    "parts",
                   ],
                   "type": "object",
                 },
