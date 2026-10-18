@@ -239,4 +239,10 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
     // Label colours become the palette's names.
     after: "paletteLabels",
   },
+  {
+    statements: [
+      // When a conversation was resolved: its last inbox message archived (HAL-3392). Null while open.
+      "ALTER TABLE threads ADD COLUMN resolved_at INTEGER",
+    ],
+  },
 ]
