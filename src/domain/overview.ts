@@ -385,6 +385,7 @@ export const inboundStats = Effect.fn("overview.inbound")(function* (range: Stat
         reason: upstream.reason,
         zones: upstream.zones,
         from: upstream.from,
+        ...(upstream.relay ? { relay: upstream.relay } : {}),
       },
     },
     held,

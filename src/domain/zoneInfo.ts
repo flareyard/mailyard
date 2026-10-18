@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { CloudflareZones } from "../services/CloudflareZones.ts"
+import { type RelayRefusal, withRelay } from "../services/cloudflareApi.ts"
 import { Dns } from "../services/Dns.ts"
 import { SENDING_SUBDOMAIN } from "./dnsChecks.ts"
 
@@ -24,6 +25,8 @@ export interface ZoneInfo {
   /** The bounce (return-path) domain mail is sent with. */
   readonly returnPath: string | null
   readonly checkedAt: number
+  /** Set when Flareyard's relay refused the zone lookup, which is why the zone fields are null (HAL-3558). */
+  readonly relay?: RelayRefusal
 }
 
 const norm = (ns: string) => ns.replace(/\.$/, "").toLowerCase()
@@ -63,8 +66,10 @@ export const readZoneInfo = Effect.fn("domains.zoneInfo")(function* (
     checkedAt: Date.now(),
   } satisfies ZoneInfo
   if (!zones.connected) return { info: base as ZoneInfo, zoneId: null as string | null }
-  const zone = yield* zones.zoneFor(name)
-  if (Option.isNone(zone)) return { info: base as ZoneInfo, zoneId: null as string | null }
+  const found = yield* zones.findZone(name)
+  const zone = found.value
+  if (Option.isNone(zone))
+    return { info: { ...base, ...withRelay(found.relay) } as ZoneInfo, zoneId: null as string | null }
   const z = zone.value
   const [dnssec, subdomain] = yield* Effect.all([zones.dnssec(z.id), zones.sendingSubdomain(z.id, name)], {
     concurrency: 2,

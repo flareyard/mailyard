@@ -6,6 +6,7 @@ import { dmarcDaily, dmarcReports, dmarcSources, domains } from "../db/schema.ts
 import { recordAudit } from "../domain/audit.ts"
 import { Ids } from "../kit/index.ts"
 import { CloudflareZones } from "../services/CloudflareZones.ts"
+import { RelayRefusalSchema, relayMessage, withRelay } from "../services/cloudflareApi.ts"
 import { chunksOf, Database } from "../services/Database.ts"
 import { Dns } from "../services/Dns.ts"
 import type { DmarcReport } from "./parse.ts"
@@ -31,6 +32,7 @@ export class DmarcDomainNotFound extends Schema.TaggedError<DmarcDomainNotFound>
 export class DmarcChangeRefused extends Schema.TaggedError<DmarcChangeRefused>()("DmarcChangeRefused", {
   reason: Schema.Literals(["no_dns_token", "zone_not_found", "several_records", "write_failed", "invalid"]),
   message: Schema.String,
+  relay: Schema.optionalKey(RelayRefusalSchema),
 }) {}
 
 const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10)
@@ -565,13 +567,16 @@ export const changePolicy = Effect.fn("dmarc.changePolicy")(function* (input: {
   if (!zones.connected)
     return yield* new DmarcChangeRefused({
       reason: "no_dns_token",
-      message: "Mailyard has no CLOUDFLARE_DNS_TOKEN, so it can't change DNS. Set the record shown by hand.",
+      message:
+        "Mailyard can't reach Cloudflare to change DNS: install it through Flareyard, or set CLOUDFLARE_DNS_TOKEN. Until then, set the record shown by hand.",
     })
-  const zone = yield* zones.zoneFor(domain.name)
+  const found = yield* zones.findZone(domain.name)
+  const zone = found.value
   if (Option.isNone(zone))
     return yield* new DmarcChangeRefused({
       reason: "zone_not_found",
-      message: `The token can't see a zone for ${domain.name}.`,
+      message: found.relay ? relayMessage(found.relay) : `Mailyard can't see a zone for ${domain.name}.`,
+      ...withRelay(found.relay),
     })
   const existing = yield* zones.txtRecords(zone.value.id, name)
   const dmarcRecords = Option.getOrElse(existing, () => []).filter((r) =>
@@ -586,7 +591,12 @@ export const changePolicy = Effect.fn("dmarc.changePolicy")(function* (input: {
   const out = target
     ? yield* zones.updateTxt(zone.value.id, target.id, name, after)
     : yield* zones.createTxt(zone.value.id, name, after)
-  if (!out.ok) return yield* new DmarcChangeRefused({ reason: "write_failed", message: out.message })
+  if (!out.ok)
+    return yield* new DmarcChangeRefused({
+      reason: "write_failed",
+      message: out.message,
+      ...withRelay(out.relay),
+    })
   yield* recordAudit({
     actor: input.actor,
     action: "dmarc.policy",

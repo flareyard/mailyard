@@ -2,6 +2,13 @@ import { eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import { Bindings } from "../Bindings.ts"
 import { domains } from "../db/schema.ts"
+import {
+  cloudflareApi,
+  DIRECT_API,
+  type RelayRefusal,
+  relayMessage,
+  relayRefusalOf,
+} from "../services/cloudflareApi.ts"
 import { Database } from "../services/Database.ts"
 
 /**
@@ -15,8 +22,6 @@ import { Database } from "../services/Database.ts"
  * blocklist, so `rbl` stays null. Mail the Worker handled shows as `dropped`: it isn't a refusal.
  */
 
-const GRAPHQL = "https://api.cloudflare.com/client/v4/graphql"
-const API = "https://api.cloudflare.com/client/v4"
 /** How far back Cloudflare keeps Email Routing analytics. */
 export const RETENTION_DAYS = 31
 const CACHE_MS = 5 * 60_000
@@ -32,9 +37,15 @@ export interface UpstreamRejections {
   readonly dmarcFail: number | null
   /** Rejected for failing SPF or DKIM without a DMARC verdict of fail. */
   readonly authFail: number | null
+  /** Set when Flareyard's relay refused the zone lookup or the query (HAL-3558). */
+  readonly relay?: RelayRefusal
 }
 
-const QUERY = `query MailyardRoutingRejections($zone: string!, $from: Date!, $to: Date!) {
+/**
+ * Declared word for word in cloudflare-app.json's `cloudflareApi.graphql` (MailyardRoutingRejections):
+ * Flareyard's relay sends only declared queries, so a change here is a change there too.
+ */
+export const QUERY = `query MailyardRoutingRejections($zone: string!, $from: Date!, $to: Date!) {
   viewer {
     zones(filter: { zoneTag: $zone }) {
       emailRoutingAdaptiveGroups(filter: { date_geq: $from, date_leq: $to }, limit: 5000) {
@@ -56,7 +67,7 @@ export const isRejection = (status: string | undefined) => /reject/i.test(status
 
 const cache = new Map<string, { at: number; value: UpstreamRejections }>()
 
-const notConnected = (reason: string): UpstreamRejections => ({
+const notConnected = (reason: string, relay?: RelayRefusal | null): UpstreamRejections => ({
   connected: false,
   reason,
   zones: 0,
@@ -64,48 +75,63 @@ const notConnected = (reason: string): UpstreamRejections => ({
   rejected: null,
   dmarcFail: null,
   authFail: null,
+  ...(relay ? { relay } : {}),
 })
 
-const post = (token: string, zone: string, from: string, to: string) =>
-  Effect.promise(async (): Promise<{ ok: true; groups: Groups } | { ok: false; message: string }> => {
-    try {
-      const response = await fetch(GRAPHQL, {
-        method: "POST",
-        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({ query: QUERY, variables: { zone, from, to } }),
-        signal: AbortSignal.timeout(10_000),
-      })
-      const body = (await response.json().catch(() => null)) as {
-        data?: { viewer?: { zones?: Array<{ emailRoutingAdaptiveGroups?: Groups }> } }
-        errors?: Array<{ message: string }> | null
-      } | null
-      if (!response.ok || !body) return { ok: false, message: `Cloudflare answered ${response.status}.` }
-      if (body.errors && body.errors.length > 0)
-        return { ok: false, message: body.errors.map((e) => e.message).join("; ") }
-      return { ok: true, groups: body.data?.viewer?.zones?.[0]?.emailRoutingAdaptiveGroups ?? [] }
-    } catch {
-      return { ok: false, message: "Cloudflare didn't answer." }
-    }
-  })
+type Target = { readonly base: string; readonly key: string }
 
-/** A domain's zone id: the one stored with the domain, else looked up by name with the token. */
-const zoneOf = (token: string, name: string) =>
-  Effect.promise(async () => {
+const post = (target: Target, zone: string, from: string, to: string) =>
+  Effect.promise(
+    async (): Promise<
+      { ok: true; groups: Groups } | { ok: false; message: string; relay: RelayRefusal | null }
+    > => {
+      try {
+        const response = await fetch(`${target.base}/graphql`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${target.key}`, "content-type": "application/json" },
+          body: JSON.stringify({ query: QUERY, variables: { zone, from, to } }),
+          signal: AbortSignal.timeout(10_000),
+        })
+        const body = (await response.json().catch(() => null)) as {
+          data?: { viewer?: { zones?: Array<{ emailRoutingAdaptiveGroups?: Groups }> } }
+          errors?: Array<{ message: string }> | null
+        } | null
+        const relay = relayRefusalOf(body, target.base)
+        if (relay) return { ok: false, message: relayMessage(relay), relay }
+        if (!response.ok || !body)
+          return { ok: false, message: `Cloudflare answered ${response.status}.`, relay: null }
+        if (body.errors && body.errors.length > 0)
+          return { ok: false, message: body.errors.map((e) => e.message).join("; "), relay: null }
+        return { ok: true, groups: body.data?.viewer?.zones?.[0]?.emailRoutingAdaptiveGroups ?? [] }
+      } catch {
+        return { ok: false, message: "Cloudflare didn't answer.", relay: null }
+      }
+    },
+  )
+
+/** A zone id by name, through Flareyard's relay when installed there (HAL-3558), else directly. */
+const zoneOf = (lookup: Target, name: string) =>
+  Effect.promise(async (): Promise<{ id: string | null; relay: RelayRefusal | null }> => {
     const labels = name.toLowerCase().split(".")
     for (let i = 0; labels.length - i >= 2; i++) {
       try {
-        const response = await fetch(`${API}/zones?name=${encodeURIComponent(labels.slice(i).join("."))}`, {
-          headers: { authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(10_000),
-        })
+        const response = await fetch(
+          `${lookup.base}/zones?name=${encodeURIComponent(labels.slice(i).join("."))}`,
+          {
+            headers: { authorization: `Bearer ${lookup.key}` },
+            signal: AbortSignal.timeout(10_000),
+          },
+        )
         const body = (await response.json().catch(() => null)) as { result?: Array<{ id: string }> } | null
+        const relay = relayRefusalOf(body, lookup.base)
+        if (relay) return { id: null, relay }
         const id = body?.result?.[0]?.id
-        if (id) return id
+        if (id) return { id, relay: null }
       } catch {
-        return null
+        return { id: null, relay: null }
       }
     }
-    return null
+    return { id: null, relay: null }
   })
 
 /**
@@ -117,11 +143,14 @@ export const upstreamRejections = Effect.fn("overview.upstreamRejections")(funct
   now = Date.now(),
 ) {
   const env = yield* Bindings
-  const token = env.CLOUDFLARE_ANALYTICS_TOKEN
-  if (!token)
+  // Installed through Flareyard, the zone lookup and the declared query both go through its relay
+  // (HAL-3570); self-hosted, straight to Cloudflare with the analytics token.
+  const api = cloudflareApi(env, env.CLOUDFLARE_ANALYTICS_TOKEN)
+  if (!api.token)
     return notConnected(
-      "Set CLOUDFLARE_ANALYTICS_TOKEN (Analytics Read on the receiving zones) to count what Email Routing rejects before Mailyard sees it.",
+      "Install Mailyard through Flareyard (granting Account Analytics: Read), or set CLOUDFLARE_ANALYTICS_TOKEN (Analytics Read on the receiving zones), to count what Email Routing rejects before Mailyard sees it.",
     )
+  const target: Target = { base: api.base, key: api.token }
   const oldest = new Date(now - (RETENTION_DAYS - 1) * 86_400_000).toISOString().slice(0, 10)
   const kept = days.filter((d) => d >= oldest)
   const from = kept[0]
@@ -141,18 +170,33 @@ export const upstreamRejections = Effect.fn("overview.upstreamRejections")(funct
       .all(),
   )
   const zones = new Set<string>()
+  let refused: RelayRefusal | null = null
   for (const d of receiving) {
-    const zone = d.zoneId ?? (yield* zoneOf(token, d.name))
-    if (zone) zones.add(zone)
+    if (d.zoneId) {
+      zones.add(d.zoneId)
+      continue
+    }
+    const found = yield* zoneOf(target, d.name)
+    if (found.id) zones.add(found.id)
+    refused ??= found.relay
   }
   if (receiving.length > 0 && zones.size === 0)
-    return notConnected("The analytics token can't see the zones of the receiving domains.")
+    return refused
+      ? notConnected(relayMessage(refused), refused)
+      : notConnected(
+          api.base === DIRECT_API
+            ? "The analytics token can't see the zones of the receiving domains."
+            : "Mailyard can't see the zones of the receiving domains.",
+        )
 
   let rejected = 0
   let dmarcFail = 0
   for (const zone of zones) {
-    const answer = yield* post(token, zone, from, to)
-    if (!answer.ok) return notConnected(`Email Routing analytics: ${answer.message}`)
+    const answer = yield* post(target, zone, from, to)
+    if (!answer.ok)
+      return answer.relay
+        ? notConnected(answer.message, answer.relay)
+        : notConnected(`Email Routing analytics: ${answer.message}`)
     for (const g of answer.groups) {
       if (!isRejection(g.dimensions.status)) continue
       rejected += g.count

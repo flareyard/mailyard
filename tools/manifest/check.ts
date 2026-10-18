@@ -72,7 +72,71 @@ export const crossFieldProblems = (m: Manifest): ReadonlyArray<string> => {
     }
   }
 
+  // v1.3: each relayed route runs under a scope the app asks for; the names are bindings of their own.
+  if (m.cloudflareApi) {
+    const api = m.cloudflareApi
+    const names = [api.url, api.token, ...(api.accountId ? [api.accountId] : [])]
+    for (const name of new Set(names.filter((n, i) => names.indexOf(n) !== i))) {
+      problems.push(`cloudflareApi names ${name} more than once.`)
+    }
+    for (const name of new Set(names)) {
+      if (secrets.includes(name)) problems.push(`cloudflareApi's ${name} clashes with a secret of that name.`)
+      if (settingNames.includes(name))
+        problems.push(`cloudflareApi's ${name} clashes with a setting of that name.`)
+    }
+    const routes = api.routes.map((r) => `${r.method} ${r.path}`)
+    for (const route of new Set(routes.filter((r, i) => routes.indexOf(r) !== i))) {
+      problems.push(`cloudflareApi route ${route} is listed more than once.`)
+    }
+    for (const r of api.routes) {
+      if (!all.includes(r.scope))
+        problems.push(
+          `cloudflareApi route ${r.method} ${r.path} needs ${r.scope}, which scopes.required or scopes.optional must list.`,
+        )
+    }
+    const queryNames = (api.graphql ?? []).map((q) => q.name)
+    for (const name of new Set(queryNames.filter((n, i) => queryNames.indexOf(n) !== i))) {
+      problems.push(`cloudflareApi GraphQL query ${name} is listed more than once.`)
+    }
+    for (const q of api.graphql ?? []) {
+      if (!all.includes(q.scope))
+        problems.push(
+          `cloudflareApi GraphQL query ${q.name} needs ${q.scope}, which scopes.required or scopes.optional must list.`,
+        )
+      for (const p of graphqlProblems(q.query, q.zoneVariable))
+        problems.push(`cloudflareApi GraphQL query ${q.name}: ${p}`)
+    }
+  }
+
   if (m.domain.suggest && !m.domain.supported)
     problems.push("domain.suggest is set but domain.supported is false.")
+  return problems
+}
+
+/** A GraphQL query with its whitespace collapsed: how the relay compares a call with what was declared. */
+export const normaliseGraphql = (query: string) => query.replace(/\s+/g, " ").trim()
+
+/**
+ * Why a declared GraphQL query could reach beyond the install's zone, if it could (HAL-3570). The query
+ * is checked as text, so anything that could hide text from these checks is refused outright: comments
+ * and string literals. What's left must read `viewer.zones` filtered by the zone variable and nothing else.
+ */
+export const graphqlProblems = (query: string, zoneVariable: string): ReadonlyArray<string> => {
+  const problems: Array<string> = []
+  const q = normaliseGraphql(query)
+  // Without whitespace, `zones ( filter : { zoneTag : $zone } )` and `zones(filter:{zoneTag:$zone})` agree.
+  const compact = q.replace(/\s+/g, "")
+  if (/[#"]/.test(q)) problems.push("comments and string literals aren't allowed; pass values as variables.")
+  if (!/^query\b/.test(q)) problems.push("it must be a single `query` operation.")
+  if (/\b(mutation|subscription)\b/.test(q)) problems.push("only queries are relayed.")
+  if (!compact.includes(`$${zoneVariable}:`)) problems.push(`it must declare the variable $${zoneVariable}.`)
+  if (/\baccounts?\b|\baccountTag\b/.test(q)) problems.push("it can't read accounts.")
+  if (/zoneTag_/.test(q)) problems.push("zoneTag can only be matched exactly.")
+  const zones = [...compact.matchAll(/(?<![A-Za-z0-9_])zones(?![A-Za-z0-9_])/g)]
+  if (zones.length === 0) problems.push("it must read viewer.zones.")
+  if (zones.some((z) => !compact.startsWith(`zones(filter:{zoneTag:$${zoneVariable}})`, z.index)))
+    problems.push(`every zones field must be filtered by { zoneTag: $${zoneVariable} } alone.`)
+  const tags = [...compact.matchAll(/zoneTag:([^,})]+)/g)].map((m) => m[1])
+  if (tags.some((t) => t !== `$${zoneVariable}`)) problems.push(`zoneTag must always be $${zoneVariable}.`)
   return problems
 }
