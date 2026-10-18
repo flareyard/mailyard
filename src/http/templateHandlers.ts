@@ -3,6 +3,7 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Schema from "effect/Schema"
 import { checkSend } from "../domain/agents.ts"
 import { describeAlertSettings, getAlertSettings, putAlertSettings } from "../domain/alertChannels.ts"
+import { describeAssistant, getAssistantSettings, putAssistantSettings } from "../domain/assistant.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { listAudit } from "../domain/auditLog.ts"
 import {
@@ -240,6 +241,24 @@ export const SettingsHandlers = HttpApiBuilder.group(
             after: { enabled: after.enabled, mailboxIds: after.mailboxIds, types: after.types },
           })
           return after
+        }).pipe(dbDies),
+      ),
+      getAssistant: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(describeAssistant()), dbDies),
+      ),
+      putAssistant: p(({ payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "settings.write")
+          const before = yield* getAssistantSettings()
+          const saved = yield* putAssistantSettings(payload)
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "settings.assistant",
+            target: "assistant",
+            before,
+            after: payload,
+          })
+          return saved
         }).pipe(dbDies),
       ),
       getAlertSettings: p(() =>

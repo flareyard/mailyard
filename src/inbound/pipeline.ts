@@ -11,14 +11,17 @@ import { Bindings } from "../Bindings.ts"
 import { inboundDeliveries, inboundMessages, mailboxes, mailboxRules } from "../db/schema.ts"
 import { looksLikeReport, parseReport, unpack } from "../dmarc/parse.ts"
 import { domainForReportAddress, storeReport } from "../dmarc/reports.ts"
+import { CATEGORY_LABELS, categorize } from "../domain/assistant.ts"
 import { publishMailEvent } from "../domain/mailEvents.ts"
 import { PROBE_LOCAL, recordProbeArrival } from "../domain/testSend.ts"
 import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
+import { callMailbox } from "../mail/rpc.ts"
 import { BODY_TEXT_LIMIT, type InboundDelivery } from "../mailbox/types.ts"
 import { runEffects } from "../rules/effects.ts"
 import { type FilingPlan, planFiling } from "../rules/filing.ts"
+import { Assistant } from "../services/Assistant.ts"
 import { chunksOf, Database } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { type ParsedMessage, parseMessage, sha256Hex } from "./parse.ts"
@@ -470,11 +473,32 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
         automated: parsed.automated || parsed.listId !== null,
         spam: plan.spam.isSpam || plan.filing.folder === "spam",
       })
+      // A category label (HAL-3305), when the helper is on: after filing, so a slow model never
+      // holds mail back, and never for spam.
+      if (!plan.spam.isSpam && plan.filing.folder !== "spam")
+        yield* categorizeFiled(mailboxId, result.id, parsed)
     }
   }
   yield* update(row.id, { status: "filed", error: null, filedAt: Date.now() })
   return { outcome: "filed", id: row.id, mailboxIds: resolution.mailboxIds } as const
 })
+
+/** Labels a filed message with its category, if the categories helper is on. Never fails the filing. */
+const categorizeFiled = (mailboxId: string, messageId: string, parsed: ParsedMessage) =>
+  Effect.gen(function* () {
+    const assistant = yield* Assistant
+    if (assistant.source === "off") return
+    const category = yield* categorize({
+      mailboxId,
+      from: parsed.from ? `${parsed.from.name ?? ""} <${parsed.from.address}>`.trim() : "(unknown)",
+      subject: parsed.subject,
+      text: parsed.text || parsed.snippet,
+      listUnsubscribe: parsed.listUnsubscribe !== null,
+    })
+    if (!category) return
+    const label = yield* callMailbox(mailboxId, (s) => s.ensureLabel(CATEGORY_LABELS[category]))
+    yield* callMailbox(mailboxId, (s) => s.updateMessages([messageId], { addLabels: [label.id] }))
+  }).pipe(Effect.catchCause((cause) => Effect.logWarning("inbound: could not categorize", cause)))
 
 const effectsFor = (
   mailboxId: string,

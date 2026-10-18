@@ -4,6 +4,39 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
 {
   "components": {
     "schemas": {
+      "AssistantRefusedEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "AssistantRefused",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+          "reason": {
+            "enum": [
+              "off",
+              "disabled",
+              "cap",
+              "no_answer",
+              "invalid",
+            ],
+            "type": "string",
+          },
+          "requestId": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "reason",
+          "message",
+        ],
+        "type": "object",
+      },
       "CloudflareNotConnectedEncoded": {
         "additionalProperties": false,
         "properties": {
@@ -75933,6 +75966,494 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/mailboxes/{id}/threads/{threadId}/draft": {
+      "post": {
+        "operationId": "mail.draftReply",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "instructions": {
+                    "maxLength": 1000,
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "draft": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "attachments": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "delivery": {
+                                "description": "How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.",
+                                "enum": [
+                                  "inline",
+                                  "link",
+                                ],
+                                "type": "string",
+                              },
+                              "filename": {
+                                "type": "string",
+                              },
+                              "key": {
+                                "description": "The \`key\` POST /v1/mailboxes/{id}/uploads answered with.",
+                                "type": "string",
+                              },
+                              "mimeType": {
+                                "type": "string",
+                              },
+                              "size": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "key",
+                              "filename",
+                              "mimeType",
+                              "size",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "bcc": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "address": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "name",
+                              "address",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "blockedReason": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "quota_exhausted",
+                                "domain_unhealthy",
+                                "all_recipients_suppressed",
+                              ],
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited.",
+                        },
+                        "bodyHtml": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "bodyText": {
+                          "type": "string",
+                        },
+                        "cc": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "address": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "name",
+                              "address",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "from": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "inReplyTo": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "lastError": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "references": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "replyMode": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "reply",
+                                "replyAll",
+                                "forward",
+                              ],
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "sendAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "sourceMessageId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "status": {
+                          "enum": [
+                            "draft",
+                            "scheduled",
+                            "due",
+                          ],
+                          "type": "string",
+                        },
+                        "subject": {
+                          "type": "string",
+                        },
+                        "threadId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "to": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "address": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "name",
+                              "address",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "track": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "clicks": {
+                                  "type": "boolean",
+                                },
+                                "opens": {
+                                  "type": "boolean",
+                                },
+                              },
+                              "required": [
+                                "opens",
+                                "clicks",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "threadId",
+                        "inReplyTo",
+                        "references",
+                        "from",
+                        "to",
+                        "cc",
+                        "bcc",
+                        "subject",
+                        "bodyText",
+                        "bodyHtml",
+                        "attachments",
+                        "status",
+                        "sendAt",
+                        "replyMode",
+                        "sourceMessageId",
+                        "lastError",
+                        "blockedReason",
+                        "track",
+                        "createdAt",
+                        "updatedAt",
+                      ],
+                      "type": "object",
+                    },
+                    "model": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "draft",
+                    "model",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictEncoded",
+                    },
+                    {
+                      "$ref": "#/components/schemas/AssistantRefusedEncoded",
+                    },
+                  ],
+                },
+              },
+            },
+            "description": "Conflict | AssistantRefused",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "mail",
+        ],
+      },
+    },
     "/v1/mailboxes/{id}/threads/{threadId}/notes": {
       "post": {
         "operationId": "mail.addNote",
@@ -76081,6 +76602,183 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Conflict",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "mail",
+        ],
+      },
+    },
+    "/v1/mailboxes/{id}/threads/{threadId}/summary": {
+      "post": {
+        "operationId": "mail.summarizeThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "refresh": {
+                    "type": "boolean",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bullets": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "cached": {
+                      "type": "boolean",
+                    },
+                    "generatedAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "model": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "summary": {
+                      "type": "string",
+                    },
+                    "version": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "summary",
+                    "bullets",
+                    "version",
+                    "cached",
+                    "model",
+                    "generatedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictEncoded",
+                    },
+                    {
+                      "$ref": "#/components/schemas/AssistantRefusedEncoded",
+                    },
+                  ],
+                },
+              },
+            },
+            "description": "Conflict | AssistantRefused",
           },
           "429": {
             "content": {
@@ -82186,6 +82884,140 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/segments/from-text": {
+      "post": {
+        "operationId": "segments.fromText",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "text": {
+                    "maxLength": 1000,
+                    "minLength": 2,
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "text",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "explanation": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "model": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "rule": {
+                      "$ref": "#/components/schemas/SegmentRule",
+                    },
+                  },
+                  "required": [
+                    "rule",
+                    "explanation",
+                    "count",
+                    "model",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantRefusedEncoded",
+                },
+              },
+            },
+            "description": "AssistantRefused",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "segments",
+        ],
+      },
+    },
     "/v1/segments/preview": {
       "post": {
         "operationId": "segments.preview",
@@ -86118,6 +86950,485 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "channels",
                     "defaultEmail",
                     "effective",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "settings",
+        ],
+      },
+    },
+    "/v1/settings/assistant": {
+      "get": {
+        "operationId": "settings.getAssistant",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "available": {
+                      "type": "boolean",
+                    },
+                    "categories": {
+                      "type": "boolean",
+                    },
+                    "dailyCallsPerMailbox": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "drafts": {
+                      "type": "boolean",
+                    },
+                    "model": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "provider": {
+                      "enum": [
+                        "off",
+                        "workers-ai",
+                        "openai",
+                        "fixed",
+                      ],
+                      "type": "string",
+                    },
+                    "segments": {
+                      "type": "boolean",
+                    },
+                    "summaries": {
+                      "type": "boolean",
+                    },
+                    "today": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "byFeature": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "calls": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "feature": {
+                                "enum": [
+                                  "summary",
+                                  "draft",
+                                  "category",
+                                  "segment",
+                                ],
+                                "type": "string",
+                              },
+                              "inputTokens": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "neurons": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "outputTokens": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "feature",
+                              "calls",
+                              "inputTokens",
+                              "outputTokens",
+                              "neurons",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "day": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "day",
+                        "byFeature",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "summaries",
+                    "drafts",
+                    "categories",
+                    "segments",
+                    "dailyCallsPerMailbox",
+                    "provider",
+                    "model",
+                    "available",
+                    "today",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "settings",
+        ],
+      },
+      "put": {
+        "operationId": "settings.putAssistant",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "categories": {
+                    "type": "boolean",
+                  },
+                  "dailyCallsPerMailbox": {
+                    "maximum": 100000,
+                    "minimum": 0,
+                    "type": "integer",
+                  },
+                  "drafts": {
+                    "type": "boolean",
+                  },
+                  "segments": {
+                    "type": "boolean",
+                  },
+                  "summaries": {
+                    "type": "boolean",
+                  },
+                },
+                "required": [
+                  "summaries",
+                  "drafts",
+                  "categories",
+                  "segments",
+                  "dailyCallsPerMailbox",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "available": {
+                      "type": "boolean",
+                    },
+                    "categories": {
+                      "type": "boolean",
+                    },
+                    "dailyCallsPerMailbox": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "drafts": {
+                      "type": "boolean",
+                    },
+                    "model": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "provider": {
+                      "enum": [
+                        "off",
+                        "workers-ai",
+                        "openai",
+                        "fixed",
+                      ],
+                      "type": "string",
+                    },
+                    "segments": {
+                      "type": "boolean",
+                    },
+                    "summaries": {
+                      "type": "boolean",
+                    },
+                    "today": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "byFeature": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "calls": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "feature": {
+                                "enum": [
+                                  "summary",
+                                  "draft",
+                                  "category",
+                                  "segment",
+                                ],
+                                "type": "string",
+                              },
+                              "inputTokens": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "neurons": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "outputTokens": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "feature",
+                              "calls",
+                              "inputTokens",
+                              "outputTokens",
+                              "neurons",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "day": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "day",
+                        "byFeature",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "summaries",
+                    "drafts",
+                    "categories",
+                    "segments",
+                    "dailyCallsPerMailbox",
+                    "provider",
+                    "model",
+                    "available",
+                    "today",
                   ],
                   "type": "object",
                 },
