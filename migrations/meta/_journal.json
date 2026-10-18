@@ -218,6 +218,13 @@
       "when": 1792289787251,
       "tag": "0030_hourly_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1792290582584,
+      "tag": "0031_delivery_stats",
+      "breakpoints": true
     }
   ]
 }

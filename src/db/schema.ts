@@ -749,6 +749,38 @@ export const hourlyStats = sqliteTable(
 )
 
 /**
+ * How long Email Service took to deliver, from a message's last `sent` event to its `delivered` one,
+ * as a histogram per UTC day (HAL-3420). Bucket i holds times under DELIVERY_BUCKETS_MS[i]; the last
+ * bucket is a day or more. Kept by a trigger on `message_events` (migration 0031).
+ */
+export const deliveryTimes = sqliteTable(
+  "delivery_times",
+  {
+    day: text("day").notNull(),
+    bucket: integer("bucket").notNull(),
+    n: integer("n").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.bucket] })],
+)
+
+/**
+ * Deferrals per UTC day, provider, SMTP status and reason (HAL-3420), kept by a trigger on
+ * `message_events`: Email Service's deferrals carry the receiving server's response; Mailyard's own
+ * (its retry queue) carry the sender's error.
+ */
+export const deferralDaily = sqliteTable(
+  "deferral_daily",
+  {
+    day: text("day").notNull(),
+    provider: text("provider").notNull().default(""),
+    smtpStatus: text("smtp_status").notNull().default(""),
+    reason: text("reason").notNull(),
+    n: integer("n").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.provider, t.smtpStatus, t.reason] })],
+)
+
+/**
  * Idempotency-Key records. A repeat with the same key and the same body replays the stored response;
  * the same key with a different body is refused with 409, as Plunk does. Kept for 24 hours.
  */
