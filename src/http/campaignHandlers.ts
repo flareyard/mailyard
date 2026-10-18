@@ -6,6 +6,7 @@ import {
   type CampaignNotFound,
   campaignAudience,
   campaignChecks,
+  campaignCounts,
   createCampaign,
   deleteCampaign,
   describeCampaign,
@@ -49,7 +50,7 @@ type CampaignHttp<E> = E extends CampaignNotFound | { readonly _tag: "SegmentNot
         | CampaignContentInvalid
         | { readonly _tag: "InvalidMessage" | "TemplateMissing" }
     ? InvalidRequest
-    : E extends CampaignLocked
+    : E extends CampaignLocked | { readonly _tag: "CampaignStale" }
       ? Conflict
       : E extends Faults
         ? never
@@ -101,6 +102,19 @@ export const campaignErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
           })
         case "CampaignLocked":
           return new Conflict({ message: err.message ?? "Conflict." })
+        case "CampaignStale": {
+          const stale = e as unknown as {
+            updatedAt: number | null
+            updatedBy: string | null
+            message: string
+          }
+          return new Conflict({
+            message: stale.message,
+            reason: "stale",
+            updatedAt: stale.updatedAt,
+            updatedBy: stale.updatedBy,
+          })
+        }
         default:
           return e
       }
@@ -114,6 +128,7 @@ export const CampaignsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) => requireScope("read").pipe(Effect.andThen(listCampaigns(query)), campaignErrors)),
+      counts: p(() => requireScope("read").pipe(Effect.andThen(campaignCounts()), campaignErrors)),
       create: p(({ payload }) =>
         requireScope("admin").pipe(
           Effect.flatMap((caller) => createCampaign(payload, caller.keyId)),
@@ -129,7 +144,13 @@ export const CampaignsHandlers = HttpApiBuilder.group(
       ),
       update: p(({ params, payload }) =>
         requireScope("admin").pipe(
-          Effect.flatMap((caller) => updateCampaign(params.id, payload, caller.keyId)),
+          Effect.flatMap((caller) =>
+            updateCampaign(
+              params.id,
+              { ...payload, ifMatch: payload.ifMatch === null ? undefined : payload.ifMatch },
+              caller.keyId,
+            ),
+          ),
           campaignErrors,
         ),
       ),

@@ -185,7 +185,17 @@ const feedGovernor = (
     )
       return
     yield* database.query("campaigns.autoPause", (db) =>
-      db.update(campaigns).set({ status: "paused" }).where(eq(campaigns.id, campaign.id)).run(),
+      db
+        .update(campaigns)
+        .set({
+          status: "paused",
+          pausedReason: result.reason,
+          // The governor says why in words; the screens act on the code (HAL-3428).
+          pausedBy: result.reason?.startsWith("Complaint") ? "complaint_rate" : "bounce_rate",
+          updatedAt: at,
+        })
+        .where(eq(campaigns.id, campaign.id))
+        .run(),
     )
     yield* raiseAlert({
       key: `campaign.paused:${campaign.id}`,

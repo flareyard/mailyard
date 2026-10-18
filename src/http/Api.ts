@@ -134,6 +134,9 @@ export class Conflict extends Schema.TaggedError<Conflict>()(
     message: Schema.String,
     /** A machine-readable why, where the screen acts on it (suppressions: `complaint`, `not-applicable`). */
     reason: Schema.optionalKey(Schema.String),
+    /** With `reason: "stale"`: when the other save was, and whose (HAL-3428). */
+    updatedAt: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+    updatedBy: Schema.optionalKey(Schema.NullOr(Schema.String)),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -3083,11 +3086,41 @@ export const CampaignSchema = Schema.Struct({
   sendAt: Schema.NullOr(Schema.Number),
   audienceSize: Schema.NullOr(Schema.Number),
   pausedReason: Schema.NullOr(Schema.String),
+  /** Why it's paused, as a code: the governor's bounce or complaint line, a person, or the quota. */
+  pausedBy: Schema.NullOr(Schema.Literals(["bounce_rate", "complaint_rate", "admin", "quota"])),
+  /** The IANA zone the schedule was picked in. */
+  timezone: Schema.NullOr(Schema.String),
+  /** The last test send, and how each address went. */
+  lastTest: Schema.NullOr(
+    Schema.Struct({
+      at: Schema.Number,
+      results: Schema.Array(
+        Schema.Struct({ email: Schema.String, messageId: Schema.String, status: Schema.String }),
+      ),
+    }),
+  ),
+  /** Who saved it last; with `updatedAt`, what PATCH's `ifMatch` checks. */
+  updatedBy: Schema.NullOr(Schema.String),
   abWinner: Schema.NullOr(Schema.Literals(["a", "b"])),
   startedAt: Schema.NullOr(Schema.Number),
   finishedAt: Schema.NullOr(Schema.Number),
   createdAt: Schema.Number,
   updatedAt: Schema.NullOr(Schema.Number),
+})
+
+/** A campaign in the list: once it has started, its numbers too, from the rollup. */
+const CampaignListItem = Schema.Struct({
+  ...CampaignSchema.fields,
+  summary: Schema.NullOr(
+    Schema.Struct({
+      sent: Schema.Number,
+      delivered: Schema.Number,
+      opened: Schema.Number,
+      clicked: Schema.Number,
+      bounced: Schema.Number,
+      unsubscribed: Schema.Number,
+    }),
+  ),
 })
 
 const CampaignReportSchema = Schema.Struct({
@@ -3100,21 +3133,24 @@ const CampaignReportSchema = Schema.Struct({
   tracked: Schema.Boolean,
   opened: Count,
   machineOnlyOpens: Count,
-  machineOpenShare: Schema.Number,
+  machineOpenShare: Schema.NullOr(Schema.Number),
   clicked: Count,
   replied: Count,
   unsubscribed: Count,
   bounced: Schema.Struct({ hard: Count, soft: Count }),
   complained: Count,
   failed: Count,
+  /** Under `minimumSends` the rates are null rather than misleading. */
+  insufficientData: Schema.Boolean,
+  minimumSends: Schema.Number,
   rates: Schema.Struct({
-    delivery: Schema.Number,
-    open: Schema.Number,
-    click: Schema.Number,
-    clickToOpen: Schema.Number,
-    bounce: Schema.Number,
-    complaint: Schema.Number,
-    unsubscribe: Schema.Number,
+    delivery: Schema.NullOr(Schema.Number),
+    open: Schema.NullOr(Schema.Number),
+    click: Schema.NullOr(Schema.Number),
+    clickToOpen: Schema.NullOr(Schema.Number),
+    bounce: Schema.NullOr(Schema.Number),
+    complaint: Schema.NullOr(Schema.Number),
+    unsubscribe: Schema.NullOr(Schema.Number),
   }),
   providers: Schema.Array(
     Schema.Struct({
@@ -3184,6 +3220,7 @@ const CampaignFields = {
   ab: Schema.optionalKey(Schema.NullOr(AbSchema)),
   trackOpens: Schema.optionalKey(Schema.Boolean),
   trackClicks: Schema.optionalKey(Schema.Boolean),
+  timezone: Schema.optionalKey(Schema.NullOr(Schema.String)),
 }
 
 const CheckSchema = Schema.Struct({
@@ -3601,8 +3638,22 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         limit: Limit,
       },
       success: Schema.Struct({
-        campaigns: Schema.Array(CampaignSchema),
+        campaigns: Schema.Array(CampaignListItem),
         nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("counts", "/v1/campaigns/counts", {
+      success: Schema.Struct({
+        draft: Schema.Number,
+        scheduled: Schema.Number,
+        sending: Schema.Number,
+        paused: Schema.Number,
+        sent: Schema.Number,
+        cancelled: Schema.Number,
+        /** Scheduled, sending and paused. */
+        active: Schema.Number,
+        total: Schema.Number,
       }),
       error: Forbidden,
     }),
@@ -3628,6 +3679,8 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         fromAddress: Schema.optionalKey(Schema.String),
         subject: Schema.optionalKey(Schema.String),
         ...CampaignFields,
+        /** The `updatedAt` the editor loaded; a later save answers 409 `reason: "stale"` with who saved. */
+        ifMatch: Schema.optionalKey(Schema.NullOr(Schema.Number)),
       }),
       success: CampaignSchema,
       error: [Forbidden, NotFound, InvalidRequest, Conflict],

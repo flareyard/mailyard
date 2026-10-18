@@ -33,7 +33,10 @@ const all = (sql: string, ...params: Array<unknown>) =>
   })
 
 const n = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0))
-const rate = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 10_000) / 10_000 : 0)
+/** The volume under which a campaign's rates are noise, as /v1/stats/delivery's minimum. */
+const MIN_SENDS = 100
+const roundedRate = (part: number, whole: number) =>
+  whole > 0 ? Math.round((part / whole) * 10_000) / 10_000 : 0
 /** A Message-ID as compared: no angle brackets, lower case. */
 const bare = (column: string) => `lower(replace(replace(${column}, '<', ''), '>', ''))`
 
@@ -106,6 +109,7 @@ export const campaignReport = Effect.fn("campaigns.report")(function* (id: strin
     : []
   const sent = n(funnel.sent)
   const delivered = n(funnel.delivered)
+  const rate = (part: number, whole: number) => (sent < MIN_SENDS ? null : roundedRate(part, whole))
   return {
     campaignId: id,
     status: campaign.status,
@@ -124,6 +128,9 @@ export const campaignReport = Effect.fn("campaigns.report")(function* (id: strin
     bounced: { hard: n(funnel.bounced_hard), soft: n(funnel.bounced_soft) },
     complained: n(funnel.complained),
     failed: n(funnel.failed),
+    /** Under 100 sends the rates are null: one bounce in five sends is a 20% rate that means nothing (HAL-3428). */
+    insufficientData: sent < MIN_SENDS,
+    minimumSends: MIN_SENDS,
     rates: {
       delivery: rate(delivered, sent),
       open: rate(n(funnel.opened), delivered),

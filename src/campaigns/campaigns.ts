@@ -1,12 +1,20 @@
-import { and, desc, eq, lt, or } from "drizzle-orm"
+import { and, count, desc, eq, inArray, lt, or } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { campaigns, contacts, domains, segments, templates, topics } from "../db/schema.ts"
+import {
+  campaignEngagement,
+  campaigns,
+  contacts,
+  domains,
+  segments,
+  templates,
+  topics,
+} from "../db/schema.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { parseParty, sendBulkMessage } from "../domain/outbox.ts"
 import { Ids } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { audiencePreview } from "./audience.ts"
 import { checkCampaign } from "./checks.ts"
 import { getCompliance } from "./compliance.ts"
@@ -49,6 +57,10 @@ export const describeCampaign = (c: CampaignRow) => ({
   sendAt: c.sendAt,
   audienceSize: c.audienceSize,
   pausedReason: c.pausedReason,
+  pausedBy: c.pausedBy,
+  timezone: c.timezone,
+  lastTest: c.lastTest ?? null,
+  updatedBy: c.updatedBy,
   abWinner: c.abWinner,
   startedAt: c.startedAt,
   finishedAt: c.finishedAt,
@@ -81,6 +93,24 @@ export interface CampaignInput {
   readonly ab?: AbTest | null | undefined
   readonly trackOpens?: boolean | undefined
   readonly trackClicks?: boolean | undefined
+  /** The IANA zone the schedule was picked in (`Africa/Lagos`). */
+  readonly timezone?: string | null | undefined
+}
+
+/** A stale edit: someone saved the campaign after the editor loaded it (HAL-3428). */
+export class CampaignStale extends Schema.TaggedError<CampaignStale>()("CampaignStale", {
+  message: Schema.String,
+  updatedAt: Schema.NullOr(Schema.Number),
+  updatedBy: Schema.NullOr(Schema.String),
+}) {}
+
+const isZone = (zone: string) => {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: zone })
+    return true
+  } catch {
+    return false
+  }
 }
 
 const EMAIL = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/
@@ -103,6 +133,11 @@ const validate = (next: Omit<CampaignRow, "id" | "status" | "createdAt">) =>
     )
     if (!domain?.sendingEnabled)
       return yield* bad("fromAddress", `${fromDomain} isn't a sending domain in Mailyard.`)
+    if (next.timezone && !isZone(next.timezone))
+      return yield* bad(
+        "timezone",
+        `${next.timezone} isn't a time zone (use an IANA name, like Africa/Lagos).`,
+      )
     if (next.replyTo && !EMAIL.test(parseParty(next.replyTo).email))
       return yield* bad("replyTo", "Not an email address.")
     if (next.templateId && next.bodyHtml) return yield* bad("bodyHtml", "Use a template or a body, not both.")
@@ -190,6 +225,10 @@ export const createCampaign = Effect.fn("campaigns.create")(function* (
     workflowId: null,
     audienceSize: null,
     pausedReason: null,
+    pausedBy: null,
+    timezone: input.timezone ?? null,
+    lastTest: null,
+    updatedBy: actor,
     abWinner: null,
     startedAt: null,
     finishedAt: null,
@@ -212,16 +251,27 @@ export const createCampaign = Effect.fn("campaigns.create")(function* (
 /** Edits a draft. Once scheduled, a campaign's content is what it is: cancel, copy and edit the copy. */
 export const updateCampaign = Effect.fn("campaigns.update")(function* (
   id: string,
-  input: CampaignInput,
+  input: CampaignInput & {
+    /** The `updatedAt` the editor loaded: refused if someone has saved since. */
+    readonly ifMatch?: number | undefined
+  },
   actor: string,
 ) {
   const before = yield* findCampaign(id)
   if (before.status !== "draft")
     return yield* new CampaignLocked({ message: `A ${before.status} campaign can't be edited.` })
+  const { ifMatch, ...patch } = input
+  if (ifMatch !== undefined && before.updatedAt !== ifMatch)
+    return yield* new CampaignStale({
+      message: "Someone saved this campaign after you opened it. Reload to see their changes.",
+      updatedAt: before.updatedAt,
+      updatedBy: before.updatedBy,
+    })
   const next = {
     ...before,
-    ...Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)),
+    ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)),
     updatedAt: Date.now(),
+    updatedBy: actor,
   } as CampaignRow
   const { id: _id, status: _status, createdAt: _createdAt, ...fields } = next
   yield* validate(fields)
@@ -286,8 +336,29 @@ export const listCampaigns = Effect.fn("campaigns.list")(function* (query: {
   )
   const page = rows.slice(0, limit)
   const last = page.at(-1)
+  // Campaigns that have sent carry their numbers, one rollup row each (HAL-3428).
+  const started = page.filter((c) => c.startedAt !== null).map((c) => c.id)
+  const counts = yield* queryIn("campaigns.listSummaries", started, (db, chunk) =>
+    db.select().from(campaignEngagement).where(inArray(campaignEngagement.campaignId, chunk)).all(),
+  )
   return {
-    campaigns: page.map(describeCampaign),
+    campaigns: page.map((c) => {
+      const e = counts.find((x) => x.campaignId === c.id)
+      return {
+        ...describeCampaign(c),
+        summary:
+          c.startedAt === null
+            ? null
+            : {
+                sent: e?.sent ?? 0,
+                delivered: e?.delivered ?? 0,
+                opened: e?.uniqueOpens ?? 0,
+                clicked: e?.uniqueClicks ?? 0,
+                bounced: e?.bounced ?? 0,
+                unsubscribed: e?.unsubscribed ?? 0,
+              },
+      }
+    }),
     nextCursor: rows.length > limit && last ? `${last.createdAt}:${last.id}` : null,
   }
 })
@@ -375,6 +446,14 @@ export const testCampaign = Effect.fn("campaigns.test")(function* (
     })
     sent.push({ email, messageId: result.id, status: result.status })
   }
+  // Kept on the campaign, so the editor can say when it was last tested and how (HAL-3428).
+  yield* database.query("campaigns.lastTest", (db) =>
+    db
+      .update(campaigns)
+      .set({ lastTest: { at: stamp, results: sent } })
+      .where(eq(campaigns.id, campaign.id))
+      .run(),
+  )
   return { sent }
 })
 
@@ -384,4 +463,23 @@ export const campaignChecks = Effect.fn("campaigns.checksFor")(function* (id: st
 
 export const campaignAudience = Effect.fn("campaigns.audience")(function* (id: string) {
   return yield* audiencePreview(yield* findCampaign(id))
+})
+
+/** `GET /v1/campaigns/counts`: how many there are in each state, for the list's tabs. */
+export const campaignCounts = Effect.fn("campaigns.counts")(function* () {
+  const database = yield* Database
+  const rows = yield* database.query("campaigns.counts", (db) =>
+    db.select({ status: campaigns.status, n: count() }).from(campaigns).groupBy(campaigns.status).all(),
+  )
+  const of = (s: CampaignStatus) => rows.find((r) => r.status === s)?.n ?? 0
+  return {
+    draft: of("draft"),
+    scheduled: of("scheduled"),
+    sending: of("sending"),
+    paused: of("paused"),
+    sent: of("sent"),
+    cancelled: of("cancelled"),
+    active: of("scheduled") + of("sending") + of("paused"),
+    total: rows.reduce((a, r) => a + r.n, 0),
+  }
 })
