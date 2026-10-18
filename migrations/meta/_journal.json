@@ -260,6 +260,13 @@
       "when": 1792294575904,
       "tag": "0036_form_details",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1792296540752,
+      "tag": "0037_campaign_detail",
+      "breakpoints": true
     }
   ]
 }

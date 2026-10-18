@@ -139,7 +139,7 @@ export const pauseCampaign = Effect.fn("campaigns.pause")(function* (id: string,
     d.query("campaigns.pause", (db) =>
       db
         .update(campaigns)
-        .set({ status: "paused", pausedReason: reason, updatedAt: Date.now() })
+        .set({ status: "paused", pausedReason: reason, pausedBy: "admin", updatedAt: Date.now() })
         .where(eq(campaigns.id, id))
         .run(),
     ),
@@ -159,7 +159,7 @@ export const resumeCampaign = Effect.fn("campaigns.resume")(function* (id: strin
     d.query("campaigns.resume", (db) =>
       db
         .update(campaigns)
-        .set({ status, pausedReason: null, updatedAt: Date.now() })
+        .set({ status, pausedReason: null, pausedBy: null, updatedAt: Date.now() })
         .where(eq(campaigns.id, id))
         .run(),
     ),

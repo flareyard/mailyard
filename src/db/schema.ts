@@ -413,6 +413,21 @@ export const campaigns = sqliteTable(
     workflowId: text("workflow_id"),
     audienceSize: integer("audience_size"),
     pausedReason: text("paused_reason"),
+    /** Why it's paused, as a code the screens act on (HAL-3428); `pausedReason` says it in words. */
+    pausedBy: text("paused_by", { enum: ["bounce_rate", "complaint_rate", "admin", "quota"] }),
+    /** The IANA zone the schedule was set in, to show `sendAt` the way it was meant. */
+    timezone: text("timezone"),
+    /** The last test send: when, and how each address went. */
+    lastTest: text("last_test", { mode: "json" }).$type<{
+      readonly at: number
+      readonly results: ReadonlyArray<{
+        readonly email: string
+        readonly messageId: string
+        readonly status: string
+      }>
+    }>(),
+    /** Who last saved it, for the editor's conflict message. */
+    updatedBy: text("updated_by"),
     /** Opens (a pixel) and clicks (redirected links) for this campaign; both on unless switched off. */
     trackOpens: integer("track_opens", { mode: "boolean" }).notNull().default(true),
     trackClicks: integer("track_clicks", { mode: "boolean" }).notNull().default(true),
@@ -866,6 +881,9 @@ export const deferralDaily = sqliteTable(
  */
 export const campaignEngagement = sqliteTable("campaign_engagement", {
   campaignId: text("campaign_id").primaryKey(),
+  /** Messages handed to Email Service, and those that bounced (HAL-3428). */
+  sent: integer("sent").notNull().default(0),
+  bounced: integer("bounced").notNull().default(0),
   delivered: integer("delivered").notNull().default(0),
   uniqueOpens: integer("unique_opens").notNull().default(0),
   machineOpens: integer("machine_opens").notNull().default(0),

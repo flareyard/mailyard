@@ -134,9 +134,10 @@ describe("campaign report", () => {
       complained: 1,
       ab: null,
     })
-    expect(report.rates.delivery).toBe(0.8)
-    expect(report.rates.open).toBe(0.25)
-    expect(report.rates.clickToOpen).toBe(1)
+    // Five sends is under the 100 a rate needs (HAL-3428): the counts stand, the rates are null.
+    expect(report).toMatchObject({ insufficientData: true, minimumSends: 100 })
+    expect(report.rates.delivery).toBeNull()
+    expect(report.rates.open).toBeNull()
     expect(report.providers).toEqual([
       expect.objectContaining({ provider: "gmail", sent: 2, delivered: 2, bounced: 0, opened: 1 }),
       expect.objectContaining({ provider: "outlook", sent: 2, delivered: 1, bounced: 1, opened: 0 }),

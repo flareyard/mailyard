@@ -110,6 +110,7 @@ describe("GET /openapi.json", () => {
       "/v1/automations/{id}/versions/{version}/restore",
       "/v1/automations/{id}/webhook-secret",
       "/v1/campaigns",
+      "/v1/campaigns/counts",
       "/v1/campaigns/{id}",
       "/v1/campaigns/{id}/audience/preview",
       "/v1/campaigns/{id}/cancel",
