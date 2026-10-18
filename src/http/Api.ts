@@ -146,6 +146,17 @@ export class FixRefused extends Schema.TaggedError<FixRefused>()(
   { httpApiStatus: 409 },
 ) {}
 
+/** A DMARC policy change Mailyard won't make (HAL-3375): 409 with `reason`. */
+export class DmarcRefused extends Schema.TaggedError<DmarcRefused>()(
+  "DmarcRefused",
+  {
+    requestId: Schema.optionalKey(Schema.String),
+    reason: Schema.Literals(["no_dns_token", "zone_not_found", "several_records", "write_failed"]),
+    message: Schema.String,
+  },
+  { httpApiStatus: 409 },
+) {}
+
 export class NotFound extends Schema.TaggedError<NotFound>()(
   "NotFound",
   {
@@ -1448,6 +1459,90 @@ export const MailboxDetailSchema = Schema.Struct({
   ),
 })
 
+const DmarcSourceMarkSchema = Schema.Struct({
+  ip: Schema.String,
+  known: Schema.Boolean,
+  label: Schema.NullOr(Schema.String),
+  markedBy: Schema.NullOr(Schema.String),
+  markedAt: Schema.NullOr(Schema.Number),
+})
+const DmarcViewSchema = Schema.Struct({
+  domain: Schema.Struct({ id: Schema.String, name: Schema.String }),
+  range: Schema.Struct({ key: Schema.String, from: Schema.Number, to: Schema.Number, days: Schema.Number }),
+  receiving: Schema.Struct({ address: Schema.String, inRua: Schema.Boolean, routed: Schema.Boolean }),
+  reports: Schema.Number,
+  reportDays: Schema.Number,
+  lastReportAt: Schema.NullOr(Schema.Number),
+  reporters: Schema.Array(
+    Schema.Struct({
+      org: Schema.String,
+      email: Schema.NullOr(Schema.String),
+      reports: Schema.Number,
+      messages: Schema.Number,
+    }),
+  ),
+  policy: Schema.Struct({
+    /** The one DMARC record at `_dmarc`; null when there's none, or several. */
+    record: Schema.NullOr(Schema.String),
+    records: Schema.Array(Schema.String),
+    lookupError: Schema.NullOr(Schema.String),
+    p: Schema.NullOr(Schema.Literals(["none", "quarantine", "reject"])),
+    sp: Schema.NullOr(Schema.String),
+    pct: Schema.NullOr(Schema.Number),
+    adkim: Schema.NullOr(Schema.String),
+    aspf: Schema.NullOr(Schema.String),
+    rua: Schema.Array(Schema.String),
+  }),
+  totals: Schema.Struct({
+    messages: Schema.Number,
+    dmarcPass: Schema.Number,
+    dkimPass: Schema.Number,
+    spfPass: Schema.Number,
+    quarantined: Schema.Number,
+    rejected: Schema.Number,
+  }),
+  sources: Schema.Array(
+    Schema.Struct({
+      ip: Schema.String,
+      ptr: Schema.NullOr(Schema.String),
+      provider: Schema.NullOr(Schema.String),
+      messages: Schema.Number,
+      /** Aligned passes, as DMARC counts them. */
+      spfPass: Schema.Number,
+      dkimPass: Schema.Number,
+      dmarcPass: Schema.Number,
+      quarantined: Schema.Number,
+      rejected: Schema.Number,
+      /** Marked known by someone, or every message passed DMARC. */
+      known: Schema.Boolean,
+      markedKnown: Schema.Boolean,
+      label: Schema.NullOr(Schema.String),
+      reason: Schema.String,
+      dkimDomains: Schema.Record(Schema.String, Schema.String),
+      spfDomains: Schema.Record(Schema.String, Schema.String),
+      firstSeen: Schema.NullOr(Schema.Number),
+      lastSeen: Schema.NullOr(Schema.Number),
+    }),
+  ),
+  recommendation: Schema.Struct({
+    current: Schema.NullOr(Schema.Literals(["none", "quarantine", "reject"])),
+    unknownFailShare: Schema.Number,
+    safeToQuarantine: Schema.Boolean,
+    safeToReject: Schema.Boolean,
+    blockers: Schema.Array(
+      Schema.Struct({ kind: Schema.String, message: Schema.String, ip: Schema.optionalKey(Schema.String) }),
+    ),
+    next: Schema.NullOr(
+      Schema.Struct({
+        p: Schema.Literals(["none", "quarantine", "reject"]),
+        pct: Schema.NullOr(Schema.Number),
+      }),
+    ),
+    /** The record to publish for `next`, every other tag kept; null when nothing's next or it isn't safe. */
+    nextRecord: Schema.NullOr(Schema.String),
+  }),
+})
+
 export class DomainsApi extends HttpApiGroup.make("domains")
   .add(
     HttpApiEndpoint.get("list", "/v1/domains", {
@@ -1527,6 +1622,51 @@ export class DomainsApi extends HttpApiGroup.make("domains")
       }),
       /** 409 with `reason`: `no_dns_token`, `zone_not_found` or `nothing_to_fix`. */
       error: [Forbidden, NotFound, FixRefused],
+    }),
+    /**
+     * What DMARC aggregate reports say about the domain (HAL-3375): reports arrive at
+     * `dmarc@<domain>` (the address Mailyard's own DMARC record names in `rua`), are added up per
+     * day and sending IP, and read back here per `range` (7d, 30d by default, 90d) with the live
+     * policy, every source with its pass rates and why it fails, and whether it's safe to tighten.
+     */
+    HttpApiEndpoint.get("dmarc", "/v1/domains/:id/dmarc", {
+      params: { id: Schema.String },
+      query: { range: Schema.optionalKey(Schema.Literals(["7d", "30d", "90d"])) },
+      success: DmarcViewSchema,
+      error: [Forbidden, NotFound],
+    }),
+    /** Marks a sending IP as known (a forwarder, a service that's yours), so it no longer blocks a stricter policy. */
+    HttpApiEndpoint.post("dmarcKnown", "/v1/domains/:id/dmarc/sources/:ip/known", {
+      params: { id: Schema.String, ip: Schema.String },
+      payload: Schema.Struct({ label: Schema.optionalKey(Schema.NullOr(Schema.String)) }),
+      success: DmarcSourceMarkSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("dmarcUnknown", "/v1/domains/:id/dmarc/sources/:ip/known", {
+      params: { id: Schema.String, ip: Schema.String },
+      success: DmarcSourceMarkSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /**
+     * Changes the DMARC policy (`p`, and `pct` to apply it to a share of mail). `?dryRun=1` only
+     * answers the record before and after. Without it the record is written through the zone token,
+     * every other tag kept: this changes live DNS, so it happens only when the caller asks.
+     */
+    HttpApiEndpoint.patch("dmarcPolicy", "/v1/domains/:id/dmarc", {
+      params: { id: Schema.String },
+      query: { dryRun: Schema.optionalKey(Schema.Literals(["1", "true", "0", "false"])) },
+      payload: Schema.Struct({
+        p: Schema.Literals(["none", "quarantine", "reject"]),
+        pct: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+      }),
+      success: Schema.Struct({
+        name: Schema.String,
+        before: Schema.NullOr(Schema.String),
+        after: Schema.String,
+        applied: Schema.Boolean,
+        changed: Schema.Boolean,
+      }),
+      error: [Forbidden, NotFound, InvalidRequest, DmarcRefused],
     }),
   )
   .middleware(ApiKeyAuth) {}

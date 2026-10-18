@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import { changePolicy, dmarcView, markSource } from "../dmarc/reports.ts"
 import {
   createDomain,
   type DomainConflict,
@@ -30,7 +31,7 @@ import { isManager } from "../domain/permissions.ts"
 import { membershipIn, membershipsOf, seesAllMailboxes } from "../mail/access.ts"
 import type { DatabaseError } from "../services/Database.ts"
 import type { MailboxUnavailable } from "../services/Mailboxes.ts"
-import { Conflict, FixRefused, InvalidRequest, MailApi, NotFound } from "./Api.ts"
+import { Conflict, DmarcRefused, FixRefused, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 
@@ -131,6 +132,14 @@ const requireAdminOrOwner = (mailboxId: string) =>
     return caller
   })
 
+/** An IP from a path: IPv4 or IPv6, as reports name them. */
+const validIp = (raw: string) => {
+  const ip = decodeURIComponent(raw).trim().toLowerCase()
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip) || (/^[0-9a-f:]+$/.test(ip) && ip.includes(":"))
+    ? Effect.succeed(ip)
+    : Effect.fail(new InvalidRequest({ field: "ip", message: `${raw} isn't an IP address.` }))
+}
+
 export const DomainsHandlers = HttpApiBuilder.group(
   MailApi,
   "domains",
@@ -191,6 +200,66 @@ export const DomainsHandlers = HttpApiBuilder.group(
       ),
       candidates: p(() =>
         requireScope("read", "settings.read").pipe(Effect.andThen(domainCandidates()), infraDies),
+      ),
+      dmarc: p(({ params, query }) =>
+        requireScope("read", "settings.read").pipe(
+          Effect.andThen(dmarcView(params.id, query.range ?? "30d")),
+          Effect.catchTag("DmarcDomainNotFound", (e) =>
+            Effect.fail(new NotFound({ message: `Domain ${e.id} not found.` })),
+          ),
+          infraDies,
+        ),
+      ),
+      dmarcKnown: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "domains.manage")
+          const ip = yield* validIp(params.ip)
+          return yield* markSource({
+            domainId: params.id,
+            ip,
+            known: true,
+            label: payload.label,
+            actor: caller.keyId,
+          })
+        }).pipe(
+          Effect.catchTag("DmarcDomainNotFound", (e) =>
+            Effect.fail(new NotFound({ message: `Domain ${e.id} not found.` })),
+          ),
+          infraDies,
+        ),
+      ),
+      dmarcUnknown: p(({ params }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "domains.manage")
+          const ip = yield* validIp(params.ip)
+          return yield* markSource({ domainId: params.id, ip, known: false, actor: caller.keyId })
+        }).pipe(
+          Effect.catchTag("DmarcDomainNotFound", (e) =>
+            Effect.fail(new NotFound({ message: `Domain ${e.id} not found.` })),
+          ),
+          infraDies,
+        ),
+      ),
+      dmarcPolicy: p(({ params, query, payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "domains.manage")
+          return yield* changePolicy({
+            domainId: params.id,
+            p: payload.p,
+            pct: payload.pct,
+            dryRun: query.dryRun === "1" || query.dryRun === "true",
+            actor: caller.keyId,
+          })
+        }).pipe(
+          Effect.catchTags({
+            DmarcDomainNotFound: (e) => Effect.fail(new NotFound({ message: `Domain ${e.id} not found.` })),
+            DmarcChangeRefused: (e) =>
+              e.reason === "invalid"
+                ? Effect.fail(new InvalidRequest({ field: "pct", message: e.message }))
+                : Effect.fail(new DmarcRefused({ reason: e.reason, message: e.message })),
+          }),
+          infraDies,
+        ),
       ),
     })
   }),

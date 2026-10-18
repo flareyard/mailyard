@@ -53,6 +53,15 @@ export const RoutingRule = Schema.Struct({
 })
 export type RoutingRule = typeof RoutingRule.Type
 
+/** A DNS record as `GET /zones/{id}/dns_records` lists it; only the fields Mailyard reads. */
+export const DnsRecord = Schema.Struct({
+  id: Schema.String,
+  type: Schema.String,
+  name: Schema.String,
+  content: Schema.String,
+})
+export type DnsRecord = typeof DnsRecord.Type
+
 const Envelope = <A extends Schema.Top>(result: A) =>
   Schema.Struct({
     success: Schema.Boolean,
@@ -139,6 +148,18 @@ export class CloudflareZones extends Context.Service<
       name: string,
       content: string,
     ) => Effect.Effect<WriteOutcome<unknown>>
+    /** The TXT records at exactly `name` (HAL-3375). */
+    readonly txtRecords: (
+      zoneId: string,
+      name: string,
+    ) => Effect.Effect<Option.Option<ReadonlyArray<DnsRecord>>>
+    /** Replaces one TXT record's content, keeping its name. */
+    readonly updateTxt: (
+      zoneId: string,
+      recordId: string,
+      name: string,
+      content: string,
+    ) => Effect.Effect<WriteOutcome<unknown>>
     /** The zone's Email Routing rules (catch-all excluded), up to 1,000. */
     readonly routingRules: (zoneId: string) => Effect.Effect<Option.Option<ReadonlyArray<RoutingRule>>>
     /** Points a rule at a Worker, keeping its matcher. */
@@ -169,6 +190,8 @@ export class CloudflareZones extends Context.Service<
           enableRouting: () => refused,
           fixSending: () => refused,
           createTxt: () => refused,
+          txtRecords: () => Effect.succeedNone,
+          updateTxt: () => refused,
           routingRules: () => Effect.succeedNone,
           routeToWorker: () => refused,
         })
@@ -243,6 +266,14 @@ export class CloudflareZones extends Context.Service<
           }),
         createTxt: (zoneId, name, content) =>
           write(token, "POST", `/zones/${zoneId}/dns_records`, { type: "TXT", name, content, ttl: 1 }),
+        txtRecords: (zoneId, name) =>
+          read(
+            token,
+            `/zones/${zoneId}/dns_records?type=TXT&name=${encodeURIComponent(name)}&per_page=100`,
+            Schema.Array(DnsRecord),
+          ),
+        updateTxt: (zoneId, recordId, name, content) =>
+          write(token, "PATCH", `/zones/${zoneId}/dns_records/${recordId}`, { type: "TXT", name, content }),
         routingRules: (zoneId) =>
           Effect.gen(function* () {
             const all: Array<RoutingRule> = []
