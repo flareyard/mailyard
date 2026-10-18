@@ -83768,6 +83768,424 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/settings/alerts": {
+      "get": {
+        "operationId": "settings.getAlertSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "channels": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "email",
+                              "webhook",
+                            ],
+                            "type": "string",
+                          },
+                          "kinds": {
+                            "items": {
+                              "enum": [
+                                "delivery_events_missing",
+                                "campaign_paused",
+                                "dns_drift",
+                                "reputation_warning",
+                                "reputation_at_risk",
+                                "bounce_spike",
+                                "complaint_spike",
+                                "quota_80",
+                                "quota_100",
+                                "webhook_dead_letter",
+                                "import_failed",
+                                "export_ready",
+                                "domain_activated",
+                                "automation_failed",
+                                "approval_pending",
+                              ],
+                              "type": "string",
+                            },
+                            "maxItems": 50,
+                            "type": "array",
+                          },
+                          "minSeverity": {
+                            "enum": [
+                              "info",
+                              "warning",
+                              "critical",
+                            ],
+                            "type": "string",
+                          },
+                          "target": {
+                            "maxLength": 254,
+                            "minLength": 1,
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "minSeverity",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "defaultEmail": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "effective": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "criticalEmail": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "note": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "criticalEmail",
+                        "note",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "channels",
+                    "defaultEmail",
+                    "effective",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "settings",
+        ],
+      },
+      "put": {
+        "operationId": "settings.putAlertSettings",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "channels": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "enum": [
+                            "email",
+                            "webhook",
+                          ],
+                          "type": "string",
+                        },
+                        "kinds": {
+                          "items": {
+                            "enum": [
+                              "delivery_events_missing",
+                              "campaign_paused",
+                              "dns_drift",
+                              "reputation_warning",
+                              "reputation_at_risk",
+                              "bounce_spike",
+                              "complaint_spike",
+                              "quota_80",
+                              "quota_100",
+                              "webhook_dead_letter",
+                              "import_failed",
+                              "export_ready",
+                              "domain_activated",
+                              "automation_failed",
+                              "approval_pending",
+                            ],
+                            "type": "string",
+                          },
+                          "maxItems": 50,
+                          "type": "array",
+                        },
+                        "minSeverity": {
+                          "enum": [
+                            "info",
+                            "warning",
+                            "critical",
+                          ],
+                          "type": "string",
+                        },
+                        "target": {
+                          "maxLength": 254,
+                          "minLength": 1,
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "kind",
+                        "target",
+                        "minSeverity",
+                      ],
+                      "type": "object",
+                    },
+                    "maxItems": 20,
+                    "type": "array",
+                  },
+                  "defaultEmail": {
+                    "anyOf": [
+                      {
+                        "maxLength": 254,
+                        "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                },
+                "required": [
+                  "channels",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "channels": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "email",
+                              "webhook",
+                            ],
+                            "type": "string",
+                          },
+                          "kinds": {
+                            "items": {
+                              "enum": [
+                                "delivery_events_missing",
+                                "campaign_paused",
+                                "dns_drift",
+                                "reputation_warning",
+                                "reputation_at_risk",
+                                "bounce_spike",
+                                "complaint_spike",
+                                "quota_80",
+                                "quota_100",
+                                "webhook_dead_letter",
+                                "import_failed",
+                                "export_ready",
+                                "domain_activated",
+                                "automation_failed",
+                                "approval_pending",
+                              ],
+                              "type": "string",
+                            },
+                            "maxItems": 50,
+                            "type": "array",
+                          },
+                          "minSeverity": {
+                            "enum": [
+                              "info",
+                              "warning",
+                              "critical",
+                            ],
+                            "type": "string",
+                          },
+                          "target": {
+                            "maxLength": 254,
+                            "minLength": 1,
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "kind",
+                          "target",
+                          "minSeverity",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "defaultEmail": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "effective": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "criticalEmail": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "note": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "criticalEmail",
+                        "note",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "channels",
+                    "defaultEmail",
+                    "effective",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "settings",
+        ],
+      },
+    },
     "/v1/settings/brand": {
       "get": {
         "operationId": "settings.getBrand",
@@ -97769,6 +98187,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "approval.pending",
                           "approval.approved",
                           "approval.rejected",
+                          "alert.raised",
                         ],
                         "type": "string",
                       },
@@ -97851,6 +98270,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                     "approval.pending",
                                     "approval.approved",
                                     "approval.rejected",
+                                    "alert.raised",
                                   ],
                                   "type": "string",
                                 },
@@ -98264,6 +98684,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "approval.pending",
                                   "approval.approved",
                                   "approval.rejected",
+                                  "alert.raised",
                                 ],
                                 "type": "string",
                               },
@@ -98588,6 +99009,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "approval.pending",
                               "approval.approved",
                               "approval.rejected",
+                              "alert.raised",
                             ],
                             "type": "string",
                           },
@@ -98900,6 +99322,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "approval.pending",
                               "approval.approved",
                               "approval.rejected",
+                              "alert.raised",
                             ],
                             "type": "string",
                           },
@@ -99308,6 +99731,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "approval.pending",
                               "approval.approved",
                               "approval.rejected",
+                              "alert.raised",
                             ],
                             "type": "string",
                           },
@@ -100177,6 +100601,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "approval.pending",
                                   "approval.approved",
                                   "approval.rejected",
+                                  "alert.raised",
                                 ],
                                 "type": "string",
                               },
@@ -100456,6 +100881,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "approval.pending",
                           "approval.approved",
                           "approval.rejected",
+                          "alert.raised",
                         ],
                         "type": "string",
                       },

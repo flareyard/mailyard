@@ -689,6 +689,30 @@ const AuditEntrySchema = Schema.Struct({
   after: Schema.Unknown,
 })
 
+const AlertChannelSchema = Schema.Struct({
+  kind: Schema.Literals(["email", "webhook"]),
+  /** An email address, or a webhook endpoint's id. */
+  target: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(254)),
+  /** Alert kinds this channel takes; empty or absent for every kind. */
+  kinds: Schema.optionalKey(Schema.Array(Schema.Literals(ALERT_KINDS)).check(Schema.isMaxLength(50))),
+  minSeverity: Schema.Literals(["info", "warning", "critical"]),
+})
+const AlertSettingsPayload = Schema.Struct({
+  channels: Schema.Array(AlertChannelSchema).check(Schema.isMaxLength(20)),
+  /** Where critical alerts go when no channel is set; the owner's address when absent or null. */
+  defaultEmail: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(254)))),
+})
+const AlertSettingsView = Schema.Struct({
+  channels: Schema.Array(AlertChannelSchema),
+  defaultEmail: Schema.NullOr(Schema.String),
+  effective: Schema.Struct({
+    /** With no channels: where critical alerts are mailed; null when nobody would get them. */
+    criticalEmail: Schema.NullOr(Schema.String),
+    /** A sentence for the settings page; null when channels are set. */
+    note: Schema.NullOr(Schema.String),
+  }),
+})
+
 export class SettingsApi extends HttpApiGroup.make("settings")
   .add(
     HttpApiEndpoint.get("getBrand", "/v1/settings/brand", { success: BrandSettingsSchema, error: Forbidden }),
@@ -704,6 +728,22 @@ export class SettingsApi extends HttpApiGroup.make("settings")
         logoUploadId: Schema.optionalKey(Schema.String),
       }),
       success: BrandSettingsSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    /**
+     * Where alerts go besides the drawer (HAL-3465): `email` channels mail an address, `webhook`
+     * channels send `alert.raised` to one endpoint (by id). Each takes `kinds` (all when empty) at or
+     * above `minSeverity`. With no channels, critical alerts mail `defaultEmail`, else the owner;
+     * `effective` says who that is right now.
+     */
+    HttpApiEndpoint.get("getAlertSettings", "/v1/settings/alerts", {
+      success: AlertSettingsView,
+      error: Forbidden,
+    }),
+    /** Replaces the alert channels. A bad address or unknown endpoint answers `400 { field, message }`. */
+    HttpApiEndpoint.put("putAlertSettings", "/v1/settings/alerts", {
+      payload: AlertSettingsPayload,
+      success: AlertSettingsView,
       error: [Forbidden, InvalidRequest],
     }),
     /**
