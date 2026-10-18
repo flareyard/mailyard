@@ -36,6 +36,11 @@ export type BlockReason = (typeof BLOCK_REASONS)[number]
 export class SendBlocked extends Schema.TaggedError<SendBlocked>()(
   "SendBlocked",
   {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
     reason: Schema.Literals(BLOCK_REASONS),
     message: Schema.String,
     resetsAt: Schema.optionalKey(Schema.NullOr(Schema.Number)),

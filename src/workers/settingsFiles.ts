@@ -3,7 +3,6 @@ import * as Option from "effect/Option"
 import type { Env } from "../Bindings.ts"
 import { auditCsv } from "../domain/auditLog.ts"
 import { logoKey } from "../domain/brand.ts"
-import { importErrorsCsv } from "../imports/contactImport.ts"
 import { BlobStore } from "../kit/index.ts"
 import { authorize, problem } from "./auth.ts"
 import { runtimeFor } from "./inbound.ts"
@@ -59,32 +58,6 @@ export const handleAuditCsv = async (request: Request, env: Env) => {
       "x-content-type-options": "nosniff",
       "x-rows": String(rows),
       "x-truncated": String(truncated),
-    },
-  })
-}
-
-export const IMPORT_ERRORS_PATH = /^\/v1\/imports\/([^/]+)\/errors\.csv$/
-
-/** `GET /v1/imports/{id}/errors.csv`: every rejected row of a contact import (HAL-3371). */
-export const handleImportErrorsCsv = async (request: Request, env: Env, id: string) => {
-  if (request.method !== "GET") return problem(405, "Use GET.")
-  const auth = await authorize(request, env)
-  if (auth instanceof Response) return auth
-  if (auth.caller.kind !== "secret" || !auth.caller.scopes.includes("read"))
-    return problem(403, 'This needs a secret key with the "read" scope.', { required: "read" })
-  const result = await runtimeFor(env).runPromise(Effect.result(importErrorsCsv(id)))
-  if (result._tag === "Failure") {
-    const tag = (result.failure as { _tag?: string })._tag
-    return tag === "ImportNotFound"
-      ? problem(404, `Import ${id} not found.`)
-      : problem(500, "Couldn't read the errors.")
-  }
-  return new Response(result.success, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="${id}-errors.csv"`,
-      "cache-control": "private, no-store",
-      "x-content-type-options": "nosniff",
     },
   })
 }

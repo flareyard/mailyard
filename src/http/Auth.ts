@@ -18,6 +18,11 @@ export const UnauthorizedReason = Schema.Literals([
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
   {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
     message: Schema.String,
     reason: Schema.optionalKey(UnauthorizedReason),
     /** When the key was revoked, for `reason: "revoked"`. */
@@ -29,6 +34,11 @@ export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
 export class Forbidden extends Schema.TaggedError<Forbidden>()(
   "Forbidden",
   {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
     message: Schema.String,
     /** `public-key`: a pk_ key, which can only track. `insufficient-scope`: the key lacks `required`. */
     reason: Schema.optionalKey(Schema.Literals(["public-key", "insufficient-scope"])),
@@ -42,7 +52,15 @@ export class Forbidden extends Schema.TaggedError<Forbidden>()(
 /** Too many failed attempts from one address: wait `retryAfter` seconds. */
 export class RateLimited extends Schema.TaggedError<RateLimited>()(
   "RateLimited",
-  { message: Schema.String, retryAfter: Schema.Number },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+    retryAfter: Schema.Number,
+  },
   { httpApiStatus: 429 },
 ) {}
 

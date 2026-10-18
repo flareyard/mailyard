@@ -534,6 +534,19 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
   let duplicates = 0
   const emailColumn = headers[emailAt] ?? null
   for (const record of parsed.records) {
+    // More cells than the header has columns: the row's cells can't be matched to columns, so it's
+    // rejected rather than guessed at. Trailing empty cells (a spreadsheet's extra commas) are fine.
+    if (record.fields.length > headers.length && record.fields.slice(headers.length).some((c) => c.trim())) {
+      invalid++
+      errors.push({
+        line: record.line,
+        message: `This row has ${record.fields.length} cells; the header has ${headers.length} columns.`,
+        column: null,
+        value: null,
+        code: "parse_error",
+      })
+      continue
+    }
     const raw = (record.fields[emailAt] ?? "").trim()
     const email = normalizeEmail(raw)
     if (!EMAIL.test(email)) {

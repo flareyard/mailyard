@@ -30,6 +30,7 @@ import { InboundHandlers } from "../http/inboundHandlers.ts"
 import { InsightsHandlers } from "../http/insightHandlers.ts"
 import { MailHandlers } from "../http/mailHandlers.ts"
 import { OverviewHandlers } from "../http/overviewHandlers.ts"
+import { PublicFormsHandlers } from "../http/publicFormsHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
 import { SearchHandlers } from "../http/searchHandlers.ts"
 import { AlertsHandlers, SendingHandlers } from "../http/sendingHandlers.ts"
@@ -63,12 +64,7 @@ import {
 } from "./public.ts"
 import { handleQueue } from "./queue.ts"
 import { handleScheduled } from "./scheduled.ts"
-import {
-  handleAuditCsv,
-  handleBrandLogo,
-  handleImportErrorsCsv,
-  IMPORT_ERRORS_PATH,
-} from "./settingsFiles.ts"
+import { handleAuditCsv, handleBrandLogo } from "./settingsFiles.ts"
 import { handleStatsCsv, STATS_CSV_PATH } from "./statsCsv.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleRequestLink, handleUnsubscribe, REQUEST_LINK_PATH } from "./unsubscribe.ts"
@@ -111,6 +107,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     AlertsHandlers,
     CampaignsHandlers,
     ImportsHandlers,
+    PublicFormsHandlers,
     SuppressionsHandlers,
     OverviewHandlers,
     SearchHandlers,
@@ -148,8 +145,6 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
     new URL(request.url).searchParams.get("format") === "csv"
   )
     return handleAuditCsv(request, env)
-  const importErrors = IMPORT_ERRORS_PATH.exec(path)
-  if (importErrors) return handleImportErrorsCsv(request, env, d(importErrors[1]))
   const logo = BRAND_LOGO_PATH.exec(path)
   if (logo) return handleBrandLogo(request, env, logo[1] ?? "")
   const statsCsv = STATS_CSV_PATH.exec(path)

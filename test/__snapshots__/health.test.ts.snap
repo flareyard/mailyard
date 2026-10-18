@@ -16,6 +16,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "message": {
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
         },
         "required": [
           "_tag",
@@ -33,6 +37,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "message": {
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
           },
           "status": {
@@ -77,6 +85,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "reason": {
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
           },
           "ruleAction": {
@@ -147,6 +159,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
         },
         "required": [
           "_tag",
@@ -184,6 +200,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
           "required": {
             "type": "string",
           },
@@ -212,6 +232,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "message": {
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
         },
         "required": [
           "_tag",
@@ -229,6 +253,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "message": {
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
           },
         },
@@ -253,6 +281,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "message": {
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
         },
         "required": [
           "_tag",
@@ -271,6 +303,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "message": {
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
           },
         },
@@ -322,6 +358,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "message": {
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
         },
         "required": [
           "_tag",
@@ -340,6 +380,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "message": {
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
           },
           "retryAfter": {
@@ -997,6 +1041,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
           "resetsAt": {
             "anyOf": [
               {
@@ -1049,6 +1097,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
           "revokedAt": {
             "anyOf": [
               {
@@ -1086,6 +1138,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
+            "type": "string",
+          },
         },
         "required": [
           "_tag",
@@ -1103,6 +1159,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "type": "string",
           },
           "message": {
+            "type": "string",
+          },
+          "requestId": {
+            "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
           },
         },
@@ -40769,6 +40829,187 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/forms/{id}/submit": {
+      "post": {
+        "operationId": "publicForms.submit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                  ],
+                },
+                "description": "\`email\` (required), \`name\`, \`topics\` (topic ids, when the form lets the visitor pick), \`cf-turnstile-response\` (when the form has Turnstile), and the form's custom fields by key. \`_hp\` and \`website\` are honeypots and must stay empty.",
+                "type": "object",
+              },
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                    },
+                    {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                  ],
+                },
+                "description": "\`email\` (required), \`name\`, \`topics\` (topic ids, when the form lets the visitor pick), \`cf-turnstile-response\` (when the form has Turnstile), and the form's custom fields by key. \`_hp\` and \`website\` are honeypots and must stay empty.",
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "confirm",
+                        "subscribed",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "status",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "error": {
+                      "enum": [
+                        "invalid",
+                        "invalid_body",
+                        "challenge",
+                      ],
+                      "type": "string",
+                    },
+                    "field": {
+                      "type": "string",
+                    },
+                    "requestId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "error",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Error",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "not_found",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "field": {
+                      "type": "string",
+                    },
+                    "requestId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "error",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Error",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "rate_limited",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "field": {
+                      "type": "string",
+                    },
+                    "requestId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "error",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Error",
+          },
+        },
+        "security": [],
+        "tags": [
+          "publicForms",
+        ],
+      },
+    },
     "/v1/health": {
       "get": {
         "operationId": "insights.health",
@@ -43510,6 +43751,81 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "imports",
+        ],
+      },
+    },
+    "/v1/imports/{id}/errors.csv": {
+      "get": {
+        "operationId": "imports.errorsCsv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                },
+              },
+            },
+            "description": "Success",
           },
           "401": {
             "content": {
@@ -89943,6 +90259,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "imports",
+    },
+    {
+      "name": "publicForms",
     },
     {
       "name": "suppressions",
