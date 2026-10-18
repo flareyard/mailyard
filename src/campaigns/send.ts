@@ -416,9 +416,19 @@ export const sendChunk = Effect.fn("campaignSend.chunk")(function* (
     })
     sent++
   }
+  const retryAt = grant.retryAt ?? now + 60_000
+  // A day-long hold (quota or warm-up) shows on the campaign; per-minute provider pacing doesn't.
+  const held =
+    grant.granted.length < pending.length && (grant.reason === "quota" || grant.reason === "warmup")
+      ? { heldUntil: retryAt, heldBy: grant.reason }
+      : { heldUntil: null, heldBy: null }
+  if (held.heldUntil !== campaign.heldUntil || held.heldBy !== campaign.heldBy)
+    yield* database.query("campaigns.held", (db) =>
+      db.update(campaigns).set(held).where(eq(campaigns.id, id)).run(),
+    )
   if (grant.granted.length === pending.length) return { state: "done", sent, skipped } satisfies ChunkResult
   if (grant.reason === "paused") return { state: "paused", sent, skipped } satisfies ChunkResult
-  return { state: "wait", retryAt: grant.retryAt ?? now + 60_000, sent, skipped } satisfies ChunkResult
+  return { state: "wait", retryAt, sent, skipped } satisfies ChunkResult
 })
 
 /**
@@ -463,7 +473,7 @@ export const finishSend = Effect.fn("campaignSend.finish")(function* (id: string
   yield* database.query("campaignSend.finish", (db) =>
     db
       .update(campaigns)
-      .set({ status: "sent", finishedAt: Date.now(), updatedAt: Date.now() })
+      .set({ status: "sent", finishedAt: Date.now(), updatedAt: Date.now(), heldUntil: null, heldBy: null })
       .where(and(eq(campaigns.id, id), sql`${campaigns.status} in ('sending', 'scheduled')`))
       .run(),
   )

@@ -15447,6 +15447,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "fromAddress": {
                             "type": "string",
                           },
+                          "heldBy": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "quota",
+                                  "warmup",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "heldUntil": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "id": {
                             "type": "string",
                           },
@@ -15515,7 +15551,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "bounce_rate",
                                   "complaint_rate",
                                   "admin",
-                                  "quota",
                                 ],
                                 "type": "string",
                               },
@@ -15857,6 +15892,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "audienceSize",
                           "pausedReason",
                           "pausedBy",
+                          "heldUntil",
+                          "heldBy",
                           "timezone",
                           "lastTest",
                           "exclude",
@@ -17597,6 +17634,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -17665,7 +17738,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -17896,6 +17968,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",
@@ -19081,6 +19155,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -19149,7 +19259,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -19380,6 +19489,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",
@@ -21136,6 +21247,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -21204,7 +21351,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -21435,6 +21581,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",
@@ -22592,6 +22740,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -22660,7 +22844,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -22891,6 +23074,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",
@@ -24217,6 +24402,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -24285,7 +24506,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -24516,6 +24736,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",
@@ -26703,6 +26925,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -26771,7 +27029,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -27002,6 +27259,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",
@@ -27912,6 +28171,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -27980,7 +28275,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -28211,6 +28505,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",
@@ -29149,6 +29445,42 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "fromAddress": {
                       "type": "string",
                     },
+                    "heldBy": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "quota",
+                            "warmup",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "heldUntil": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -29217,7 +29549,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "bounce_rate",
                             "complaint_rate",
                             "admin",
-                            "quota",
                           ],
                           "type": "string",
                         },
@@ -29448,6 +29779,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "audienceSize",
                     "pausedReason",
                     "pausedBy",
+                    "heldUntil",
+                    "heldBy",
                     "timezone",
                     "lastTest",
                     "exclude",

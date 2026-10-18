@@ -465,11 +465,30 @@ describe("campaigns: fix targets, link statuses and block content (HAL-3430)", (
       status: 400,
       field: "bodyBlocks",
     })
-    expect(
-      await refused({
-        bodyBlocks: { ...doc, blocks: [{ type: "paragraph", text: "{{#if vip}}unclosed" }] },
-      }),
-    ).toEqual({ status: 400, field: "bodyBlocks" })
+    // A section error names the block it's in, so the editor can mark it (HAL-3433).
+    const sectionError = await call("/v1/campaigns", {
+      method: "POST",
+      key: ADMIN,
+      json: {
+        name: "B",
+        fromAddress: `team@${domain}`,
+        subject: "S",
+        bodyBlocks: { ...doc, blocks: [...doc.blocks, { type: "note", text: "{{#if vip}}unclosed" }] },
+      },
+    })
+    expect(sectionError.status).toBe(400)
+    const section = await json<{ field: string; message: string }>(sectionError)
+    expect(section.field).toBe("bodyBlocks.blocks[3].text")
+    expect(section.message).toMatch(/^In blocks\[3\]\.text: Line 1: \{\{#if vip\}\}/)
+    // In the footer, or in the subject, it says so too.
+    expect(await refused({ bodyBlocks: { ...doc, footer: { reason: "{{/if}}" } } })).toEqual({
+      status: 400,
+      field: "bodyBlocks.footer.reason",
+    })
+    expect(await refused({ subject: "{{#each x}}", bodyBlocks: doc })).toEqual({
+      status: 400,
+      field: "subject",
+    })
     // Not a block document at all: the schema refuses it.
     const malformed = await call("/v1/campaigns", {
       method: "POST",

@@ -3115,8 +3115,14 @@ export const CampaignSchema = Schema.Struct({
   sendAt: Schema.NullOr(Schema.Number),
   audienceSize: Schema.NullOr(Schema.Number),
   pausedReason: Schema.NullOr(Schema.String),
-  /** Why it's paused, as a code: the governor's bounce or complaint line, a person, or the quota. */
-  pausedBy: Schema.NullOr(Schema.Literals(["bounce_rate", "complaint_rate", "admin", "quota"])),
+  /** Why it's paused, as a code: the governor's bounce or complaint line, or a person. */
+  pausedBy: Schema.NullOr(Schema.Literals(["bounce_rate", "complaint_rate", "admin"])),
+  /**
+   * A sending campaign the governor holds until this time (ms): the day's quota or the domain's
+   * warm-up cap is spent. It carries on by itself; `status` stays "sending". Null otherwise.
+   */
+  heldUntil: Schema.NullOr(Schema.Number),
+  heldBy: Schema.NullOr(Schema.Literals(["quota", "warmup"])),
   /** The IANA zone the schedule was picked in. */
   timezone: Schema.NullOr(Schema.String),
   /** The last test send, and how each address went. */

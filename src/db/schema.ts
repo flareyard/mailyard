@@ -417,7 +417,13 @@ export const campaigns = sqliteTable(
     audienceSize: integer("audience_size"),
     pausedReason: text("paused_reason"),
     /** Why it's paused, as a code the screens act on (HAL-3428); `pausedReason` says it in words. */
-    pausedBy: text("paused_by", { enum: ["bounce_rate", "complaint_rate", "admin", "quota"] }),
+    pausedBy: text("paused_by", { enum: ["bounce_rate", "complaint_rate", "admin"] }),
+    /**
+     * While sending, held by the governor until this time (HAL-3431): the day's quota or the
+     * domain's warm-up cap is spent, and it carries on by itself then. Not a pause: nobody resumes it.
+     */
+    heldUntil: integer("held_until"),
+    heldBy: text("held_by", { enum: ["quota", "warmup"] }),
     /** The IANA zone the schedule was set in, to show `sendAt` the way it was meant. */
     timezone: text("timezone"),
     /** The last test send: when, and how each address went. */

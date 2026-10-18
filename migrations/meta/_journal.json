@@ -281,6 +281,13 @@
       "when": 1792299843118,
       "tag": "0039_campaign_blocks_link_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1792302333361,
+      "tag": "0040_campaign_held",
+      "breakpoints": true
     }
   ]
 }
