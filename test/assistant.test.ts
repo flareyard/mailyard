@@ -200,7 +200,9 @@ describe("the assistant helpers (HAL-3305)", () => {
 describe("the Assistant service (HAL-3305)", () => {
   it("takes an endpoint's base or its full chat completions URL", () => {
     expect(chatCompletionsUrl("https://api.openai.com/v1")).toBe("https://api.openai.com/v1/chat/completions")
-    expect(chatCompletionsUrl("https://api.openai.com/v1/")).toBe("https://api.openai.com/v1/chat/completions")
+    expect(chatCompletionsUrl("https://api.openai.com/v1/")).toBe(
+      "https://api.openai.com/v1/chat/completions",
+    )
     // The install form asks for this one; it used to become …/chat/completions/chat/completions.
     expect(chatCompletionsUrl("https://api.openai.com/v1/chat/completions")).toBe(
       "https://api.openai.com/v1/chat/completions",
