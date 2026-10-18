@@ -18,6 +18,7 @@ import {
 import { AutomationsHandlers, RunsHandlers } from "../http/automationHandlers.ts"
 import { CampaignsHandlers } from "../http/campaignHandlers.ts"
 import { ExportsHandlers } from "../http/exportHandlers.ts"
+import { FilesHandlers } from "../http/filesHandlers.ts"
 import {
   ActionsHandlers,
   ApiKeyAuthLive,
@@ -108,6 +109,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     CampaignsHandlers,
     ImportsHandlers,
     PublicFormsHandlers,
+    FilesHandlers,
     SuppressionsHandlers,
     OverviewHandlers,
     SearchHandlers,
