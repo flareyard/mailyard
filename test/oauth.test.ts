@@ -173,7 +173,7 @@ const connect = async (
     redirect_uri: REDIRECT,
     code_verifier: verifier,
     client_id: CLIENT_ID,
-    resource: RESOURCE,
+    resource: params.resource ?? RESOURCE,
   })
   expect(res.status).toBe(200)
   return { tokens: await json<Tokens>(res), code, verifier }
@@ -344,6 +344,42 @@ describe("connecting a client (HAL-3462)", () => {
       body: form,
     })
     expect(res.status).toBe(403)
+  })
+})
+
+describe("a deployment on two hostnames", () => {
+  it("names the host the client called as the resource, and its tokens work there", async () => {
+    const API = "https://api.mailyard.test"
+    const meta = await json<{ resource: string; authorization_servers: string[] }>(
+      await exports.default.fetch(new Request(`${API}/.well-known/oauth-protected-resource/mcp`)),
+    )
+    expect(meta).toMatchObject({ resource: `${API}/mcp`, authorization_servers: [ORIGIN] })
+    const bare = await exports.default.fetch(
+      new Request(`${API}/mcp`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+    expect(bare.headers.get("www-authenticate")).toContain(
+      `resource_metadata="${API}/.well-known/oauth-protected-resource/mcp"`,
+    )
+
+    const sender = await person("sender")
+    const box = await mailbox(sender.id)
+    const { tokens } = await connect(
+      sender,
+      { scopes: ["read"], mailboxes: [box.id] },
+      { resource: `${API}/mcp` },
+    )
+    const res = await exports.default.fetch(
+      new Request(`${API}/mcp`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${tokens.access_token}` },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" }),
+      }),
+    )
+    expect(res.status).toBe(200)
   })
 })
 

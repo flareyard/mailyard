@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lt, or } from "drizzle-orm"
+import { and, desc, eq, inArray, isNull, lt } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import {
   apiKeys,

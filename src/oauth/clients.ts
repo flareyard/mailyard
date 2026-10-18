@@ -144,9 +144,9 @@ const checkMetadata = (m: Metadata) =>
       return yield* invalidMetadata(
         "Mailyard registers public clients only: token_endpoint_auth_method must be none (PKCE stands in for the secret).",
       )
-    if (m.grant_types && m.grant_types.some((g) => g !== "authorization_code" && g !== "refresh_token"))
+    if (m.grant_types?.some((g) => g !== "authorization_code" && g !== "refresh_token"))
       return yield* invalidMetadata("Only the authorization_code and refresh_token grants are supported.")
-    if (m.response_types && m.response_types.some((r) => r !== "code"))
+    if (m.response_types?.some((r) => r !== "code"))
       return yield* invalidMetadata("Only response_type code is supported.")
     if (m.redirect_uris.length === 0) return yield* invalidMetadata("redirect_uris can't be empty.")
     if (m.redirect_uris.length > MAX_REDIRECT_URIS)
@@ -259,11 +259,7 @@ export const findClient = Effect.fn("oauth.findClient")(function* (clientId: str
     )
     return row satisfies OAuthClient
   }
-  if (
-    !cached ||
-    cached.kind !== "dcr" ||
-    (cached.lastUsedAt === null && now - cached.createdAt >= DCR_UNUSED_MS)
-  )
+  if (cached?.kind !== "dcr" || (cached.lastUsedAt === null && now - cached.createdAt >= DCR_UNUSED_MS))
     return yield* new OAuthError({
       error: "invalid_client",
       description: "This client isn't registered with Mailyard. Register it again.",

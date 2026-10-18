@@ -216,9 +216,35 @@ const originsOf = (request: Request) => [
 /** The resource identifiers (RFC 8707) an access token may name to be used here. */
 export const mcpResources = (request: Request) => originsOf(request).map((o) => `${o}${MCP_PATH}`)
 
-/** Where an MCP client reads how to sign in (RFC 9728 §5.1), for the public origin. */
+/**
+ * Whether `resource` names this deployment's `/mcp` (RFC 8707): on the public origin, the host the
+ * request came to, or a subdomain of the public host. The founder's install serves the app on
+ * mail.flareyard.dev and MCP on api.mail.flareyard.dev, and a client names the URL it connected to.
+ */
+export const isMcpResource = (resource: string, request: Request) => {
+  let url: URL
+  try {
+    url = new URL(resource)
+  } catch {
+    return false
+  }
+  if (url.pathname !== MCP_PATH || url.search || url.hash || url.username || url.password) return false
+  if (
+    url.protocol !== "https:" &&
+    !(url.protocol === "http:" && /^(localhost|127\.0\.0\.1)$/.test(url.hostname))
+  )
+    return false
+  if (originsOf(request).includes(url.origin)) return true
+  const home = linkOrigin(request.url)
+  return home !== null && url.protocol === "https:" && url.hostname.endsWith(`.${new URL(home).hostname}`)
+}
+
+/**
+ * Where an MCP client reads how to sign in (RFC 9728 §5.1): on the host it called, since the
+ * metadata names that host's `/mcp` as the resource and clients check it matches.
+ */
 export const resourceMetadataUrl = (request: Request) =>
-  `${linkOrigin(request.url) ?? new URL(request.url).origin}/.well-known/oauth-protected-resource${MCP_PATH}`
+  `${new URL(request.url).origin}/.well-known/oauth-protected-resource${MCP_PATH}`
 
 /** The scopes a client asks for by default: everything an agent normally needs. */
 const DEFAULT_CHALLENGE_SCOPE = "read send"

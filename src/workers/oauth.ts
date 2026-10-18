@@ -3,7 +3,7 @@ import type { Env } from "../Bindings.ts"
 import type { Caller } from "../domain/apiKeys.ts"
 import { requestSignInLink, safeReturn } from "../domain/people.ts"
 import { resolveSession } from "../domain/sessions.ts"
-import { MCP_PATH, mcpResources } from "../mcp/handler.ts"
+import { isMcpResource, MCP_PATH } from "../mcp/handler.ts"
 import {
   clientHost,
   findClient,
@@ -160,7 +160,8 @@ const ipOf = (request: Request) => request.headers.get("cf-connecting-ip") ?? "u
 const protectedResource = (request: Request) => {
   const issuer = issuerOf(request)
   return json({
-    resource: `${issuer}${MCP_PATH}`,
+    // The /mcp on the host the client asked: it checks the resource matches the URL it connected to.
+    resource: `${new URL(request.url).origin}${MCP_PATH}`,
     authorization_servers: [issuer],
     scopes_supported: ADVERTISED_SCOPES,
     bearer_methods_supported: ["header"],
@@ -261,7 +262,7 @@ const checkRequest = (request: Request, get: (name: string) => string | null) =>
     if (get("code_challenge_method") !== "S256")
       return fail("invalid_request", "code_challenge_method must be S256.")
     const resource = get("resource") ?? ""
-    if (!mcpResources(request).includes(resource))
+    if (!isMcpResource(resource, request))
       return fail("invalid_target", `resource must be ${issuer}${MCP_PATH}.`)
     const scopes = parseScopes(get("scope"))
     if (!scopes) return fail("invalid_scope", `Mailyard's scopes are ${ALL_SCOPES.join(", ")}.`)

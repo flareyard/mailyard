@@ -66,7 +66,15 @@ describe("the public origin (HAL-3483)", () => {
       "/.well-known/oauth-protected-resource/mcp",
     ])
       expect(isWorkerPath(path)).toBe(true)
-    for (const path of ["/", "/inbox", "/settings/keys", "/assets/app.js", "/v1x", "/mcpx", "/.well-known/security.txt"])
+    for (const path of [
+      "/",
+      "/inbox",
+      "/settings/keys",
+      "/assets/app.js",
+      "/v1x",
+      "/mcpx",
+      "/.well-known/security.txt",
+    ])
       expect(isWorkerPath(path)).toBe(false)
   })
 
