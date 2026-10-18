@@ -314,7 +314,7 @@ function Row({
       <td>
         <StatusPill status={a.status} label={STATUS_LABEL[a.status]} />
       </td>
-      <td>{versionLine(a)}</td>
+      <td style={{ whiteSpace: "nowrap" }}>{versionLine(a)}</td>
       <td className="r num">{fmtInt(a.activeRuns)}</td>
       <td className="r num">{fmtInt(a.entered)}</td>
       <td className="r num">{fmtInt(a.completed)}</td>

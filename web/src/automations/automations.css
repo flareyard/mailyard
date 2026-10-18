@@ -93,19 +93,8 @@ button.node-end:focus-visible {
   margin-bottom: 12px;
 }
 
-/* Touch screens (tablets count): table links, the failures link and the inspector's checkboxes take 44 px. */
+/* Touch screens (tablets count): the inspector's checkboxes take 44 px (table links: audience/kit/kit.css). */
 @media (pointer: coarse) {
-  .dt td a.cell-link,
-  .dt td a.link,
-  .sumstrip .link-quiet {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-  }
-  .dt td a.link {
-    min-width: 44px;
-    justify-content: flex-end;
-  }
   .inspector label.cluster,
   .inspector label.check {
     min-height: 44px;

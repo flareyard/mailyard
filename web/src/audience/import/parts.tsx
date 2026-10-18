@@ -112,7 +112,7 @@ export function RowErrorsPanel({ imp }: { imp: ContactImport }) {
       </header>
       <div className="panel-body">
         <div className="table-wrap">
-          <table className="table dt" data-od-id="import-errors">
+          <table className="table dt" data-od-id="import-errors" style={{ minWidth: 640 }}>
             <thead>
               <tr>
                 <th className="r">Line</th>

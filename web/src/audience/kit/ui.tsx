@@ -11,6 +11,7 @@ import { meQuery } from "../../auth/session.ts"
 import { fixturesEnabled } from "../../fixtures/mode.ts"
 import { Icon } from "../../ui/icons.tsx"
 import { can, type Permission, whoCanDo } from "./perm.ts"
+import "./kit.css"
 
 export {
   ApiErrorCallout,
