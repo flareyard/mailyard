@@ -66,6 +66,7 @@ export const createKey = Effect.fn("apiKeys.create")(function* (input: {
   readonly name: string
   readonly kind: Caller["kind"]
   readonly scopes?: ReadonlyArray<Scope> | undefined
+  readonly purpose?: "api" | "mcp" | undefined
   readonly createdBy: string
 }) {
   const database = yield* Database
@@ -76,6 +77,7 @@ export const createKey = Effect.fn("apiKeys.create")(function* (input: {
     id,
     name: input.name,
     kind: input.kind,
+    purpose: input.purpose ?? "api",
     prefix: key.slice(0, 10),
     hash: yield* Effect.promise(() => sha256(key)),
     scopes: [...scopes],
@@ -87,10 +89,16 @@ export const createKey = Effect.fn("apiKeys.create")(function* (input: {
   return { key, record: saved }
 })
 
-export const listKeys = Effect.fn("apiKeys.list")(function* () {
+/** Every key, newest first; with `purpose`, only those. A handful of rows, written by people. */
+export const listKeys = Effect.fn("apiKeys.list")(function* (purpose?: "api" | "mcp") {
   const database = yield* Database
   return yield* database.query("apiKeys.list", (db) =>
-    db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt)).all(),
+    db
+      .select()
+      .from(apiKeys)
+      .where(purpose ? eq(apiKeys.purpose, purpose) : undefined)
+      .orderBy(desc(apiKeys.createdAt))
+      .all(),
   )
 })
 

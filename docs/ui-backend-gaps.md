@@ -540,6 +540,7 @@ What the Transactional, Domains, Analytics, Settings and public-page designs nee
 | 1.3 | `headers[]`, `idempotencyKey`, `templateVersion`, `source` on a message | Message detail → Headers, Details | `headers: [{ name, value }]` as sent; `idempotencyKey: string\|null`; `templateVersion: number\|null`; `source: "api"\|"smtp"\|"automation"\|"campaign"\|"mailbox"`. |
 | 1.4 | `GET /v1/messages/{id}/raw` for sends | Message detail → Raw source | The mailbox side has `…/messages/{messageId}`; outbound messages have no raw source. |
 | 1.5 | Request counts per key | `api-keys.html` → Requests, 24 h | `GET /v1/api-keys?include=usage` adds `requests24h: number` per key. Only `lastUsedAt` exists. |
+| 1.5b | Key `purpose` (`api` \| `mcp`) | Settings → Integrations, API keys | **Built**, HAL-3410: `purpose` on every key, optional on `POST /v1/api-keys` (default `api`; a public key can't be `mcp`, 400), and `GET /v1/api-keys?purpose=mcp` filters. A label, not a permission. |
 | 1.6 | `POST /v1/api-keys/{id}/rotate` | API keys → Rotate | Spec lists rotate. Proposed: returns `{ key, apiKey }` like create, and revokes the old key after `graceSeconds` (default 0). |
 | 1.7 | Template usage | `templates.html` → Used by, Sends 30 d | `GET /v1/templates?include=usage` adds `usage: { sends30d, usedBy: [{ type: "apiKey"\|"automation"\|"campaign", id, name }] }`. |
 | 1.8 | Test send of a template | Template editor → Send a test | `POST /v1/templates/{id}/test { to, data, version? }` → `{ messageId }`. Today there's render and preview only. |

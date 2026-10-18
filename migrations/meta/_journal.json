@@ -169,6 +169,13 @@
       "when": 1792279179817,
       "tag": "0023_message_recipients",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792282388547,
+      "tag": "0024_api_key_purpose",
+      "breakpoints": true
     }
   ]
 }

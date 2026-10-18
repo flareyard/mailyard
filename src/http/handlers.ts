@@ -246,6 +246,7 @@ const summarizeKey = (row: {
   id: string
   name: string
   kind: "secret" | "public"
+  purpose: "api" | "mcp"
   prefix: string
   scopes: ReadonlyArray<string>
   createdBy: string | null
@@ -256,6 +257,7 @@ const summarizeKey = (row: {
   id: row.id,
   name: row.name,
   kind: row.kind,
+  purpose: row.purpose,
   prefix: row.prefix,
   scopes: [...row.scopes],
   createdBy: row.createdBy,
@@ -270,20 +272,31 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
-      list: p(() =>
+      list: p(({ query }) =>
         requireScope("admin").pipe(
-          Effect.andThen(listKeys()),
+          Effect.andThen(listKeys(query.purpose)),
           Effect.map((rows) => ({ keys: rows.map(summarizeKey) })),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       create: p(({ payload }) =>
         requireScope("admin").pipe(
+          Effect.tap(() =>
+            payload.kind === "public" && payload.purpose === "mcp"
+              ? Effect.fail(
+                  new InvalidRequest({
+                    field: "purpose",
+                    message: "Public keys can only track events, so /mcp refuses them. Use a secret key.",
+                  }),
+                )
+              : Effect.void,
+          ),
           Effect.flatMap((caller) =>
             createKey({
               name: payload.name,
               kind: payload.kind,
               scopes: payload.scopes,
+              purpose: payload.purpose,
               createdBy: caller.keyId,
             }),
           ),
