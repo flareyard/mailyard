@@ -545,10 +545,10 @@ export const pruneOAuth = Effect.fn("oauth.prune")(function* (now = Date.now()) 
   )
   if (old.length > 0)
     yield* database.query("oauth.pruneGrantTokens", (db) =>
-      // d1: bounded
       db
         .delete(oauthTokens)
         .where(
+          // d1: bounded: at most 500 grant ids, from the query above.
           inArray(
             oauthTokens.grantId,
             old.map((g) => g.id),

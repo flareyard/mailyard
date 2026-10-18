@@ -353,7 +353,11 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
       summary: "Email a sign-in link that comes back to the authorization",
       description:
         "From the sign-in page: email and return (the /oauth/authorize URL). The link signs the person in and lands them back on the consent page. The answer is the same whether or not the address belongs to someone.",
-      responses: { "200": bytes("The check-your-email page.", "text/html") },
+      responses: {
+        "200": bytes("The check-your-email page.", "text/html"),
+        "403": bytes("The request didn't come from this site.", "text/html"),
+        "429": bytes("Too many tries from this address.", "text/html"),
+      },
     },
   },
   "/oauth/token": {

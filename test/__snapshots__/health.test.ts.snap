@@ -1924,6 +1924,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "The check-your-email page.",
           },
+          "403": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The request didn't come from this site.",
+          },
+          "429": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "Too many tries from this address.",
+          },
         },
         "summary": "Email a sign-in link that comes back to the authorization",
         "tags": [
