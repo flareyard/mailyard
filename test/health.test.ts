@@ -265,6 +265,7 @@ describe("GET /openapi.json", () => {
       "/v1/session/link/{token}",
       "/v1/sessions",
       "/v1/sessions/{id}",
+      "/v1/settings/alerts",
       "/v1/settings/brand",
       "/v1/settings/compliance",
       "/v1/settings/compliance/tracking-check",

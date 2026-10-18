@@ -137,5 +137,16 @@ export const sampleEventData = (type: WebhookEvent): Record<string, unknown> => 
         decidedBy: "mem_sample",
         reason: "Not now",
       })
+    case "alert.raised":
+      return base({
+        alertId: "alr_sample",
+        key: "quota_80",
+        kind: "quota_80",
+        severity: "warning",
+        title: "80% of this month's sending used",
+        detail: "Sample: at this rate the quota runs out before the month ends.",
+        subject: null,
+        escalated: false,
+      })
   }
 }

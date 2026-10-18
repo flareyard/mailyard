@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Schema from "effect/Schema"
 import { checkSend } from "../domain/agents.ts"
+import { describeAlertSettings, getAlertSettings, putAlertSettings } from "../domain/alertChannels.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { listAudit } from "../domain/auditLog.ts"
 import {
@@ -219,6 +220,28 @@ export const SettingsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
+      getAlertSettings: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(describeAlertSettings()), dbDies),
+      ),
+      putAlertSettings: p(({ payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "settings.write")
+          const before = yield* getAlertSettings()
+          const saved = yield* putAlertSettings(payload).pipe(
+            Effect.catchTag("AlertSettingsInvalid", (e) =>
+              Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            ),
+          )
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "settings.alerts",
+            target: "alerts",
+            before,
+            after: { channels: saved.channels, defaultEmail: saved.defaultEmail },
+          })
+          return saved
+        }).pipe(dbDies),
+      ),
       getBrand: p(() =>
         requireScope("read", "settings.read").pipe(Effect.andThen(getBrandSettings()), dbDies),
       ),
