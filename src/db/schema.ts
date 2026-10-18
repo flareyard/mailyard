@@ -3,6 +3,7 @@ import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from
 import type { RecordCheck } from "../domain/dnsChecks.ts"
 import type { ZoneInfo } from "../domain/zoneInfo.ts"
 import type { Action, Condition } from "../rules/engine.ts"
+import type { BlocksDocument } from "../templates/document.ts"
 
 /**
  * The account-wide D1 database. Per-mailbox data (threads, messages, search) lives in each
@@ -398,6 +399,8 @@ export const campaigns = sqliteTable(
     /** Inline content, for a campaign written without a template. */
     bodyHtml: text("body_html"),
     bodyText: text("body_text"),
+    /** Block content (HAL-3430): a template-kit document, the block editor's source, in place of bodyHtml. */
+    bodyBlocks: text("body_blocks", { mode: "json" }).$type<BlocksDocument | null>(),
     fromAddress: text("from_address").notNull(),
     replyTo: text("reply_to"),
     subject: text("subject").notNull(),
@@ -1374,3 +1377,19 @@ export const messageRecipients = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.messageId, t.recipient] })],
 )
+
+/**
+ * The last time each link in campaign content was followed (HAL-3430): written by the pre-send
+ * check and by a render that asks for it, read by the preview's link list. One row per URL, so a
+ * link in many campaigns is checked once.
+ */
+export const linkChecks = sqliteTable("link_checks", {
+  url: text("url").primaryKey(),
+  /** The final HTTP status after redirects; null when nothing answered. */
+  status: integer("status"),
+  /** "timed out" or "unreachable" when there was no status. */
+  error: text("error"),
+  /** Where the redirects ended, when somewhere else. */
+  redirectsTo: text("redirects_to"),
+  checkedAt: integer("checked_at").notNull(),
+})

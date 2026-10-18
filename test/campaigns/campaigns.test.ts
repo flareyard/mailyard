@@ -23,6 +23,12 @@ beforeAll(() => {
     const answer = LINKS[host] ?? 200
     if (answer === "timeout") throw new DOMException("The operation timed out.", "TimeoutError")
     if (answer === 405 && request.method === "GET") return new Response(null, { status: 206 })
+    if (host === "redirect.links.test") {
+      // As fetch reports a followed redirect: the final response, with where it ended up.
+      const r = new Response(null, { status: 200 })
+      Object.defineProperty(r, "url", { value: "https://ok.links.test/landed" })
+      return r
+    }
     return new Response(null, { status: answer })
   }) as typeof fetch
 })
@@ -292,6 +298,180 @@ describe("campaigns: pre-flight checks", () => {
     expect(
       status(await json<Checks>(await call(`/v1/campaigns/${huge.id}/checks`, { key: ADMIN })), "size"),
     ).toBe("fail")
+  })
+})
+
+describe("campaigns: fix targets, link statuses and block content (HAL-3430)", () => {
+  type Fix = { label: string; target: string; field?: string; domainId?: string }
+  type Checks = {
+    ready: boolean
+    checks: Array<{ id: string; status: string; detail: string; fix: Fix | null }>
+  }
+  const fixOf = (c: Checks, id: string) => c.checks.find((x) => x.id === id)?.fix
+
+  it("says where each check is fixed", async () => {
+    const domain = await sendingDomain()
+    await call("/v1/settings/compliance", {
+      method: "PUT",
+      key: ADMIN,
+      json: { postalAddress: null, linkAllowlist: [], seedAddresses: [] },
+    })
+    const { body: campaign } = await createCampaign({
+      name: "Fixes",
+      fromAddress: `noreply@${domain}`,
+      subject: "Hi",
+      bodyHtml: `<p>Hi {{ first_name | "there" }}, <a href="https://gone.links.test/">read</a></p>`,
+    })
+    const c = await json<Checks>(await call(`/v1/campaigns/${campaign.id}/checks`, { key: ADMIN }))
+    // Every check carries a fix, null only where Mailyard always satisfies it.
+    for (const check of c.checks) expect(check, check.id).toHaveProperty("fix")
+    expect(c.checks.filter((x) => x.fix === null).map((x) => x.id)).toEqual(["unsubscribe"])
+    const domainRow = await env.DB.prepare("select id from domains where name = ?")
+      .bind(domain)
+      .first<{ id: string }>()
+    expect(fixOf(c, "subject")).toEqual({ label: "Edit the subject", target: "content", field: "subject" })
+    expect(fixOf(c, "links_resolve")).toMatchObject({ target: "content", field: "bodyHtml" })
+    expect(fixOf(c, "reply_to")).toMatchObject({ target: "content", field: "replyTo" })
+    expect(fixOf(c, "postal_address")).toMatchObject({
+      target: "settings.compliance",
+      field: "postalAddress",
+    })
+    expect(fixOf(c, "link_domains")).toMatchObject({ target: "settings.compliance", field: "linkAllowlist" })
+    expect(fixOf(c, "tracking")).toMatchObject({ target: "settings.compliance", field: "trackingOrigin" })
+    expect(fixOf(c, "sender")).toMatchObject({ target: "content", field: "fromAddress" })
+    // A placeholder the renderer doesn't know goes out as typed: flagged, with the syntax that works.
+    const merge = c.checks.find((x) => x.id === "merge_fields")
+    expect(merge).toMatchObject({ status: "warn" })
+    expect(merge?.detail).toContain('{{ first_name | "there" }}')
+    expect(merge?.detail).toContain('{{ name ?? "there" }}')
+
+    // A sending domain that fails its records points at that domain.
+    await env.DB.prepare("update domains set sending_enabled = 0 where id = ?").bind(domainRow?.id).run()
+    const off = await json<Checks>(await call(`/v1/campaigns/${campaign.id}/checks`, { key: ADMIN }))
+    expect(fixOf(off, "sender")).toEqual({
+      label: "Turn on sending",
+      target: "domains",
+      domainId: domainRow?.id,
+    })
+  })
+
+  it("lists each link with what the check found, and follows the rest on request", async () => {
+    const domain = await sendingDomain()
+    const tag = uid()
+    const { body: campaign } = await createCampaign({
+      name: "Links",
+      fromAddress: `team@${domain}`,
+      subject: "Links",
+      bodyHtml: `<p><a href="https://ok.links.test/${tag}">ok</a> <a href="https://gone.links.test/${tag}">gone</a> <a href="https://redirect.links.test/${tag}">moved</a> <a href="https://slow.links.test/${tag}">slow</a></p>`,
+    })
+    type Link = {
+      url: string
+      status: number | null
+      error: string | null
+      redirectsTo: string | null
+      checkedAt: number | null
+    }
+    const render = async (body: Record<string, unknown> = {}) =>
+      json<{ links: Array<Link> }>(
+        await call(`/v1/campaigns/${campaign.id}/render`, { method: "POST", key: ADMIN, json: body }),
+      )
+    // Before any check: listed, never followed.
+    const before = await render()
+    expect(before.links.map((l) => l.url)).toEqual([
+      `https://ok.links.test/${tag}`,
+      `https://gone.links.test/${tag}`,
+      `https://redirect.links.test/${tag}`,
+      `https://slow.links.test/${tag}`,
+    ])
+    expect(before.links.every((l) => l.status === null && l.checkedAt === null)).toBe(true)
+    // The checks follow them and keep what they found; the render reads it back.
+    await call(`/v1/campaigns/${campaign.id}/checks`, { key: ADMIN })
+    const after = await render()
+    expect(after.links.map((l) => [l.status, l.error, l.redirectsTo])).toEqual([
+      [200, null, null],
+      [404, null, null],
+      [200, null, "https://ok.links.test/landed"],
+      [null, "timed out", null],
+    ])
+    expect(after.links.every((l) => typeof l.checkedAt === "number")).toBe(true)
+
+    // checkLinks follows what was never checked, without a checks run.
+    const fresh = `https://ok.links.test/new-${tag}`
+    await call(`/v1/campaigns/${campaign.id}`, {
+      method: "PATCH",
+      key: ADMIN,
+      json: { bodyHtml: `<p><a href="${fresh}">new</a></p>` },
+    })
+    expect((await render()).links).toEqual([
+      { url: fresh, status: null, error: null, redirectsTo: null, checkedAt: null },
+    ])
+    expect((await render({ checkLinks: true })).links[0]).toMatchObject({ url: fresh, status: 200 })
+  })
+
+  it("keeps block content and renders it through the template kit, merge-field fallbacks included", async () => {
+    const domain = await sendingDomain()
+    const doc = {
+      preheader: "Spring is here",
+      label: "News",
+      blocks: [
+        { type: "heading", text: 'Hello {{ name ?? "there" }}' },
+        { type: "paragraph", text: "Our {{ season }} sale starts now." },
+        { type: "button", label: "Shop", url: "https://ok.links.test/shop" },
+      ],
+      footer: {
+        reason: "You signed up at the yard.",
+        links: [{ label: "Unsubscribe", url: "{{ unsubscribe_url }}" }],
+      },
+    }
+    const { status, body: campaign } = await createCampaign({
+      name: "Blocks",
+      fromAddress: `team@${domain}`,
+      subject: "Spring",
+      bodyBlocks: doc,
+    })
+    expect(status).toBe(200)
+    expect((campaign as unknown as { bodyBlocks: unknown }).bodyBlocks).toEqual(doc)
+    const contact = await json<{ id: string }>(
+      await call("/v1/contacts", {
+        method: "POST",
+        key: ADMIN,
+        json: { email: `blocks-${uid()}@example.net`, fields: { season: "spring" } },
+      }),
+    )
+    const r = await json<{ html: string; text: string; footerAdded: boolean; links: Array<{ url: string }> }>(
+      await call(`/v1/campaigns/${campaign.id}/render`, {
+        method: "POST",
+        key: ADMIN,
+        json: { contactId: contact.id },
+      }),
+    )
+    // No name on the contact: the fallback. The kit lays it out, and its own footer links to unsubscribe.
+    expect(r.html).toContain("Hello there")
+    expect(r.html).toContain("Our spring sale starts now.")
+    expect(r.text).toContain("Our spring sale starts now.")
+    expect(r.footerAdded).toBe(false)
+    expect(r.links.map((l) => l.url)).toContain("https://ok.links.test/shop")
+
+    const refused = async (body: Record<string, unknown>) => {
+      const res = await createCampaign({ name: "B", fromAddress: `team@${domain}`, subject: "S", ...body })
+      return { status: res.status, field: res.body.field }
+    }
+    expect(await refused({ bodyBlocks: doc, bodyHtml: "<p>x</p>" })).toEqual({
+      status: 400,
+      field: "bodyBlocks",
+    })
+    expect(
+      await refused({
+        bodyBlocks: { ...doc, blocks: [{ type: "paragraph", text: "{{#if vip}}unclosed" }] },
+      }),
+    ).toEqual({ status: 400, field: "bodyBlocks" })
+    // Not a block document at all: the schema refuses it.
+    const malformed = await call("/v1/campaigns", {
+      method: "POST",
+      key: ADMIN,
+      json: { name: "B", fromAddress: `team@${domain}`, subject: "S", bodyBlocks: { blocks: "nope" } },
+    })
+    expect(malformed.status).toBe(400)
   })
 })
 

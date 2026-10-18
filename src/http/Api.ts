@@ -16,6 +16,7 @@ import { SendBlocked } from "../mail/send.ts"
 import { LABEL_COLORS } from "../mailbox/types.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { Rule as SegmentRule } from "../segments/rules.ts"
+import { BlocksDocument } from "../templates/document.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 import { withRawRoutes } from "./rawRoutes.ts"
 
@@ -3101,6 +3102,8 @@ export const CampaignSchema = Schema.Struct({
   templateVersion: Schema.NullOr(Schema.Number),
   bodyHtml: Schema.NullOr(Schema.String),
   bodyText: Schema.NullOr(Schema.String),
+  /** Block content: a template-kit document rendered in the brand, in place of `bodyHtml`. */
+  bodyBlocks: Schema.NullOr(BlocksDocument),
   fromAddress: Schema.String,
   replyTo: Schema.NullOr(Schema.String),
   subject: Schema.String,
@@ -3242,6 +3245,11 @@ const CampaignFields = {
   templateId: Schema.optionalKey(Schema.NullOr(Schema.String)),
   bodyHtml: Schema.optionalKey(Schema.NullOr(Schema.String)),
   bodyText: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  /**
+   * Block content, kept as the block editor's source. Merge fields in its strings are
+   * `{{ name }}`, with a fallback `{{ name ?? "there" }}`.
+   */
+  bodyBlocks: Schema.optionalKey(Schema.NullOr(BlocksDocument)),
   replyTo: Schema.optionalKey(Schema.NullOr(Schema.String)),
   subjectB: Schema.optionalKey(Schema.NullOr(Schema.String)),
   preheader: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(200)))),
@@ -3257,6 +3265,30 @@ const CheckSchema = Schema.Struct({
   status: Schema.Literals(["pass", "warn", "fail"]),
   title: Schema.String,
   detail: Schema.String,
+  /**
+   * Where it's fixed: `content` (a campaign `field`: subject, bodyHtml, bodyBlocks, bodyText,
+   * templateId, fromAddress, replyTo, trackClicks), `settings.compliance` (a compliance `field`:
+   * linkAllowlist, trackingOrigin, postalAddress), `domains` (with `domainId` once the domain
+   * exists) or `audience`. Null when there's nothing to fix.
+   */
+  fix: Schema.NullOr(
+    Schema.Struct({
+      label: Schema.String,
+      target: Schema.Literals(["content", "audience", "settings.compliance", "domains"]),
+      field: Schema.optionalKey(Schema.String),
+      domainId: Schema.optionalKey(Schema.String),
+    }),
+  ),
+})
+
+/** A link in the content and its last check: null status and `checkedAt` when never followed. */
+const LinkStatusSchema = Schema.Struct({
+  url: Schema.String,
+  status: Schema.NullOr(Schema.Number),
+  /** "timed out" or "unreachable" when nothing answered. */
+  error: Schema.NullOr(Schema.String),
+  redirectsTo: Schema.NullOr(Schema.String),
+  checkedAt: Schema.NullOr(Schema.Number),
 })
 
 const ComplianceSchema = Schema.Struct({
@@ -3724,6 +3756,8 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
       payload: Schema.Struct({
         contactId: Schema.optionalKey(Schema.String),
         variant: Schema.optionalKey(Schema.Literals(["a", "b"])),
+        /** Follow the links not checked in the last hour (at most 30) before answering. */
+        checkLinks: Schema.optionalKey(Schema.Boolean),
       }),
       success: Schema.Struct({
         subject: Schema.String,
@@ -3733,6 +3767,8 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         size: Schema.Number,
         /** Mailyard added the unsubscribe footer because the content had no such link. */
         footerAdded: Schema.Boolean,
+        /** Each link in the message, with what the links check (or `checkLinks`) last found. */
+        links: Schema.Array(LinkStatusSchema),
       }),
       error: [Forbidden, NotFound, InvalidRequest],
     }),

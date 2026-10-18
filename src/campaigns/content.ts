@@ -34,7 +34,7 @@ const esc = (s: string) =>
 
 /**
  * What a campaign sends: its template at the version it will use (the frozen one once scheduled,
- * else the published one), or its inline HTML. The campaign's subject always wins.
+ * else the published one), its block document, or its inline HTML. The campaign's subject always wins.
  */
 export const contentOf = Effect.fn("campaigns.content")(function* (campaign: CampaignRow) {
   if (campaign.templateId) {
@@ -45,10 +45,23 @@ export const contentOf = Effect.fn("campaigns.content")(function* (campaign: Cam
       templateVersion: resolved.version.version,
     }
   }
+  if (campaign.bodyBlocks) {
+    // Rendered through the template kit, in the brand, like a blocks template.
+    return {
+      source: {
+        kind: "blocks",
+        subject: campaign.subject,
+        source: JSON.stringify(campaign.bodyBlocks),
+        ...(campaign.bodyText ? { text: campaign.bodyText } : {}),
+      } as TemplateSource,
+      templateId: null,
+      templateVersion: null,
+    }
+  }
   if (!campaign.bodyHtml) {
     return yield* new CampaignContentInvalid({
       field: "bodyHtml",
-      message: "A campaign needs a template or a body.",
+      message: "A campaign needs a template, a body or blocks.",
     })
   }
   return {
