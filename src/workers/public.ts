@@ -4,6 +4,8 @@ import { type FormOutcome, findForm, formPage, recordFormOutcome, submitForm } f
 import { confirmSubscription } from "../domain/subscriptions.ts"
 import { pageCsp, renderFormPage } from "../forms/page.ts"
 import { verifyTurnstile } from "../forms/turnstile.ts"
+import { publicLook } from "../public/look.ts"
+import { type ResultExtra, resultPage } from "../public/pages.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /**
@@ -23,8 +25,8 @@ export const handleFormPage = async (request: Request, env: Env, formId: string)
   if (result._tag === "Failure") {
     const tag = (result.failure as { _tag?: string })._tag
     return tag === "FormNotFound"
-      ? page(404, "Form not found", "This signup form no longer exists.")
-      : page(500, "Something went wrong", "Please try again in a moment.")
+      ? await page(env, 404, "Form not found", "This signup form no longer exists.")
+      : await page(env, 500, "Something went wrong", "Please try again in a moment.")
   }
   const { form, topics, brand } = result.success
   const html = renderFormPage({
@@ -52,33 +54,43 @@ const HONEYPOTS = ["_hp", "website"]
 const esc = (s: string) =>
   s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;")
 
-const page = (status: number, title: string, message: string) =>
-  new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title>
-<style>:root{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box}main{max-width:28rem}h1{font-size:1.4rem;margin:0 0 .5rem}</style></head>
-<body><main><h1>${esc(title)}</h1><p>${esc(message)}</p></main></body></html>`,
-    { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
-  )
+/** A result page in the sender's brand (or Flareyard's look), with the compliance footer. */
+const page = async (env: Env, status: number, title: string, message: string, extra?: ResultExtra) =>
+  resultPage(await runtimeFor(env).runPromise(publicLook), status, title, message, extra)
 
 export const handleConfirm = async (env: Env, token: string) => {
   const result = await runtimeFor(env).runPromise(Effect.result(confirmSubscription(token)))
   if (result._tag === "Success") {
     if (result.success.blocked) {
-      return page(
+      return await page(
+        env,
         200,
         "We can't send to this address",
         "Mail to this address bounced or was reported, so we've paused it.",
       )
     }
-    return page(200, "You're subscribed", `Thanks: you'll now receive ${result.success.topic}.`)
+    // From a signup form with a redirect: there, after a moment to read this (works without JavaScript).
+    const form = result.success.formId
+      ? await runtimeFor(env).runPromise(Effect.option(findForm(result.success.formId)))
+      : null
+    const redirectUrl = form && form._tag === "Some" ? form.value.redirectUrl : null
+    return await page(env, 200, "You're subscribed", `Thanks: you'll now receive ${result.success.topic}.`, {
+      kind: "success",
+      ...(redirectUrl ? { redirect: { url: redirectUrl, after: 3 } } : {}),
+    })
   }
   const reason = (result.failure as { reason?: string; _tag?: string }).reason
   if (reason === "expired")
-    return page(410, "This link has expired", "Sign up again and we'll send a fresh link.")
+    return await page(env, 410, "This link has expired", "Sign up again and we'll send a fresh link.")
   if ((result.failure as { _tag?: string })._tag === "ConsentKeyMissing") {
-    return page(503, "Something's not set up", "This mailing list can't confirm subscriptions right now.")
+    return await page(
+      env,
+      503,
+      "Something's not set up",
+      "This mailing list can't confirm subscriptions right now.",
+    )
   }
-  return page(400, "This link isn't valid", "Check you copied the whole link from the email.")
+  return await page(env, 400, "This link isn't valid", "Check you copied the whole link from the email.")
 }
 
 const readBody = async (request: Request): Promise<Record<string, unknown> | null> => {
@@ -131,18 +143,20 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
     if (!success) {
       await count("refused")
       return html
-        ? page(429, "Too many tries", "Wait a minute and try again.")
+        ? await page(env, 429, "Too many tries", "Wait a minute and try again.")
         : Response.json({ error: "rate_limited" }, { status: 429, headers: { ...cors, "retry-after": "60" } })
     }
   }
   const body = await readBody(request)
   if (!body) return Response.json({ error: "invalid_body" }, { status: 400, headers: cors })
-  const done = (status: "confirm" | "subscribed", redirectUrl: string | null) => {
+  const done = async (status: "confirm" | "subscribed", redirectUrl: string | null) => {
     if (html && redirectUrl) return Response.redirect(redirectUrl, 303)
     if (html) {
       return status === "confirm"
-        ? page(200, "Check your inbox", "We've sent you a link to confirm your subscription.")
-        : page(200, "You're subscribed", "Thanks for signing up.")
+        ? await page(env, 200, "Check your inbox", "We've sent you a link to confirm your subscription.", {
+            kind: "info",
+          })
+        : await page(env, 200, "You're subscribed", "Thanks for signing up.", { kind: "success" })
     }
     return Response.json({ status }, { headers: cors })
   }
@@ -160,7 +174,8 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
       if (!verdict.ok) {
         await count("refused")
         return html
-          ? page(
+          ? await page(
+              env,
               400,
               "Please try again",
               "We couldn't confirm you're a person. Go back, complete the check and sign up again.",
@@ -173,7 +188,7 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
   if (typeof email !== "string") {
     await count("refused")
     return html
-      ? page(400, "Email needed", "Enter your email address to sign up.")
+      ? await page(env, 400, "Email needed", "Enter your email address to sign up.")
       : Response.json({ error: "invalid", field: "email" }, { status: 400, headers: cors })
   }
   const origin = new URL(request.url).origin
@@ -202,13 +217,14 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
   const failure = result.failure as { _tag?: string; field?: string; message?: string }
   if (failure._tag === "FormNotFound") {
     return html
-      ? page(404, "Form not found", "This signup form no longer exists.")
+      ? await page(env, 404, "Form not found", "This signup form no longer exists.")
       : Response.json({ error: "not_found" }, { status: 404, headers: cors })
   }
   if (failure._tag === "ContactInvalid") {
     await count("refused")
     return html
-      ? page(
+      ? await page(
+          env,
           400,
           failure.field === "email" ? "Check your email address" : "Check the form",
           failure.message ?? "Enter a valid email address.",
@@ -217,6 +233,6 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
   }
   console.error("form submit failed", failure._tag)
   return html
-    ? page(500, "Something went wrong", "Please try again in a moment.")
+    ? await page(env, 500, "Something went wrong", "Please try again in a moment.")
     : Response.json({ error: "internal" }, { status: 500, headers: cors })
 }

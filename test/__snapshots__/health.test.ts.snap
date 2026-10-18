@@ -71708,6 +71708,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "privacyUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "seedAddresses": {
                       "items": {
                         "type": "string",
@@ -71802,6 +71812,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                   },
+                  "privacyUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
                   "seedAddresses": {
                     "items": {
                       "type": "string",
@@ -71845,6 +71865,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "type": "array",
                     },
                     "postalAddress": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "privacyUrl": {
                       "anyOf": [
                         {
                           "type": "string",

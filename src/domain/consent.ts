@@ -13,12 +13,24 @@ export const ConsentPayload = Schema.Union([
     kind: Schema.Literal("confirm"),
     contactId: Schema.String,
     topicId: Schema.String,
+    /** The signup form it came from, so the confirm page can send the person on to its redirect. */
+    formId: Schema.optionalKey(Schema.String),
     issuedAt: Schema.Number,
   }),
   /**
    * In every bulk message: opens the preference page, and one-click unsubscribes from `topicId`
    * (everything, when null). It never expires: Gmail and Yahoo require the link to keep working.
    */
+  /**
+   * "View in browser" (HAL-3377): a campaign as one recipient got it (null for a test send, which
+   * shows the campaign as a preview). It never expires, like the unsubscribe link beside it.
+   */
+  Schema.Struct({
+    kind: Schema.Literal("view"),
+    campaignId: Schema.String,
+    contactId: Schema.NullOr(Schema.String),
+    issuedAt: Schema.Number,
+  }),
   Schema.Struct({
     kind: Schema.Literal("unsubscribe"),
     contactId: Schema.String,

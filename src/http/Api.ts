@@ -3382,6 +3382,8 @@ const ComplianceSchema = Schema.Struct({
   linkAllowlist: Schema.Array(Schema.String),
   seedAddresses: Schema.Array(Schema.String),
   trackingOrigin: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  /** An https link to the sender's privacy policy, shown in the footer of the public pages. */
+  privacyUrl: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/\S+$/)))),
 })
 
 const ContactImportSchema = Schema.Struct({
@@ -3994,6 +3996,10 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         ).check(Schema.isMaxLength(5)),
         trackingOrigin: Schema.optionalKey(
           Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/[a-z0-9.-]+$/i))),
+        ),
+        /** The sender's privacy policy (https), linked in the public pages' footer. */
+        privacyUrl: Schema.optionalKey(
+          Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/\S+$/))),
         ),
       }),
       success: ComplianceSchema,

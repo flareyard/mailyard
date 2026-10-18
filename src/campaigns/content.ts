@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { type campaigns, topics } from "../db/schema.ts"
 import { getBrand } from "../domain/brand.ts"
+import { signConsent } from "../domain/consent.ts"
 import { parseParty } from "../domain/outbox.ts"
 import { resolveForSend } from "../domain/templates.ts"
 import { unsubscribeHeaders } from "../domain/unsubscribe.ts"
@@ -75,6 +76,9 @@ export const contentOf = Effect.fn("campaigns.content")(function* (campaign: Cam
     templateVersion: null,
   }
 })
+
+export const VIEW_PATH = /^\/v\/([^/]+)$/
+export const viewInBrowserUrl = (origin: string, token: string) => `${origin}/v/${encodeURIComponent(token)}`
 
 /** The footer bulk mail must have, added when the content doesn't already link to unsubscribe. */
 export const footer = (input: {
@@ -153,7 +157,18 @@ export const renderWith = Effect.fn("campaigns.renderWith")(function* (
     mailDomain,
   })
   const subject = options.variant === "b" && campaign.subjectB ? campaign.subjectB : campaign.subject
+  // "View in browser" (HAL-3377): this recipient's copy, or a preview for a test send.
+  const viewUrl = viewInBrowserUrl(
+    options.origin,
+    yield* signConsent({
+      kind: "view",
+      campaignId: campaign.id,
+      contactId: recipient.contactId,
+      issuedAt: Date.now(),
+    }),
+  )
   const vars = {
+    view_url: viewUrl,
     ...recipient.fields,
     email: recipient.email,
     name: recipient.name,
@@ -177,11 +192,16 @@ export const renderWith = Effect.fn("campaigns.renderWith")(function* (
     preferencesUrl: preferences.url,
     postalAddress: compliance.postalAddress,
   })
+  // The view link goes last, where it can't become the inbox preview, unless the content placed it.
+  const placedView = rendered.html.includes(viewUrl)
+  const viewLine = placedView
+    ? ""
+    : `<div style="margin:12px auto 24px;max-width:600px;text-align:center;font:12px/1.5 system-ui,sans-serif;color:#6b7280"><a href="${esc(viewUrl)}" style="color:#6b7280">View this email in your browser</a></div>`
   const html = withPreheader(
-    needsFooter ? withFooter(rendered.html, block.html) : rendered.html,
+    withFooter(needsFooter ? withFooter(rendered.html, block.html) : rendered.html, viewLine),
     campaign.preheader,
   )
-  const text = needsFooter ? `${rendered.text}${block.text}` : rendered.text
+  const text = `${needsFooter ? `${rendered.text}${block.text}` : rendered.text}${placedView ? "" : `\nView in your browser: ${viewUrl}\n`}`
   const message: Outgoing = {
     from: from.name ? { email: from.email, name: from.name } : { email: from.email },
     to: [recipient.name ? { email: recipient.email, name: recipient.name } : { email: recipient.email }],
