@@ -20,6 +20,7 @@ import { SendBlocked } from "../mail/send.ts"
 import { LABEL_COLORS } from "../mailbox/types.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { Rule as SegmentRule } from "../segments/rules.ts"
+import { RelayRefusalSchema } from "../services/cloudflareApi.ts"
 import { BlocksDocument } from "../templates/document.ts"
 import { ApiKeyAuth, Forbidden, RateLimited, Unauthorized } from "./Auth.ts"
 import { withRawRoutes } from "./rawRoutes.ts"
@@ -127,6 +128,8 @@ export class InvalidRequest extends Schema.TaggedError<InvalidRequest>()(
     ),
     field: Schema.String,
     message: Schema.String,
+    /** Set when Flareyard's Cloudflare relay refused a call the request needed (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 400 },
 ) {}
@@ -142,6 +145,8 @@ export class FixRefused extends Schema.TaggedError<FixRefused>()(
     ),
     reason: Schema.Literals(["no_dns_token", "zone_not_found", "nothing_to_fix"]),
     message: Schema.String,
+    /** With `zone_not_found`: set when Flareyard's relay refused the zone lookup (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -153,6 +158,8 @@ export class DmarcRefused extends Schema.TaggedError<DmarcRefused>()(
     requestId: Schema.optionalKey(Schema.String),
     reason: Schema.Literals(["no_dns_token", "zone_not_found", "several_records", "write_failed"]),
     message: Schema.String,
+    /** Set when Flareyard's relay, not Cloudflare, refused the lookup or the write (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -1426,6 +1433,8 @@ export const DomainDetailSchema = Schema.Struct({
   returnPath: Schema.NullOr(Schema.String),
   /** When the zone fields were read: the last recheck. */
   zoneCheckedAt: Schema.NullOr(Schema.Number),
+  /** Set when Flareyard's relay refused the zone lookup at the last recheck, so the zone fields are null. */
+  zoneRelay: Schema.optionalKey(RelayRefusalSchema),
   checks: Schema.Array(RecordCheckSchema),
   expectedRecords: Schema.Array(
     Schema.Struct({
@@ -1640,6 +1649,9 @@ export class DomainsApi extends HttpApiGroup.make("domains")
             existingMx: Schema.Array(Schema.String),
           }),
         ),
+        /** Why the zones couldn't be listed, when Flareyard's relay refused (HAL-3558). */
+        message: Schema.optionalKey(Schema.String),
+        relay: Schema.optionalKey(RelayRefusalSchema),
       }),
       error: Forbidden,
     }),
@@ -1679,6 +1691,7 @@ export class DomainsApi extends HttpApiGroup.make("domains")
             action: Schema.Literals(["enable_routing", "fix_sending", "add_dmarc", "manual"]),
             ok: Schema.Boolean,
             detail: Schema.String,
+            relay: Schema.optionalKey(RelayRefusalSchema),
           }),
         ),
       }),
@@ -1773,6 +1786,8 @@ export class MailboxesApi extends HttpApiGroup.make("mailboxes")
          * was repointed here) or `unchecked` (no zone token, or a catch-all, which no rule shadows).
          */
         routing: Schema.Literals(["clear", "replaced", "unchecked"]),
+        /** With `unchecked`: set when Flareyard's relay refused the zone or rule lookup (HAL-3558). */
+        routingRelay: Schema.optionalKey(RelayRefusalSchema),
       }),
       error: [Forbidden, NotFound, InvalidRequest, Conflict],
     }),
@@ -3749,7 +3764,11 @@ export class SendingApi extends HttpApiGroup.make("sending")
           available: Schema.Literal(true),
           addresses: Schema.Array(Schema.Struct({ email: Schema.String, verifiedAt: Schema.Number })),
         }),
-        Schema.Struct({ available: Schema.Literal(false), reason: Schema.String }),
+        Schema.Struct({
+          available: Schema.Literal(false),
+          reason: Schema.String,
+          relay: Schema.optionalKey(RelayRefusalSchema),
+        }),
       ]),
       error: Forbidden,
     }),
@@ -4983,6 +5002,7 @@ const SuppressionSchema = Schema.Struct({
 const CloudflareRemovalSchema = Schema.Struct({
   state: Schema.Literals(["removed", "not-listed", "read-only", "not-connected", "failed"]),
   message: Schema.NullOr(Schema.String),
+  relay: Schema.optionalKey(RelayRefusalSchema),
 }).annotate({
   description:
     "What happened on Cloudflare's list. removed: its entries for the address are gone. not-listed: it had none. read-only: Cloudflare keeps an entry nobody can delete, until it expires. not-connected: no write token, so Cloudflare may still refuse the address. failed: Cloudflare said no.",
@@ -5026,10 +5046,12 @@ const SyncSchema = Schema.Struct({
   }),
   complete: Schema.Boolean,
   error: Schema.NullOr(Schema.String),
+  /** Set when the sync failed because Flareyard's relay refused the read (HAL-3558). */
+  relay: Schema.optionalKey(RelayRefusalSchema),
   matched: Schema.optionalKey(Schema.Number),
 })
 
-/** Cloudflare's list can't be changed from here: no CLOUDFLARE_EMAIL_WRITE_TOKEN. */
+/** Cloudflare's list can't be changed from here: not installed through Flareyard, and no CLOUDFLARE_EMAIL_WRITE_TOKEN. */
 export class CloudflareNotConnected extends Schema.TaggedError<CloudflareNotConnected>()(
   "CloudflareNotConnected",
   {
@@ -5039,6 +5061,8 @@ export class CloudflareNotConnected extends Schema.TaggedError<CloudflareNotConn
       }),
     ),
     message: Schema.String,
+    /** Set when Flareyard's relay, not Cloudflare, refused (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -5053,6 +5077,8 @@ export class CloudflareRefused extends Schema.TaggedError<CloudflareRefused>()(
     ),
     status: Schema.Number,
     message: Schema.String,
+    /** Set when Flareyard's relay, not Cloudflare, refused (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 502 },
 ) {}
@@ -5089,6 +5115,7 @@ export class SuppressionsApi extends HttpApiGroup.make("suppressions")
           checkedAt: Schema.NullOr(Schema.Number),
           cloudflareOnly: Schema.Number,
           error: Schema.NullOr(Schema.String),
+          relay: Schema.optionalKey(RelayRefusalSchema),
         }),
         nextCursor: Schema.NullOr(Schema.String),
       }),
@@ -5111,7 +5138,11 @@ export class SuppressionsApi extends HttpApiGroup.make("suppressions")
             "False when the address was already on the list: its reason is kept, and a new note is taken.",
         }),
         cloudflare: Schema.NullOr(
-          Schema.Struct({ state: Schema.String, message: Schema.NullOr(Schema.String) }),
+          Schema.Struct({
+            state: Schema.String,
+            message: Schema.NullOr(Schema.String),
+            relay: Schema.optionalKey(RelayRefusalSchema),
+          }),
         ),
       }),
       error: [Forbidden, InvalidRequest],
@@ -5304,10 +5335,12 @@ export class OverviewApi extends HttpApiGroup.make("overview")
             zones: Schema.Number,
             /** The first day counted: Cloudflare keeps 31 days. */
             from: Schema.NullOr(Schema.String),
+            /** Set when Flareyard's relay refused the lookup or the query (HAL-3558). */
+            relay: Schema.optionalKey(RelayRefusalSchema),
           }),
         }).annotate({
           description:
-            "`total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN.",
+            "`total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics through Flareyard's relay (account-analytics.read) or, self-hosted, with CLOUDFLARE_ANALYTICS_TOKEN.",
         }),
         held: Schema.Number,
         spam: Schema.Number,

@@ -6,6 +6,7 @@ import { stopRunsForEmail } from "../automations/runs.ts"
 import { Bindings } from "../Bindings.ts"
 import { contacts, settings, suppressions } from "../db/schema.ts"
 import { CloudflareEmail, type CloudflareSuppression } from "../services/CloudflareEmail.ts"
+import { type RelayRefusal, RelayRefusalSchema, relayMessage, withRelay } from "../services/cloudflareApi.ts"
 import { Database } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
 import { EMAIL, isBlocked, normalizeEmail } from "./contacts.ts"
@@ -52,6 +53,7 @@ export class CloudflareUnavailable extends Schema.TaggedError<CloudflareUnavaila
     reason: Schema.Literals(["not-connected", "refused"]),
     status: Schema.Number,
     message: Schema.String,
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
 ) {}
 
@@ -67,6 +69,8 @@ export type SyncState = {
   readonly adopted: number
   readonly complete: boolean
   readonly error: string | null
+  /** Set when the last sync failed because Flareyard's relay refused the read (HAL-3558). */
+  readonly relay?: RelayRefusal
 }
 
 const EMPTY_SYNC: SyncState = { checkedAt: null, cloudflareOnly: 0, adopted: 0, complete: false, error: null }
@@ -220,6 +224,7 @@ export const listSuppressions = Effect.fn("suppressions.list")(function* (query:
       checkedAt: sync.checkedAt,
       cloudflareOnly: sync.cloudflareOnly,
       error: sync.error,
+      ...withRelay(sync.relay),
     },
     nextCursor: rows.length > limit && last ? cursorOf(last) : null,
   }
@@ -242,7 +247,7 @@ export const getSuppression = Effect.fn("suppressions.get")(function* (raw: stri
     ...describeSuppression(row),
     contact: contact ? { id: contact.id, status: contact.status } : null,
     contactStatusBefore: row.contactStatusBefore,
-    cloudflareEntries: Option.match(entries, {
+    cloudflareEntries: Option.match(entries.value, {
       onNone: () => null,
       onSome: (list) => list.map(describeCloudflareEntry),
     }),
@@ -340,7 +345,14 @@ export const addSuppression = Effect.fn("suppressions.add")(function* (input: Ad
   if (!row.bulkOnly) yield* stopRunsForEmail(email, "The address was added to the suppression list.")
   const cloudflare = input.push
     ? yield* pushSuppression(email, actor).pipe(
-        Effect.map((r) => r.cloudflare as { readonly state: string; readonly message: string | null }),
+        Effect.map(
+          (r) =>
+            r.cloudflare as {
+              readonly state: string
+              readonly message: string | null
+              readonly relay?: RelayRefusal
+            },
+        ),
         Effect.catchTags({
           SuppressionNotFound: (e) => Effect.succeed(pushOutcome(e)),
           SuppressionRefused: (e) => Effect.succeed(pushOutcome(e)),
@@ -356,6 +368,7 @@ const pushOutcome = (e: SuppressionNotFound | SuppressionRefused | CloudflareUna
   ({
     state: e._tag === "CloudflareUnavailable" ? e.reason : "not-applicable",
     message: "message" in e ? e.message : "Not on the list.",
+    ...(e._tag === "CloudflareUnavailable" ? withRelay(e.relay) : {}),
   }) as const
 
 /** `PATCH /v1/suppressions/{email}`: the note, and whether it blocks every stream or only bulk mail. */
@@ -405,18 +418,27 @@ export type RemovalOutcome = {
    */
   readonly state: "removed" | "not-listed" | "read-only" | "not-connected" | "failed"
   readonly message: string | null
+  /** Set when Flareyard's relay, not Cloudflare, refused the read or the removal (HAL-3558). */
+  readonly relay?: RelayRefusal
 }
 
 const removeFromCloudflare = (email: string, row: SuppressionRow) =>
   Effect.gen(function* () {
     const cf = yield* CloudflareEmail
     const database = yield* Database
-    const entries = yield* cf.suppressions.find(email)
+    const found = yield* cf.suppressions.find(email)
+    if (found.relay)
+      return {
+        state: "failed",
+        message: `${relayMessage(found.relay)} Until then Cloudflare may still refuse this address.`,
+        relay: found.relay,
+      } satisfies RemovalOutcome
+    const entries = found.value
     if (Option.isNone(entries)) {
       return {
         state: "not-connected",
         message: row.cloudflareId
-          ? "Cloudflare's list still has this address; set CLOUDFLARE_EMAIL_WRITE_TOKEN so Mailyard can remove it, or remove it in the dashboard."
+          ? "Cloudflare's list still has this address. Install Mailyard through Flareyard (or set CLOUDFLARE_EMAIL_WRITE_TOKEN) so it can remove it, or remove it in Cloudflare's dashboard."
           : "Mailyard can't read Cloudflare's list, so it may still refuse this address.",
       } satisfies RemovalOutcome
     }
@@ -425,12 +447,12 @@ const removeFromCloudflare = (email: string, row: SuppressionRow) =>
     if (deletable.length > 0 && !cf.suppressions.canWrite)
       return {
         state: "not-connected",
-        message: `Cloudflare's list has ${entries.value.length} ${entries.value.length === 1 ? "entry" : "entries"} for this address; set CLOUDFLARE_EMAIL_WRITE_TOKEN so Mailyard can remove ${entries.value.length === 1 ? "it" : "them"}.`,
+        message: `Cloudflare's list has ${entries.value.length} ${entries.value.length === 1 ? "entry" : "entries"} for this address. Install Mailyard through Flareyard (or set CLOUDFLARE_EMAIL_WRITE_TOKEN) so it can remove ${entries.value.length === 1 ? "it" : "them"}.`,
       } satisfies RemovalOutcome
     for (const e of deletable) {
       const done = yield* cf.suppressions.remove(e.id)
       if (!done.ok && done.status !== 404)
-        return { state: "failed", message: done.message } satisfies RemovalOutcome
+        return { state: "failed", message: done.message, ...withRelay(done.relay) } satisfies RemovalOutcome
     }
     yield* database.query("suppressions.cloudflareCleared", (db) =>
       db
@@ -518,10 +540,18 @@ export const pushSuppression = Effect.fn("suppressions.push")(function* (raw: st
       reason: "not-connected",
       status: 0,
       message:
-        "Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_EMAIL_WRITE_TOKEN (Email Sending: Edit) to push to Cloudflare.",
+        "Mailyard can't reach Cloudflare's list: install it through Flareyard, or set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_EMAIL_WRITE_TOKEN (Email Sending: Edit).",
     })
   const database = yield* Database
-  const found = Option.getOrElse(yield* cf.suppressions.find(row.email), () => [])
+  const listed = yield* cf.suppressions.find(row.email)
+  if (listed.relay)
+    return yield* new CloudflareUnavailable({
+      reason: "refused",
+      status: 403,
+      message: relayMessage(listed.relay),
+      relay: listed.relay,
+    })
+  const found = Option.getOrElse(listed.value, () => [])
   const account = found.find((e) => e.scope?.type !== "sending_domain")
   let id = account?.id ?? null
   if (!id) {
@@ -534,6 +564,7 @@ export const pushSuppression = Effect.fn("suppressions.push")(function* (raw: st
         reason: "refused",
         status: created.status,
         message: created.message,
+        ...withRelay(created.relay),
       })
     id = created.value.id
   }
@@ -579,14 +610,20 @@ export const syncWithCloudflare = Effect.fn("suppressions.sync")(function* () {
   let cursor: string | null = null
   let complete = false
   for (let page = 0; page < MAX_PAGES; page++) {
-    const result: Option.Option<{
-      readonly items: ReadonlyArray<CloudflareSuppression>
-      readonly next: string | null
-    }> = yield* cf.suppressions.page(cursor)
+    const read: {
+      readonly value: Option.Option<{
+        readonly items: ReadonlyArray<CloudflareSuppression>
+        readonly next: string | null
+      }>
+      readonly relay: RelayRefusal | null
+    } = yield* cf.suppressions.page(cursor)
+    const result = read.value
     if (Option.isNone(result)) {
+      const { relay: _previous, ...before } = yield* syncState
       const state: SyncState = {
-        ...(yield* syncState),
-        error: "Cloudflare's suppression list couldn't be read.",
+        ...before,
+        error: read.relay ? relayMessage(read.relay) : "Cloudflare's suppression list couldn't be read.",
+        ...withRelay(read.relay),
       }
       yield* saveSync(state)
       return { connected: true as const, ...state }

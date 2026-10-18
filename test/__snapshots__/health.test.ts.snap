@@ -49,6 +49,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "message": {
             "type": "string",
           },
+          "relay": {
+            "$ref": "#/components/schemas/RelayRefusal",
+          },
           "requestId": {
             "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
@@ -71,6 +74,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           },
           "message": {
             "type": "string",
+          },
+          "relay": {
+            "$ref": "#/components/schemas/RelayRefusal",
           },
           "requestId": {
             "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
@@ -277,6 +283,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "relay": {
+            "$ref": "#/components/schemas/RelayRefusal",
+          },
           "requestId": {
             "type": "string",
           },
@@ -307,6 +316,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "nothing_to_fix",
             ],
             "type": "string",
+          },
+          "relay": {
+            "$ref": "#/components/schemas/RelayRefusal",
           },
           "requestId": {
             "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
@@ -481,6 +493,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "message": {
             "type": "string",
           },
+          "relay": {
+            "$ref": "#/components/schemas/RelayRefusal",
+          },
           "requestId": {
             "description": "The request's id, also in the x-request-id header: quote it when asking for help.",
             "type": "string",
@@ -629,6 +644,50 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           "_tag",
           "message",
           "retryAfter",
+        ],
+        "type": "object",
+      },
+      "RelayRefusal": {
+        "additionalProperties": false,
+        "description": "Present when Flareyard's Cloudflare relay, not Cloudflare, refused the call (installs through Flareyard only).",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "number",
+              },
+              {
+                "enum": [
+                  "Infinity",
+                  "-Infinity",
+                  "NaN",
+                ],
+                "type": "string",
+              },
+            ],
+          },
+          "reason": {
+            "description": "Why Flareyard's relay refused the Cloudflare call: install_key_invalid (10401, reinstall), relay_disconnected (10402, reconnect Cloudflare in Flareyard), route_undeclared (10403), scope_not_granted (10404, grant \`scope\` on the app's page in Flareyard), wrong_account (10405), request_too_large (10413), rate_limited (10429), cloudflare_unreachable (10502).",
+            "enum": [
+              "install_key_invalid",
+              "relay_disconnected",
+              "route_undeclared",
+              "scope_not_granted",
+              "wrong_account",
+              "request_too_large",
+              "rate_limited",
+              "cloudflare_unreachable",
+            ],
+            "type": "string",
+          },
+          "scope": {
+            "description": "On scope_not_granted: the Cloudflare OAuth scope to grant.",
+            "type": "string",
+          },
+        },
+        "required": [
+          "reason",
+          "code",
         ],
         "type": "object",
       },
@@ -39777,6 +39836,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "zoneRelay": {
+                      "$ref": "#/components/schemas/RelayRefusal",
+                    },
                     "zoneStatus": {
                       "anyOf": [
                         {
@@ -39962,6 +40024,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "connected": {
                       "type": "boolean",
+                    },
+                    "message": {
+                      "type": "string",
+                    },
+                    "relay": {
+                      "$ref": "#/components/schemas/RelayRefusal",
                     },
                   },
                   "required": [
@@ -40640,6 +40708,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "zoneRelay": {
+                      "$ref": "#/components/schemas/RelayRefusal",
+                    },
                     "zoneStatus": {
                       "anyOf": [
                         {
@@ -41168,6 +41239,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                    },
+                    "zoneRelay": {
+                      "$ref": "#/components/schemas/RelayRefusal",
                     },
                     "zoneStatus": {
                       "anyOf": [
@@ -42701,6 +42775,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "ok": {
                             "type": "boolean",
                           },
+                          "relay": {
+                            "$ref": "#/components/schemas/RelayRefusal",
+                          },
                         },
                         "required": [
                           "checks",
@@ -43096,6 +43173,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "null",
                             },
                           ],
+                        },
+                        "zoneRelay": {
+                          "$ref": "#/components/schemas/RelayRefusal",
                         },
                         "zoneStatus": {
                           "anyOf": [
@@ -43608,6 +43688,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                    },
+                    "zoneRelay": {
+                      "$ref": "#/components/schemas/RelayRefusal",
                     },
                     "zoneStatus": {
                       "anyOf": [
@@ -54103,6 +54186,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "unchecked",
                       ],
                       "type": "string",
+                    },
+                    "routingRelay": {
+                      "$ref": "#/components/schemas/RelayRefusal",
                     },
                     "signature": {
                       "anyOf": [
@@ -93613,7 +93699,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "rejected": {
                       "additionalProperties": false,
-                      "description": "\`total\` and \`noSuchAddress\` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN.",
+                      "description": "\`total\` and \`noSuchAddress\` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics through Flareyard's relay (account-analytics.read) or, self-hosted, with CLOUDFLARE_ANALYTICS_TOKEN.",
                       "properties": {
                         "authFail": {
                           "anyOf": [
@@ -93736,6 +93822,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "type": "null",
                                 },
                               ],
+                            },
+                            "relay": {
+                              "$ref": "#/components/schemas/RelayRefusal",
                             },
                             "zones": {
                               "anyOf": [
@@ -94896,6 +94985,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "readable": {
                           "type": "boolean",
                         },
+                        "relay": {
+                          "$ref": "#/components/schemas/RelayRefusal",
+                        },
                         "writable": {
                           "type": "boolean",
                         },
@@ -95259,6 +95351,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "type": "null",
                                 },
                               ],
+                            },
+                            "relay": {
+                              "$ref": "#/components/schemas/RelayRefusal",
                             },
                             "state": {
                               "type": "string",
@@ -96669,6 +96764,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "relay": {
+                      "$ref": "#/components/schemas/RelayRefusal",
+                    },
                   },
                   "required": [
                     "connected",
@@ -96774,6 +96872,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "null",
                             },
                           ],
+                        },
+                        "relay": {
+                          "$ref": "#/components/schemas/RelayRefusal",
                         },
                         "state": {
                           "enum": [
@@ -97234,6 +97335,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "type": "null",
                                 },
                               ],
+                            },
+                            "relay": {
+                              "$ref": "#/components/schemas/RelayRefusal",
                             },
                             "state": {
                               "enum": [
@@ -103938,6 +104042,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                         "reason": {
                           "type": "string",
+                        },
+                        "relay": {
+                          "$ref": "#/components/schemas/RelayRefusal",
                         },
                       },
                       "required": [
