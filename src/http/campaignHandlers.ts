@@ -16,7 +16,7 @@ import {
   testCampaign,
   updateCampaign,
 } from "../campaigns/campaigns.ts"
-import { getCompliance, putCompliance } from "../campaigns/compliance.ts"
+import { getCompliance, putCompliance, recheckTrackingOrigin } from "../campaigns/compliance.ts"
 import type { CampaignContentInvalid } from "../campaigns/content.ts"
 import { campaignRecipients, campaignReport, resendDryRun, resendToNonOpeners } from "../campaigns/report.ts"
 import {
@@ -269,6 +269,9 @@ export const CampaignsHandlers = HttpApiBuilder.group(
         ),
       ),
       getCompliance: p(() => requireScope("read").pipe(Effect.andThen(getCompliance()), campaignErrors)),
+      recheckTracking: p(() =>
+        requireScope("admin").pipe(Effect.andThen(recheckTrackingOrigin()), campaignErrors),
+      ),
       putCompliance: p(({ payload }) =>
         Effect.gen(function* () {
           const caller = yield* requireScope("admin")

@@ -1,6 +1,7 @@
 import { and, asc, count, eq, gte, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { getCompliance } from "../campaigns/compliance.ts"
 import { subscriptionChanges, subscriptions, topics } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
@@ -109,6 +110,8 @@ export const createTopic = Effect.fn("topics.create")(function* (
   const database = yield* Database
   const name = yield* checkName(input.name)
   const sender = yield* checkSender(input.sender)
+  // Left out: the workspace's default (Settings → Compliance), else double opt-in on.
+  const doubleOptIn = input.doubleOptIn ?? (yield* getCompliance()).doubleOptInDefault ?? true
   const id = `top_${yield* (yield* Ids).next}`
   const row = yield* database.query("topics.insert", (db) =>
     db
@@ -117,7 +120,7 @@ export const createTopic = Effect.fn("topics.create")(function* (
         id,
         name,
         description: input.description ?? null,
-        doubleOptIn: input.doubleOptIn ?? true,
+        doubleOptIn,
         sender: sender ?? null,
       })
       .returning()

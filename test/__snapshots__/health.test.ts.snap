@@ -67,6 +67,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             ],
             "type": "string",
           },
+          "aliasIds": {
+            "items": {
+              "type": "string",
+            },
+            "type": "array",
+          },
           "message": {
             "type": "string",
           },
@@ -3069,6 +3075,278 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "tags": [
           "apiKeys",
+        ],
+      },
+    },
+    "/v1/audit": {
+      "get": {
+        "operationId": "settings.audit",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "enum": [
+                "json",
+                "csv",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "entries": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "action": {
+                            "type": "string",
+                          },
+                          "actor": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "key",
+                                  "root",
+                                  "system",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "after": {},
+                          "at": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "before": {},
+                          "id": {
+                            "type": "string",
+                          },
+                          "ip": {
+                            "type": "null",
+                          },
+                          "location": {
+                            "type": "null",
+                          },
+                          "target": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                  },
+                                  "label": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "type": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                },
+                                "required": [
+                                  "type",
+                                  "id",
+                                  "label",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "via": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "api",
+                                  "mcp",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "id",
+                          "at",
+                          "actor",
+                          "via",
+                          "ip",
+                          "location",
+                          "action",
+                          "target",
+                          "before",
+                          "after",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "entries",
+                    "nextCursor",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "settings",
         ],
       },
     },
@@ -71493,14 +71771,53 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "additionalProperties": false,
                   "properties": {
                     "colors": {
-                      "additionalProperties": {
-                        "type": "string",
+                      "additionalProperties": false,
+                      "properties": {
+                        "bg": {
+                          "type": "string",
+                        },
+                        "body": {
+                          "type": "string",
+                        },
+                        "border": {
+                          "type": "string",
+                        },
+                        "fg": {
+                          "type": "string",
+                        },
+                        "indigo": {
+                          "type": "string",
+                        },
+                        "lime": {
+                          "type": "string",
+                        },
+                        "muted": {
+                          "type": "string",
+                        },
+                        "red": {
+                          "type": "string",
+                        },
+                        "surface": {
+                          "type": "string",
+                        },
+                        "white": {
+                          "type": "string",
+                        },
                       },
                       "type": "object",
                     },
                     "fonts": {
-                      "additionalProperties": {
-                        "type": "string",
+                      "additionalProperties": false,
+                      "properties": {
+                        "body": {
+                          "type": "string",
+                        },
+                        "display": {
+                          "type": "string",
+                        },
+                        "mono": {
+                          "type": "string",
+                        },
                       },
                       "type": "object",
                     },
@@ -71578,7 +71895,87 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {},
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "colors": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "bg": {
+                        "type": "string",
+                      },
+                      "body": {
+                        "type": "string",
+                      },
+                      "border": {
+                        "type": "string",
+                      },
+                      "fg": {
+                        "type": "string",
+                      },
+                      "indigo": {
+                        "type": "string",
+                      },
+                      "lime": {
+                        "type": "string",
+                      },
+                      "muted": {
+                        "type": "string",
+                      },
+                      "red": {
+                        "type": "string",
+                      },
+                      "surface": {
+                        "type": "string",
+                      },
+                      "white": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "fonts": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "body": {
+                        "type": "string",
+                      },
+                      "display": {
+                        "type": "string",
+                      },
+                      "mono": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "fontsHref": {
+                    "type": "string",
+                  },
+                  "logoUploadId": {
+                    "type": "string",
+                  },
+                  "logoUrl": {
+                    "type": "string",
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "type": "string",
+                  },
+                  "siteUrl": {
+                    "type": "string",
+                  },
+                  "tagline": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "name",
+                  "siteUrl",
+                  "tagline",
+                ],
+                "type": "object",
+              },
             },
           },
           "required": true,
@@ -71591,14 +71988,53 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "additionalProperties": false,
                   "properties": {
                     "colors": {
-                      "additionalProperties": {
-                        "type": "string",
+                      "additionalProperties": false,
+                      "properties": {
+                        "bg": {
+                          "type": "string",
+                        },
+                        "body": {
+                          "type": "string",
+                        },
+                        "border": {
+                          "type": "string",
+                        },
+                        "fg": {
+                          "type": "string",
+                        },
+                        "indigo": {
+                          "type": "string",
+                        },
+                        "lime": {
+                          "type": "string",
+                        },
+                        "muted": {
+                          "type": "string",
+                        },
+                        "red": {
+                          "type": "string",
+                        },
+                        "surface": {
+                          "type": "string",
+                        },
+                        "white": {
+                          "type": "string",
+                        },
                       },
                       "type": "object",
                     },
                     "fonts": {
-                      "additionalProperties": {
-                        "type": "string",
+                      "additionalProperties": false,
+                      "properties": {
+                        "body": {
+                          "type": "string",
+                        },
+                        "display": {
+                          "type": "string",
+                        },
+                        "mono": {
+                          "type": "string",
+                        },
                       },
                       "type": "object",
                     },
@@ -71692,6 +72128,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "doubleOptInDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "linkAllowlist": {
                       "items": {
                         "type": "string",
@@ -71707,6 +72153,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                    },
+                    "preferencePage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "showTopicDescriptions": {
+                          "type": "boolean",
+                        },
+                        "useBrand": {
+                          "type": "boolean",
+                        },
+                      },
+                      "required": [
+                        "useBrand",
+                        "showTopicDescriptions",
+                      ],
+                      "type": "object",
                     },
                     "privacyUrl": {
                       "anyOf": [
@@ -71724,10 +72186,88 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "trackClicksDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackOpensDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "trackingOrigin": {
                       "anyOf": [
                         {
                           "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackingOriginCheck": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "certificate": {
+                              "enum": [
+                                "valid",
+                                "failed",
+                              ],
+                              "type": "string",
+                            },
+                            "checkedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "cname": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "host": {
+                              "type": "string",
+                            },
+                            "routesHere": {
+                              "type": "boolean",
+                            },
+                          },
+                          "required": [
+                            "host",
+                            "cname",
+                            "certificate",
+                            "routesHere",
+                            "checkedAt",
+                          ],
+                          "type": "object",
                         },
                         {
                           "type": "null",
@@ -71795,6 +72335,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "doubleOptInDefault": {
+                    "anyOf": [
+                      {
+                        "type": "boolean",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
                   "linkAllowlist": {
                     "items": {
                       "type": "string",
@@ -71812,6 +72362,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                   },
+                  "preferencePage": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "showTopicDescriptions": {
+                        "type": "boolean",
+                      },
+                      "useBrand": {
+                        "type": "boolean",
+                      },
+                    },
+                    "required": [
+                      "useBrand",
+                      "showTopicDescriptions",
+                    ],
+                    "type": "object",
+                  },
                   "privacyUrl": {
                     "anyOf": [
                       {
@@ -71828,6 +72394,26 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "maxItems": 5,
                     "type": "array",
+                  },
+                  "trackClicksDefault": {
+                    "anyOf": [
+                      {
+                        "type": "boolean",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "trackOpensDefault": {
+                    "anyOf": [
+                      {
+                        "type": "boolean",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
                   },
                   "trackingOrigin": {
                     "anyOf": [
@@ -71858,6 +72444,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "doubleOptInDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "linkAllowlist": {
                       "items": {
                         "type": "string",
@@ -71873,6 +72469,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "null",
                         },
                       ],
+                    },
+                    "preferencePage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "showTopicDescriptions": {
+                          "type": "boolean",
+                        },
+                        "useBrand": {
+                          "type": "boolean",
+                        },
+                      },
+                      "required": [
+                        "useBrand",
+                        "showTopicDescriptions",
+                      ],
+                      "type": "object",
                     },
                     "privacyUrl": {
                       "anyOf": [
@@ -71890,10 +72502,88 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "trackClicksDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackOpensDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "trackingOrigin": {
                       "anyOf": [
                         {
                           "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackingOriginCheck": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "certificate": {
+                              "enum": [
+                                "valid",
+                                "failed",
+                              ],
+                              "type": "string",
+                            },
+                            "checkedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "cname": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "host": {
+                              "type": "string",
+                            },
+                            "routesHere": {
+                              "type": "boolean",
+                            },
+                          },
+                          "required": [
+                            "host",
+                            "cname",
+                            "certificate",
+                            "routesHere",
+                            "checkedAt",
+                          ],
+                          "type": "object",
                         },
                         {
                           "type": "null",
@@ -71921,6 +72611,216 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "campaigns",
+        ],
+      },
+    },
+    "/v1/settings/compliance/tracking-check": {
+      "post": {
+        "operationId": "campaigns.recheckTracking",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "doubleOptInDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "linkAllowlist": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "postalAddress": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "preferencePage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "showTopicDescriptions": {
+                          "type": "boolean",
+                        },
+                        "useBrand": {
+                          "type": "boolean",
+                        },
+                      },
+                      "required": [
+                        "useBrand",
+                        "showTopicDescriptions",
+                      ],
+                      "type": "object",
+                    },
+                    "privacyUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "seedAddresses": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "trackClicksDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackOpensDefault": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackingOrigin": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "trackingOriginCheck": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "certificate": {
+                              "enum": [
+                                "valid",
+                                "failed",
+                              ],
+                              "type": "string",
+                            },
+                            "checkedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "cname": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "host": {
+                              "type": "string",
+                            },
+                            "routesHere": {
+                              "type": "boolean",
+                            },
+                          },
+                          "required": [
+                            "host",
+                            "cname",
+                            "certificate",
+                            "routesHere",
+                            "checkedAt",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "postalAddress",
+                    "linkAllowlist",
+                    "seedAddresses",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
           },
           "401": {
             "content": {

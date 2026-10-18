@@ -10,6 +10,8 @@ export interface Look {
   readonly theme: PageTheme
   readonly postalAddress: string | null
   readonly privacyUrl: string | null
+  /** Whether the preference page shows each topic's description (Settings → Compliance). */
+  readonly showTopicDescriptions?: boolean
 }
 
 export interface Prefs {
@@ -54,7 +56,7 @@ export const preferencePage = (
   const topics = prefs.topics
     .map(
       (t) =>
-        `<label class="topic"><input type="checkbox" name="topic" value="${esc(t.id)}"${t.subscribed ? " checked" : ""}><span>${esc(t.name)}${t.id === focus?.id ? '<span class="tag">From this email</span>' : ""}${t.description ? `<small>${esc(t.description)}</small>` : ""}</span></label>`,
+        `<label class="topic"><input type="checkbox" name="topic" value="${esc(t.id)}"${t.subscribed ? " checked" : ""}><span>${esc(t.name)}${t.id === focus?.id ? '<span class="tag">From this email</span>' : ""}${t.description && look.showTopicDescriptions !== false ? `<small>${esc(t.description)}</small>` : ""}</span></label>`,
     )
     .join("")
   const undo =

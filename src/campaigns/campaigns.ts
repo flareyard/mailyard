@@ -275,7 +275,13 @@ export const createCampaign = Effect.fn("campaigns.create")(function* (
   actor: string,
 ) {
   const now = Date.now()
-  const defaults = trackingDefaults(yield* Bindings)
+  // The workspace's own defaults (Settings → Tracking) win over the deploy's.
+  const deploy = trackingDefaults(yield* Bindings)
+  const workspace = yield* getCompliance()
+  const defaults = {
+    trackOpens: workspace.trackOpensDefault ?? deploy.trackOpens,
+    trackClicks: workspace.trackClicksDefault ?? deploy.trackClicks,
+  }
   const row = {
     name: input.name.trim(),
     segmentId: input.segmentId ?? null,

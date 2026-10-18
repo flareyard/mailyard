@@ -94,8 +94,14 @@ const mailboxErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
           field: (e as MailboxInvalid).field,
           message: (e as MailboxInvalid).message,
         })
-      case "MailboxConflict":
-        return new Conflict({ message: (e as MailboxConflict).message })
+      case "MailboxConflict": {
+        const c = e as MailboxConflict
+        return new Conflict({
+          message: c.message,
+          ...(c.reason ? { reason: c.reason } : {}),
+          ...(c.aliasIds ? { aliasIds: [...c.aliasIds] } : {}),
+        })
+      }
       case "RoutingRuleExists": {
         const r = e as RoutingRuleExists
         return new Conflict({
