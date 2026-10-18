@@ -14,6 +14,7 @@
       "!web/src/fixtures/fixtures.json",
       "!web/e2e/responsive-audit.mjs",
       "!web/src/styles",
+      "!site/public",
       "!web/dist-audit",
       "!web/test-results",
       "!web/playwright-report"

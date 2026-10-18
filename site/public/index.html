@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mailyard: mail for people and agents, on your own Cloudflare</title>
+<meta name="description" content="Mailyard is open-source mail for people and agents. An inbox, transactional sending, campaigns and automations, plus a mailbox your agent reaches over MCP. Installed from Flareyard into your own Cloudflare account, on your own domain.">
+<link rel="canonical" href="https://mailyard.flareyard.dev/">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#efebe5">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#28241f">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mailyard">
+<meta property="og:url" content="https://mailyard.flareyard.dev/">
+<meta property="og:title" content="Mailyard: mail for people and agents, on your own Cloudflare">
+<meta property="og:description" content="One letter. Your own domain. Delivered. An inbox for people and a mailbox for agents, running in your own Cloudflare account.">
+<meta property="og:image" content="https://mailyard.flareyard.dev/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="An ember paper-plane letter beside the words: One letter. Your own domain. Delivered. Mailyard.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mailyard: mail for people and agents, on your own Cloudflare">
+<meta name="twitter:description" content="An inbox for people and a mailbox for agents, running in your own Cloudflare account, on your own domain.">
+<meta name="twitter:image" content="https://mailyard.flareyard.dev/assets/og.png">
+<meta name="twitter:image:alt" content="An ember paper-plane letter beside the words: One letter. Your own domain. Delivered. Mailyard.">
+<!-- Temporary favicon: a plain envelope until the Mailyard mark is approved. Colours are ember-700 and white from brand/tokens.css. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6.5' width='28' height='19' rx='3' fill='%23e84e10'/%3E%3Cpath d='M5 9.5l11 8.5 11-8.5' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preload" href="assets/fonts/FunnelDisplay-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/FunnelSans-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+/* Decide the layout before first paint so nothing shifts: the scroll story needs room and motion; everything else gets the static story. */
+(function (r) {
+  r.classList.add('js');
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, pref = null;
+  try { pref = localStorage.getItem('mailyard-motion'); } catch (e) {}
+  if (pref === 'off' || (reduce && pref !== 'on')) r.classList.add('still');
+  if (innerWidth >= 768 && innerHeight >= 560 && (!reduce || pref === 'on')) r.classList.add('story');
+})(document.documentElement);
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="ground" aria-hidden="true"><div id="shadow"></div></div>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div id="tags" aria-hidden="true"></div>
+
+<header class="top" id="top" data-od-id="site-header">
+  <a class="logo" href="#hero" data-go="hero" data-od-id="header-wordmark" aria-label="Mailyard, back to the top">mailyard</a>
+  <p class="tagline" data-od-id="header-tagline"><b>Mail for people and agents</b><br>On your own Cloudflare, on your own domain</p>
+  <div class="top-end">
+    <div class="runs">
+      <button class="runs-btn" type="button" aria-expanded="false" aria-controls="runs-list" data-od-id="header-runs">What it runs on <span aria-hidden="true">+</span></button>
+      <ul id="runs-list" class="runs-list" hidden>
+        <li><span class="chip-svc svc-edge">Email Routing</span><span>inbound mail</span></li>
+        <li><span class="chip-svc svc-msg">Email Sending</span><span>outbound mail</span></li>
+        <li><span class="chip-svc svc-msg">Queues</span><span>sends, events</span></li>
+        <li><span class="chip-svc svc-compute">Workers</span><span>api, inbound, MCP</span></li>
+        <li><span class="chip-svc svc-compute">Durable Objects</span><span>mailboxes, send governor</span></li>
+        <li><span class="chip-svc svc-compute">Workflows</span><span>campaigns, automations</span></li>
+        <li><span class="chip-svc svc-data">D1</span><span>contacts, threads, audit</span></li>
+        <li><span class="chip-svc svc-data">R2</span><span>raw mail, attachments</span></li>
+        <li><span class="chip-svc svc-ai">Workers AI</span><span>attachments to text</span></li>
+      </ul>
+    </div>
+    <a class="btn-quiet" href="https://mail.flareyard.dev/sign-in" data-od-id="header-sign-in">Sign in</a>
+  </div>
+</header>
+
+<main id="main">
+  <!-- 01 The letter -->
+  <section class="scene chap" id="hero" data-od-id="hero" aria-labelledby="hero-title">
+    <p class="eyebrow" data-od-id="hero-eyebrow">Mail for people and agents, in your own Cloudflare account</p>
+    <h1 class="display" id="hero-title" data-od-id="hero-headline">
+      <span class="ln">One letter.</span><span class="ln">Your own</span><span class="ln">domain.</span><span class="ln acc">Delivered.</span>
+    </h1>
+    <figure class="still-art" data-od-id="hero-art"><img src="assets/img/still-letter.webp" width="750" height="679" alt="An ember paper plane folded from a letter, with mailyard printed on its wings." fetchpriority="high"></figure>
+    <div class="rail" data-od-id="hero-rail" aria-hidden="true">
+      <span class="id">My—001</span><span class="vbar"></span><span>People and agents, one yard</span>
+    </div>
+    <div class="cap-block" data-od-id="hero-caption">
+      <p class="lbl">Your domain, <b>your account</b></p>
+      <p class="lead">Every email, yours or your agent's, starts in your own account.</p>
+      <div class="cta-row">
+        <a class="btn-primary" href="https://app.flareyard.dev/apps" data-od-id="hero-cta-deploy">Deploy to your Cloudflare <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5"/></svg></a>
+        <button class="sq-btn needs-js" type="button" data-go="fold" aria-label="Scroll to the next chapter" data-od-id="hero-down">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5"/></svg>
+        </button>
+      </div>
+      <p class="help-line">Installs from Flareyard into your own account.</p>
+    </div>
+    <div class="row-bottom" data-od-id="hero-bottom-row"><span>Scroll to follow the letter ↓</span><span>No mail server. No SaaS bill.</span></div>
+  </section>
+
+  <!-- 02 The fold -->
+  <div class="pin-wrap" id="fold-wrap">
+    <section class="pin chap" id="fold" data-od-id="fold" aria-labelledby="fold-title">
+      <p class="sec-label" data-od-id="fold-label"><span class="num">02</span><span class="bar"></span><span>Getting a letter ready</span></p>
+      <h2 class="display sm" id="fold-title" data-od-id="fold-headline">
+        <span class="ln">No mail</span><span class="ln">server.</span><span class="ln acc">Just a</span><span class="ln acc">domain</span><span class="ln acc">you own.</span>
+      </h2>
+      <div class="postmark" data-od-id="fold-postmark" role="img" aria-label="Postmark: your domain, your account, signed">
+        <svg viewBox="0 0 88 88" aria-hidden="true">
+          <defs><path id="pm-c" d="M44 44m-34 0a34 34 0 1 1 68 0a34 34 0 1 1-68 0"/></defs>
+          <circle cx="44" cy="44" r="43.5" fill="none" stroke="currentColor" stroke-width="1"/>
+          <g class="spin"><text fill="currentColor" class="pm-ring"><textPath href="#pm-c">your domain · your account · signed and sent ·</textPath></text></g>
+          <circle cx="44" cy="44" r="25" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 2.4"/>
+          <text x="44" y="46" text-anchor="middle" fill="currentColor" class="pm-big">Signed</text>
+          <text x="44" y="56" text-anchor="middle" fill="currentColor" class="pm-small">by your domain</text>
+        </svg>
+      </div>
+      <figure class="still-art" data-od-id="fold-art"><img src="assets/img/still-sheet.webp" width="580" height="759" alt="The letter unfolded flat, its email lines faintly printed on the sheet." loading="lazy"></figure>
+      <div class="fold-cap" data-od-id="fold-caption">
+        <p class="lbl">One sheet, three checks</p>
+        <p class="lead">Write the message.<br>Sign it with your domain.<br>Send it from your account.</p>
+        <ol class="steps" data-od-id="fold-steps"><li class="fill" aria-hidden="true"></li>
+          <li data-step="0" class="on">01 / Write</li><li data-step="1">02 / Sign</li><li data-step="2">03 / Send</li>
+        </ol>
+      </div>
+      <div class="row-bottom" data-od-id="fold-bottom-row"><span>SPF, DKIM and DMARC, written for you.</span><span>Keep folding ↓</span></div>
+    </section>
+  </div>
+
+  <!-- 03 The route -->
+  <div class="pin-wrap" id="tunnel-wrap">
+    <section class="pin chap" id="tunnel" data-od-id="tunnel" aria-labelledby="tunnel-title">
+      <p class="sec-label" data-od-id="tunnel-label"><span class="num">03</span><span class="bar"></span><span>The delivery route</span></p>
+      <h2 class="display scrim" id="tunnel-title" data-od-id="tunnel-headline">
+        <span class="ln">Clear every</span><span class="ln">check. Land</span><span class="ln acc">in the inbox.</span>
+      </h2>
+      <p class="coords" data-od-id="tunnel-coords"><code>spf=pass</code><br><code>dkim=pass dmarc=pass</code></p>
+      <figure class="still-art" data-od-id="tunnel-art"><img src="assets/img/still-route.webp" width="1280" height="720" alt="The paper plane flying into a tunnel of blue, ember and amber rings: the delivery route." loading="lazy"></figure>
+      <div class="wind" data-od-id="tunnel-queue">
+        <svg viewBox="0 0 20 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M1 4h11.5a2.5 2.5 0 1 0-2.4-3.2M1 8h16a2.5 2.5 0 1 1-2.4 3.2M1 12h8"/></svg>
+        <p class="lead">Queue it.<br>Pace it to your quota.<br>Deliver it.</p>
+      </div>
+      <ol class="route-list" data-od-id="tunnel-route-list" aria-label="The route, hop by hop">
+        <li>api Worker</li><li>send Queue</li><li><code>SendGovernorDO</code></li><li>Email Sending</li><li>SPF, DKIM, DMARC</li><li>the inbox</li>
+      </ol>
+      <div class="dest" data-od-id="tunnel-destination">
+        <svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><circle cx="17" cy="17" r="9"/><path d="M17 1v32M1 17h32"/></svg>
+        <p class="lbl">Destination<strong>the inbox</strong></p>
+      </div>
+      <div class="row-bottom" data-od-id="tunnel-bottom-row"><span>Bounces and complaints suppress themselves.</span><span>Every event lands on the timeline.</span></div>
+    </section>
+  </div>
+
+  <!-- 04 Your send -->
+  <section class="chap" id="flight" data-od-id="flight" aria-labelledby="flight-title">
+    <p class="sec-label" data-od-id="flight-label"><span class="num">04</span><span class="bar"></span><span>Your turn to send</span></p>
+    <h2 class="display sm scrim" id="flight-title" data-od-id="flight-headline">
+      <span class="ln">Pick one.</span><span class="ln acc">Pace it.</span><span class="ln acc">Send it.</span>
+    </h2>
+    <figure class="still-art" data-od-id="flight-art"><img src="assets/img/still-rest.webp" width="659" height="419" alt="The paper plane gliding in to rest, ready to be thrown." loading="lazy"></figure>
+    <form class="card" id="card" data-od-id="send-card" aria-labelledby="card-title">
+      <div class="hd"><span id="card-title">Send plan</span><span class="sample">Sample</span></div>
+      <h3 id="tpl-h">Pick a template.</h3>
+      <fieldset class="tiles" aria-labelledby="tpl-h">
+        <label class="tile" data-od-id="tile-plain"><input type="radio" name="tpl" value="plain"><span class="sw sw-plain"></span>Plain text</label>
+        <label class="tile" data-od-id="tile-broadcast"><input type="radio" name="tpl" value="broadcast"><span class="sw sw-band"></span>Broadcast</label>
+        <label class="tile" data-od-id="tile-transactional"><input type="radio" name="tpl" value="transactional" checked><span class="sw sw-ember"></span>Transactional</label>
+      </fieldset>
+      <div class="sl-row"><label for="quota">Share of your account's daily quota</label><output id="quota-out" for="quota">45%</output></div>
+      <input id="quota" type="range" min="5" max="100" step="5" value="45" data-od-id="quota-slider" aria-describedby="quota-help">
+      <p class="help" id="quota-help">Cloudflare Email Service sets your account's daily quota. The send governor spreads your share across the day.</p>
+      <button class="send needs-js" id="send" type="button" data-od-id="send-button"><span>Send it</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5"/></svg></button>
+      <p class="help needs-js" id="send-help" aria-live="polite">You get 10 seconds to undo after you press it.</p>
+      <button class="receipt needs-js" id="receipt" type="button" data-od-id="receipt-button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 11.5v2h11v-2"/></svg>Keep the receipt</button>
+      <p class="tiny">Sample data. Nothing leaves this page.</p>
+    </form>
+    <div class="note" data-od-id="flight-note">
+      <p class="lbl">Your yard, <b>your rules</b></p>
+      <p class="small">3,000 sends a month included, then $0.35 per 1,000, at Cloudflare Email Service pricing.</p>
+    </div>
+  </section>
+
+  <!-- 05 Your agent -->
+  <div class="pin-wrap" id="agents-wrap">
+    <section class="pin chap" id="agents" data-od-id="agents" aria-labelledby="agents-title">
+      <p class="sec-label" data-od-id="agents-label"><span class="num">05</span><span class="bar"></span><span>A mailbox for your agent</span></p>
+      <h2 class="display sm" id="agents-title" data-od-id="agents-headline">
+        <span class="ln">Your agent</span><span class="ln">gets mail.</span><span class="ln acc">You sign off.</span>
+      </h2>
+      <p class="lead ag-lead" data-od-id="agents-lead">A letter lands at agent@yourdomain. The agent reads it, drafts a reply, and holds it until you say send.</p>
+      <div class="ag-code" data-od-id="agents-setup">
+        <p class="lbl" id="mcp-l">Connect Claude Code in one line</p>
+        <div class="code-box">
+          <code id="mcp-cmd" aria-labelledby="mcp-l">claude mcp add --transport http mailyard https://&lt;your-mailyard&gt;/mcp --header "Authorization: Bearer sk_…"</code>
+          <button class="copy needs-js" type="button" data-copy="mcp-cmd" data-od-id="agents-copy">Copy</button>
+        </div>
+        <p class="help-line">The key is scoped to that agent's mailbox. It reads, searches, drafts and sends over MCP.</p>
+      </div>
+      <div class="mailbox" id="mailbox" data-step="3" data-od-id="agents-mailbox">
+        <div class="hd"><span>agent@yourdomain</span><span class="sample">Sample</span></div>
+        <ol class="steps ag-steps" aria-label="What happens"><li class="fill" aria-hidden="true"></li>
+          <li data-step="1">01 / Arrives</li><li data-step="2">02 / Drafts</li><li data-step="3">03 / You approve</li>
+        </ol>
+        <div class="mb-thread" data-od-id="agents-thread">
+          <p class="mb-from"><span>customer@example.com</span><span class="mb-new">New</span></p>
+          <p class="mb-subj">Could you resend October's invoice?</p>
+          <p class="mb-att"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M10.5 4.5 5.8 9.2a1.6 1.6 0 0 0 2.3 2.3l5-5a3 3 0 0 0-4.3-4.3L3.7 7.3a4.3 4.3 0 0 0 6.1 6.1l3.7-3.7"/></svg>order-1042.pdf · read as text</p>
+        </div>
+        <div class="mb-draft" data-od-id="agents-draft">
+          <p class="mb-k">Draft by your agent</p>
+          <p class="dl" data-l="0">Hi, here's October's invoice again.</p>
+          <p class="dl" data-l="1">It matches order 1042 from the PDF you sent.</p>
+          <p class="dl" data-l="2">Thanks for checking.</p>
+        </div>
+        <div class="mb-approve" data-od-id="agents-approval">
+          <p class="mb-k"><span class="hold-dot" aria-hidden="true"></span>Held for your approval</p>
+          <p class="mb-why">The recipient is on this agent's allow-list.</p>
+          <div class="mb-actions needs-js">
+            <button class="send ag-approve" id="approve" type="button" data-od-id="agents-approve-button"><span>Approve and send</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5"/></svg></button>
+          </div>
+          <p class="help needs-js" id="approve-help" aria-live="polite">Sample data. Nothing is sent.</p>
+        </div>
+      </div>
+      <div class="row-bottom" data-od-id="agents-bottom-row"><span>Per-agent send limits and recipient allow-lists.</span><span>Every action is audited.</span></div>
+    </section>
+  </div>
+
+  <!-- In the yard -->
+  <section id="yard" data-od-id="yard" aria-labelledby="yard-title">
+    <h2 class="yard-title" id="yard-title">Everything in the yard.</h2>
+    <div class="yard-grid">
+      <div class="yard-col" data-od-id="yard-people">
+        <h3>For people</h3>
+        <ul>
+          <li><b>Inbox</b> with threads, search, labels, snooze and undo send</li>
+          <li><b>Transactional sending</b> through a Plunk-compatible API</li>
+          <li><b>Contacts, segments and forms</b></li>
+          <li><b>Campaigns and automations</b></li>
+          <li><b>Analytics</b> on every send</li>
+        </ul>
+      </div>
+      <div class="yard-col" data-od-id="yard-agents">
+        <h3>For agents</h3>
+        <ul>
+          <li><b>Its own mailbox</b> on your domain and its own scoped key</li>
+          <li><b>Reads, searches, drafts and sends</b> over MCP</li>
+          <li><b>Send limits and allow-lists</b> per agent, with sends held for your approval</li>
+          <li><b>Wakes on new mail</b> by webhook or long-poll</li>
+          <li><b>Reads attachments</b>, turned into text by Workers AI</li>
+          <li><b>Every action audited</b></li>
+        </ul>
+      </div>
+      <div class="yard-col" data-od-id="yard-runs">
+        <h3>What it runs on</h3>
+        <p class="yard-sub">All in your own Cloudflare account.</p>
+        <ul class="svc-list">
+          <li class="chip-svc svc-edge">Email Routing</li>
+          <li class="chip-svc svc-msg">Email Sending</li>
+          <li class="chip-svc svc-msg">Queues</li>
+          <li class="chip-svc svc-compute">Workers</li>
+          <li class="chip-svc svc-compute">Durable Objects</li>
+          <li class="chip-svc svc-compute">Workflows</li>
+          <li class="chip-svc svc-data">D1</li>
+          <li class="chip-svc svc-data">R2</li>
+          <li class="chip-svc svc-ai">Workers AI</li>
+        </ul>
+        <p class="svc-key" aria-label="Colour key"><span class="k svc-compute">compute</span> <span class="k svc-data">storage and data</span> <span class="k svc-ai">AI</span> <span class="k svc-msg">messaging</span> <span class="k svc-edge">edge</span></p>
+        <p class="price">3,000 sends a month included, then $0.35 per 1,000. Cloudflare Email Service pricing; your account's daily quota applies.</p>
+      </div>
+    </div>
+    <div class="yard-cta">
+      <a class="btn-primary" href="https://app.flareyard.dev/apps" data-od-id="yard-cta-deploy">Deploy to your Cloudflare <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5"/></svg></a>
+      <p class="help-line">Mailyard installs from Flareyard into your own account. Source on GitHub, opening at launch.</p>
+    </div>
+  </section>
+</main>
+
+<footer data-od-id="footer">
+  <div class="f-grid">
+    <p class="wordmark" data-od-id="footer-wordmark">mailyard</p>
+    <p class="f-line" data-od-id="footer-line">Keep your mail<br>in your own <em>yard.</em></p>
+    <a class="f-back" href="#hero" data-go="hero" data-od-id="footer-back">Back to the first letter <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5"/></svg></a>
+  </div>
+  <nav class="f-links" aria-label="Footer" data-od-id="footer-links">
+    <a href="https://flareyard.dev" data-od-id="link-flareyard"><svg class="fy" viewBox="0 0 32 32" shape-rendering="crispEdges" aria-hidden="true"><rect x="1" y="25" width="6" height="6" fill="currentColor"/><rect x="17" y="9" width="6" height="6" fill="currentColor"/><rect x="25" y="1" width="6" height="6" fill="currentColor"/><rect x="17" y="17" width="6" height="6" fill="currentColor"/><rect x="25" y="17" width="6" height="6" fill="currentColor"/><rect x="9" y="17" width="6" height="6" class="fy-ember"/></svg>A Flareyard app</a>
+    <a href="https://app.flareyard.dev/apps" data-od-id="link-deploy">Install from Flareyard ↗</a>
+    <a href="https://mail.flareyard.dev/sign-in" data-od-id="link-sign-in">Sign in to your yard ↗</a>
+    <span class="f-note" data-od-id="link-repo">Source on GitHub, opening at launch</span>
+  </nav>
+</footer>
+
+<nav class="dock" aria-label="Chapters" data-od-id="chapter-dock">
+  <ol>
+    <li><a class="chip on" href="#hero" data-go="hero" data-chip="0" aria-current="true"><span>01</span><span class="nm">The letter</span></a></li>
+    <li><a class="chip" href="#fold" data-go="fold" data-chip="1"><span>02</span><span class="nm">The fold</span></a></li>
+    <li><a class="chip" href="#tunnel" data-go="tunnel" data-chip="2"><span>03</span><span class="nm">The route</span></a></li>
+    <li><a class="chip" href="#flight" data-go="flight" data-chip="3"><span>04</span><span class="nm">Your send</span></a></li>
+    <li><a class="chip" href="#agents" data-go="agents" data-chip="4"><span>05</span><span class="nm">Your agent</span></a></li>
+  </ol>
+  <span class="sep"></span>
+  <button class="eye needs-js" id="motion" type="button" aria-pressed="false" data-od-id="motion-toggle"><span class="sr">Pause motion</span>
+    <svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1" y="1" width="20" height="12" rx="6"/><circle class="pupil" cx="13.5" cy="7" r="3"/></svg>
+  </button>
+</nav>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
