@@ -86,6 +86,7 @@ export class MailboxStore {
         if (migration.after === "rebuildFolderCounts") this.rebuildFolderCounts()
         if (migration.after === "rebuildCorrespondents") this.rebuildCorrespondents()
         if (migration.after === "paletteLabels") this.paletteLabels()
+        if (migration.after === "threadColumns") this.threadColumns()
       }
       this.sql.exec("DELETE FROM _schema")
       this.sql.exec("INSERT INTO _schema (version) VALUES (?)", MAILBOX_MIGRATIONS.length)
@@ -96,8 +97,24 @@ export class MailboxStore {
     return this.sql.exec<{ version: number }>("SELECT version FROM _schema").toArray()[0]?.version ?? 0
   }
 
+  /**
+   * Threads' columns added after v1 that `refresh` writes (HAL-3392: `resolved_at`). Run before the v2
+   * back-fill, which rebuilds threads, and as its own migration, so it's added once whichever comes first.
+   */
+  private threadColumns() {
+    const columns = new Set(
+      this.sql
+        .exec<{ name: string }>("SELECT name FROM pragma_table_info('threads')")
+        .toArray()
+        .map((c) => c.name),
+    )
+    if (columns.size > 0 && !columns.has("resolved_at"))
+      this.sql.exec("ALTER TABLE threads ADD COLUMN resolved_at INTEGER")
+  }
+
   /** v2: fill in the threading facts and search rows for messages v1 stored, then thread them in send order. */
   private threadAndIndexExisting() {
+    this.threadColumns()
     const rows = this.sql.exec("SELECT * FROM messages ORDER BY received_at, id").toArray()
     for (const row of rows) {
       const facts = subjectKey(String(row.subject))
@@ -651,16 +668,25 @@ export class MailboxStore {
     const wokenAt = num(previous?.woken_at)
     const snoozedUntil = num(previous?.snoozed_until)
     const lastAt = Number(agg.last_at)
+    // Resolved (HAL-3392): an open conversation (in the inbox, or snoozed) whose last open message was
+    // archived. Anything back in the inbox reopens it. Mail that was never open (an import straight to
+    // the archive) is never "resolved", so it can't skew resolution times.
+    const open = (fs: ReadonlyArray<string>) => fs.includes("inbox") || fs.includes("snoozed")
+    const wasOpen = previous !== undefined && open(parse(previous.folders) as Array<string>)
+    const isOpen = open(folders)
+    const archived = !isOpen && folders.includes("archive")
+    const resolvedAt = isOpen ? null : archived ? (wasOpen ? this.now() : num(previous?.resolved_at)) : null
     this.sql.exec(
       `INSERT INTO threads (id, subject, snippet, latest_message_id, message_count, unread_count, starred,
-         has_attachments, participants, folders, label_ids, first_at, last_at, sort_at, woken_at, snoozed_until)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         has_attachments, participants, folders, label_ids, first_at, last_at, sort_at, woken_at, snoozed_until,
+         resolved_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET subject = excluded.subject, snippet = excluded.snippet,
          latest_message_id = excluded.latest_message_id, message_count = excluded.message_count,
          unread_count = excluded.unread_count, starred = excluded.starred, has_attachments = excluded.has_attachments,
          participants = excluded.participants, folders = excluded.folders, label_ids = excluded.label_ids,
          first_at = excluded.first_at, last_at = excluded.last_at, sort_at = excluded.sort_at,
-         woken_at = excluded.woken_at, snoozed_until = excluded.snoozed_until`,
+         woken_at = excluded.woken_at, snoozed_until = excluded.snoozed_until, resolved_at = excluded.resolved_at`,
       threadId,
       first.subject,
       latest.snippet,
@@ -677,6 +703,7 @@ export class MailboxStore {
       Math.max(lastAt, wokenAt ?? 0),
       wokenAt,
       snoozedUntil,
+      resolvedAt,
     )
     return this.toThread(this.threadRow(threadId) as Row)
   }
@@ -699,6 +726,7 @@ export class MailboxStore {
       sortAt: Number(row.sort_at),
       snoozedUntil: num(row.snoozed_until),
       assignee: str(row.assignee),
+      resolvedAt: num(row.resolved_at),
     }
   }
 
@@ -991,8 +1019,13 @@ export class MailboxStore {
    */
   responseTimes(input: { readonly from: number; readonly to: number }) {
     const rows = this.sql
-      .exec<{ assignee: string | null; first_in: number | null; first_reply: number | null }>(
-        `SELECT t.assignee AS assignee,
+      .exec<{
+        assignee: string | null
+        first_in: number | null
+        first_reply: number | null
+        resolved_at: number | null
+      }>(
+        `SELECT t.assignee AS assignee, t.resolved_at AS resolved_at,
            (SELECT min(m.received_at) FROM messages m WHERE m.thread_id = t.id AND m.folder != 'sent') AS first_in,
            (SELECT min(r.received_at) FROM messages r WHERE r.thread_id = t.id AND r.folder = 'sent'
               AND r.received_at > (SELECT min(m.received_at) FROM messages m WHERE m.thread_id = t.id AND m.folder != 'sent')) AS first_reply
@@ -1001,20 +1034,24 @@ export class MailboxStore {
         input.to,
       )
       .toArray()
-    const by = new Map<string | null, { threads: number; replied: Array<number> }>()
+    const by = new Map<string | null, { threads: number; replied: Array<number>; resolved: Array<number> }>()
     for (const r of rows) {
       if (r.first_in === null) continue
-      const entry = by.get(r.assignee) ?? { threads: 0, replied: [] }
+      const entry = by.get(r.assignee) ?? { threads: 0, replied: [], resolved: [] }
       entry.threads++
       if (r.first_reply !== null) entry.replied.push(r.first_reply - r.first_in)
+      if (r.resolved_at !== null && r.resolved_at >= r.first_in)
+        entry.resolved.push(r.resolved_at - r.first_in)
       by.set(r.assignee, entry)
     }
     return [...by.entries()].map(([assignee, e]) => ({
       assignee,
       threads: e.threads,
       answered: e.replied.length,
+      resolved: e.resolved.length,
       firstResponseMedianMs: median(e.replied),
       firstResponseP90Ms: percentile(e.replied, 0.9),
+      resolutionMedianMs: median(e.resolved),
     }))
   }
 

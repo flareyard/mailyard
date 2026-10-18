@@ -197,8 +197,9 @@ export const responseTimes = Effect.fn("overview.responseTimes")(function* (
           answered: r.answered,
           firstResponseMedianMin: minutes(r.firstResponseMedianMs),
           firstResponseP90Min: minutes(r.firstResponseP90Ms),
-          // Mailyard doesn't record when a conversation is resolved yet (HAL-3392).
-          resolutionMedianHours: null,
+          resolved: r.resolved,
+          resolutionMedianHours:
+            r.resolutionMedianMs === null ? null : Math.round((r.resolutionMedianMs / 3_600_000) * 10) / 10,
         })),
       })),
     unavailable: answers.filter((a) => a.value === null).map((a) => a.mailbox.id),

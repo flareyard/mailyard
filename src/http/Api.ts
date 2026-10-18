@@ -1802,6 +1802,8 @@ export const ThreadSchema = Schema.Struct({
   lastAt: Schema.Number,
   sortAt: Schema.Number,
   snoozedUntil: Schema.NullOr(Schema.Number),
+  /** When the conversation was resolved (its last open message archived); null while open. */
+  resolvedAt: Schema.optionalKey(Schema.NullOr(Schema.Number)),
   assignee: Schema.NullOr(Schema.String).annotate({
     description: "The API key id handling it; see assignedTo for the name.",
   }),
@@ -5178,6 +5180,9 @@ export class OverviewApi extends HttpApiGroup.make("overview")
                 answered: Schema.Number,
                 firstResponseMedianMin: Schema.NullOr(Schema.Number),
                 firstResponseP90Min: Schema.NullOr(Schema.Number),
+                /** Conversations resolved: an open thread whose last open message was archived (HAL-3392). */
+                resolved: Schema.Number,
+                /** From the first message in to the resolution, median, in hours to one decimal. */
                 resolutionMedianHours: Schema.NullOr(Schema.Number),
               }),
             ),

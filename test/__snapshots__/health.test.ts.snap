@@ -72692,6 +72692,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                             "type": "array",
                           },
+                          "resolvedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "scheduledSendAt": {
                             "anyOf": [
                               {
@@ -74142,6 +74164,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "object",
                             },
                             "type": "array",
+                          },
+                          "resolvedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
                           },
                           "scheduledSendAt": {
                             "anyOf": [
@@ -75720,6 +75764,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "type": "object",
                           },
                           "type": "array",
+                        },
+                        "resolvedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
                         },
                         "scheduledSendAt": {
                           "anyOf": [
@@ -81472,6 +81538,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                     "type": "object",
                                   },
                                   "type": "array",
+                                },
+                                "resolvedAt": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
                                 },
                                 "scheduledSendAt": {
                                   "anyOf": [
@@ -90831,6 +90919,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                     },
                                   ],
                                 },
+                                "resolved": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
                                 "threads": {
                                   "anyOf": [
                                     {
@@ -90854,6 +90957,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "answered",
                                 "firstResponseMedianMin",
                                 "firstResponseP90Min",
+                                "resolved",
                                 "resolutionMedianHours",
                               ],
                               "type": "object",
