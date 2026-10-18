@@ -6,25 +6,15 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ApiError, api, type components, unwrap } from "../api/client.ts"
 
-type MeBody = NonNullable<Awaited<ReturnType<typeof api.GET<"/v1/me", Record<string, never>>>>["data"]>
-export type Role = "owner" | "admin" | "sender" | "agent" | "viewer"
-/**
- * The live /v1/me body. People and roles (HAL-3361) add `user` and `role`; until then the session is a key and
- * both are absent, so the shell shows the key's name and scopes. Workspaces carry no host: the current one is
- * wherever this page is served from.
- */
-export type Workspace = MeBody["workspace"] & { host?: string | null }
-export type Me = Omit<MeBody, "workspace" | "workspaces"> & {
-  workspace: Workspace
-  workspaces: Workspace[]
-  user?: { id: string; name: string; email: string } | null
-  role?: Role | null
-}
+/** The live `GET /v1/me` body (HAL-3358, people and roles HAL-3361), straight from the generated schema. */
+export type Me = NonNullable<Awaited<ReturnType<typeof api.GET<"/v1/me", Record<string, never>>>>["data"]>
+export type Workspace = Me["workspace"]
+export type Role = NonNullable<Me["role"]>
 export type { components }
 
 export const meQuery = queryOptions({
   queryKey: ["me"],
-  queryFn: () => unwrap(api.GET("/v1/me")) as Promise<Me>,
+  queryFn: () => unwrap(api.GET("/v1/me")),
   retry: (n, e) => !(e instanceof ApiError && (e.status === 401 || e.status === 403)) && n < 2,
   staleTime: 60_000,
 })
@@ -33,7 +23,7 @@ export const useMe = () => useQuery(meQuery)
 
 /** Exchanges a key for the session cookie. The key is never stored: it lives in this call and nowhere else. */
 export async function signIn(key: string): Promise<Me> {
-  return unwrap(api.POST("/v1/session", { body: { key: key.trim() } })) as Promise<Me>
+  return unwrap(api.POST("/v1/session", { body: { key: key.trim() } }))
 }
 
 export async function signOut(): Promise<void> {

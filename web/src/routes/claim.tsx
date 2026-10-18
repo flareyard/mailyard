@@ -1,26 +1,26 @@
 /**
- * /claim (design: auth/claim-workspace.html, auth/claim-already-claimed.html; GAPS 1.10). The first person in
- * with the deploy's admin key claims the workspace and becomes its owner; the admin key stays as break-glass.
- * `POST /v1/workspace/claim { workspaceName, name, email }` answers `409 { claimedBy, claimedAt }` once it has an
- * owner. It's HAL-3361, not built yet: until the route is in the API's OpenAPI the form shows, says so, and
- * can't submit. Nothing here pretends to succeed.
+ * /claim (design: auth/claim-workspace.html, auth/claim-already-claimed.html; live contract HAL-3361). The first
+ * person in with the deploy's admin key (Bearer or an admin-key session) claims the workspace and becomes its
+ * owner; the admin key stays as break-glass. `POST /v1/workspace/claim { workspaceName, name, email }` answers
+ * `{ member, signInLinkSent }`; a second claim gets `409 { reason: "already-claimed", claimedBy, claimedAt }`.
+ * On a deploy older than HAL-3361 the route isn't in its OpenAPI, and the form says so instead of failing.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useRef, useState } from "react"
-import { ApiError } from "../api/client.ts"
+import { ApiError, api, unwrap } from "../api/client.ts"
 import { useCapabilities } from "../auth/capabilities.ts"
 import { Gated } from "../auth/NoPermission.tsx"
 import { meQuery, useMe } from "../auth/session.ts"
-import { plannedCall } from "../first-run/planned.ts"
 import { describe, FieldError } from "../first-run/ui.tsx"
+import { toDate } from "../lib/format.ts"
 import { AuthLayout } from "../ui/AuthLayout.tsx"
 import { Icon } from "../ui/icons.tsx"
 import { RequestId } from "../ui/Panel.tsx"
 
 export const Route = createFileRoute("/claim")({ component: Claim })
 
-type Claimed = { claimedBy: string | null; claimedAt: string | null }
+type Claimed = { claimedBy: string | null; claimedAt: string | number | null }
 
 function Claim() {
   const me = useMe()
@@ -34,6 +34,7 @@ function Claim() {
   const [email, setEmail] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [claimed, setClaimed] = useState<Claimed | null>(null)
+  const [done, setDone] = useState<{ email: string; workspace: string; linkSent: boolean } | null>(null)
   const refs = {
     ws: useRef<HTMLInputElement>(null),
     name: useRef<HTMLInputElement>(null),
@@ -43,16 +44,19 @@ function Claim() {
 
   const claim = useMutation({
     mutationFn: (body: { workspaceName: string; name: string; email: string }) =>
-      plannedCall<unknown>("POST", "/v1/workspace/claim", body),
-    onSuccess: async () => {
+      unwrap(api.POST("/v1/workspace/claim", { body })),
+    onSuccess: async (res, body) => {
       await qc.invalidateQueries({ queryKey: meQuery.queryKey })
-      navigate({ to: "/", search: { step: "domain" } })
+      setDone({ email: res.member.email, workspace: body.workspaceName, linkSent: res.signInLinkSent })
     },
     onError: (e) => {
-      if (e instanceof ApiError && e.status === 409)
+      if (e instanceof ApiError && e.status === 409 && e.reason === "already-claimed")
         setClaimed({
           claimedBy: typeof e.body.claimedBy === "string" ? e.body.claimedBy : null,
-          claimedAt: typeof e.body.claimedAt === "string" ? e.body.claimedAt : null,
+          claimedAt:
+            typeof e.body.claimedAt === "string" || typeof e.body.claimedAt === "number"
+              ? e.body.claimedAt
+              : null,
         })
       else if (e instanceof ApiError && e.status === 400 && typeof e.body.field === "string")
         setErrors({ [e.body.field === "workspaceName" ? "ws" : e.body.field]: e.message })
@@ -60,6 +64,8 @@ function Claim() {
   })
 
   if (claimed) return <AlreadyClaimed claimed={claimed} workspace={workspace} />
+  if (done)
+    return <ClaimedNow done={done} onContinue={() => navigate({ to: "/", search: { step: "domain" } })} />
 
   const adminKey = me.data?.via === "admin-key"
   const signedOut = me.error instanceof ApiError && me.error.status === 401
@@ -79,8 +85,8 @@ function Claim() {
 
   const blocked = !live
     ? {
-        reason: "Claiming isn’t live yet",
-        who: "People and roles arrive with HAL-3361. Until then the admin key and scoped keys are how you get in.",
+        reason: "This Mailyard can’t be claimed yet",
+        who: "Update the deploy to a release with people and roles (HAL-3361).",
       }
     : signedOut || !me.data
       ? {
@@ -115,12 +121,9 @@ function Claim() {
           <Icon name="info" />
           <div className="stack stack-4">
             <span>
-              <b>Claiming arrives with people and roles (HAL-3361).</b> Until that deploys, Mailyard has no
-              owners: the admin key and the keys you make in Settings → API keys are how you get in. This form
-              can’t claim yet.
-            </span>
-            <span>
-              <span className="pill pill-proposal">Planned · HAL-3361</span>
+              <b>This Mailyard can’t be claimed yet.</b> Owners arrive with people and roles (HAL-3361), which
+              this deploy doesn’t have. Update it from Flareyard; until then the admin key and the keys in
+              Settings → API keys are how you get in.
             </span>
           </div>
         </div>
@@ -151,7 +154,7 @@ function Claim() {
         className="stack stack-16"
         onSubmit={submit}
         noValidate
-        data-endpoint="POST /v1/workspace/claim (planned, HAL-3361)"
+        data-endpoint="POST /v1/workspace/claim (built, HAL-3361)"
       >
         <div className="field">
           <label className="label" htmlFor="ws-name">
@@ -249,8 +252,9 @@ function Claim() {
 function AlreadyClaimed({ claimed, workspace }: { claimed: Claimed; workspace: string }) {
   const caps = useCapabilities()
   const flareyard = caps.has("GET", "/v1/session/flareyard/start")
-  const when = claimed.claimedAt
-    ? new Date(claimed.claimedAt).toLocaleDateString("en-GB", {
+  const at = toDate(claimed.claimedAt)
+  const when = at
+    ? at.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
         timeZone: "UTC",
@@ -298,6 +302,46 @@ function AlreadyClaimed({ claimed, workspace }: { claimed: Claimed; workspace: s
       <Link className="link" to="/sign-in">
         Back to sign in
       </Link>
+    </AuthLayout>
+  )
+}
+
+/** Claimed: you're the owner. The backend emails a sign-in link to the owner's address when it can. */
+function ClaimedNow({
+  done,
+  onContinue,
+}: {
+  done: { email: string; workspace: string; linkSent: boolean }
+  onContinue: () => void
+}) {
+  return (
+    <AuthLayout>
+      <div className="callout callout-ok" role="status">
+        <Icon name="check-circle" />
+        <span>
+          <b>You own {done.workspace} now.</b> The admin key stays as a break-glass key.
+        </span>
+      </div>
+      <div>
+        <h1>{done.linkSent ? "Check your email" : "You’re the owner"}</h1>
+        <p className="lede">
+          {done.linkSent ? (
+            <>
+              A sign-in link is on its way to <span className="mono">{done.email}</span>. Open it to sign in
+              as yourself, not the admin key. It works once.
+            </>
+          ) : (
+            <>
+              Mailyard couldn’t email a sign-in link (no system sender is set), so keep using the admin key
+              for now. Once a sender is set, sign in by email as <span className="mono">{done.email}</span>.
+            </>
+          )}
+        </p>
+      </div>
+      <button className="btn btn-primary btn-lg btn-block" type="button" onClick={onContinue}>
+        Continue to the setup checklist
+        <Icon name="arrow-right" />
+      </button>
     </AuthLayout>
   )
 }

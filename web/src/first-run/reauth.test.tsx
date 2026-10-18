@@ -154,6 +154,32 @@ describe("Gated", () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
+  it("names who can from a role refusal's allowedRoles", async () => {
+    const { Gated } = await import("../auth/NoPermission.tsx")
+    const { ApiError } = await import("../api/client.ts")
+    const refusal = new ApiError(403, {
+      _tag: "Forbidden",
+      reason: "role",
+      role: "viewer",
+      required: "campaigns.pause",
+      allowedRoles: ["owner", "admin", "sender"],
+    })
+    render(
+      <Gated
+        allowed={false}
+        reason="You can’t pause campaigns"
+        who="fallback"
+        refusal={refusal}
+        action="pause a campaign"
+      >
+        <button type="button">Pause</button>
+      </Gated>,
+    )
+    expect(screen.getByRole("tooltip").textContent).toBe(
+      "You can’t pause campaignsOwners, admins and senders can pause a campaign.",
+    )
+  })
+
   it("renders the control untouched when allowed", async () => {
     const { Gated } = await import("../auth/NoPermission.tsx")
     const onClick = vi.fn()

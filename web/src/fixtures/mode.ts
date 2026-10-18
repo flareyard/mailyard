@@ -6,6 +6,8 @@
  * On with `VITE_FIXTURES=1` (bun run dev:fixtures) or `?fixtures=1`, which sticks for the tab. `?fixtures=0`
  * turns it off. Fixture mode never runs against a real session: requests never leave the page.
  */
+import { findOverride } from "./overrides.ts"
+
 type Variant = { screen: string; path: string; query: string; body: unknown }
 type Table = Record<string, Variant[]>
 
@@ -72,6 +74,15 @@ export function findFixture(t: Table, method: string, url: URL): Variant | undef
 /** A fetch that answers from the fixture table, shaped like the real API's responses. */
 export async function fixtureFetch(request: Request): Promise<Response> {
   const url = new URL(request.url)
+  // Routes whose design fixtures predate the live contract answer from hand-written, typed overrides first.
+  const override = await findOverride(request)
+  if (override) {
+    await new Promise((r) => setTimeout(r, 120))
+    return Response.json(override.body, {
+      status: override.status,
+      headers: { "x-fixture-screen": "override" },
+    })
+  }
   const hit = findFixture(await load(), request.method, url)
   await new Promise((r) => setTimeout(r, 120))
   if (!hit) {

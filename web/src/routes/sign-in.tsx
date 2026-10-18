@@ -1,11 +1,12 @@
 /**
- * /sign-in (design: screens/auth/sign-in*.html, 10 states). Two ways in: the Flareyard handoff (HAL-3360) and an
- * access key exchanged for the HttpOnly session cookie (HAL-3358). Every refusal the API types (HAL-3359) has
+ * /sign-in (design: screens/auth/sign-in*.html, 10 states). Three ways in: the Flareyard handoff (HAL-3360), an
+ * access key exchanged for the HttpOnly session cookie (HAL-3358), and a sign-in link by email (HAL-3361). Every refusal the API types (HAL-3359) has
  * its own message; the key never touches storage and is cleared from the field once it has been sent.
  */
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useState } from "react"
 import { useCapabilities } from "../auth/capabilities.ts"
+import { EmailLinkForm } from "../auth/EmailLinkForm.tsx"
 import { keyLooksValid, type SignInError, signInError, useSessionActions } from "../auth/session.ts"
 import { fixturesEnabled } from "../fixtures/mode.ts"
 import { AuthLayout } from "../ui/AuthLayout.tsx"
@@ -274,6 +275,9 @@ function SignIn() {
           </span>
         </p>
       </form>
+
+      <div className="or">or get a link by email</div>
+      <EmailLinkForm />
       {fixturesEnabled() ? <p className="t-small muted">Fixture mode: any key signs in.</p> : null}
     </AuthLayout>
   )

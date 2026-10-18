@@ -17,6 +17,7 @@ import {
   type ReactNode,
   useId,
 } from "react"
+import { ApiError } from "../api/client.ts"
 import type { Me } from "./session.ts"
 
 type ControlProps = {
@@ -34,6 +35,8 @@ export function Gated({
   who,
   side,
   block = false,
+  refusal,
+  action,
   children,
 }: {
   allowed: boolean
@@ -45,9 +48,18 @@ export function Gated({
   side?: "right" | "up"
   /** Full-width controls (`.btn-block`). */
   block?: boolean
+  /**
+   * The API's refusal, when the control was refused by a call: a `403 { reason: "role", allowedRoles }` makes the
+   * second line name the roles that can, from the backend's own list, instead of `who`.
+   */
+  refusal?: unknown
+  /** What the control does, for that line: “pause a campaign” → “Owners, admins and senders can pause a campaign.” */
+  action?: string
   children: ReactElement<ControlProps>
 }) {
   const id = useId()
+  const byRole = roleRefusal(refusal)
+  const whoLine = byRole?.allowedRoles.length ? whoCan(byRole.allowedRoles, action ?? "do this") : who
   if (allowed || !isValidElement(children)) return children
   const original = children.props
   const stop = (e: MouseEvent<HTMLElement>) => {
@@ -71,13 +83,29 @@ export function Gated({
       {control}
       <span className={`reason-pop${side ? ` is-${side}` : ""}`} id={id} role="tooltip">
         <b>{reason}</b>
-        {who ? <span className="reason-who">{who}</span> : null}
+        {whoLine ? <span className="reason-who">{whoLine}</span> : null}
       </span>
     </span>
   )
 }
 
 export type Role = NonNullable<Me["role"]>
+
+const ROLES: readonly Role[] = ["owner", "admin", "sender", "agent", "viewer"]
+const isRole = (v: unknown): v is Role => typeof v === "string" && (ROLES as readonly string[]).includes(v)
+
+/** A role refusal (HAL-3361): `403 { reason: "role", role, required, allowedRoles }`, or null for anything else. */
+export function roleRefusal(
+  e: unknown,
+): { role: Role | null; required: string | null; allowedRoles: Role[] } | null {
+  if (!(e instanceof ApiError) || e.status !== 403 || e.body.reason !== "role") return null
+  const b = e.body
+  return {
+    role: isRole(b.role) ? b.role : null,
+    required: typeof b.required === "string" ? b.required : null,
+    allowedRoles: Array.isArray(b.allowedRoles) ? b.allowedRoles.filter(isRole) : [],
+  }
+}
 
 const ROLE_PLURAL: Record<Role, string> = {
   owner: "Owners",
