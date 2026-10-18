@@ -2964,6 +2964,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["workspace.delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspace/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["workspace.restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspace/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["workspace.deletion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/mcp": {
         parameters: {
             query?: never;
@@ -3107,6 +3155,46 @@ export interface components {
             reason?: "missing" | "format" | "unknown" | "revoked" | "session-expired";
             revokedAt?: number | ("Infinity" | "-Infinity" | "NaN");
         };
+        ForbiddenEncoded: {
+            /** @enum {string} */
+            _tag: "Forbidden";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+            /** @enum {string} */
+            reason?: "public-key" | "insufficient-scope" | "csrf" | "role" | "owner" | "mailbox_role";
+            required?: string;
+            scopes?: string[];
+            keyName?: string | null;
+            role?: string;
+            allowedRoles?: string[];
+            owners?: string[];
+        };
+        InvalidRequestEncoded: {
+            /** @enum {string} */
+            _tag: "InvalidRequest";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            field: string;
+            message: string;
+        };
+        ConflictEncoded: {
+            /** @enum {string} */
+            _tag: "Conflict";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+            reason?: string;
+            updatedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+            updatedBy?: string | null;
+            ruleDestination?: string;
+            ruleAction?: string;
+            ruleId?: string;
+            aliasIds?: string[];
+            deletesAt?: number | ("Infinity" | "-Infinity" | "NaN");
+            claimedBy?: string;
+            claimedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+        };
         GoneEncoded: {
             /** @enum {string} */
             _tag: "Gone";
@@ -3123,50 +3211,11 @@ export interface components {
             requestId?: string;
             message: string;
         };
-        ForbiddenEncoded: {
-            /** @enum {string} */
-            _tag: "Forbidden";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            message: string;
-            /** @enum {string} */
-            reason?: "public-key" | "insufficient-scope" | "csrf" | "role" | "owner" | "mailbox_role";
-            required?: string;
-            scopes?: string[];
-            keyName?: string | null;
-            role?: string;
-            allowedRoles?: string[];
-            owners?: string[];
-        };
         NoSystemSenderEncoded: {
             /** @enum {string} */
             _tag: "NoSystemSender";
             /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
             requestId?: string;
-            message: string;
-        };
-        ConflictEncoded: {
-            /** @enum {string} */
-            _tag: "Conflict";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            message: string;
-            reason?: string;
-            updatedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
-            updatedBy?: string | null;
-            ruleDestination?: string;
-            ruleAction?: string;
-            ruleId?: string;
-            aliasIds?: string[];
-            claimedBy?: string;
-            claimedAt?: number | ("Infinity" | "-Infinity" | "NaN");
-        };
-        InvalidRequestEncoded: {
-            /** @enum {string} */
-            _tag: "InvalidRequest";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            field: string;
             message: string;
         };
         NotReadyEncoded: {
@@ -3496,13 +3545,13 @@ export interface operations {
                     "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
-            /** @description IdempotencyConflict */
+            /** @description IdempotencyConflict | Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IdempotencyConflictEncoded"];
+                    "application/json": components["schemas"]["IdempotencyConflictEncoded"] | components["schemas"]["ConflictEncoded"];
                 };
             };
             /** @description Unprocessable */
@@ -4976,6 +5025,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -17157,6 +17215,15 @@ export interface operations {
                     "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
             /** @description RateLimited */
             429: {
                 headers: {
@@ -19016,6 +19083,15 @@ export interface operations {
                     "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
             /** @description RateLimited */
             429: {
                 headers: {
@@ -20749,6 +20825,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -27669,7 +27754,8 @@ export interface operations {
                                 access: "owner" | "member" | "viewer";
                             }[];
                             message: string | null;
-                            invitedBy: string;
+                            invitedBy: string | null;
+                            invitedById: string;
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -27972,7 +28058,8 @@ export interface operations {
                                 access: "owner" | "member" | "viewer";
                             }[];
                             message: string | null;
-                            invitedBy: string;
+                            invitedBy: string | null;
+                            invitedById: string;
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -28053,7 +28140,8 @@ export interface operations {
                                 access: "owner" | "member" | "viewer";
                             }[];
                             message: string | null;
-                            invitedBy: string;
+                            invitedBy: string | null;
+                            invitedById: string;
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -28150,7 +28238,8 @@ export interface operations {
                             access: "owner" | "member" | "viewer";
                         }[];
                         message: string | null;
-                        invitedBy: string;
+                        invitedBy: string | null;
+                        invitedById: string;
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                         sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -28257,7 +28346,8 @@ export interface operations {
                             access: "owner" | "member" | "viewer";
                         }[];
                         message: string | null;
-                        invitedBy: string;
+                        invitedBy: string | null;
+                        invitedById: string;
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                         sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -28360,7 +28450,8 @@ export interface operations {
                             access: "owner" | "member" | "viewer";
                         }[];
                         message: string | null;
-                        invitedBy: string;
+                        invitedBy: string | null;
+                        invitedById: string;
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                         sentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -28404,6 +28495,218 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GoneEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    confirm: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requestedAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        requestedBy: string;
+                        deletesAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        exportId: string;
+                        startedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                        completedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        restored: true;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "none" | "scheduled" | "deleting" | "deleted";
+                        deletion: {
+                            requestedAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            requestedBy: string;
+                            deletesAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            exportId: string;
+                            startedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                            completedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                        } | null;
+                        files: {
+                            name: string;
+                            url: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
                 };
             };
             /** @description RateLimited */
