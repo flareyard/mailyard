@@ -5422,6 +5422,86 @@ const AgentSchema = Schema.Struct({
   removedAt: Schema.NullOr(Schema.Number),
 })
 
+const NullableTime = Schema.NullOr(Schema.Number)
+
+/**
+ * What's connected (HAL-3466), read-only. `mcp.keys` lists the `purpose: mcp` keys (and the agent each
+ * belongs to) for callers who manage keys, and is null for everyone else, who still see the counts.
+ * Keys are made and revoked on `/v1/api-keys` and `/v1/agents`.
+ */
+export class IntegrationsApi extends HttpApiGroup.make("integrations")
+  .add(
+    HttpApiEndpoint.get("get", "/v1/integrations", {
+      success: Schema.Struct({
+        mcp: Schema.Struct({
+          /** The URL to connect an MCP client to; null when the public address isn't known. */
+          endpoint: Schema.NullOr(Schema.String),
+          keyCount: Schema.Number,
+          agentCount: Schema.Number,
+          lastUsedAt: NullableTime,
+          keys: Schema.NullOr(
+            Schema.Array(
+              Schema.Struct({
+                id: Schema.String,
+                name: Schema.String,
+                prefix: Schema.String,
+                scopes: Schema.Array(Schema.String),
+                lastUsedAt: NullableTime,
+                createdAt: Schema.Number,
+                agent: Schema.NullOr(
+                  Schema.Struct({
+                    id: Schema.String,
+                    name: Schema.String,
+                    mailboxId: Schema.String,
+                    address: Schema.NullOr(Schema.String),
+                  }),
+                ),
+              }),
+            ),
+          ),
+        }),
+        webhooks: Schema.Struct({
+          count: Schema.Number,
+          enabled: Schema.Number,
+          paused: Schema.Number,
+          /** Enabled, unpaused endpoints with dead deliveries or whose last attempt failed. */
+          failing: Schema.Number,
+          deadLetters: Schema.Number,
+          held: Schema.Number,
+          failingEndpoints: Schema.Array(
+            Schema.Struct({
+              id: Schema.String,
+              url: Schema.String,
+              deadLetters: Schema.Number,
+              lastFailureAt: NullableTime,
+              lastSuccessAt: NullableTime,
+            }),
+          ),
+        }),
+        /** The Hermes email lane (HAL-3306). */
+        hermes: Schema.Struct({
+          connected: Schema.Boolean,
+          lane: Schema.NullOr(Schema.String),
+          mailboxes: Schema.Array(Schema.String),
+          since: NullableTime,
+        }),
+        /** Sibling Flareyard apps, recognised by an MCP key named for them. */
+        siblings: Schema.Array(
+          Schema.Struct({
+            app: Schema.String,
+            name: Schema.String,
+            via: Schema.Literals(["mcp", "queue"]),
+            connected: Schema.Boolean,
+            keyId: Schema.NullOr(Schema.String),
+            lastUsedAt: NullableTime,
+          }),
+        ),
+      }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /**
  * Agents: an AI agent's own mailbox and the MCP key that uses it, made together, with limits on
  * what the key may send. Managing them needs `agents.manage` (owners and admins; the admin scope).
@@ -5584,4 +5664,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(WorkspaceApi)
   .add(AgentsApi)
   .add(ApprovalsApi)
+  .add(IntegrationsApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}
