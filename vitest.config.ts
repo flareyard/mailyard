@@ -55,6 +55,7 @@ export default defineConfig({
                 BENCH: process.env.BENCH ?? "",
                 // The undo window, shortened so tests watch the alarm hand a send over.
                 MAILYARD_UNDO_SECONDS: "0.5",
+                MAILYARD_PUBLIC_ORIGIN: "https://app.mailyard.test",
               },
             },
           })),

@@ -43,9 +43,16 @@ export const sessionToken = (request: Request) => {
  * Whether a cookie-signed request came from this site: a write, and any WebSocket (whose handshake
  * is a GET a page on another site could open), must carry this origin (HAL-3358).
  */
-const fromThisSite = (request: Request) => {
+const fromThisSite = (request: Request, publicOrigin: string | undefined) => {
   const origin = request.headers.get("origin")
-  if (origin) return origin === new URL(request.url).origin
+  if (origin) {
+    if (origin === new URL(request.url).origin) return true
+    try {
+      return publicOrigin !== undefined && origin === new URL(publicOrigin).origin
+    } catch {
+      return false
+    }
+  }
   return request.headers.get("sec-fetch-site") === "same-origin"
 }
 
@@ -75,7 +82,7 @@ export const authorize = async (
       return response
     }
     const websocket = request.headers.get("upgrade")?.toLowerCase() === "websocket"
-    if ((websocket || !SAFE.has(request.method)) && !fromThisSite(request))
+    if ((websocket || !SAFE.has(request.method)) && !fromThisSite(request, env.MAILYARD_PUBLIC_ORIGIN))
       return problem(
         403,
         "This request was signed in by the session cookie but didn't come from this site, so it was refused.",

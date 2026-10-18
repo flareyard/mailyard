@@ -53,20 +53,25 @@ import { ApiKeyAuth, CurrentCaller, Forbidden, RateLimited, Unauthorized } from 
 /** Methods that change nothing, so a cross-site request can't do harm with them. */
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"])
 
-/**
- * Whether a request came from this origin: its `Origin` header matches, or (when a browser sends no
- * Origin) `Sec-Fetch-Site` says same-origin. A cookie-signed write that is neither is refused, which
- * with SameSite=Lax closes cross-site request forgery (HAL-3358).
- */
-export const sameOrigin = (request: HttpServerRequest.HttpServerRequest) => {
-  const origin = request.headers.origin
-  if (origin) {
-    try {
-      return origin === new URL(request.originalUrl).origin
-    } catch {
-      return false
-    }
+/** A URL's origin, or null for something that isn't a URL. */
+const urlOrigin = (url: string | undefined) => {
+  if (!url) return null
+  try {
+    return new URL(url).origin
+  } catch {
+    return null
   }
+}
+
+/**
+ * Whether a request came from this site: its `Origin` header is this request's origin or the
+ * workspace's public origin (`MAILYARD_PUBLIC_ORIGIN`), or (when a browser sends no Origin)
+ * `Sec-Fetch-Site` says same-origin. A cookie-signed write that is neither is refused, which with
+ * SameSite=Lax closes cross-site request forgery (HAL-3358).
+ */
+export const sameOrigin = (request: HttpServerRequest.HttpServerRequest, publicOrigin?: string) => {
+  const origin = request.headers.origin
+  if (origin) return origin === urlOrigin(request.originalUrl) || origin === urlOrigin(publicOrigin)
   return request.headers["sec-fetch-site"] === "same-origin"
 }
 
@@ -132,7 +137,7 @@ export const ApiKeyAuthLive = Layer.effect(
           ),
         ),
       )
-      if (!SAFE_METHODS.has(request.method) && !sameOrigin(request))
+      if (!SAFE_METHODS.has(request.method) && !sameOrigin(request, bindings.MAILYARD_PUBLIC_ORIGIN))
         return yield* new Forbidden({
           message:
             "This request was signed in by the session cookie but didn't come from this site, so it was refused. Reload the page and try again.",

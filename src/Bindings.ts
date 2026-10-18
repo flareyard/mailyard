@@ -21,6 +21,11 @@ export interface Env {
   }>
   /** Signs links to attachments and large files (GET /v1/files/{token}). Deploy-time secret. */
   readonly FILE_SIGNING_KEY?: string
+  /**
+   * The app's canonical origin (e.g. `https://mail.example.com`) when the Worker answers on several
+   * hostnames. A cookie-signed write from it passes the CSRF check (HAL-3358, HAL-3483).
+   */
+  readonly MAILYARD_PUBLIC_ORIGIN?: string
   /** Seconds a send waits so it can be undone. 10 unless set; tests shorten it. */
   readonly MAILYARD_UNDO_SECONDS?: string
   /** New campaigns track opens and clicks unless these are "false" (manifest settings). */

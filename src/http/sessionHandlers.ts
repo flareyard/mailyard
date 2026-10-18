@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import * as HttpEffect from "effect/http/HttpEffect"
 import * as HttpServerResponse from "effect/http/HttpServerResponse"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import { Bindings } from "../Bindings.ts"
 import { authenticate } from "../domain/apiKeys.ts"
 import {
   clientOf,
@@ -34,7 +35,9 @@ export const SessionHandlers = HttpApiBuilder.group(
       signIn: p(({ payload, request }) =>
         Effect.gen(function* () {
           // A form on another site can't sign someone in to an account of its choosing.
-          if (request.headers.origin && !sameOrigin(request)) return yield* crossSite()
+          const { MAILYARD_PUBLIC_ORIGIN } = yield* Bindings
+          if (request.headers.origin && !sameOrigin(request, MAILYARD_PUBLIC_ORIGIN))
+            return yield* crossSite()
           const caller = yield* authenticate(payload.key.trim()).pipe(
             Effect.catchTag("InvalidKey", (e) =>
               throttle.pipe(
@@ -83,7 +86,7 @@ export const SessionHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const token = request.cookies[SESSION_COOKIE]
           if (token) {
-            if (!sameOrigin(request)) return yield* crossSite()
+            if (!sameOrigin(request, (yield* Bindings).MAILYARD_PUBLIC_ORIGIN)) return yield* crossSite()
             yield* endSessionByToken(token)
           }
           yield* clearSessionCookie

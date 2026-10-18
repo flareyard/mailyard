@@ -123,6 +123,14 @@ describe("browser sessions (HAL-3358)", () => {
     )
     expect(fetchSite.status).toBeLessThan(300)
     expect((await withCookie(cookie as string, "/v1/contacts", write())).status).toBeLessThan(300)
+    // The workspace's public origin (MAILYARD_PUBLIC_ORIGIN) counts as this site too.
+    const publicOrigin = await withCookie(
+      cookie as string,
+      "/v1/contacts",
+      write(),
+      "https://app.mailyard.test",
+    )
+    expect(publicOrigin.status).toBeLessThan(300)
     // Reads need no Origin.
     expect((await withCookie(cookie as string, "/v1/contacts", {}, "")).status).toBe(200)
     // Bearer requests never need one: they can't be forged by a browser.
