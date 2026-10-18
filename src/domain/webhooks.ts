@@ -1,13 +1,15 @@
-import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, lt, or, sql } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { webhookDeliveries, webhookEndpoints } from "../db/schema.ts"
+import { type WebhookFilter, webhookDeliveries, webhookEndpoints } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
+import { currentRequestId } from "../kit/requestContext.ts"
 import { Database } from "../services/Database.ts"
 import { clearAlert, raiseAlert } from "./alerts.ts"
+import { sampleEventData } from "./webhookSamples.ts"
 
 /**
  * Outbound webhooks, signed per the Standard Webhooks spec (standardwebhooks.com): headers
@@ -139,13 +141,16 @@ const checkEvents = (events: ReadonlyArray<string>) => {
   return unknown.length ? `Unknown event types: ${unknown.join(", ")}.` : undefined
 }
 
-export const describeEndpoint = (row: typeof webhookEndpoints.$inferSelect, deadLetters = 0) => ({
+export const describeEndpoint = (row: typeof webhookEndpoints.$inferSelect, deadLetters = 0, held = 0) => ({
   id: row.id,
   url: row.url,
   description: row.description,
   // Every stored event was checked against WEBHOOK_EVENTS when the endpoint was saved.
   events: [...row.events] as Array<WebhookEvent | "*">,
   enabled: row.enabled,
+  filter: row.filter ?? null,
+  paused: row.paused,
+  held,
   lastSuccessAt: row.lastSuccessAt,
   lastFailureAt: row.lastFailureAt,
   /** Deliveries that failed for good and wait for a replay (HAL-3416). */
@@ -155,16 +160,16 @@ export const describeEndpoint = (row: typeof webhookEndpoints.$inferSelect, dead
 })
 
 /** Dead deliveries per endpoint, from the (endpoint, status) index: only dead rows are read. */
-const deadLetterCounts = (endpointIds?: ReadonlyArray<string>) =>
+const deadLetterCounts = (endpointIds?: ReadonlyArray<string>, status: "dead" | "paused" = "dead") =>
   Effect.gen(function* () {
     const database = yield* Database
-    const rows = yield* database.query("webhooks.deadLetters", (db) =>
+    const rows = yield* database.query(`webhooks.count.${status}`, (db) =>
       db
         .select({ endpointId: webhookDeliveries.endpointId, n: sql<number>`count(*)` })
         .from(webhookDeliveries)
         .where(
           and(
-            eq(webhookDeliveries.status, "dead"),
+            eq(webhookDeliveries.status, status),
             // d1: bounded: callers pass one endpoint, or none for all.
             endpointIds ? inArray(webhookDeliveries.endpointId, [...endpointIds]) : undefined,
           ),
@@ -176,7 +181,11 @@ const deadLetterCounts = (endpointIds?: ReadonlyArray<string>) =>
   })
 
 const withDeadLetters = (row: typeof webhookEndpoints.$inferSelect) =>
-  deadLetterCounts([row.id]).pipe(Effect.map((counts) => describeEndpoint(row, counts.get(row.id) ?? 0)))
+  Effect.gen(function* () {
+    const dead = yield* deadLetterCounts([row.id])
+    const held = yield* deadLetterCounts([row.id], "paused")
+    return describeEndpoint(row, dead.get(row.id) ?? 0, held.get(row.id) ?? 0)
+  })
 
 const findEndpoint = Effect.fn("webhooks.find")(function* (id: string) {
   const database = yield* Database
@@ -187,10 +196,69 @@ const findEndpoint = Effect.fn("webhooks.find")(function* (id: string) {
   return row
 })
 
+/** Drops empty lists, so `{ mailboxIds: [] }` means no mailbox filter rather than "match nothing". */
+const normalizeFilter = (filter: WebhookFilter | null | undefined): WebhookFilter | null => {
+  if (!filter) return null
+  const out: Record<string, ReadonlyArray<string>> = {}
+  for (const key of ["mailboxIds", "streams", "campaignIds", "topicIds"] as const) {
+    const list: ReadonlyArray<string> | undefined = filter[key]
+    if (list && list.length > 0) out[key] = [...new Set(list)]
+  }
+  return Object.keys(out).length > 0 ? (out as WebhookFilter) : null
+}
+
+/** The event field each filter list checks. */
+const FILTER_FIELDS = {
+  mailboxIds: "mailboxId",
+  streams: "stream",
+  campaignIds: "campaignId",
+  topicIds: "topicId",
+} as const
+
+/**
+ * Whether an event passes an endpoint's filter: every list given must contain the event's value for
+ * its field. An event without that field (a contact event under a mailbox filter) doesn't pass.
+ */
+export const matchesFilter = (filter: WebhookFilter | null | undefined, data: Record<string, unknown>) => {
+  if (!filter) return true
+  for (const key of Object.keys(FILTER_FIELDS) as Array<keyof typeof FILTER_FIELDS>) {
+    const list: ReadonlyArray<string> | undefined = filter[key]
+    if (!list || list.length === 0) continue
+    const value = data[FILTER_FIELDS[key]]
+    if (typeof value !== "string" || !list.includes(value)) return false
+  }
+  return true
+}
+
+/** Sends an unpaused endpoint's held deliveries, oldest first. */
+const drainHeld = Effect.fn("webhooks.drainHeld")(function* (endpointId: string) {
+  const database = yield* Database
+  const held = yield* database.query("webhooks.held", (db) =>
+    db
+      .select({ id: webhookDeliveries.id })
+      .from(webhookDeliveries)
+      .where(and(eq(webhookDeliveries.endpointId, endpointId), eq(webhookDeliveries.status, "paused")))
+      .orderBy(asc(webhookDeliveries.createdAt), asc(webhookDeliveries.id))
+      .all(),
+  )
+  if (held.length === 0) return 0
+  yield* database.query("webhooks.unhold", (db) =>
+    db
+      .update(webhookDeliveries)
+      .set({ status: "pending" })
+      .where(and(eq(webhookDeliveries.endpointId, endpointId), eq(webhookDeliveries.status, "paused")))
+      .run(),
+  )
+  yield* (yield* WebhookQueue).enqueueMany(held.map((h) => h.id))
+  return held.length
+})
+
 export const createEndpoint = Effect.fn("webhooks.create")(function* (input: {
   readonly url: string
   readonly description?: string | undefined
   readonly events: ReadonlyArray<string>
+  readonly filter?: WebhookFilter | null | undefined
+  readonly paused?: boolean | undefined
 }) {
   const problem = checkUrl(input.url) ?? checkEvents(input.events)
   if (problem) return yield* new WebhookInvalid({ message: problem })
@@ -207,6 +275,8 @@ export const createEndpoint = Effect.fn("webhooks.create")(function* (input: {
         url: input.url,
         description: input.description ?? null,
         events: [...input.events],
+        filter: normalizeFilter(input.filter),
+        paused: input.paused ?? false,
         secretCiphertext,
         updatedAt: Date.now(),
       })
@@ -222,7 +292,8 @@ export const listEndpoints = Effect.fn("webhooks.list")(function* () {
     db.select().from(webhookEndpoints).orderBy(desc(webhookEndpoints.createdAt)).all(),
   )
   const counts = yield* deadLetterCounts()
-  return rows.map((row) => describeEndpoint(row, counts.get(row.id) ?? 0))
+  const held = yield* deadLetterCounts(undefined, "paused")
+  return rows.map((row) => describeEndpoint(row, counts.get(row.id) ?? 0, held.get(row.id) ?? 0))
 })
 
 export const getEndpoint = Effect.fn("webhooks.get")(function* (id: string) {
@@ -236,6 +307,8 @@ export const updateEndpoint = Effect.fn("webhooks.update")(function* (
     readonly description?: string | null | undefined
     readonly events?: ReadonlyArray<string> | undefined
     readonly enabled?: boolean | undefined
+    readonly filter?: WebhookFilter | null | undefined
+    readonly paused?: boolean | undefined
   },
 ) {
   const current = yield* findEndpoint(id)
@@ -251,12 +324,16 @@ export const updateEndpoint = Effect.fn("webhooks.update")(function* (
         description: patch.description === undefined ? current.description : patch.description,
         events: patch.events ? [...patch.events] : current.events,
         enabled: patch.enabled ?? current.enabled,
+        filter: patch.filter === undefined ? current.filter : normalizeFilter(patch.filter),
+        paused: patch.paused ?? current.paused,
         updatedAt: Date.now(),
       })
       .where(eq(webhookEndpoints.id, id))
       .returning()
       .get(),
   )
+  // Unpausing sends what was held, oldest first.
+  if (current.paused && patch.paused === false) yield* drainHeld(id)
   return yield* withDeadLetters(row)
 })
 
@@ -290,7 +367,7 @@ export const rotateSecret = Effect.fn("webhooks.rotate")(function* (id: string) 
 export const listDeliveries = Effect.fn("webhooks.deliveries")(function* (
   endpointId: string,
   filter: {
-    readonly status?: "pending" | "succeeded" | "retrying" | "dead" | undefined
+    readonly status?: "pending" | "succeeded" | "retrying" | "dead" | "paused" | undefined
     readonly cursor?: string | undefined
     readonly limit: number
   },
@@ -334,6 +411,7 @@ export const listDeliveries = Effect.fn("webhooks.deliveries")(function* (
       nextAttemptAt: d.nextAttemptAt,
       createdAt: d.createdAt,
       payload: JSON.parse(d.payload) as unknown,
+      requestId: d.requestId,
     })),
     nextCursor: rows.length > filter.limit && last ? `${last.createdAt}:${last.id}` : null,
   }
@@ -387,21 +465,26 @@ export const emit = Effect.fn("webhooks.emit")(function* (
   )
   const targets = onlyEndpointId
     ? endpoints.filter((e) => e.id === onlyEndpointId)
-    : endpoints.filter((e) => e.events.includes("*") || e.events.includes(type))
+    : endpoints.filter(
+        (e) => (e.events.includes("*") || e.events.includes(type)) && matchesFilter(e.filter, data),
+      )
   if (targets.length === 0) return 0
   const ids = yield* Ids
   const eventId = `evt_${yield* ids.next}`
   const payload = JSON.stringify({ id: eventId, type, createdAt: new Date().toISOString(), data })
+  const requestId = currentRequestId()
   const queue = yield* WebhookQueue
   for (const endpoint of targets) {
     const id = `whd_${yield* ids.next}`
+    // A paused endpoint keeps its deliveries, held, to send in order when it's unpaused.
+    const status = endpoint.paused ? ("paused" as const) : ("pending" as const)
     yield* database.query("webhooks.deliveryInsert", (db) =>
       db
         .insert(webhookDeliveries)
-        .values({ id, endpointId: endpoint.id, eventId, eventType: type, payload, status: "pending" })
+        .values({ id, endpointId: endpoint.id, eventId, eventType: type, payload, status, requestId })
         .run(),
     )
-    yield* queue.enqueue(id, 0)
+    if (!endpoint.paused) yield* queue.enqueue(id, 0)
   }
   return targets.length
 })
@@ -424,6 +507,17 @@ export const deliver = Effect.fn("webhooks.deliver")(function* (deliveryId: stri
     db.select().from(webhookEndpoints).where(eq(webhookEndpoints.id, delivery.endpointId)).get(),
   )
   if (!endpoint?.enabled) return "skipped" as const
+  if (endpoint.paused) {
+    // Paused after this was queued: hold it with the rest, to go in order on unpause.
+    yield* database.query("webhooks.hold", (db) =>
+      db
+        .update(webhookDeliveries)
+        .set({ status: "paused" })
+        .where(eq(webhookDeliveries.id, deliveryId))
+        .run(),
+    )
+    return "held" as const
+  }
 
   const secret = yield* (yield* SecretBox).open(endpoint.secretCiphertext)
   const timestamp = Math.floor(Date.now() / 1000)
@@ -439,6 +533,7 @@ export const deliver = Effect.fn("webhooks.deliver")(function* (deliveryId: stri
           "webhook-id": delivery.eventId,
           "webhook-timestamp": String(timestamp),
           "webhook-signature": signature,
+          ...(delivery.requestId ? { "x-mailyard-request-id": delivery.requestId } : {}),
         },
         body: delivery.payload,
         signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -602,24 +697,35 @@ export const replayDead = Effect.fn("webhooks.replayDead")(function* (endpointId
 })
 
 /** Queues a `ping`-style test event to one endpoint, regardless of its subscriptions. */
-export const sendTest = Effect.fn("webhooks.test")(function* (endpointId: string) {
+export const sendTest = Effect.fn("webhooks.test")(function* (endpointId: string, event?: WebhookEvent) {
   const endpoint = yield* findEndpoint(endpointId)
   const database = yield* Database
   const ids = yield* Ids
   const eventId = `evt_${yield* ids.next}`
   const id = `whd_${yield* ids.next}`
+  // A sample of the event the receiver will really get, or a plain ping (HAL-3464).
+  const eventType = event ?? "webhook.test"
   const payload = JSON.stringify({
     id: eventId,
-    type: "webhook.test",
+    type: eventType,
     createdAt: new Date().toISOString(),
-    data: { message: "A test event from Mailyard." },
+    data: event ? sampleEventData(event) : { message: "A test event from Mailyard." },
   })
   yield* database.query("webhooks.testInsert", (db) =>
     db
       .insert(webhookDeliveries)
-      .values({ id, endpointId: endpoint.id, eventId, eventType: "webhook.test", payload, status: "pending" })
+      .values({
+        id,
+        endpointId: endpoint.id,
+        eventId,
+        eventType,
+        payload,
+        status: "pending",
+        requestId: currentRequestId(),
+      })
       .run(),
   )
+  // A test goes even to a paused endpoint: it's how you check one before unpausing it.
   yield* (yield* WebhookQueue).enqueue(id, 0)
-  return { deliveryId: id, eventId }
+  return { deliveryId: id, eventId, eventType }
 })

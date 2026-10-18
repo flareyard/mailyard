@@ -747,6 +747,25 @@ export const WebhookEventSchema = Schema.Literals(WEBHOOK_EVENTS).annotate({
     'A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint\'s whsec_ secret).',
 })
 
+/** An empty list means no filter on that field. */
+const IdList = Schema.Array(Schema.String.check(Schema.isMaxLength(200))).check(Schema.isMaxLength(100))
+
+/**
+ * Only events about these (HAL-3464): `mail.received` for support@ only, say. Each list given must
+ * contain the event's field; an event without the field (a contact event under a mailbox filter)
+ * doesn't match. Null for every event of the subscribed types.
+ */
+export const WebhookFilterSchema = Schema.Struct({
+  mailboxIds: Schema.optionalKey(IdList),
+  streams: Schema.optionalKey(
+    Schema.Array(
+      Schema.Literals(["transactional", "campaign", "automation", "reply", "mailbox", "test", "system"]),
+    ),
+  ),
+  campaignIds: Schema.optionalKey(IdList),
+  topicIds: Schema.optionalKey(IdList),
+})
+
 export const WebhookEndpoint = Schema.Struct({
   id: Schema.String,
   url: Schema.String,
@@ -754,6 +773,11 @@ export const WebhookEndpoint = Schema.Struct({
   /** The events this endpoint receives; `*` means all of them. */
   events: Schema.Array(Schema.Union([WebhookEventSchema, Schema.Literal("*")])),
   enabled: Schema.Boolean,
+  filter: Schema.NullOr(WebhookFilterSchema),
+  /** Deliveries are held while paused and sent in order when it's unpaused; `enabled: false` drops them. */
+  paused: Schema.Boolean,
+  /** Deliveries waiting because the endpoint is paused. */
+  held: Schema.Number,
   lastSuccessAt: Schema.NullOr(Schema.Number),
   lastFailureAt: Schema.NullOr(Schema.Number),
   /** Deliveries that failed for good; replay them with POST …/deliveries/replay. */
@@ -762,7 +786,7 @@ export const WebhookEndpoint = Schema.Struct({
   updatedAt: Schema.Number,
 })
 
-const DeliveryStatus = Schema.Literals(["pending", "succeeded", "retrying", "dead"])
+const DeliveryStatus = Schema.Literals(["pending", "succeeded", "retrying", "dead", "paused"])
 
 export const WebhookDelivery = Schema.Struct({
   id: Schema.String,
@@ -777,6 +801,8 @@ export const WebhookDelivery = Schema.Struct({
   nextAttemptAt: Schema.NullOr(Schema.Number),
   createdAt: Schema.Number,
   payload: Schema.Unknown,
+  /** The API request that caused the event, also sent as `x-mailyard-request-id`. */
+  requestId: Schema.NullOr(Schema.String),
 })
 
 const WithSecret = Schema.Struct({
@@ -800,6 +826,8 @@ export class WebhooksApi extends HttpApiGroup.make("webhooks")
         url: Schema.String,
         description: Schema.optionalKey(Schema.String),
         events: Schema.NonEmptyArray(Schema.String),
+        filter: Schema.optionalKey(Schema.NullOr(WebhookFilterSchema)),
+        paused: Schema.optionalKey(Schema.Boolean),
       }),
       success: WithSecret,
       error: [Forbidden, InvalidRequest],
@@ -816,6 +844,10 @@ export class WebhooksApi extends HttpApiGroup.make("webhooks")
         description: Schema.optionalKey(Schema.NullOr(Schema.String)),
         events: Schema.optionalKey(Schema.NonEmptyArray(Schema.String)),
         enabled: Schema.optionalKey(Schema.Boolean),
+        /** Null removes the filter. */
+        filter: Schema.optionalKey(Schema.NullOr(WebhookFilterSchema)),
+        /** Unpausing sends what was held, oldest first. */
+        paused: Schema.optionalKey(Schema.Boolean),
       }),
       success: WebhookEndpoint,
       error: [Forbidden, NotFound, InvalidRequest],
@@ -857,9 +889,11 @@ export class WebhooksApi extends HttpApiGroup.make("webhooks")
       success: Schema.Struct({ id: Schema.String, status: DeliveryStatus }),
       error: [Forbidden, NotFound],
     }),
+    /** Sends a realistic sample of an event type (with `"sample": true` in its data), or a plain test event. */
     HttpApiEndpoint.post("test", "/v1/webhooks/:id/test", {
       params: { id: Schema.String },
-      success: Schema.Struct({ deliveryId: Schema.String, eventId: Schema.String }),
+      payload: [Schema.Struct({ event: Schema.optionalKey(WebhookEventSchema) }), Schema.Null],
+      success: Schema.Struct({ deliveryId: Schema.String, eventId: Schema.String, eventType: Schema.String }),
       error: [Forbidden, NotFound],
     }),
   )
