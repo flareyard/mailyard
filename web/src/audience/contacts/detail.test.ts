@@ -96,3 +96,32 @@ describe("profile fields", () => {
     expect(inputValue(null, "string")).toBe("")
   })
 })
+
+describe("consent evidence and replies (HAL-3426)", () => {
+  it("lists the evidence in a fixed order, naming the key", async () => {
+    const { evidenceRows } = await import("./detail.ts")
+    const rows = evidenceRows(
+      {
+        formId: "frm_newsletter",
+        formVersion: "3",
+        ip: "102.89.4.7",
+        attestedBy: "key_1",
+        attestedAt: Date.UTC(2026, 9, 1, 9, 30),
+      },
+      (id) => (id === "key_1" ? "the Marketing key" : id),
+    )
+    expect(rows.map((r) => [r.label, r.value])).toEqual([
+      ["Form", "frm_newsletter · version 3"],
+      ["Attested by", "the Marketing key"],
+      ["Attested at", "1 Oct 2026, 09:30 UTC"],
+      ["IP address", "102.89.4.7"],
+    ])
+    expect(evidenceRows(null)).toEqual([])
+  })
+  it("words the consent method and links a reply to its thread", async () => {
+    const { CONSENT_METHOD, replyHref } = await import("./detail.ts")
+    expect(CONSENT_METHOD.form?.("Live sessions")).toBe("Opted in to Live sessions on a form")
+    expect(replyHref({ mailboxId: "mbx_support", threadId: "thr_1" })).toBe("/mail/mbx_support/threads/thr_1")
+    expect(replyHref({ mailboxId: null, threadId: "thr_1" })).toBeNull()
+  })
+})

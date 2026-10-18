@@ -217,3 +217,59 @@ export function inputValue(v: unknown, type: string | undefined): string {
   if (type === "date" && typeof v === "string") return v.slice(0, 10)
   return String(v)
 }
+
+export type Evidence = {
+  importId?: string
+  attestedBy?: string
+  attestedAt?: number | string
+  statement?: string
+  ip?: string
+  userAgent?: string
+  page?: string
+  formId?: string
+  formVersion?: string
+} | null
+
+/**
+ * The consent evidence a regulator asks for (HAL-3426), as label and value rows in a fixed order: where it
+ * happened (form and version, page, import), who attested and when, the statement, and the IP and user agent.
+ * `mono` marks ids, addresses and URLs.
+ */
+export function evidenceRows(
+  e: Evidence | undefined,
+  keyName: (id: string) => string = (id) => id,
+): { label: string; value: string; mono: boolean }[] {
+  if (!e) return []
+  const rows: { label: string; value: string; mono: boolean }[] = []
+  const add = (label: string, value: string | undefined | null, mono = false) => {
+    if (value !== undefined && value !== null && value !== "") rows.push({ label, value, mono })
+  }
+  add("Form", e.formId ? `${e.formId}${e.formVersion ? ` · version ${e.formVersion}` : ""}` : undefined, true)
+  add("Page", e.page, true)
+  add("Import", e.importId, true)
+  add("Attested by", e.attestedBy ? keyName(e.attestedBy) : undefined)
+  if (e.attestedAt !== undefined && toDate(e.attestedAt)) {
+    const d = toDate(e.attestedAt) as Date
+    add(
+      "Attested at",
+      `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${fmtTime(d.getTime())}`,
+    )
+  }
+  add("Statement", e.statement ? `“${e.statement}”` : undefined)
+  add("IP address", e.ip, true)
+  add("User agent", e.userAgent, true)
+  return rows
+}
+
+export const CONSENT_METHOD: Record<string, (topic: string) => string> = {
+  double_opt_in: (t) => `Confirmed ${t} by double opt-in`,
+  form: (t) => `Opted in to ${t} on a form`,
+  preference_page: (t) => `Opted in to ${t} on the preference page`,
+}
+
+/** Where a reply opens in Mail, once the reply carries its mailbox and thread (HAL-3426). */
+export function replyHref(r: { mailboxId?: string | null; threadId?: string | null }): string | null {
+  return r.mailboxId && r.threadId
+    ? `/mail/${encodeURIComponent(r.mailboxId)}/threads/${encodeURIComponent(r.threadId)}`
+    : null
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { fieldPatch, fieldsMeta, isNamed, phoneSub, triggersReading, typeChangeWarning } from "./logic.ts"
+import { fieldPatch, fieldsMeta, isNamed, phoneSub, typeChangeWarning } from "./logic.ts"
 
 const plan = {
   key: "plan",
@@ -36,16 +36,5 @@ describe("the field registry", () => {
     expect(fieldPatch(plan, "", "string")).toEqual({ label: null })
     expect(fieldPatch(company, "Company", "string")).toEqual({ label: "Company" })
     expect(fieldPatch(plan, "Plan", "number")).toEqual({ type: "number" })
-  })
-  it("finds date triggers that read a field (usedBy doesn't count them yet)", () => {
-    const autos = [
-      { id: "aut_1", name: "Course anniversary", trigger: { kind: "date", field: "signed_up_at" } },
-      { id: "aut_2", name: "Welcome", trigger: { kind: "created" } },
-      { id: "aut_3", name: "Draft", trigger: null },
-    ]
-    expect(triggersReading("signed_up_at", autos)).toEqual([
-      { automationId: "aut_1", automation: "Course anniversary", field: "signed_up_at" },
-    ])
-    expect(triggersReading("plan", autos)).toEqual([])
   })
 })

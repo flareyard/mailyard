@@ -13,34 +13,19 @@ import { Icon } from "../../ui/icons.tsx"
 import { Panel } from "../../ui/Panel.tsx"
 import { AudienceHead } from "../AudienceHead.tsx"
 import { fieldError, fmtDay } from "../kit/format.ts"
-import { arr, type ContactField, fieldsQuery } from "../kit/queries.ts"
+import { type ContactField, fieldsQuery } from "../kit/queries.ts"
 import { ApiErrorCallout, FieldError, Sheet, SkeletonRows, useCan } from "../kit/ui.tsx"
 import {
-  type DateTrigger,
   type FieldType,
   fieldPatch,
   fieldsMeta,
   isNamed,
   phoneSub,
   TYPE_WORD,
-  triggersReading,
   typeChangeWarning,
 } from "./logic.ts"
 
 const ENDPOINT = "GET /v1/contact-fields · PATCH /v1/contact-fields/:key"
-
-type AutomationLite = { id: string; name: string; trigger: { kind: string; field?: string } | null }
-
-/** Automations, for the date triggers `usedBy` doesn't count yet (HAL-3426). */
-const automationsLiteQuery = {
-  queryKey: ["automations", "lite"] as const,
-  queryFn: async () =>
-    arr<AutomationLite>(
-      (await unwrap(api.GET("/v1/automations", { params: { query: { range: "7d" } } })))?.automations,
-    ),
-  staleTime: 60_000,
-  retry: false,
-}
 
 export const usedByHref = (u: { type: "segment" | "automation"; id: string }) =>
   u.type === "segment" ? `/audience/segments/${u.id}` : `/automations/${u.id}`
@@ -53,10 +38,8 @@ export function FieldsPage({
   onEdit: (key: string | undefined) => void
 }) {
   const q = useQuery(fieldsQuery)
-  const autos = useQuery(automationsLiteQuery)
   const write = useCan("contacts.write", "name and retype fields")
   const editing = edit ? q.data?.find((f) => f.key === edit) : undefined
-  const triggers = (key: string) => triggersReading(key, autos.data ?? [])
   const keyName = write.me?.key?.name
   const scopes = write.me?.scopes.join(", ")
 
@@ -140,7 +123,6 @@ export function FieldsPage({
                     <FieldRow
                       key={f.key}
                       f={f}
-                      triggers={triggers(f.key)}
                       canEdit={write.allowed}
                       who={write.who}
                       onEdit={() => onEdit(f.key)}
@@ -197,13 +179,11 @@ export function FieldsPage({
 
 function FieldRow({
   f,
-  triggers,
   canEdit,
   who,
   onEdit,
 }: {
   f: ContactField
-  triggers: DateTrigger[]
   canEdit: boolean
   who: string
   onEdit: () => void
@@ -242,12 +222,6 @@ function FieldRow({
         ) : (
           <span className="muted">Not used</span>
         )}
-        {triggers.map((t) => (
-          <span key={t.automationId} className="cell-sub">
-            {t.automation}’s date trigger reads it too; <span className="mono">usedBy</span> doesn’t count
-            triggers yet.
-          </span>
-        ))}
       </td>
       <td className="r">{fmtDay(f.createdAt)}</td>
       <td className="r">

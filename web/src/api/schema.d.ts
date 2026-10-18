@@ -15278,6 +15278,17 @@ export interface operations {
                             /** @enum {string} */
                             to: "subscribed" | "unconfirmed" | "unsubscribed";
                             source: string;
+                            evidence: {
+                                importId?: string;
+                                attestedBy?: string;
+                                attestedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                                statement?: string;
+                                ip?: string;
+                                userAgent?: string;
+                                page?: string;
+                                formId?: string;
+                                formVersion?: string;
+                            } | null;
                         } | {
                             /** @enum {string} */
                             kind: "delivery";
@@ -15295,6 +15306,19 @@ export interface operations {
                             topicId: string;
                             topic: string;
                             source: string;
+                            /** @enum {string} */
+                            method: "double_opt_in" | "form" | "preference_page";
+                            evidence: {
+                                importId?: string;
+                                attestedBy?: string;
+                                attestedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                                statement?: string;
+                                ip?: string;
+                                userAgent?: string;
+                                page?: string;
+                                formId?: string;
+                                formVersion?: string;
+                            } | null;
                         } | {
                             /** @enum {string} */
                             kind: "reply";
@@ -15303,6 +15327,9 @@ export interface operations {
                             subject: string | null;
                             to: string;
                             inReplyTo: string | null;
+                            mailboxId: string | null;
+                            threadId: string | null;
+                            messageId: string | null;
                         } | {
                             /** @enum {string} */
                             kind: "automation";

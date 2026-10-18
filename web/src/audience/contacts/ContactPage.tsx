@@ -16,7 +16,14 @@ import { Icon, type IconName } from "../../ui/icons.tsx"
 import { PanelError, PanelSkeleton } from "../../ui/Panel.tsx"
 import { fieldError, fmtDateTime, fmtDay, initialsOf } from "../kit/format.ts"
 import { usePopover } from "../kit/popover.ts"
-import { allTopicsQuery, type ContactField, fieldLabel, fieldsQuery, type Topic } from "../kit/queries.ts"
+import {
+  allTopicsQuery,
+  type ContactField,
+  fieldLabel,
+  fieldsQuery,
+  type Topic,
+  useKeyName,
+} from "../kit/queries.ts"
 import {
   ApiErrorCallout,
   BackLink,
@@ -29,17 +36,21 @@ import {
 } from "../kit/ui.tsx"
 import { Engagement, fieldValue } from "./ContactsPage.tsx"
 import {
+  CONSENT_METHOD,
   consentParts,
   dataLine,
   deliveryMeta,
   deliveryTone,
   deliveryVerb,
+  type Evidence,
+  evidenceRows,
   groupByDay,
   highlightField,
   inputValue,
   itemTime,
   KIND_LABEL,
   messageTone,
+  replyHref,
   SUPPRESSION_REASON,
   SUPPRESSION_SOURCE,
   streamLabel,
@@ -979,6 +990,7 @@ function TlItem({ it }: { it: TimelineItem }) {
   let tone = ""
   let title: ReactNode = null
   let meta: ReactNode = null
+  let extra: ReactNode = null
   switch (it.kind) {
     case "event":
       title = (
@@ -1037,10 +1049,11 @@ function TlItem({ it }: { it: TimelineItem }) {
           </span>
         </>
       )
+      extra = <EvidenceDetail evidence={it.evidence} />
       break
     case "consent":
       tone = "is-pass"
-      title = `Confirmed ${it.topic} by double opt-in`
+      title = (CONSENT_METHOD[it.method] ?? CONSENT_METHOD.double_opt_in)?.(it.topic) ?? it.topic
       meta = (
         <>
           <span>
@@ -1049,9 +1062,17 @@ function TlItem({ it }: { it: TimelineItem }) {
           <span>Consent on record</span>
         </>
       )
+      extra = <EvidenceDetail evidence={it.evidence} />
       break
-    case "reply":
-      title = `Replied: ${it.subject ?? "(no subject)"}`
+    case "reply": {
+      const href = replyHref(it)
+      title = href ? (
+        <>
+          Replied: <Link to={href as never}>{it.subject ?? "(no subject)"}</Link>
+        </>
+      ) : (
+        `Replied: ${it.subject ?? "(no subject)"}`
+      )
       meta = (
         <>
           <span>
@@ -1068,6 +1089,7 @@ function TlItem({ it }: { it: TimelineItem }) {
         </>
       )
       break
+    }
     case "automation":
       tone =
         it.state === "failed" ? "is-fail" : it.state === "completed" || it.state === "exited" ? "is-pass" : ""
@@ -1095,9 +1117,31 @@ function TlItem({ it }: { it: TimelineItem }) {
       <span className="tl-body">
         <span className="tl-title">{title}</span>
         {meta ? <span className="tl-meta">{meta}</span> : null}
+        {extra}
       </span>
       <time className="tl-time">{itemTime(it.at)}</time>
     </li>
+  )
+}
+
+/** The consent evidence on a topic change (HAL-3426), folded away until asked for. */
+function EvidenceDetail({ evidence }: { evidence: Evidence | undefined }) {
+  const keyName = useKeyName()
+  const rows = evidenceRows(evidence, keyName)
+  if (!rows.length) return null
+  return (
+    <details className="tl-evidence">
+      <summary className="link-quiet">Evidence</summary>
+      <dl className="kv">
+        {rows.map((r) => (
+          <FragmentKv
+            key={r.label}
+            dt={<dt>{r.label}</dt>}
+            dd={<dd className={r.mono ? "mono" : undefined}>{r.value}</dd>}
+          />
+        ))}
+      </dl>
+    </details>
   )
 }
 

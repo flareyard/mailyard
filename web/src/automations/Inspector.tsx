@@ -17,7 +17,6 @@ import {
 import { ApiErrorCallout, CopyButton, Planned } from "../audience/kit/ui.tsx"
 import { useCapabilities } from "../auth/capabilities.ts"
 import { Gated } from "../auth/NoPermission.tsx"
-import { fixturesEnabled } from "../fixtures/mode.ts"
 import { fmtInt } from "../lib/format.ts"
 import { Icon } from "../ui/icons.tsx"
 import { NODE_ICON } from "./Canvas.tsx"

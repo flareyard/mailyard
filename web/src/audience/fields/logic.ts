@@ -84,22 +84,3 @@ export function fieldPatch(
   if (type !== f.type) out.type = type
   return Object.keys(out).length ? out : null
 }
-
-export type DateTrigger = { automationId: string; automation: string; field: string }
-
-/**
- * Automations whose date trigger reads a field. `usedBy` doesn't count triggers or `wait_until` fields yet
- * (HAL-3426), so the row says so from the automations list.
- */
-export function triggersReading(
-  key: string,
-  automations: readonly {
-    id: string
-    name: string
-    trigger: { kind: string; field?: string } | null
-  }[],
-): DateTrigger[] {
-  return automations
-    .filter((a) => a.trigger?.kind === "date" && a.trigger.field === key)
-    .map((a) => ({ automationId: a.id, automation: a.name, field: key }))
-}

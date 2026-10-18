@@ -12,3 +12,15 @@ button.link-quiet {
 .bulkbar button.link {
   color: var(--background-100);
 }
+
+/* Consent evidence under a timeline item (HAL-3426). */
+.tl-evidence {
+  margin-top: 4px;
+}
+.tl-evidence summary {
+  cursor: pointer;
+  min-height: 24px;
+}
+.tl-evidence .kv {
+  margin-top: 4px;
+}
