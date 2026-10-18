@@ -10,6 +10,7 @@ import { EmailLinkForm } from "../auth/EmailLinkForm.tsx"
 import { keyLooksValid, type SignInError, signInError, useSessionActions } from "../auth/session.ts"
 import { fixturesEnabled } from "../fixtures/mode.ts"
 import { AuthLayout } from "../ui/AuthLayout.tsx"
+import { FlareyardMark } from "../ui/FlareyardMark.tsx"
 import { Icon } from "../ui/icons.tsx"
 import { RequestId } from "../ui/Panel.tsx"
 
@@ -309,9 +310,10 @@ function FlareyardChip() {
         height: 22,
         borderRadius: 4,
         background: "var(--background-100)",
+        color: "var(--gray-1000)",
       }}
     >
-      <img src="/ui/brand/flareyard-mark.svg" alt="" width={14} height={14} />
+      <FlareyardMark />
     </span>
   )
 }

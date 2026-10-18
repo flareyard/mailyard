@@ -5,6 +5,7 @@
 import { useQuery } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { fixturesEnabled } from "../fixtures/mode.ts"
+import { FlareyardMark } from "./FlareyardMark.tsx"
 import { Icon } from "./icons.tsx"
 import { Wordmark } from "./Wordmark.tsx"
 
@@ -24,7 +25,7 @@ export function AuthLayout({ children, caption }: { children: ReactNode; caption
         <div className="auth-top">
           <Wordmark />
           <a className="fy-byline" href="https://flareyard.dev">
-            <img src="/ui/brand/flareyard-mark.svg" alt="" width={14} height={14} />A Flareyard app
+            <FlareyardMark />A Flareyard app
           </a>
         </div>
         <div className="auth-center">
