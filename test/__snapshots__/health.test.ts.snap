@@ -72925,6 +72925,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "deadLetters": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
                           "description": {
                             "anyOf": [
                               {
@@ -73052,6 +73067,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "enabled",
                           "lastSuccessAt",
                           "lastFailureAt",
+                          "deadLetters",
                           "createdAt",
                           "updatedAt",
                         ],
@@ -73159,6 +73175,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "additionalProperties": false,
                       "properties": {
                         "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "deadLetters": {
                           "anyOf": [
                             {
                               "type": "number",
@@ -73300,6 +73331,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "enabled",
                         "lastSuccessAt",
                         "lastFailureAt",
+                        "deadLetters",
                         "createdAt",
                         "updatedAt",
                       ],
@@ -73405,6 +73437,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "deadLetters": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "description": {
                       "anyOf": [
                         {
@@ -73532,6 +73579,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "enabled",
                     "lastSuccessAt",
                     "lastFailureAt",
+                    "deadLetters",
                     "createdAt",
                     "updatedAt",
                   ],
@@ -73625,6 +73673,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "deadLetters": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "description": {
                       "anyOf": [
                         {
@@ -73752,6 +73815,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "enabled",
                     "lastSuccessAt",
                     "lastFailureAt",
+                    "deadLetters",
                     "createdAt",
                     "updatedAt",
                   ],
@@ -73886,6 +73950,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "deadLetters": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "description": {
                       "anyOf": [
                         {
@@ -74013,6 +74092,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "enabled",
                     "lastSuccessAt",
                     "lastFailureAt",
+                    "deadLetters",
                     "createdAt",
                     "updatedAt",
                   ],
@@ -74375,6 +74455,140 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/webhooks/{id}/deliveries/replay": {
+      "post": {
+        "operationId": "webhooks.replayAll",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "dead",
+                    ],
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "status",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "remaining": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "replayed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "replayed",
+                    "remaining",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "webhooks",
+        ],
+      },
+    },
     "/v1/webhooks/{id}/deliveries/{deliveryId}/replay": {
       "post": {
         "operationId": "webhooks.replay",
@@ -74501,6 +74715,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "additionalProperties": false,
                       "properties": {
                         "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "deadLetters": {
                           "anyOf": [
                             {
                               "type": "number",
@@ -74642,6 +74871,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "enabled",
                         "lastSuccessAt",
                         "lastFailureAt",
+                        "deadLetters",
                         "createdAt",
                         "updatedAt",
                       ],

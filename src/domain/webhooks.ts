@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -136,7 +136,7 @@ const checkEvents = (events: ReadonlyArray<string>) => {
   return unknown.length ? `Unknown event types: ${unknown.join(", ")}.` : undefined
 }
 
-export const describeEndpoint = (row: typeof webhookEndpoints.$inferSelect) => ({
+export const describeEndpoint = (row: typeof webhookEndpoints.$inferSelect, deadLetters = 0) => ({
   id: row.id,
   url: row.url,
   description: row.description,
@@ -145,9 +145,34 @@ export const describeEndpoint = (row: typeof webhookEndpoints.$inferSelect) => (
   enabled: row.enabled,
   lastSuccessAt: row.lastSuccessAt,
   lastFailureAt: row.lastFailureAt,
+  /** Deliveries that failed for good and wait for a replay (HAL-3416). */
+  deadLetters,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
+
+/** Dead deliveries per endpoint, from the (endpoint, status) index: only dead rows are read. */
+const deadLetterCounts = (endpointIds?: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const rows = yield* database.query("webhooks.deadLetters", (db) =>
+      db
+        .select({ endpointId: webhookDeliveries.endpointId, n: sql<number>`count(*)` })
+        .from(webhookDeliveries)
+        .where(
+          and(
+            eq(webhookDeliveries.status, "dead"),
+            endpointIds ? inArray(webhookDeliveries.endpointId, [...endpointIds]) : undefined,
+          ),
+        )
+        .groupBy(webhookDeliveries.endpointId)
+        .all(),
+    )
+    return new Map(rows.map((r) => [r.endpointId, r.n]))
+  })
+
+const withDeadLetters = (row: typeof webhookEndpoints.$inferSelect) =>
+  deadLetterCounts([row.id]).pipe(Effect.map((counts) => describeEndpoint(row, counts.get(row.id) ?? 0)))
 
 const findEndpoint = Effect.fn("webhooks.find")(function* (id: string) {
   const database = yield* Database
@@ -192,11 +217,12 @@ export const listEndpoints = Effect.fn("webhooks.list")(function* () {
   const rows = yield* database.query("webhooks.list", (db) =>
     db.select().from(webhookEndpoints).orderBy(desc(webhookEndpoints.createdAt)).all(),
   )
-  return rows.map(describeEndpoint)
+  const counts = yield* deadLetterCounts()
+  return rows.map((row) => describeEndpoint(row, counts.get(row.id) ?? 0))
 })
 
 export const getEndpoint = Effect.fn("webhooks.get")(function* (id: string) {
-  return describeEndpoint(yield* findEndpoint(id))
+  return yield* withDeadLetters(yield* findEndpoint(id))
 })
 
 export const updateEndpoint = Effect.fn("webhooks.update")(function* (
@@ -227,7 +253,7 @@ export const updateEndpoint = Effect.fn("webhooks.update")(function* (
       .returning()
       .get(),
   )
-  return describeEndpoint(row)
+  return yield* withDeadLetters(row)
 })
 
 export const deleteEndpoint = Effect.fn("webhooks.delete")(function* (id: string) {
@@ -237,7 +263,7 @@ export const deleteEndpoint = Effect.fn("webhooks.delete")(function* (id: string
     db.delete(webhookEndpoints).where(eq(webhookEndpoints.id, id)).run(),
   )
   yield* clearAlert(`webhook_dead_letter:${id}`, "webhooks")
-  return describeEndpoint(current)
+  return describeEndpoint(current, 0)
 })
 
 /** A new secret; the old one stops working at once. Returned this one time. */
@@ -254,7 +280,7 @@ export const rotateSecret = Effect.fn("webhooks.rotate")(function* (id: string) 
       .returning()
       .get(),
   )
-  return { endpoint: describeEndpoint(row), secret }
+  return { endpoint: yield* withDeadLetters(row), secret }
 })
 
 export const listDeliveries = Effect.fn("webhooks.deliveries")(function* (
@@ -312,7 +338,11 @@ export const listDeliveries = Effect.fn("webhooks.deliveries")(function* (
 /** Hands deliveries to the webhook queue; the consumer does the HTTP. */
 export class WebhookQueue extends Context.Service<
   WebhookQueue,
-  { enqueue(deliveryId: string, delaySeconds: number): Effect.Effect<void> }
+  {
+    enqueue(deliveryId: string, delaySeconds: number): Effect.Effect<void>
+    /** Many at once, now: a queue batch holds at most 100 messages. */
+    enqueueMany(deliveryIds: ReadonlyArray<string>): Effect.Effect<void>
+  }
 >()("mailyard/WebhookQueue") {
   static readonly layer = Layer.effect(
     WebhookQueue,
@@ -323,6 +353,13 @@ export class WebhookQueue extends Context.Service<
           Effect.promise(() =>
             WEBHOOK_QUEUE.send({ deliveryId }, { delaySeconds: Math.min(Math.max(delaySeconds, 0), 43200) }),
           ),
+        enqueueMany: (deliveryIds) =>
+          Effect.promise(async () => {
+            for (let i = 0; i < deliveryIds.length; i += 100)
+              await WEBHOOK_QUEUE.sendBatch(
+                deliveryIds.slice(i, i + 100).map((deliveryId) => ({ body: { deliveryId } })),
+              )
+          }),
       })
     }),
   )
@@ -521,6 +558,43 @@ export const replay = Effect.fn("webhooks.replay")(function* (endpointId: string
   )
   if (endpoint) yield* syncDeadLetterAlert(endpoint)
   return { id: row.id, status: row.status }
+})
+
+/** How many dead deliveries one bulk replay takes; the rest wait for the next call (`remaining`). */
+export const REPLAY_PAGE = 500
+
+/**
+ * `POST /v1/webhooks/{id}/deliveries/replay { status: "dead" }`: every dead delivery of an endpoint,
+ * from attempt one, a page at a time, oldest first, through the normal queue. Their order is kept
+ * only as far as the queue keeps it; receivers de-duplicate on webhook-id as for any retry.
+ */
+export const replayDead = Effect.fn("webhooks.replayDead")(function* (endpointId: string) {
+  const endpoint = yield* findEndpoint(endpointId)
+  const database = yield* Database
+  const page = yield* database.query("webhooks.deadPage", (db) =>
+    db
+      .select({ id: webhookDeliveries.id })
+      .from(webhookDeliveries)
+      .where(and(eq(webhookDeliveries.endpointId, endpointId), eq(webhookDeliveries.status, "dead")))
+      .orderBy(webhookDeliveries.createdAt)
+      .limit(REPLAY_PAGE)
+      .all(),
+  )
+  const ids = page.map((r) => r.id)
+  for (let i = 0; i < ids.length; i += 90) {
+    const chunk = ids.slice(i, i + 90)
+    yield* database.query("webhooks.replayDead", (db) =>
+      db
+        .update(webhookDeliveries)
+        .set({ status: "pending", attempts: 0, nextAttemptAt: null })
+        .where(and(inArray(webhookDeliveries.id, chunk), eq(webhookDeliveries.status, "dead")))
+        .run(),
+    )
+    yield* (yield* WebhookQueue).enqueueMany(chunk)
+  }
+  const left = (yield* deadLetterCounts([endpointId])).get(endpointId) ?? 0
+  yield* syncDeadLetterAlert(endpoint)
+  return { replayed: ids.length, remaining: left }
 })
 
 /** Queues a `ping`-style test event to one endpoint, regardless of its subscriptions. */

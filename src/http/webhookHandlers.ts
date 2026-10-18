@@ -7,6 +7,7 @@ import {
   listDeliveries,
   listEndpoints,
   replay,
+  replayDead,
   rotateSecret,
   sendTest,
   updateEndpoint,
@@ -80,6 +81,9 @@ export const WebhooksHandlers = HttpApiBuilder.group(
       ),
       replay: p(({ params }) =>
         requireScope("admin").pipe(Effect.andThen(replay(params.id, params.deliveryId)), notFound, dbDies),
+      ),
+      replayAll: p(({ params }) =>
+        requireScope("admin").pipe(Effect.andThen(replayDead(params.id)), notFound, dbDies),
       ),
       test: p(({ params }) =>
         requireScope("admin").pipe(Effect.andThen(sendTest(params.id)), notFound, dbDies),

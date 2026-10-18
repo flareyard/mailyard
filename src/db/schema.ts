@@ -745,6 +745,7 @@ export const webhookDeliveries = sqliteTable(
   (t) => [
     index("webhook_deliveries_endpoint").on(t.endpointId, t.createdAt),
     index("webhook_deliveries_status").on(t.status),
+    index("webhook_deliveries_endpoint_status").on(t.endpointId, t.status, t.createdAt),
   ],
 )
 
