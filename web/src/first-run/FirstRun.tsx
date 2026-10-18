@@ -241,7 +241,7 @@ function Complete() {
                 <span className="row-sub">{stepSub(st, false)}</span>
               </span>
               {st.status !== "done" ? (
-                <Link className="link-quiet" to="/" search={(prev) => ({ ...prev, step: st.id })}>
+                <Link className="link-quiet" from="/" to="/" search={(prev) => ({ ...prev, step: st.id })}>
                   {st.status === "skipped" ? "Do it now" : "Open"}
                 </Link>
               ) : null}
@@ -257,6 +257,7 @@ function Complete() {
           ) : (
             <Link
               className="btn btn-primary"
+              from="/"
               to="/"
               search={(prev) => ({ ...(prev.range ? { range: prev.range } : {}) })}
               onClick={() => s.remember((m) => ({ ...m, handedOver: true, started: true }))}
@@ -317,11 +318,15 @@ function StepLink({
 }) {
   const router = useRouter()
   const navigate = useNavigate()
-  const href = router.buildLocation({ to: "/", search: (prev) => ({ ...prev, step }) }).href
+  const href = router.buildLocation({
+    from: "/",
+    to: "/",
+    search: (prev: Record<string, unknown>) => ({ ...prev, step }),
+  } as never).href
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
     e.preventDefault()
-    navigate({ to: "/", search: (prev) => ({ ...prev, step }) })
+    navigate({ from: "/", to: "/", search: (prev) => ({ ...prev, step }) })
   }
   return (
     <a

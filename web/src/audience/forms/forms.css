@@ -1,0 +1,50 @@
+/* ops.css also defines `.editor` (its template editor, two equal panes) and loads after audience.css; inside
+   the form editor (`.au-form`) the audience design's main-plus-side layout wins again. */
+.au-form .editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1199px) {
+  .au-form .editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.au-form .flip {
+  transform: rotate(180deg);
+}
+.au-form .fd-row.is-drop {
+  box-shadow: inset 0 2px 0 var(--gray-1000);
+}
+.au-form .fd-opts.is-error .vchips {
+  border-color: var(--red-800);
+}
+.au-form .pubframe[inert] .input,
+.au-form .pubframe[inert] .select {
+  pointer-events: none;
+}
+.au-form .pubframe .pf-body {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 20px 14px;
+}
+@media (max-width: 767px) {
+  .au-form .fd-row {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+  .au-form .fd-move {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+  .au-form .fd-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .au-form .fd-line .fd-key {
+    grid-column: auto;
+  }
+}
+@media (max-width: 767px) {
+  .au-form .fd-row.is-fixed .fd-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,161 @@
+/*
+ * Campaigns (HAL-3310): the few pieces the design draws but its stylesheet doesn't name. Tokens only; every other
+ * class on these screens is the design's own (styles/audience.css, styles/mailyard.css).
+ */
+
+/* Block types the canvas draws in the email's own voice. */
+.cmp-em-warn {
+  border-left: 3px solid var(--amber-700);
+  padding-left: 10px;
+}
+.em-btn.cmp-em-ghost {
+  background: transparent;
+  color: var(--gray-1000);
+  box-shadow: inset 0 0 0 1px var(--gray-1000);
+}
+.em-btn.cmp-em-danger {
+  background: var(--red-800);
+  color: var(--background-100);
+}
+.cmp-em-stat {
+  font: 700 22px / 28px var(--font-sans);
+}
+.cmp-em-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cmp-em-meta {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 6px 16px;
+  margin: 0;
+}
+.cmp-em-meta dd {
+  margin: 0;
+  text-align: right;
+}
+.cmp-em-otp {
+  letter-spacing: 0.2em;
+  text-align: center;
+}
+.cmp-em-progress {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  font: 500 12px / 20px var(--font-sans);
+}
+.cmp-em-progress li {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--gray-500);
+  color: var(--gray-900);
+}
+.cmp-em-progress li.is-done {
+  background: var(--gray-1000);
+  border-color: var(--gray-1000);
+  color: var(--background-100);
+}
+.cmp-em-html {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.devframe.is-dark .em-btn.cmp-em-ghost {
+  background: transparent;
+  color: var(--background-100);
+  box-shadow: inset 0 0 0 1px var(--background-100);
+}
+.devframe.is-dark .cmp-em-progress li {
+  border-color: var(--gray-800);
+  color: var(--gray-500);
+}
+
+/* The selected block's fields, under it on the canvas. */
+.cmp-block-form {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-base);
+  border: 1px solid var(--my-border);
+  background: var(--my-surface);
+  cursor: auto;
+}
+.cmp-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.cmp-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed var(--my-border);
+  border-radius: var(--radius-base);
+}
+.cmp-item > .btn {
+  align-self: flex-start;
+}
+.cmp-drop {
+  height: 4px;
+  margin: 2px 16px;
+  border-radius: 2px;
+  background: var(--blue-700);
+}
+.cmp-flip {
+  transform: rotate(180deg);
+}
+.eblock[role="button"] {
+  cursor: pointer;
+}
+.eblock[role="button"]:focus-visible,
+.footer-lock[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.footer-lock[role="button"] {
+  cursor: pointer;
+}
+
+/* Link-looking words inside a preview, which aren't links in the app. */
+.cmp-link-like {
+  text-decoration: underline;
+  color: inherit;
+}
+
+/* A threshold card that is a link, reading as its content. */
+.cmp-plain-link,
+.cmp-plain-link:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* A/B figures, a size down from a stat. */
+.cmp-ab-value {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+/* The phone list's second line is words, not an address. */
+.mrow .cmp-m-sub {
+  font-family: var(--font-sans);
+}
+
+/*
+ * styles/ops.css also defines `.editor` (the template editor's two equal panes) and loads after audience.css, so
+ * the campaign editor restates the design's main-plus-340-px-side grid for itself.
+ */
+.editor.cmp-editor {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+@media (max-width: 1199px) {
+  .editor.cmp-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

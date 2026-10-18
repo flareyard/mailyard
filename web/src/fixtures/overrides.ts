@@ -12,6 +12,7 @@
  *   sign-in link to …@rate-limited.example           → 429
  */
 import type { paths } from "../api/schema"
+import { screenFixture } from "../audience/kit/fixtureScreens.ts"
 
 type Json<P extends keyof paths, M extends "get" | "post", S extends number = 200> = paths[P][M] extends {
   responses: { [K in S]: { content: { "application/json": infer R } } }
@@ -153,6 +154,9 @@ export const OVERRIDES: readonly Override[] = [
 
 /** The override answering this request, if any. */
 export async function findOverride(request: Request): Promise<Answer | undefined> {
+  // Audience, campaigns and automations (HAL-3310): `?fx=<design screen>` answers from that screen's fixtures.
+  const screen = await screenFixture(request)
+  if (screen) return screen
   const url = new URL(request.url)
   for (const o of OVERRIDES) {
     if (o.method !== request.method) continue

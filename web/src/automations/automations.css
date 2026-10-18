@@ -1,0 +1,117 @@
+/* Automations (HAL-3310): only what audience.css doesn't already carry. Tokens only. */
+
+/* A filter chip whose value is a native select, so each chip is one query key and works by keyboard. */
+.au-chip {
+  gap: 6px;
+  cursor: pointer;
+}
+.au-chipselect {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--my-fg);
+  cursor: pointer;
+  min-height: 24px;
+}
+.au-chipselect:focus-visible {
+  outline: 2px solid var(--gray-1000);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* The bar above the canvas that says a dry run or a run is drawn on it. */
+.au-overlay-bar {
+  margin: 8px 0;
+  align-items: center;
+}
+.au-overlay-bar .grow {
+  min-width: 0;
+}
+
+/* Exit pills are buttons too, so they take focus like every other step. */
+button.node-end {
+  font: inherit;
+  color: var(--my-fg);
+  background: var(--my-surface);
+}
+button.node-end.is-selected {
+  border-color: var(--gray-1000);
+  box-shadow: 0 0 0 2px var(--gray-1000);
+}
+.node:focus-visible,
+button.node-end:focus-visible {
+  outline: 2px solid var(--gray-1000);
+  outline-offset: 3px;
+}
+.canvas:focus-visible {
+  outline: 2px solid var(--gray-1000);
+  outline-offset: -2px;
+}
+
+/* The inspector scrolls on its own beside a tall canvas. */
+.workspace .inspector {
+  max-height: calc(100dvh - var(--my-topbar-h, 56px) - 120px);
+  position: sticky;
+  top: 0;
+}
+@media (max-width: 1199px) {
+  .workspace .inspector {
+    position: absolute;
+    max-height: none;
+  }
+  .tpl-row {
+    min-height: 44px;
+  }
+  .edge .edge-add {
+    display: grid;
+    width: 32px;
+    height: 32px;
+  }
+}
+.inspector .fgrid > .field {
+  min-width: 0;
+}
+.inspector .input-group {
+  display: flex;
+}
+.inspector .input-group .input {
+  min-width: 0;
+  flex: 1;
+}
+
+/* A node's issue stays short on the canvas; the inspector and the issues panel carry the whole message. */
+.node .node-issue span {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ro-note.phone-only {
+  margin-bottom: 12px;
+}
+
+/* Touch screens (tablets count): table links, the failures link and the inspector's checkboxes take 44 px. */
+@media (pointer: coarse) {
+  .dt td a.cell-link,
+  .dt td a.link,
+  .sumstrip .link-quiet {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .dt td a.link {
+    min-width: 44px;
+    justify-content: flex-end;
+  }
+  .inspector label.cluster,
+  .inspector label.check {
+    min-height: 44px;
+    align-items: center;
+  }
+  .au-chipselect {
+    min-height: 44px;
+  }
+}

@@ -165,7 +165,7 @@ export function SetupProvider({ setup, view, children }: { setup: Setup; view: V
   }, [])
   const goTo = useCallback(
     (v: View) => {
-      navigate({ to: "/", search: (prev) => ({ ...prev, step: v }) })
+      navigate({ from: "/", to: "/", search: (prev) => ({ ...prev, step: v }) })
     },
     [navigate],
   )

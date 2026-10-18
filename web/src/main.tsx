@@ -7,6 +7,7 @@ import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { ApiError } from "./api/client.ts"
+import { parseSearch, stringifySearch } from "./audience/kit/search.ts"
 import { routeTree } from "./routeTree.gen.ts"
 
 const queryClient = new QueryClient({
@@ -25,6 +26,9 @@ const router = createRouter({
   context: { queryClient },
   defaultPreload: "intent",
   scrollRestoration: true,
+  // Lists as repeated keys, like the API takes them (`field=…&field=…`); see audience/kit/search.ts.
+  parseSearch,
+  stringifySearch,
 })
 
 declare module "@tanstack/react-router" {
