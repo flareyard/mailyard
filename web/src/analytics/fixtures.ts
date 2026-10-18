@@ -410,7 +410,8 @@ function responseTimes(url: URL): ResponseTimes {
                 answered: 38,
                 firstResponseMedianMin: 38,
                 firstResponseP90Min: 210,
-                resolutionMedianHours: null,
+                resolved: 34,
+                resolutionMedianHours: 6.5,
               },
               {
                 assigneeId: "key_ops",
@@ -419,7 +420,8 @@ function responseTimes(url: URL): ResponseTimes {
                 answered: 9,
                 firstResponseMedianMin: 112,
                 firstResponseP90Min: 540,
-                resolutionMedianHours: null,
+                resolved: 7,
+                resolutionMedianHours: 11,
               },
               {
                 assigneeId: null,
@@ -428,6 +430,7 @@ function responseTimes(url: URL): ResponseTimes {
                 answered: 2,
                 firstResponseMedianMin: 300,
                 firstResponseP90Min: null,
+                resolved: 1,
                 resolutionMedianHours: null,
               },
             ],
