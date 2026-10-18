@@ -360,8 +360,48 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
   },
 }
 
-/** Adds the raw routes to the generated document. */
+/**
+ * Request bodies whose `filter` is a segment rule tree. The segment code decodes it itself (so a bad
+ * tree is a 400 naming the rule at fault), which leaves the schema `unknown` in the generated document;
+ * pointing it at the `SegmentRule` component lets generated clients type what they send (HAL-3427).
+ */
+const SEGMENT_RULE_BODIES: ReadonlyArray<readonly [string, string]> = [
+  ["/v1/segments", "post"],
+  ["/v1/segments/{id}", "patch"],
+  ["/v1/segments/preview", "post"],
+]
+
+const withSegmentRules = (paths: Record<string, any>) => {
+  const out = { ...paths }
+  for (const [path, method] of SEGMENT_RULE_BODIES) {
+    const schema = out[path]?.[method]?.requestBody?.content?.["application/json"]?.schema
+    if (!schema?.properties?.filter) continue
+    const rule = {
+      $ref: "#/components/schemas/SegmentRule",
+      description: "A SegmentRule tree. A tree that can't work is a 400 with the rule's path in `field`.",
+    }
+    out[path] = {
+      ...out[path],
+      [method]: {
+        ...out[path][method],
+        requestBody: {
+          ...out[path][method].requestBody,
+          content: {
+            ...out[path][method].requestBody.content,
+            "application/json": {
+              ...out[path][method].requestBody.content["application/json"],
+              schema: { ...schema, properties: { ...schema.properties, filter: rule } },
+            },
+          },
+        },
+      },
+    }
+  }
+  return out
+}
+
+/** Adds the raw routes to the generated document, and types the segment rule bodies. */
 export const withRawRoutes = (spec: Record<string, any>) => ({
   ...spec,
-  paths: { ...spec.paths, ...RAW_PATHS },
+  paths: { ...withSegmentRules(spec.paths), ...RAW_PATHS },
 })

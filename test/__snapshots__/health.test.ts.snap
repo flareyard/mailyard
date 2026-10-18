@@ -81979,7 +81979,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "filter": {},
+                  "filter": {
+                    "$ref": "#/components/schemas/SegmentRule",
+                    "description": "A SegmentRule tree. A tree that can't work is a 400 with the rule's path in \`field\`.",
+                  },
                   "name": {
                     "type": "string",
                   },
@@ -82196,7 +82199,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "filter": {},
+                  "filter": {
+                    "$ref": "#/components/schemas/SegmentRule",
+                    "description": "A SegmentRule tree. A tree that can't work is a 400 with the rule's path in \`field\`.",
+                  },
                 },
                 "required": [
                   "filter",
@@ -83094,7 +83100,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "filter": {},
+                  "filter": {
+                    "$ref": "#/components/schemas/SegmentRule",
+                    "description": "A SegmentRule tree. A tree that can't work is a 400 with the rule's path in \`field\`.",
+                  },
                   "name": {
                     "type": "string",
                   },
