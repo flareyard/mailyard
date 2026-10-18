@@ -27,6 +27,7 @@ import {
   type TriggerConfig,
   triggerOf,
 } from "./graph.ts"
+import { restoreSecrets } from "./secrets.ts"
 import { validateStep } from "./steps/index.ts"
 
 /**
@@ -366,8 +367,21 @@ export const getAutomation = Effect.fn("automations.get")(function* (id: string)
     issues: yield* issuesOf(graph, settings),
     counts: yield* nodeCounts(id),
     ...(yield* runCounts(id, 0)),
+    /** True when secret config fields came back redacted (see ./secrets.ts); set by the caller's scope. */
+    redacted: false,
   }
 })
+
+/** A graph can't carry a redacted value it has nowhere to restore from. */
+const refuseRedacted = (unrestorable: ReadonlyArray<{ nodeId: string; field: string }>) =>
+  unrestorable.length === 0
+    ? Effect.void
+    : Effect.fail(
+        new AutomationInvalid({
+          field: "graph",
+          message: `Enter the ${unrestorable.map((u) => `${u.field} of step ${u.nodeId}`).join(", ")} again: a redacted value can't be saved.`,
+        }),
+      )
 
 export const createAutomation = Effect.fn("automations.create")(function* (
   input: {
@@ -381,6 +395,7 @@ export const createAutomation = Effect.fn("automations.create")(function* (
   if (!name || name.length > 100)
     return yield* new AutomationInvalid({ field: "name", message: "A name is 1 to 100 characters." })
   const graph = input.graph ?? STARTER_GRAPH
+  yield* refuseRedacted(restoreSecrets(graph, { nodes: [], edges: [] }).unrestorable)
   const database = yield* Database
   const id = `aut_${yield* (yield* Ids).next}`
   yield* database.query("automations.insert", (db) =>
@@ -412,18 +427,23 @@ export const updateAutomation = Effect.fn("automations.update")(function* (
   },
   actor: string,
 ) {
-  yield* findAutomation(id)
+  const row = yield* findAutomation(id)
   if (patch.name !== undefined && (!patch.name.trim() || patch.name.length > 100))
     return yield* new AutomationInvalid({ field: "name", message: "A name is 1 to 100 characters." })
+  // A graph read with redacted secrets saves with the stored values kept (HAL-3412).
+  let graph = patch.graph
+  if (graph !== undefined) {
+    const restored = restoreSecrets(graph, graphOf(row))
+    yield* refuseRedacted(restored.unrestorable)
+    graph = restored.graph
+  }
   const database = yield* Database
   yield* database.query("automations.update", (db) =>
     db
       .update(automations)
       .set({
         ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
-        ...(patch.graph !== undefined
-          ? { graph: patch.graph, trigger: triggerOf(patch.graph)?.config ?? null }
-          : {}),
+        ...(graph !== undefined ? { graph, trigger: triggerOf(graph)?.config ?? null } : {}),
         ...(patch.settings !== undefined ? { settings: patch.settings } : {}),
         updatedAt: Date.now(),
         updatedBy: actor,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { type Graph, structuralIssues } from "../../src/automations/graph.ts"
 import { fieldDate, nextWeekdayHour } from "../../src/automations/steps/waitUntil.ts"
 import { goodDomain, installDohFixture, setDns } from "../dns.ts"
-import { ADMIN, call, json } from "../helpers.ts"
+import { ADMIN, call, createKey, json } from "../helpers.ts"
 
 installDohFixture()
 
@@ -249,5 +249,83 @@ describe("automations API", () => {
     expect((await admin("/v1/automations", "POST", { name: "" })).status).toBe(400)
     expect((await admin(`/v1/automations/${created.id}/pause`, "POST")).status).toBe(400)
     expect((await admin("/v1/automations/aut_nope")).status).toBe(404)
+  })
+})
+
+describe("secrets in step settings (HAL-3412)", () => {
+  const hook = "https://hooks.slack.com/services/T000/B000/abcdefSECRET"
+  const graph = (url: string, id = "h") => ({
+    nodes: [
+      { id: "t", type: "trigger", config: { kind: "created" } },
+      { id, type: "webhook", config: { url } },
+      { id: "x", type: "exit", config: {} },
+    ],
+    edges: [
+      { from: "t", to: id },
+      { from: id, to: "x" },
+    ],
+  })
+  const webhookUrl = (d: Detail) =>
+    (d.graph.nodes.find((n) => n.type === "webhook")?.config as { url: string } | undefined)?.url
+
+  it("redacts webhook URLs for keys without admin, and keeps them when a redacted graph is saved", async () => {
+    const created = await json<Detail & { redacted: boolean }>(
+      await admin("/v1/automations", "POST", { name: `Secrets ${uid()}`, graph: graph(hook) }),
+    )
+    expect(created.redacted).toBe(false)
+    expect(webhookUrl(created)).toBe(hook)
+
+    const reader = (await createKey("secret", ["read"])).key
+    const read = await json<Detail & { redacted: boolean }>(
+      await call(`/v1/automations/${created.id}`, { key: reader }),
+    )
+    expect(read.redacted).toBe(true)
+    expect(webhookUrl(read)).toBe("https://hooks.slack.com/•••")
+    expect(JSON.stringify(read)).not.toContain("SECRET")
+    // Read keys still can't save it.
+    const refused = await call(`/v1/automations/${created.id}`, {
+      method: "PATCH",
+      key: reader,
+      json: { graph: read.graph },
+    })
+    expect(refused.status).toBe(403)
+
+    const full = await json<Detail & { redacted: boolean }>(await admin(`/v1/automations/${created.id}`))
+    expect(full.redacted).toBe(false)
+    expect(webhookUrl(full)).toBe(hook)
+
+    // The editor saves back what it read, redactions and all: the stored URL survives.
+    const saved = await json<Detail>(
+      await admin(`/v1/automations/${created.id}`, "PATCH", { name: "Renamed", graph: read.graph }),
+    )
+    expect(webhookUrl(saved)).toBe(hook)
+    expect(saved.name).toBe("Renamed")
+    // A new URL replaces it.
+    const changed = await json<Detail>(
+      await admin(`/v1/automations/${created.id}`, "PATCH", {
+        graph: graph("https://hooks.example.com/new"),
+      }),
+    )
+    expect(webhookUrl(changed)).toBe("https://hooks.example.com/new")
+  })
+
+  it("refuses a redacted value it has nothing to restore from", async () => {
+    const createdRedacted = await admin("/v1/automations", "POST", {
+      name: `Secrets ${uid()}`,
+      graph: graph("https://hooks.slack.com/•••"),
+    })
+    expect(createdRedacted.status).toBe(400)
+    const created = await json<Detail>(
+      await admin("/v1/automations", "POST", { name: `Secrets ${uid()}`, graph: graph(hook) }),
+    )
+    // A step id the stored graph doesn't have.
+    const res = await admin(`/v1/automations/${created.id}`, "PATCH", {
+      graph: graph("https://hooks.slack.com/•••", "h2"),
+    })
+    expect(res.status).toBe(400)
+    expect(await json<{ message: string }>(res)).toMatchObject({
+      message: expect.stringContaining("url of step h2"),
+    })
+    expect(webhookUrl(await json<Detail>(await admin(`/v1/automations/${created.id}`)))).toBe(hook)
   })
 })
