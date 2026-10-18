@@ -342,6 +342,50 @@ describe("CampaignSend", () => {
     expect((await messages(campaign.id)).map((m) => m.contact_id)).not.toContain(ids[0])
   }, 60_000)
 
+  it("shows a quota hold on the campaign, still sending, and clears it once mail flows (HAL-3431)", async () => {
+    const { domain, topicId, tag } = await audience(4, { quota: 2 })
+    const campaign = await createCampaign({
+      name: "Held",
+      fromAddress: `news@${domain}`,
+      subject: "Hi",
+      bodyHtml: "<p>Hi</p>",
+      topicId,
+    })
+    await env.DB.prepare("update campaigns set status = 'sending' where id = ?").bind(campaign.id).run()
+    const ids = [0, 1, 2, 3].map((i) => `c_${tag}_${String(i).padStart(5, "0")}`)
+    await env.STORE.put(
+      `campaigns/${campaign.id}/audience/main/0.json`,
+      JSON.stringify(ids.map((contactId) => ({ contactId, domain: "example.net", variant: null }))),
+    )
+    const run = () =>
+      runtimeFor(env).runPromise(
+        sendChunk(campaign.id, "main", 0, { origin: "https://mailyard.test", notBefore: 0 }),
+      )
+    const view = async () =>
+      json<{ status: string; pausedBy: string | null; heldUntil: number | null; heldBy: string | null }>(
+        await call(`/v1/campaigns/${campaign.id}`, { key: ADMIN }),
+      )
+    const first = await run()
+    expect(first.state).toBe("wait")
+    expect(await view()).toEqual(
+      expect.objectContaining({
+        status: "sending",
+        pausedBy: null,
+        heldBy: "quota",
+        heldUntil: nextMidnight(Date.now()),
+      }),
+    )
+    // Not a pause: the Paused tab doesn't count it.
+    const counts = await json<{ paused: number; sending: number }>(
+      await call("/v1/campaigns/counts", { key: ADMIN }),
+    )
+    expect(counts.sending).toBeGreaterThan(0)
+
+    await governor().configure({ dailyQuota: 100_000 })
+    expect((await run()).state).toBe("done")
+    expect(await view()).toEqual(expect.objectContaining({ heldBy: null, heldUntil: null }))
+  })
+
   it("refuses to schedule what would fail, reach nobody, or already went", async () => {
     const { domain, topicId } = await audience(1)
     const shortened = await createCampaign({

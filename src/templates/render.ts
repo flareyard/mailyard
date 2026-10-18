@@ -188,22 +188,60 @@ export const templateTexts = (template: TemplateSource): ReadonlyArray<string> =
   }
 }
 
-/** Checks a template can be rendered at all (valid blocks JSON), before it's saved. */
-export const validateTemplate = (template: TemplateSource): string | undefined => {
-  // Sections must open and close properly in every part: subject, body, text, and each block's strings.
-  for (const text of templateTexts(template)) {
+/** Every string in a parsed blocks document, with its path (`blocks[4].text`, `footer.reason`). */
+const stringsAt = (v: unknown, path: string): Array<{ path: string; text: string }> =>
+  typeof v === "string"
+    ? [{ path, text: v }]
+    : Array.isArray(v)
+      ? v.flatMap((x, i) => stringsAt(x, `${path}[${i}]`))
+      : v && typeof v === "object"
+        ? Object.entries(v).flatMap(([k, x]) => stringsAt(x, path ? `${path}.${k}` : k))
+        : []
+
+/**
+ * Why a template can't be rendered (bad section syntax in any part, invalid blocks JSON), and where:
+ * `subject`, `text`, `source`, or for blocks the string's path in the document, so an editor can
+ * mark the block (HAL-3433). Undefined when it renders.
+ */
+export const templateProblem = (
+  template: TemplateSource,
+): { readonly path: string; readonly message: string } | undefined => {
+  const syntax = (path: string, text: string) => {
     try {
       placeholdersOf(text)
+      return undefined
     } catch (e) {
-      if (e instanceof TemplateSyntaxError) return e.message
+      if (e instanceof TemplateSyntaxError) return { path, message: e.message }
       throw e
     }
   }
-  if (template.kind === "html") return template.source.trim() ? undefined : "An html template needs a body."
-  try {
-    const exit = decodeBlocksDocument(JSON.parse(template.source))
-    return Exit.isFailure(exit) ? `The blocks document is invalid: ${String(exit.cause)}` : undefined
-  } catch (e) {
-    return `The blocks document is not JSON: ${e instanceof Error ? e.message : String(e)}`
+  const head = syntax("subject", template.subject) ?? syntax("text", template.text ?? "")
+  if (head) return head
+  if (template.kind === "html") {
+    return (
+      syntax("source", template.source) ??
+      (template.source.trim() ? undefined : { path: "source", message: "An html template needs a body." })
+    )
   }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(template.source)
+  } catch (e) {
+    return {
+      path: "source",
+      message: `The blocks document is not JSON: ${e instanceof Error ? e.message : String(e)}`,
+    }
+  }
+  for (const { path, text } of stringsAt(parsed, "")) {
+    const found = syntax(path, text)
+    if (found) return { path, message: `In ${path}: ${found.message}` }
+  }
+  const exit = decodeBlocksDocument(parsed)
+  return Exit.isFailure(exit)
+    ? { path: "source", message: `The blocks document is invalid: ${String(exit.cause)}` }
+    : undefined
 }
+
+/** Checks a template can be rendered at all (valid blocks JSON), before it's saved. */
+export const validateTemplate = (template: TemplateSource): string | undefined =>
+  templateProblem(template)?.message

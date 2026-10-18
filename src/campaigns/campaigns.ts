@@ -16,7 +16,7 @@ import { parseParty, sendBulkMessage } from "../domain/outbox.ts"
 import { Ids } from "../kit/index.ts"
 import { Database, queryIn } from "../services/Database.ts"
 import type { BlocksDocument } from "../templates/document.ts"
-import { validateTemplate } from "../templates/render.ts"
+import { templateProblem } from "../templates/render.ts"
 import { audiencePreview, audienceSql, audienceTooComplex, EXCLUDE_LIMITS } from "./audience.ts"
 import { checkCampaign, linksIn } from "./checks.ts"
 import { getCompliance } from "./compliance.ts"
@@ -62,6 +62,8 @@ export const describeCampaign = (c: CampaignRow) => ({
   audienceSize: c.audienceSize,
   pausedReason: c.pausedReason,
   pausedBy: c.pausedBy,
+  heldUntil: c.status === "sending" ? c.heldUntil : null,
+  heldBy: c.status === "sending" ? c.heldBy : null,
   timezone: c.timezone,
   lastTest: c.lastTest ?? null,
   exclude: c.exclude ?? null,
@@ -163,13 +165,18 @@ const validate = (next: Omit<CampaignRow, "id" | "status" | "createdAt">) =>
     if (next.bodyBlocks) {
       if (next.templateId) return yield* bad("bodyBlocks", "Use a template or blocks, not both.")
       if (next.bodyHtml) return yield* bad("bodyBlocks", "Use blocks or an HTML body, not both.")
-      const invalid = validateTemplate({
+      const problem = templateProblem({
         kind: "blocks",
         subject: next.subject,
         source: JSON.stringify(next.bodyBlocks),
         text: next.bodyText,
       })
-      if (invalid) return yield* bad("bodyBlocks", invalid)
+      // Points at the string itself (bodyBlocks.blocks[4].text), so the editor can mark the block.
+      const field =
+        problem &&
+        ({ subject: "subject", text: "bodyText", source: "bodyBlocks" }[problem.path] ??
+          `bodyBlocks.${problem.path}`)
+      if (problem && field) return yield* bad(field, problem.message)
     }
     if (next.templateId) {
       const t = yield* database.query("campaigns.template", (db) =>
@@ -291,6 +298,8 @@ export const createCampaign = Effect.fn("campaigns.create")(function* (
     audienceSize: null,
     pausedReason: null,
     pausedBy: null,
+    heldUntil: null,
+    heldBy: null,
     timezone: input.timezone ?? null,
     exclude: normaliseExclude(input.exclude) ?? null,
     lastTest: null,
