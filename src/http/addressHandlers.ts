@@ -1,7 +1,5 @@
-import { and, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
-import { mailboxMembers } from "../db/schema.ts"
 import {
   createDomain,
   type DomainConflict,
@@ -30,7 +28,7 @@ import {
 } from "../domain/mailboxes.ts"
 import { isManager } from "../domain/permissions.ts"
 import { membershipIn, membershipsOf, seesAllMailboxes } from "../mail/access.ts"
-import { Database, type DatabaseError } from "../services/Database.ts"
+import type { DatabaseError } from "../services/Database.ts"
 import type { MailboxUnavailable } from "../services/Mailboxes.ts"
 import { Conflict, FixRefused, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"

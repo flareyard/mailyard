@@ -540,7 +540,7 @@ const summarizeMessage = (row: typeof messagesOut.$inferSelect) => ({
   updatedAt: row.updatedAt,
 })
 
-const originOfUrl = (url: string) => {
+const _originOfUrl = (url: string) => {
   try {
     return new URL(url).origin
   } catch {

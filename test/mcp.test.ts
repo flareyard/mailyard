@@ -121,6 +121,17 @@ describe("the MCP server (HAL-3303)", () => {
         "send_email",
         "track_event",
         "wait_for_mail",
+        "list_templates",
+        "render_template",
+        "list_segments",
+        "message_status",
+        "list_alerts",
+        "search_contacts",
+        "schedule_campaign",
+        "pause_campaign",
+        "add_or_update_contact",
+        "unsubscribe_contact",
+        "add_to_topic",
       ].sort(),
     )
     for (const t of all.result.tools) expect(t.inputSchema.type).toBe("object")

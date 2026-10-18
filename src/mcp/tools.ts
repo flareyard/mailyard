@@ -1,18 +1,24 @@
 import { eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-
+import { campaignAudience, campaignChecks, findCampaign } from "../campaigns/campaigns.ts"
 import { campaignReport } from "../campaigns/report.ts"
-import { contacts } from "../db/schema.ts"
-import { checkSend, holdSend } from "../domain/agents.ts"
+import { pauseCampaign, scheduleCampaign } from "../campaigns/send.ts"
+import { contacts, messageEvents, messageRecipients, messagesOut } from "../db/schema.ts"
+import { checkSend, holdSend, refuseCampaignForLimitedKey } from "../domain/agents.ts"
+import { listAlerts } from "../domain/alerts.ts"
 import type { Caller, Scope } from "../domain/apiKeys.ts"
-import { getContact, normalizeEmail } from "../domain/contacts.ts"
+import { getContact, listContacts, normalizeEmail, updateContact, upsertContact } from "../domain/contacts.ts"
 import { track } from "../domain/events.ts"
 import { sendTransactional } from "../domain/outbox.ts"
 import { readableMailboxes } from "../domain/overview.ts"
-import { previewSegment } from "../domain/segments.ts"
+import { listSegments, previewSegment } from "../domain/segments.ts"
+import { subscribe, unsubscribe } from "../domain/subscriptions.ts"
+import { listTemplates, resolveForSend } from "../domain/templates.ts"
+import { refuseWhileDeleting } from "../domain/workspaceDeletion.ts"
 import { searchMail } from "../domain/workspaceSearch.ts"
 import { applyThreadAction, createDraftNow, type ThreadAction } from "../http/mailHandlers.ts"
+import { renderReport } from "../http/templateHandlers.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
 import { requireMailbox } from "../mail/access.ts"
 import { bodyTextOf } from "../mail/compose.ts"
@@ -699,4 +705,322 @@ const WAIT_TOOLS: ReadonlyArray<Tool> = [
   },
 ]
 
-export const TOOLS: ReadonlyArray<Tool> = [...CORE_TOOLS, ...AGENT_TOOLS, ...WAIT_TOOLS]
+// ---------------------------------------------------------------------------------------------
+// Workspace tools (HAL-3463): templates, segments, delivery, alerts, contacts, campaigns.
+// Each wraps the same domain function its REST endpoint uses, behind the same scope.
+// ---------------------------------------------------------------------------------------------
+
+/** A contact by address, or a refusal the model can read. */
+const contactByEmail = (email: string) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const row = yield* database.query("mcp.contactByEmailForWrite", (db) =>
+      db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(eq(contacts.email, normalizeEmail(email)))
+        .get(),
+    )
+    if (!row) return yield* new ToolRefused({ message: `No contact ${email}.` })
+    return row.id
+  })
+
+const WORKSPACE_TOOLS: ReadonlyArray<Tool> = [
+  {
+    name: "list_templates",
+    description: "The workspace's email templates: id, name, kind, subject and which version is published.",
+    scope: "read",
+    input: Schema.Struct({ includeArchived: Schema.optionalKey(Schema.Boolean) }),
+    annotations: reads("List templates"),
+    run: (input: { includeArchived?: boolean }) =>
+      listTemplates(input.includeArchived ?? false).pipe(
+        Effect.map((rows) => ({
+          templates: rows.map((t) => ({
+            id: t.id,
+            name: t.name,
+            kind: t.kind,
+            publishedVersion: t.publishedVersion,
+            latestVersion: t.latestVersion,
+            archived: t.archivedAt !== null,
+            updatedAt: t.updatedAt,
+          })),
+        })),
+      ),
+  },
+  {
+    name: "render_template",
+    description:
+      "Renders a template (by id or name) with data, as it would be sent: subject, HTML, text, size, and the variables it uses and which the data didn't supply. Sends nothing.",
+    scope: "read",
+    input: Schema.Struct({
+      template: Schema.String,
+      data: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
+      version: Schema.optionalKey(Schema.Union([Schema.Literals(["published", "latest"]), Schema.Number])),
+    }),
+    annotations: reads("Render a template"),
+    run: (input: {
+      template: string
+      data?: Record<string, unknown>
+      version?: "published" | "latest" | number
+    }) =>
+      Effect.gen(function* () {
+        const { source } = yield* resolveForSend(input.template, input.version ?? "published")
+        const report = yield* renderReport(source, input.data ?? {})
+        return { ...report, html: clip(report.html ?? "", 50_000) }
+      }),
+  },
+  {
+    name: "list_segments",
+    description: "Saved segments: id, name, the filter, how many contacts match, and what uses them.",
+    scope: "read",
+    input: Schema.Struct({}),
+    annotations: reads("List segments"),
+    run: () => listSegments().pipe(Effect.map((segments) => ({ segments }))),
+  },
+  {
+    name: "message_status",
+    description:
+      "A sent message by id: its status, stream, recipient and subject, every delivery event (sent, delivered, deferred, bounced, complained, opened, clicked) and, for mailbox mail, each recipient's state.",
+    scope: "read",
+    input: Schema.Struct({ messageId: Schema.String }),
+    annotations: reads("Message status"),
+    run: (input: { messageId: string }) =>
+      Effect.gen(function* () {
+        const database = yield* Database
+        const row = yield* database.query("mcp.message", (db) =>
+          db.select().from(messagesOut).where(eq(messagesOut.id, input.messageId)).get(),
+        )
+        if (!row) return yield* new ToolRefused({ message: `No message ${input.messageId}.` })
+        const events = yield* database.query("mcp.messageEvents", (db) =>
+          db
+            .select()
+            .from(messageEvents)
+            .where(eq(messageEvents.messageId, row.id))
+            .orderBy(messageEvents.at, messageEvents.id)
+            .limit(200)
+            .all(),
+        )
+        const recipients = yield* database.query("mcp.messageRecipients", (db) =>
+          db.select().from(messageRecipients).where(eq(messageRecipients.messageId, row.id)).limit(100).all(),
+        )
+        return {
+          message: {
+            id: row.id,
+            status: row.status,
+            stream: row.stream,
+            recipient: row.recipient,
+            sender: row.sender,
+            subject: row.subject,
+            campaignId: row.campaignId,
+            mailboxId: row.mailboxId,
+            error: row.error,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+          },
+          events: events.map((e) => ({
+            type: e.type,
+            at: e.at,
+            provider: e.provider,
+            bounceType: e.bounceType,
+          })),
+          recipients: recipients.map((r) => ({
+            recipient: r.recipient,
+            kind: r.kind,
+            status: r.status,
+            at: r.at,
+          })),
+        }
+      }),
+  },
+  {
+    name: "list_alerts",
+    description:
+      "Open alerts (or resolved, or all): delivery problems, reputation, quota, DNS drift, failed webhooks, sends waiting for approval.",
+    scope: "read",
+    input: Schema.Struct({
+      status: Schema.optionalKey(Schema.Literals(["open", "resolved", "all"])),
+      limit: Schema.optionalKey(Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+    }),
+    annotations: reads("List alerts"),
+    run: (input: { status?: "open" | "resolved" | "all"; limit?: number }) =>
+      listAlerts({ status: input.status ?? "open", limit: input.limit ?? 25 }),
+  },
+  {
+    name: "search_contacts",
+    description: "Contacts whose email or name contains the words: status, fields, topics.",
+    scope: "read",
+    input: Schema.Struct({
+      q: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
+      status: Schema.optionalKey(
+        Schema.Literals(["subscribed", "unsubscribed", "unconfirmed", "bounced", "complained"]),
+      ),
+      limit: Schema.optionalKey(Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 50 }))),
+    }),
+    annotations: reads("Search contacts"),
+    run: (input: { q: string; status?: string; limit?: number }) =>
+      listContacts({
+        q: input.q,
+        limit: input.limit ?? 10,
+        ...(input.status ? { status: input.status } : {}),
+      }),
+  },
+  {
+    name: "schedule_campaign",
+    description:
+      "Schedules a draft campaign to send now or at sendAt (Unix ms). Without confirm: true it only says what would happen: who it reaches and whether its checks pass. Needs confirm: true to schedule.",
+    scope: "admin",
+    input: Schema.Struct({
+      campaignId: Schema.String,
+      sendAt: Schema.optionalKey(Schema.Number),
+      confirm: Schema.optionalKey(Schema.Boolean),
+    }),
+    annotations: sends("Schedule a campaign"),
+    run: (input: { campaignId: string; sendAt?: number; confirm?: boolean }, caller, context) =>
+      Effect.gen(function* () {
+        const campaign = yield* findCampaign(input.campaignId)
+        if (input.confirm !== true) {
+          const audience = yield* campaignAudience(input.campaignId)
+          const { checks } = yield* campaignChecks(input.campaignId, context.origin)
+          const failing = checks.filter((c: { status: string }) => c.status === "fail")
+          return {
+            wouldSchedule: {
+              campaign: {
+                id: campaign.id,
+                name: campaign.name,
+                subject: campaign.subject,
+                status: campaign.status,
+              },
+              sendAt: input.sendAt ?? "now",
+              recipients: audience.sendable,
+              checks,
+              blocked: failing.length > 0,
+            },
+            next:
+              failing.length > 0
+                ? "Fix the failing checks first."
+                : "Show the user this, then call again with confirm: true to schedule it.",
+          }
+        }
+        yield* refuseCampaignForLimitedKey(caller)
+        yield* refuseWhileDeleting()
+        return yield* scheduleCampaign(
+          input.campaignId,
+          { sendAt: input.sendAt },
+          caller.keyId,
+          context.origin,
+        )
+      }),
+  },
+  {
+    name: "pause_campaign",
+    description:
+      "Pauses a sending or scheduled campaign; what's already sent stays sent. Without confirm: true it only says what would happen.",
+    scope: "admin",
+    input: Schema.Struct({ campaignId: Schema.String, confirm: Schema.optionalKey(Schema.Boolean) }),
+    annotations: {
+      title: "Pause a campaign",
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    run: (input: { campaignId: string; confirm?: boolean }, caller) =>
+      Effect.gen(function* () {
+        const campaign = yield* findCampaign(input.campaignId)
+        if (input.confirm !== true)
+          return {
+            wouldPause: { id: campaign.id, name: campaign.name, status: campaign.status },
+            next:
+              campaign.status === "sending" || campaign.status === "scheduled"
+                ? "Call again with confirm: true to pause it. It can be resumed later."
+                : `A ${campaign.status} campaign can't be paused.`,
+          }
+        return yield* pauseCampaign(input.campaignId, caller.keyId)
+      }),
+  },
+  {
+    name: "add_or_update_contact",
+    description:
+      "Adds a contact, or updates one with the same email: name and data fields. A new contact is subscribed unless subscribed: false.",
+    scope: "admin",
+    input: Schema.Struct({
+      email: Schema.String.check(Schema.isMaxLength(254)),
+      name: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(200))),
+      data: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
+      subscribed: Schema.optionalKey(Schema.Boolean),
+    }),
+    annotations: {
+      title: "Add or update a contact",
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    run: (input: { email: string; name?: string; data?: Record<string, unknown>; subscribed?: boolean }) =>
+      Effect.gen(function* () {
+        const result = yield* upsertContact({
+          email: input.email,
+          name: input.name,
+          data: input.data,
+          subscribed: input.subscribed,
+          whenNew: input.subscribed === false ? "unsubscribed" : "subscribed",
+        })
+        return { created: result.created, contact: yield* getContact(result.contact.id) }
+      }),
+  },
+  {
+    name: "unsubscribe_contact",
+    description:
+      "Unsubscribes a contact by email: from one topic, or from everything when topicId is left out.",
+    scope: "admin",
+    input: Schema.Struct({ email: Schema.String, topicId: Schema.optionalKey(Schema.String) }),
+    annotations: {
+      title: "Unsubscribe a contact",
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    run: (input: { email: string; topicId?: string }, caller) =>
+      Effect.gen(function* () {
+        const id = yield* contactByEmail(input.email)
+        if (input.topicId) yield* unsubscribe(id, input.topicId, "mcp")
+        else yield* updateContact(id, { status: "unsubscribed" }, caller.keyId)
+        return { contact: yield* getContact(id) }
+      }),
+  },
+  {
+    name: "add_to_topic",
+    description:
+      "Subscribes a contact (by email, added if new) to a topic. A topic with double opt-in mails a confirmation unless confirmed: true.",
+    scope: "admin",
+    input: Schema.Struct({
+      email: Schema.String,
+      topicId: Schema.String,
+      confirmed: Schema.optionalKey(Schema.Boolean),
+    }),
+    annotations: {
+      title: "Add to a topic",
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    run: (input: { email: string; topicId: string; confirmed?: boolean }, _caller, context) =>
+      Effect.gen(function* () {
+        const { contact } = yield* upsertContact({ email: input.email, whenNew: "unconfirmed" })
+        const result = yield* subscribe(contact.id, input.topicId, {
+          confirmed: input.confirmed,
+          source: "mcp",
+          origin: context.origin,
+        })
+        return {
+          state: result.state,
+          confirmationSent: result.confirmationSent,
+          contact: yield* getContact(contact.id),
+        }
+      }),
+  },
+]
+
+export const TOOLS: ReadonlyArray<Tool> = [...CORE_TOOLS, ...AGENT_TOOLS, ...WAIT_TOOLS, ...WORKSPACE_TOOLS]

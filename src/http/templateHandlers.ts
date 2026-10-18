@@ -80,7 +80,7 @@ const dbDies = <A, E, R>(self: Effect.Effect<A, E | DatabaseError, R>) =>
   Effect.catchTag(self, "DatabaseError", Effect.die) as Effect.Effect<A, Exclude<E, DatabaseError>, R>
 
 /** Renders and reports size, variables used and which required ones the data didn't supply. */
-const renderReport = (source: TemplateSource, data: Readonly<Record<string, unknown>>) =>
+export const renderReport = (source: TemplateSource, data: Readonly<Record<string, unknown>>) =>
   Effect.gen(function* () {
     const brand = yield* getBrand()
     const vars = { email: "preview@example.com", name: "Preview", ...data, data }
