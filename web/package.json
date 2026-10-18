@@ -10,7 +10,8 @@
     "test": "vitest run",
     "api:types": "openapi-typescript ${MAILYARD_OPENAPI:-https://mailyard-api.halleluyaholudele.workers.dev/openapi.json} -o src/api/schema.d.ts",
     "fixtures": "bun scripts/extract-fixtures.ts",
-    "audit": "bun e2e/run-audit.ts"
+    "audit": "bun e2e/run-audit.ts",
+    "e2e:session": "bun e2e/session.e2e.ts"
   },
   "dependencies": {
     "@floating-ui/react": "0.27.20",
