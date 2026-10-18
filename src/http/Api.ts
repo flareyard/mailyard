@@ -2677,6 +2677,19 @@ const ContactFieldSchema = Schema.Struct({
   ),
 })
 
+/** The evidence kept with a subscription change (HAL-3371, HAL-3426); every field optional. */
+const ConsentEvidenceSchema = Schema.Struct({
+  importId: Schema.optionalKey(Schema.String),
+  attestedBy: Schema.optionalKey(Schema.String),
+  attestedAt: Schema.optionalKey(Schema.Number),
+  statement: Schema.optionalKey(Schema.String),
+  ip: Schema.optionalKey(Schema.String),
+  userAgent: Schema.optionalKey(Schema.String),
+  page: Schema.optionalKey(Schema.String),
+  formId: Schema.optionalKey(Schema.String),
+  formVersion: Schema.optionalKey(Schema.String),
+})
+
 const TimelineItemSchema = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("event"),
@@ -2704,6 +2717,7 @@ const TimelineItemSchema = Schema.Union([
     from: Schema.NullOr(SubscriptionStateSchema),
     to: SubscriptionStateSchema,
     source: Schema.String,
+    evidence: Schema.NullOr(ConsentEvidenceSchema),
   }),
   Schema.Struct({
     kind: Schema.Literal("delivery"),
@@ -2722,6 +2736,10 @@ const TimelineItemSchema = Schema.Union([
     topicId: Schema.String,
     topic: Schema.String,
     source: Schema.String,
+    /** How they opted in: confirmed a double opt-in, signed up through a form, or the preference page. */
+    method: Schema.Literals(["double_opt_in", "form", "preference_page"]),
+    /** What a GDPR or CASL request asks for: where from, in what browser, on which form version. */
+    evidence: Schema.NullOr(ConsentEvidenceSchema),
   }),
   Schema.Struct({
     kind: Schema.Literal("reply"),
@@ -2730,6 +2748,10 @@ const TimelineItemSchema = Schema.Union([
     subject: Schema.NullOr(Schema.String),
     to: Schema.String,
     inReplyTo: Schema.NullOr(Schema.String),
+    /** Where it was filed, to open the conversation in Mail; null for mail filed before HAL-3426. */
+    mailboxId: Schema.NullOr(Schema.String),
+    threadId: Schema.NullOr(Schema.String),
+    messageId: Schema.NullOr(Schema.String),
   }),
   Schema.Struct({
     kind: Schema.Literal("automation"),

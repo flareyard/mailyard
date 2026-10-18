@@ -38035,6 +38035,58 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   },
                                 ],
                               },
+                              "evidence": {
+                                "anyOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "attestedAt": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                          },
+                                          {
+                                            "enum": [
+                                              "Infinity",
+                                              "-Infinity",
+                                              "NaN",
+                                            ],
+                                            "type": "string",
+                                          },
+                                        ],
+                                      },
+                                      "attestedBy": {
+                                        "type": "string",
+                                      },
+                                      "formId": {
+                                        "type": "string",
+                                      },
+                                      "formVersion": {
+                                        "type": "string",
+                                      },
+                                      "importId": {
+                                        "type": "string",
+                                      },
+                                      "ip": {
+                                        "type": "string",
+                                      },
+                                      "page": {
+                                        "type": "string",
+                                      },
+                                      "statement": {
+                                        "type": "string",
+                                      },
+                                      "userAgent": {
+                                        "type": "string",
+                                      },
+                                    },
+                                    "type": "object",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
                               "from": {
                                 "anyOf": [
                                   {
@@ -38086,6 +38138,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "from",
                               "to",
                               "source",
+                              "evidence",
                             ],
                             "type": "object",
                           },
@@ -38179,12 +38232,72 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   },
                                 ],
                               },
+                              "evidence": {
+                                "anyOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "attestedAt": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                          },
+                                          {
+                                            "enum": [
+                                              "Infinity",
+                                              "-Infinity",
+                                              "NaN",
+                                            ],
+                                            "type": "string",
+                                          },
+                                        ],
+                                      },
+                                      "attestedBy": {
+                                        "type": "string",
+                                      },
+                                      "formId": {
+                                        "type": "string",
+                                      },
+                                      "formVersion": {
+                                        "type": "string",
+                                      },
+                                      "importId": {
+                                        "type": "string",
+                                      },
+                                      "ip": {
+                                        "type": "string",
+                                      },
+                                      "page": {
+                                        "type": "string",
+                                      },
+                                      "statement": {
+                                        "type": "string",
+                                      },
+                                      "userAgent": {
+                                        "type": "string",
+                                      },
+                                    },
+                                    "type": "object",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
                               "id": {
                                 "type": "string",
                               },
                               "kind": {
                                 "enum": [
                                   "consent",
+                                ],
+                                "type": "string",
+                              },
+                              "method": {
+                                "enum": [
+                                  "double_opt_in",
+                                  "form",
+                                  "preference_page",
                                 ],
                                 "type": "string",
                               },
@@ -38205,6 +38318,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "topicId",
                               "topic",
                               "source",
+                              "method",
+                              "evidence",
                             ],
                             "type": "object",
                           },
@@ -38245,7 +38360,37 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 ],
                                 "type": "string",
                               },
+                              "mailboxId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "messageId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
                               "subject": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "threadId": {
                                 "anyOf": [
                                   {
                                     "type": "string",
@@ -38266,6 +38411,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "subject",
                               "to",
                               "inReplyTo",
+                              "mailboxId",
+                              "threadId",
+                              "messageId",
                             ],
                             "type": "object",
                           },

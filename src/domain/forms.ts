@@ -2,12 +2,14 @@ import { and, asc, eq, gte, inArray, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
+import type { ConsentEvidence } from "../db/schema.ts"
 import { type FormFieldDef, formDaily, forms, topics } from "../db/schema.ts"
 import { labelOf } from "../forms/page.ts"
 import { Ids } from "../kit/index.ts"
 import { Database, queryIn } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
 import { getBrand } from "./brand.ts"
+import { formVersion } from "./consentEvidence.ts"
 import { ContactInvalid, normalizeEmail, upsertContact } from "./contacts.ts"
 import { subscribe } from "./subscriptions.ts"
 
@@ -301,6 +303,8 @@ export const submitForm = Effect.fn("forms.submit")(function* (
     readonly topics?: ReadonlyArray<string> | undefined
   },
   origin: string,
+  /** The submitting request's IP, browser and page (HAL-3426). */
+  evidence?: ConsentEvidence | undefined,
 ) {
   const form = yield* findForm(formId)
   if (form.archived) return yield* new FormNotFound({ id: formId })
@@ -359,9 +363,16 @@ export const submitForm = Effect.fn("forms.submit")(function* (
     data: allowed,
     whenNew: "unconfirmed",
   })
+  const signup: ConsentEvidence = {
+    ...evidence,
+    formId: form.id,
+    formVersion: yield* Effect.promise(() => formVersion(form)),
+  }
   const states: Array<"subscribed" | "unconfirmed"> = []
   for (const topicId of chosen) {
-    const result = yield* Effect.result(subscribe(contact.id, topicId, { source: `form:${form.id}`, origin }))
+    const result = yield* Effect.result(
+      subscribe(contact.id, topicId, { source: `form:${form.id}`, origin, evidence: signup }),
+    )
     // A blocked or archived target is skipped quietly: the person sees the same answer either way.
     if (result._tag === "Success") states.push(result.success.state)
     else if ((result.failure as { _tag?: string })._tag === "DatabaseError")

@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import { Bindings } from "../Bindings.ts"
+import type { ConsentEvidence } from "../db/schema.ts"
 import { contacts } from "../db/schema.ts"
 import { Database } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
@@ -62,6 +63,8 @@ export const subscribe = Effect.fn("subscriptions.subscribe")(function* (
     readonly confirmed?: boolean | undefined
     readonly source: string
     readonly origin: string | null
+    /** Where the person acted from, when they did it themselves (HAL-3426). */
+    readonly evidence?: ConsentEvidence | undefined
   },
 ) {
   const contact = yield* findContact(contactId)
@@ -77,7 +80,7 @@ export const subscribe = Effect.fn("subscriptions.subscribe")(function* (
   }
   const needsConfirmation = topic.doubleOptIn && !options.confirmed
   if (!needsConfirmation) {
-    yield* writeSubscription(contact, topicId, "subscribed", options.source)
+    yield* writeSubscription(contact, topicId, "subscribed", options.source, options.evidence)
     return { state: "subscribed" as const, confirmationSent: false }
   }
   const env = yield* Bindings
@@ -94,7 +97,13 @@ export const subscribe = Effect.fn("subscriptions.subscribe")(function* (
         "This topic needs double opt-in, and no public origin is known to build the confirmation link.",
     })
   }
-  const { changed, from } = yield* writeSubscription(contact, topicId, "unconfirmed", options.source)
+  const { changed, from } = yield* writeSubscription(
+    contact,
+    topicId,
+    "unconfirmed",
+    options.source,
+    options.evidence,
+  )
   // Already confirmed earlier: nothing to send. Already pending: send again, it may have been lost.
   if (!changed && from === "subscribed") return { state: "subscribed" as const, confirmationSent: false }
   // A signup form's source is `form:<id>`; the confirm page then follows that form's redirect.
@@ -115,13 +124,20 @@ export const unsubscribe = Effect.fn("subscriptions.unsubscribe")(function* (
 })
 
 /** Follows a confirmation link: the pending subscription becomes real. Safe to follow twice. */
-export const confirmSubscription = Effect.fn("subscriptions.confirm")(function* (token: string) {
+export const confirmSubscription = Effect.fn("subscriptions.confirm")(function* (
+  token: string,
+  /** The request that followed the link (HAL-3426). */
+  evidence?: ConsentEvidence | undefined,
+) {
   const payload = yield* verifyConsent(token)
   if (payload.kind !== "confirm") return yield* new ConsentTokenInvalid({ reason: "kind" })
   const contact = yield* findContact(payload.contactId)
   const topic = yield* findTopic(payload.topicId)
   if (!isBlocked(contact.status))
-    yield* writeSubscription(contact, topic.id, "subscribed", "confirmation link")
+    yield* writeSubscription(contact, topic.id, "subscribed", "confirmation link", {
+      ...evidence,
+      ...(payload.formId ? { formId: payload.formId } : {}),
+    })
   return {
     contact: contact.email,
     topic: topic.name,

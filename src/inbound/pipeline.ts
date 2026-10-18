@@ -352,7 +352,14 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
     yield* (yield* Database).query("inbound.deliveryRow", (db) =>
       db
         .insert(inboundDeliveries)
-        .values({ inboundId: row.id, mailboxId, folder: plan.filing.folder, at: Date.now() })
+        .values({
+          inboundId: row.id,
+          mailboxId,
+          folder: plan.filing.folder,
+          messageId: result.id,
+          threadId: result.threadId,
+          at: Date.now(),
+        })
         .onConflictDoNothing()
         .run(),
     )
