@@ -40,13 +40,15 @@ const formPageResponse = async (
       ? await page(env, 404, "Form not found", "This signup form no longer exists.")
       : await page(env, 500, "Something went wrong", "Please try again in a moment.")
   }
-  const { form, topics, brand } = result.success
+  const { form, topics } = result.success
+  // The same look as /u, /c and /v: the workspace's brand or Flareyard's, and the compliance footer.
+  const look = await runtimeFor(env).runPromise(publicLook)
   const html = renderFormPage({
     form,
     topics,
-    theme: brand.theme,
-    brandName: brand.theme.name,
-    siteUrl: brand.siteUrl === "https://example.com" ? null : brand.siteUrl,
+    theme: look.theme,
+    postalAddress: look.postalAddress,
+    privacyUrl: look.privacyUrl,
     action: `/v1/forms/${encodeURIComponent(form.id)}/submit`,
     filled: options.filled,
   })
@@ -55,7 +57,7 @@ const formPageResponse = async (
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
-      "content-security-policy": pageCsp(brand.theme.fontsHref),
+      "content-security-policy": pageCsp(look.theme.fontsHref),
       "x-content-type-options": "nosniff",
       "referrer-policy": "strict-origin-when-cross-origin",
     },

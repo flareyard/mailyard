@@ -105,7 +105,7 @@ describe("the preference page (/u)", () => {
     const html = await (await call(await prefsPath(contact.id, null))).text()
     expect(html).toContain("Email preferences · Yard Co")
     expect(html).toContain("--accent:#0a7d55")
-    expect(html).toContain("font:16px/1.55 Inter, sans-serif")
+    expect(html).toContain("--font-body:Inter, sans-serif")
     expect(html).toContain("family=Inter")
     expect(html).not.toContain("Funnel")
     await env.DB.prepare("delete from settings where key = 'brand'").run()
@@ -199,7 +199,7 @@ describe("confirm and signup result pages", () => {
     expect(res.headers.get("refresh")).toBe("3;url=https://example.org/thanks")
     const html = await res.text()
     expect(html).toContain('<meta http-equiv="refresh" content="3;url=https://example.org/thanks">')
-    expect(html).toContain('class="notice success"')
+    expect(html).toContain('class="glyph success i-check"')
     expect(html).toContain('href="https://example.org/thanks">Continue</a>')
     // A token from before forms carried their id: still confirms, no redirect.
     const plain = await run<string>(
@@ -223,7 +223,7 @@ describe("confirm and signup result pages", () => {
     expect(res.status).toBe(200)
     const html = await res.text()
     expect(html).toContain("You're subscribed")
-    expect(html).toContain('class="notice success"')
+    expect(html).toContain('class="glyph success i-check"')
     expect(html).toContain("Funnel")
   })
 })

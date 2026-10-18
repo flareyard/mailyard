@@ -9,7 +9,7 @@ import { ConsentTokenInvalid, verifyConsent } from "../domain/consent.ts"
 import { decodeRendered } from "../domain/outbox.ts"
 import { BlobStore } from "../kit/index.ts"
 import { publicLook } from "../public/look.ts"
-import { shellPage } from "../public/shell.ts"
+import { glyph, shellPage } from "../public/shell.ts"
 import { Database } from "../services/Database.ts"
 import { runtimeFor } from "./inbound.ts"
 
@@ -106,7 +106,7 @@ export const handleView = async (request: Request, env: Env, token: string) => {
     postalAddress: look.postalAddress,
     privacyUrl: look.privacyUrl,
     body: gone
-      ? `<h1>This email isn't available</h1><p class="muted">It may have been removed.</p>`
-      : `<h1>This link isn't valid</h1><p class="muted">Check you opened the whole link from the email.</p>`,
+      ? `${glyph(404)}<h1>This email isn't available</h1><p class="muted">It may have been removed.</p>`
+      : `${glyph(400)}<h1>This link isn't valid</h1><p class="muted">Check you opened the whole link from the email.</p>`,
   })
 }

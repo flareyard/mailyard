@@ -1,5 +1,5 @@
 import type { PageTheme } from "./shell.ts"
-import { escapeHtml as esc, type NoticeKind, notice, shellPage } from "./shell.ts"
+import { escapeHtml as esc, glyph, type NoticeKind, notice, shellPage } from "./shell.ts"
 
 /**
  * The public pages' bodies (the preference page, its link-not-valid page, and the one-message
@@ -56,7 +56,7 @@ export const preferencePage = (
   const topics = prefs.topics
     .map(
       (t) =>
-        `<label class="topic"><input type="checkbox" name="topic" value="${esc(t.id)}"${t.subscribed ? " checked" : ""}><span>${esc(t.name)}${t.id === focus?.id ? '<span class="tag">From this email</span>' : ""}${t.description && look.showTopicDescriptions !== false ? `<small>${esc(t.description)}</small>` : ""}</span></label>`,
+        `<label class="topic"><input type="checkbox" role="switch" name="topic" value="${esc(t.id)}"${t.subscribed ? " checked" : ""}><span>${esc(t.name)}${t.id === focus?.id ? '<span class="tag">From this email</span>' : ""}${t.description && look.showTopicDescriptions !== false ? `<small>${esc(t.description)}</small>` : ""}</span></label>`,
     )
     .join("")
   const undo =
@@ -83,7 +83,7 @@ export const preferencePage = (
 ${lede}
 ${status}
 <form method="post">
-${prefs.topics.length ? `<fieldset><legend>Lists</legend>${topics}</fieldset>` : "<p>You aren't on any lists.</p>"}
+${prefs.topics.length ? `<fieldset><legend>Lists</legend>${topics}</fieldset>` : `<p class="muted">You aren't on any lists.</p>`}
 <div class="actions"><button type="submit" name="action" value="save">Save choices</button>
 <button class="secondary" type="submit" name="action" value="all">Unsubscribe from everything</button></div>
 </form>`
@@ -98,7 +98,7 @@ export const invalidLinkPage = (look: Look) =>
   page(
     look,
     "Link not valid",
-    `<h1>This link isn't valid</h1><p class="muted">It may be from an old email. We can send a fresh one to the address on our list.</p>${requestForm}`,
+    `${glyph(400)}<h1>This link isn't valid</h1><p class="muted">It may be from an old email. We can send a fresh one to the address on our list.</p>${requestForm}`,
     400,
   )
 
@@ -107,7 +107,7 @@ export type ResultExtra = {
   readonly redirect?: { readonly url: string; readonly after: number }
 }
 
-/** A page with one message: a heading, the message (as a coloured notice when `kind` is set), and a redirect. */
+/** A page with one message: a glyph (coloured by `kind` or the status), the heading, the message, and a redirect. */
 export const resultPage = (
   look: Look,
   status: number,
@@ -116,7 +116,7 @@ export const resultPage = (
   extra?: ResultExtra,
 ) => {
   const continueLink = extra?.redirect
-    ? `<p><a class="button" href="${esc(extra.redirect.url)}">Continue</a></p><p class="muted">Taking you there in ${extra.redirect.after} seconds.</p>`
+    ? `<div class="redirect"><a class="button" href="${esc(extra.redirect.url)}">Continue</a><p class="countdown">Taking you there in ${extra.redirect.after} seconds.<span class="countdown-bar" style="--after:${extra.redirect.after}s" aria-hidden="true"></span></p></div>`
     : ""
   return shellPage({
     theme: look.theme,
@@ -125,6 +125,6 @@ export const resultPage = (
     postalAddress: look.postalAddress,
     privacyUrl: look.privacyUrl,
     redirect: extra?.redirect ?? null,
-    body: `<h1>${esc(title)}</h1>${extra?.kind ? notice(extra.kind, esc(message)) : `<p class="muted">${esc(message)}</p>`}${continueLink}`,
+    body: `${glyph(status, extra?.kind)}<h1>${esc(title)}</h1><p class="lede">${esc(message)}</p>${continueLink}`,
   })
 }
