@@ -4,7 +4,7 @@ import * as Schema from "effect/Schema"
 import { apiKeys, domains, mailboxExports, mailboxes, mailboxMembers } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { SPAM_THRESHOLD } from "../rules/spam.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import type { Caller } from "./apiKeys.ts"
 import { activeKey, isRevoked } from "./apiKeys.ts"
@@ -87,11 +87,11 @@ export const getMailbox = Effect.fn("mailboxes.get")(function* (id: string) {
   const m = yield* findMailbox(id)
   const database = yield* Database
   const targetRows = m.targets?.length
-    ? yield* database.query("mailboxes.targets", (db) =>
+    ? yield* queryIn("mailboxes.targets", [...(m.targets ?? [])], (db, chunk) =>
         db
           .select({ id: mailboxes.id, address: mailboxes.address, kind: mailboxes.kind })
           .from(mailboxes)
-          .where(inArray(mailboxes.id, [...(m.targets ?? [])]))
+          .where(inArray(mailboxes.id, chunk))
           .all(),
       )
     : []
@@ -171,13 +171,12 @@ const checkTargets = Effect.fn("mailboxes.checkTargets")(function* (
   if (selfId && unique.includes(selfId)) {
     return yield* new MailboxInvalid({ field: "targets", message: "A mailbox can't deliver to itself." })
   }
-  const database = yield* Database
   const seen = new Set<string>(selfId ? [selfId] : [])
   let frontier = unique
   let reachesMail = false
   for (let depth = 0; frontier.length > 0 && depth < 8; depth++) {
-    const rows = yield* database.query("mailboxes.expand", (db) =>
-      db.select().from(mailboxes).where(inArray(mailboxes.id, frontier)).all(),
+    const rows = yield* queryIn("mailboxes.expand", frontier, (db, chunk) =>
+      db.select().from(mailboxes).where(inArray(mailboxes.id, chunk)).all(),
     )
     if (depth === 0) {
       const missing = unique.filter((id) => !rows.some((r) => r.id === id))
@@ -412,11 +411,11 @@ export const setMembers = Effect.fn("mailboxes.setMembers")(function* (
     return yield* new MailboxInvalid({ field: "members", message: "A key is listed twice." })
   const database = yield* Database
   const keys = ids.length
-    ? yield* database.query("mailboxes.memberKeys", (db) =>
+    ? yield* queryIn("mailboxes.memberKeys", ids, (db, chunk) =>
         db
           .select({ id: apiKeys.id, kind: apiKeys.kind })
           .from(apiKeys)
-          .where(and(inArray(apiKeys.id, ids), activeKey()))
+          .where(and(inArray(apiKeys.id, chunk), activeKey()))
           .all(),
       )
     : []

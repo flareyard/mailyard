@@ -12,7 +12,7 @@ import {
   templateVersions,
 } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import {
   renderTemplate,
   type TemplateSource,
@@ -351,7 +351,7 @@ export const templateUsage = Effect.fn("templates.usage")(function* (
   if (templateIds.length === 0) return usage as ReadonlyMap<string, TemplateUsage>
   const database = yield* Database
   const since = new Date(now - 29 * 86_400_000).toISOString().slice(0, 10)
-  const daily = yield* database.query("templates.usageDaily", (db) =>
+  const daily = yield* queryIn("templates.usageDaily", [...templateIds], (db, chunk) =>
     db
       .select({
         templateId: templateDaily.templateId,
@@ -359,20 +359,14 @@ export const templateUsage = Effect.fn("templates.usage")(function* (
         sends: sql<number>`sum(${templateDaily.sends})`,
       })
       .from(templateDaily)
-      .where(and(inArray(templateDaily.templateId, [...templateIds]), gte(templateDaily.day, since)))
+      .where(and(inArray(templateDaily.templateId, chunk), gte(templateDaily.day, since)))
       .groupBy(templateDaily.templateId, templateDaily.apiKeyId)
       .all(),
   )
   const keyIds = [...new Set(daily.map((d) => d.apiKeyId).filter((k) => k !== ""))]
-  const keyNames = keyIds.length
-    ? yield* database.query("templates.usageKeys", (db) =>
-        db
-          .select({ id: apiKeys.id, name: apiKeys.name })
-          .from(apiKeys)
-          .where(inArray(apiKeys.id, keyIds))
-          .all(),
-      )
-    : []
+  const keyNames = yield* queryIn("templates.usageKeys", keyIds, (db, chunk) =>
+    db.select({ id: apiKeys.id, name: apiKeys.name }).from(apiKeys).where(inArray(apiKeys.id, chunk)).all(),
+  )
   for (const d of daily) {
     const u = usage.get(d.templateId)
     if (!u) continue
@@ -384,11 +378,11 @@ export const templateUsage = Effect.fn("templates.usage")(function* (
         name: keyNames.find((k) => k.id === d.apiKeyId)?.name ?? d.apiKeyId,
       })
   }
-  const usedCampaigns = yield* database.query("templates.usageCampaigns", (db) =>
+  const usedCampaigns = yield* queryIn("templates.usageCampaigns", [...templateIds], (db, chunk) =>
     db
       .select({ id: campaigns.id, name: campaigns.name, templateId: campaigns.templateId })
       .from(campaigns)
-      .where(inArray(campaigns.templateId, [...templateIds]))
+      .where(inArray(campaigns.templateId, chunk))
       .all(),
   )
   for (const c of usedCampaigns)

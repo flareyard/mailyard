@@ -162,6 +162,7 @@ const deadLetterCounts = (endpointIds?: ReadonlyArray<string>) =>
         .where(
           and(
             eq(webhookDeliveries.status, "dead"),
+            // d1: bounded: callers pass one endpoint, or none for all.
             endpointIds ? inArray(webhookDeliveries.endpointId, [...endpointIds]) : undefined,
           ),
         )

@@ -87,6 +87,7 @@ export const planFiling = Effect.fn("rules.planFiling")(function* (input: {
         db
           .select({ value: mailboxSenders.value, list: mailboxSenders.list })
           .from(mailboxSenders)
+          // d1: bounded: a sender's address and its domains, a handful.
           .where(and(eq(mailboxSenders.mailboxId, input.mailboxId), inArray(mailboxSenders.value, keys)))
           .all(),
       )

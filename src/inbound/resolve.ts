@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { domains, mailboxes } from "../db/schema.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { parseRecipient } from "./address.ts"
 
 type MailboxRow = typeof mailboxes.$inferSelect
@@ -34,7 +34,6 @@ export class Unroutable extends Schema.TaggedError<Unroutable>()("Unroutable", {
 }) {}
 
 const expand = Effect.fn("inbound.expand")(function* (start: MailboxRow) {
-  const database = yield* Database
   const delivered: Array<string> = []
   const seen = new Set<string>([start.id])
   let frontier: Array<MailboxRow> = [start]
@@ -52,8 +51,8 @@ const expand = Effect.fn("inbound.expand")(function* (start: MailboxRow) {
       }
     }
     if (next.length === 0) break
-    const rows = yield* database.query("inbound.expandTargets", (db) =>
-      db.select().from(mailboxes).where(inArray(mailboxes.id, next)).all(),
+    const rows = yield* queryIn("inbound.expandTargets", next, (db, chunk) =>
+      db.select().from(mailboxes).where(inArray(mailboxes.id, chunk)).all(),
     )
     // Keep the order the targets were listed in, and skip ids that no longer exist.
     const byId = new Map(rows.map((r) => [r.id, r]))
@@ -89,6 +88,7 @@ export const resolveRecipient = Effect.fn("inbound.resolve")(function* (envelope
     db
       .select()
       .from(mailboxes)
+      // d1: bounded: an address and its base, two values.
       .where(inArray(mailboxes.address, [...new Set([recipient.address, recipient.base])]))
       .all(),
   )

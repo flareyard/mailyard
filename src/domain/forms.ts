@@ -5,7 +5,7 @@ import { Bindings } from "../Bindings.ts"
 import { type FormFieldDef, formDaily, forms, topics } from "../db/schema.ts"
 import { labelOf } from "../forms/page.ts"
 import { Ids } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
 import { getBrand } from "./brand.ts"
 import { ContactInvalid, normalizeEmail, upsertContact } from "./contacts.ts"
@@ -124,12 +124,11 @@ const checkInput = (input: {
           message: "A form subscribes to at least one topic.",
         })
       }
-      const database = yield* Database
-      const found = yield* database.query("forms.topics", (db) =>
+      const found = yield* queryIn("forms.topics", [...topicIds], (db, chunk) =>
         db
           .select({ id: topics.id, archived: topics.archived })
           .from(topics)
-          .where(inArray(topics.id, [...topicIds]))
+          .where(inArray(topics.id, chunk))
           .all(),
       )
       const missing = topicIds.filter((id) => !found.some((t) => t.id === id && !t.archived))
@@ -267,8 +266,7 @@ export const updateForm = Effect.fn("forms.update")(function* (
 export const formPage = Effect.fn("forms.page")(function* (id: string) {
   const form = yield* findForm(id)
   if (form.archived) return yield* new FormNotFound({ id })
-  const database = yield* Database
-  const rows = yield* database.query("forms.pageTopics", (db) =>
+  const rows = yield* queryIn("forms.pageTopics", [...form.topicIds], (db, chunk) =>
     db
       .select({
         id: topics.id,
@@ -277,7 +275,7 @@ export const formPage = Effect.fn("forms.page")(function* (id: string) {
         archived: topics.archived,
       })
       .from(topics)
-      .where(inArray(topics.id, [...form.topicIds]))
+      .where(inArray(topics.id, chunk))
       .all(),
   )
   const live = form.topicIds.flatMap((t) => rows.filter((r) => r.id === t && !r.archived))

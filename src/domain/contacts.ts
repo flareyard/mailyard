@@ -17,7 +17,7 @@ import {
   topics,
 } from "../db/schema.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { chunksOf, D1_MAX_PARAMS, Database, queryIn } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
 import { sha256 } from "./crypto.ts"
 import { emitSafely } from "./webhooks.ts"
@@ -189,8 +189,8 @@ type Membership = {
 export const membershipsOf = (contactIds: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     if (contactIds.length === 0) return new Map<string, Array<Membership>>()
-    const database = yield* Database
-    const rows = yield* database.query("contacts.memberships", (db) =>
+    // A page is up to 200 contacts: chunked under D1's parameter limit.
+    const rows = yield* queryIn("contacts.memberships", [...contactIds], (db, chunk) =>
       db
         .select({
           contactId: subscriptions.contactId,
@@ -203,7 +203,7 @@ export const membershipsOf = (contactIds: ReadonlyArray<string>) =>
         })
         .from(subscriptions)
         .innerJoin(topics, eq(topics.id, subscriptions.topicId))
-        .where(inArray(subscriptions.contactId, [...contactIds]))
+        .where(inArray(subscriptions.contactId, chunk))
         .all(),
     )
     const byContact = new Map<string, Array<Membership>>()
@@ -341,6 +341,7 @@ export const filterOf = (query: ContactQuery, now: number): SQL | undefined => {
   const q = query.q?.trim().toLowerCase()
   return and(
     q ? or(like(contacts.email, `%${q}%`), like(sql`lower(${contacts.name})`, `%${q}%`)) : undefined,
+    // d1: bounded: six statuses at most.
     statusesOf(query.status).length ? inArray(contacts.status, statusesOf(query.status)) : undefined,
     query.topicId
       ? sql`exists (select 1 from ${subscriptions} where ${subscriptions.contactId} = ${contacts.id} and ${subscriptions.topicId} = ${query.topicId} and ${subscriptions.state} = 'subscribed')`
@@ -993,18 +994,14 @@ export const eraseContact = Effect.fn("contacts.erase")(function* (id: string, a
   )
   for (const row of logRows) if (row.renderedKey) yield* store.delete(row.renderedKey)
   if (logRows.length > 0) {
-    yield* database.query("erase.scrub", (db) =>
-      db
-        .update(messagesOut)
-        .set({ recipient: `erased:${digest}`, subject: "(erased)", renderedKey: null, contactId: null })
-        .where(
-          inArray(
-            messagesOut.id,
-            logRows.map((r) => r.id),
-          ),
-        )
-        .run(),
-    )
+    for (const chunk of chunksOf(logRows.map((r) => r.id)))
+      yield* database.query("erase.scrub", (db) =>
+        db
+          .update(messagesOut)
+          .set({ recipient: `erased:${digest}`, subject: "(erased)", renderedKey: null, contactId: null })
+          .where(inArray(messagesOut.id, chunk))
+          .run(),
+      )
   }
   yield* database.query("erase.contact", (db) => db.delete(contacts).where(eq(contacts.id, id)).run())
   // The audit row names the erasure without keeping the address it erased.
@@ -1020,14 +1017,7 @@ export const eraseContact = Effect.fn("contacts.erase")(function* (id: string, a
 
 export const BULK_LIMIT = 1000
 
-/** D1 binds at most 100 parameters a statement; leave room for the others in it. */
-export const D1_MAX_PARAMS = 90
-
-export const chunksOf = <T>(items: ReadonlyArray<T>, size: number): Array<Array<T>> => {
-  const out: Array<Array<T>> = []
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
-  return out
-}
+export { chunksOf, D1_MAX_PARAMS }
 
 // ---------------------------------------------------------------------------------------------
 // The field registry (HAL-3422)

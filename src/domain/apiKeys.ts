@@ -4,7 +4,7 @@ import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { apiKeys, apiKeyUsage, mailboxMembers } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { randomToken, sha256, timingSafeEqual } from "./crypto.ts"
 
 export const Scope = Schema.Literals(["send", "track", "read", "admin"])
@@ -130,12 +130,11 @@ export const requests24h = Effect.fn("apiKeys.usage")(function* (
   now = Date.now(),
 ) {
   if (keyIds.length === 0) return new Map<string, number>()
-  const database = yield* Database
-  const rows = yield* database.query("apiKeys.usage", (db) =>
+  const rows = yield* queryIn("apiKeys.usage", [...keyIds], (db, chunk) =>
     db
       .select({ keyId: apiKeyUsage.keyId, n: sql<number>`sum(${apiKeyUsage.requests})` })
       .from(apiKeyUsage)
-      .where(and(inArray(apiKeyUsage.keyId, [...keyIds]), gte(apiKeyUsage.hour, Math.floor(now / HOUR) - 23)))
+      .where(and(inArray(apiKeyUsage.keyId, chunk), gte(apiKeyUsage.hour, Math.floor(now / HOUR) - 23)))
       .groupBy(apiKeyUsage.keyId)
       .all(),
   )
