@@ -824,6 +824,19 @@ export class MailboxStore {
     return this.sql.exec<{ n: number }>("SELECT count(*) AS n FROM messages").one().n
   }
 
+  /** What the mailbox keeps in R2 (HAL-3421): each message's original and its extracted attachments. */
+  storage(): { readonly messages: number; readonly bytes: number } {
+    const m = this.sql
+      .exec<{ n: number; bytes: number }>(
+        "SELECT count(*) AS n, coalesce(sum(size), 0) AS bytes FROM messages",
+      )
+      .one()
+    const a = this.sql
+      .exec<{ bytes: number }>("SELECT coalesce(sum(size), 0) AS bytes FROM attachments")
+      .one()
+    return { messages: m.n, bytes: m.bytes + a.bytes }
+  }
+
   /** Threads newest first, filtered by folder, label, unread or starred. */
   threads(filter: ThreadFilter = {}) {
     const limit = clampLimit(filter.limit)

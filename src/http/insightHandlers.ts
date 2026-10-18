@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import { engagementStats, storageUsage } from "../domain/engagement.ts"
 import {
   deferralStats,
   deliveryStats,
@@ -27,6 +28,8 @@ export const InsightsHandlers = HttpApiBuilder.group(
       forecast: p(({ query }) => read(forecast(query.recipients))),
       delivery: p(({ query }) => read(deliveryStats(query.range ?? "7d", query.by))),
       deferrals: p(({ query }) => read(deferralStats(query.range ?? "7d"))),
+      engagement: p(({ query }) => read(engagementStats(query.range ?? "30d"))),
+      storage: p(() => read(storageUsage())),
       volume: p(({ query }) => read(volumeStats(query.range ?? "30d", query.by ?? "day"))),
       providers: p(({ query }) => read(providerStats(query.range ?? "30d"))),
       reputation: p(() => read(reputation())),

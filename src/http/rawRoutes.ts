@@ -189,6 +189,32 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
       },
     },
   },
+  "/v1/stats/{chart}.csv": {
+    get: {
+      tags: ["insights"],
+      operationId: "insights.csv",
+      summary: "An Analytics chart as CSV",
+      description:
+        "The same numbers as the chart's JSON endpoint. Charts: volume (by=day|hour), delivery (per day, with rates), providers, deferrals, engagement (campaigns), engagement-hours (weekday × UTC hour), unsubscribes (by topic), inbound, audience. Rates stay fractions; an empty cell means not enough data.",
+      security: bearer,
+      parameters: [
+        idParam("chart", "Which chart."),
+        {
+          name: "range",
+          in: "query",
+          required: false,
+          schema: { type: "string", enum: ["24h", "7d", "30d", "90d"] },
+        },
+        { name: "by", in: "query", required: false, schema: { type: "string", enum: ["day", "hour"] } },
+      ],
+      responses: {
+        "200": bytes("RFC 4180 CSV with a header row.", "text/csv"),
+        "401": problem("No key, or not a key Mailyard knows."),
+        "403": problem("A public key, or a key without the read scope."),
+        "404": problem("No such chart."),
+      },
+    },
+  },
   "/v1/messages/{id}/raw": {
     get: {
       tags: ["messages"],
