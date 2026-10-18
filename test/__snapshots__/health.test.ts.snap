@@ -88807,8 +88807,30 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "rejected": {
                       "additionalProperties": false,
-                      "description": "Mailyard's own refusals (no such address). Email Routing rejects DMARC failures and listed senders before mail reaches Mailyard, so those are null until its analytics are read.",
+                      "description": "\`total\` and \`noSuchAddress\` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN.",
                       "properties": {
+                        "authFail": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
                         "dmarcFail": {
                           "anyOf": [
                             {
@@ -88883,12 +88905,87 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                           ],
                         },
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "connected": {
+                              "type": "boolean",
+                            },
+                            "from": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "reason": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "zones": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "connected",
+                            "reason",
+                            "zones",
+                            "from",
+                          ],
+                          "type": "object",
+                        },
+                        "upstreamRejected": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
                       },
                       "required": [
                         "total",
                         "noSuchAddress",
                         "dmarcFail",
+                        "authFail",
+                        "upstreamRejected",
                         "rbl",
+                        "upstream",
                       ],
                       "type": "object",
                     },
