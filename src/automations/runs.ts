@@ -23,8 +23,9 @@ import { compile, type Rule } from "../segments/rules.ts"
 import { Database } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
 import { publishedVersion } from "./automations.ts"
+import { entryTriggerData } from "./entryData.ts"
 import { type Graph, nextNode, type Port, type Settings, triggerOf } from "./graph.ts"
-import { renderAutomationMail } from "./mail.ts"
+import { missingDetail, renderAutomationMail } from "./mail.ts"
 import {
   runStep,
   type SendInput,
@@ -32,6 +33,7 @@ import {
   type StepContext,
   type StepOutcome,
 } from "./steps/index.ts"
+import { dateTriggerData } from "./triggerData.ts"
 
 /**
  * Automation runs (HAL-3300): who enters, and one AutomationRunWorkflow per run walking the
@@ -161,6 +163,12 @@ export const enterAutomation = Effect.fn("automations.enter")(function* (
     )
     if (!seg || !(yield* contactMatches(contactId, seg.filter as Rule))) return "skipped: not in the segment"
   }
+  const entryData = yield* entryTriggerData(
+    trigger,
+    { createdAt: contact.createdAt, fields: contact.fields as Readonly<Record<string, unknown>> },
+    data,
+    Date.now(),
+  )
   const prior = yield* database.query("automations.prior", (db) =>
     db
       .select({ state: automationRuns.state, startedAt: automationRuns.startedAt })
@@ -189,7 +197,7 @@ export const enterAutomation = Effect.fn("automations.enter")(function* (
         workflowId: runId,
         state: "running",
         currentStep: triggerOf(graph)?.id ?? null,
-        triggerData: data ? { ...data } : null,
+        triggerData: entryData,
         startedAt: now,
         updatedAt: now,
       })
@@ -800,6 +808,30 @@ const sendForRun = (
     }
     if (!input.fromAddress)
       return { status: "skipped", reason: "suppressed", detail: "No sender is set." } satisfies SendResult
+    // The origin captured when the automation was published: the base of its unsubscribe and tracking links.
+    const base = origin ?? ""
+    // Rendered before the governor and the cadence cap, so a send skipped for missing data uses up neither.
+    const rendered = yield* renderAutomationMail({
+      templateId: input.templateId,
+      version: input.version,
+      subject: input.subject,
+      fromAddress: input.fromAddress,
+      topicId: input.topicId,
+      origin: base,
+      automationName,
+      contact: { id: contact.id, email: contact.email, name: contact.name, fields: contact.fields },
+      triggerData: run.triggerData ?? null,
+    }).pipe(
+      Effect.catchTag("MissingMergeData", (e) =>
+        Effect.succeed({
+          status: "skipped",
+          reason: "missing_data",
+          detail: missingDetail(e.missing),
+        } satisfies SendResult),
+      ),
+    )
+    if ("status" in rendered) return rendered
+    const mail = rendered
     const sendId = `${run.id}:${nodeId}`
     const already = yield* database.query("runs.sendCounted", (db) =>
       db.select({ id: automationSends.id }).from(automationSends).where(eq(automationSends.id, sendId)).get(),
@@ -855,19 +887,6 @@ const sendForRun = (
           detail: `The contact already had ${cap.max} automation email${cap.max === 1 ? "" : "s"} in ${cap.days} days.`,
         } satisfies SendResult
     }
-    // The origin captured when the automation was published: the base of its unsubscribe and tracking links.
-    const base = origin ?? ""
-    const mail = yield* renderAutomationMail({
-      templateId: input.templateId,
-      version: input.version,
-      subject: input.subject,
-      fromAddress: input.fromAddress,
-      topicId: input.topicId,
-      origin: base,
-      automationName,
-      contact: { id: contact.id, email: contact.email, name: contact.name, fields: contact.fields },
-      triggerData: run.triggerData ?? null,
-    })
     const result = yield* sendBulkMessage({
       stream: "automation",
       message: mail.message,
@@ -1098,12 +1117,15 @@ export const getRun = Effect.fn("runs.getView")(function* (runId: string) {
 const SWEEP_LIMIT = 1_000
 const NIGHTLY_HOUR = 2
 
-const enqueueEntries = (automationId: string, contactIds: ReadonlyArray<string>) =>
+const enqueueEntries = (
+  automationId: string,
+  entries: ReadonlyArray<{ readonly contactId: string; readonly data?: Record<string, unknown> | null }>,
+) =>
   Effect.gen(function* () {
     const env = yield* Bindings
-    for (let i = 0; i < contactIds.length; i += 100) {
-      const batch = contactIds.slice(i, i + 100).map((contactId) => ({
-        body: { kind: "enter" as const, contactId, key: automationId, data: null, at: Date.now() },
+    for (let i = 0; i < entries.length; i += 100) {
+      const batch = entries.slice(i, i + 100).map(({ contactId, data }) => ({
+        body: { kind: "enter" as const, contactId, key: automationId, data: data ?? null, at: Date.now() },
       }))
       yield* Effect.promise(() => env.AUTOMATION_QUEUE.sendBatch(batch))
     }
@@ -1152,16 +1174,17 @@ export const sweepAutomations = Effect.fn("automations.sweep")(function* (now: n
         trigger.repeat === "yearly" ? `strftime('%m-%d', ${day}) = strftime('%m-%d', ?)` : `${day} = ?`
       const rows = yield* Effect.promise(() =>
         DB.prepare(
-          `select id from contacts where status not in ('unsubscribed', 'bounced', 'complained', 'suppressed') and ${match}
+          `select id, json_extract(fields, ?) as day from contacts where status not in ('unsubscribed', 'bounced', 'complained', 'suppressed') and ${match}
            and not exists (select 1 from automation_runs r where r.automation_id = ? and r.contact_id = contacts.id and r.started_at > ?)
            limit ${SWEEP_LIMIT}`,
         )
-          .bind(field, field, field, target, a.id, now - 20 * 3_600_000)
-          .all<{ id: string }>(),
+          .bind(field, field, field, field, target, a.id, now - 20 * 3_600_000)
+          .all<{ id: string; day: unknown }>(),
       )
+      // Each run carries the date it's about (HAL-3411): the field, the day and the years since.
       yield* enqueueEntries(
         a.id,
-        rows.results.map((r) => r.id),
+        rows.results.map((r) => ({ contactId: r.id, data: dateTriggerData(trigger, r.day, now) })),
       )
       report.push(`${a.id} date ${rows.results.length}`)
     }
@@ -1185,7 +1208,7 @@ export const sweepAutomations = Effect.fn("automations.sweep")(function* (now: n
       )
       yield* enqueueEntries(
         a.id,
-        rows.results.map((r) => r.id),
+        rows.results.map((r) => ({ contactId: r.id })),
       )
       report.push(`${a.id} segment ${rows.results.length}`)
     }

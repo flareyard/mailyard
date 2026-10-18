@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm"
+import { and, count, desc, eq, gte, inArray, or, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
@@ -10,6 +10,7 @@ import {
   domains,
   segments,
   templates,
+  templateVersions,
   topics,
 } from "../db/schema.ts"
 import { recordAudit } from "../domain/audit.ts"
@@ -17,6 +18,7 @@ import { parseParty } from "../domain/outbox.ts"
 import { Ids } from "../kit/index.ts"
 import { validate as validateRule } from "../segments/rules.ts"
 import { Database } from "../services/Database.ts"
+import { templateTexts, variablesOf } from "../templates/render.ts"
 import {
   DEFAULT_SETTINGS,
   Graph,
@@ -29,6 +31,7 @@ import {
 } from "./graph.ts"
 import { restoreSecrets } from "./secrets.ts"
 import { validateStep } from "./steps/index.ts"
+import { TRIGGER_DATA_KEYS, unsuppliedTriggerKeys } from "./triggerData.ts"
 
 /**
  * Automations (HAL-3299): the draft people edit, its validation, and publishing it as a frozen
@@ -146,6 +149,66 @@ export const issuesOf = Effect.fn("automations.issues")(function* (graph: Graph,
         code: "invalid_config",
         message: "Choose who this mail comes from (here or in the automation's settings).",
       })
+  }
+  // A send's template must not need `trigger.*` data its trigger can't carry (HAL-3411).
+  const triggerKind = triggerOf(graph)?.config.kind
+  const resolvable = sends.flatMap((s) => {
+    const t = found.find((f) => f.id === s.config.templateId)
+    const version = s.config.version === "published" ? t?.published : s.config.version
+    return t && t.archivedAt === null && typeof version === "number" && version <= t.latest
+      ? [{ send: s, version }]
+      : []
+  })
+  if (triggerKind && triggerKind !== "event" && resolvable.length > 0) {
+    const versions = yield* database.query("automations.templateVersions", (db) =>
+      db
+        .select({
+          templateId: templateVersions.templateId,
+          version: templateVersions.version,
+          subject: templateVersions.subject,
+          source: templateVersions.source,
+          text: templateVersions.text,
+          kind: templates.kind,
+        })
+        .from(templateVersions)
+        .innerJoin(templates, eq(templates.id, templateVersions.templateId))
+        .where(
+          or(
+            ...resolvable.map((r) =>
+              and(
+                eq(templateVersions.templateId, r.send.config.templateId),
+                eq(templateVersions.version, r.version),
+              ),
+            ),
+          ),
+        )
+        .all(),
+    )
+    for (const { send: s, version } of resolvable) {
+      const v = versions.find((x) => x.templateId === s.config.templateId && x.version === version)
+      if (!v) continue
+      const texts = templateTexts({
+        kind: v.kind,
+        subject: s.config.subject ?? v.subject,
+        source: v.source,
+        text: v.text,
+      })
+      let required: ReadonlyArray<string> = []
+      try {
+        required = variablesOf(...texts).required
+      } catch {
+        continue
+      }
+      const unsupplied = unsuppliedTriggerKeys(triggerKind, required)
+      if (unsupplied.length > 0) {
+        const keys = TRIGGER_DATA_KEYS[triggerKind]
+        issues.push({
+          nodeId: s.id,
+          code: "invalid_config",
+          message: `The template needs ${unsupplied.map((k) => `{{ trigger.${k} }}`).join(", ")}, which a ${triggerKind} trigger doesn't carry${keys === "any" ? "" : ` (it has ${keys.map((k) => `trigger.${k}`).join(", ")})`}. Use a contact field, or give it a fallback with ??.`,
+        })
+      }
+    }
   }
   const topicIds = [
     ...new Set(

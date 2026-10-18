@@ -329,3 +329,68 @@ describe("secrets in step settings (HAL-3412)", () => {
     expect(webhookUrl(await json<Detail>(await admin(`/v1/automations/${created.id}`)))).toBe(hook)
   })
 })
+
+describe("trigger data a template needs (HAL-3411)", () => {
+  it("flags a send needing trigger data its trigger can't carry, and refuses to publish it", async () => {
+    const domain = `td-${uid()}.test`
+    setDns(goodDomain(domain))
+    await admin("/v1/domains", "POST", { name: domain, sending: true, receiving: false })
+    const template = async (source: string) =>
+      (
+        await json<{ id: string }>(
+          await admin("/v1/templates", "POST", {
+            name: `td-${uid()}`,
+            kind: "html",
+            subject: "Hi",
+            source,
+            publish: true,
+          }),
+        )
+      ).id
+    const graph = (templateId: string, trigger: Record<string, unknown>) => ({
+      nodes: [
+        { id: "t", type: "trigger", config: trigger },
+        { id: "s", type: "send", config: { templateId, version: "published" } },
+        { id: "x", type: "exit", config: {} },
+      ],
+      edges: [
+        { from: "t", to: "s" },
+        { from: "s", to: "x" },
+      ],
+    })
+    const date = { kind: "date", field: "birthday", offsetDays: 0, hour: 9, repeat: "yearly" }
+    const settings = {
+      fromAddress: `Team <team@${domain}>`,
+      topicId: null,
+      reentry: { mode: "never" },
+      cadence: null,
+      stopEvents: [],
+    }
+    const make = async (templateId: string, trigger: Record<string, unknown>) =>
+      json<Detail>(
+        await admin("/v1/automations", "POST", {
+          name: `TD ${uid()}`,
+          graph: graph(templateId, trigger),
+          settings,
+        }),
+      )
+
+    const offer = await template('<a href="{{ trigger.offer_url }}">Your gift</a>')
+    const flagged = await make(offer, date)
+    expect(flagged.issues).toEqual([
+      expect.objectContaining({
+        nodeId: "s",
+        code: "invalid_config",
+        message: expect.stringContaining("trigger.offer_url"),
+      }),
+    ])
+    expect((await admin(`/v1/automations/${flagged.id}/publish`, "POST", {})).status).toBe(409)
+
+    // What a date trigger carries, a fallback, or an event trigger (any data) are all fine.
+    const years = await template("<p>{{ trigger.years }} years!</p>")
+    expect((await make(years, date)).issues).toEqual([])
+    const fallback = await template('<a href="{{ trigger.offer_url ?? "https://example.com" }}">Gift</a>')
+    expect((await make(fallback, date)).issues).toEqual([])
+    expect((await make(offer, { kind: "event", event: "birthday" })).issues).toEqual([])
+  })
+})

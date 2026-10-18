@@ -36,7 +36,7 @@ const setup = async () => {
           name: `t-${uid()}`,
           kind: "html",
           subject,
-          source: "<p>Hi {{ name }}, {{ trigger.plan }}</p>",
+          source: `<p>Hi {{ name }}, {{ trigger.plan ?? "welcome" }}</p>`,
           publish: true,
         }),
       )
@@ -167,6 +167,50 @@ describe("automation runs", () => {
     expect(runs.runs.map((r) => r.id)).toEqual([runId])
     const detail = await json<{ steps: Array<{ outcome: string }> }>(await admin(`/v1/runs/${runId}`))
     expect(detail.steps).toHaveLength(5)
+  }, 60_000)
+
+  it("skips a send the contact has no data for, without using up the cadence cap (HAL-3411)", async () => {
+    const { from } = await setup()
+    const needsName = (
+      await json<{ id: string }>(
+        await admin("/v1/templates", "POST", {
+          name: `t-${uid()}`,
+          kind: "html",
+          subject: "For {{ first_name }}",
+          source: "<p>Hi {{ first_name }}</p>",
+          publish: true,
+        }),
+      )
+    ).id
+    const id = await automation(
+      {
+        nodes: [
+          { id: "t", type: "trigger", config: { kind: "event", event: "joined" } },
+          { id: "s", type: "send", config: { templateId: needsName, version: "published" } },
+          { id: "x", type: "exit", config: {} },
+        ],
+        edges: [
+          { from: "t", to: "s" },
+          { from: "s", to: "x" },
+        ],
+      },
+      settingsFor(from, { cadence: { max: 1, days: 7 } }),
+    )
+    const c = await contact()
+    const runId = runIdFor(id, c, 1)
+    await using instance = await introspectWorkflowInstance(env.AUTOMATION_WORKFLOW, runId)
+    await runTrigger({ kind: "event", contactId: c, key: "joined", data: {} })
+    await instance.waitForStatus("complete")
+    expect(await stepsOf(runId)).toEqual(["t:passed", "s:skipped", "x:exited"])
+    expect((await sends(runId)).results).toEqual([])
+    const detail = await json<{ steps: Array<{ nodeId: string; detail: string }> }>(
+      await admin(`/v1/runs/${runId}`),
+    )
+    expect(detail.steps.find((s) => s.nodeId === "s")?.detail).toContain("{{ first_name }}")
+    const counted = await env.DB.prepare("select count(*) as n from automation_sends where run_id = ?")
+      .bind(runId)
+      .first<{ n: number }>()
+    expect(counted?.n).toBe(0)
   }, 60_000)
 
   it("branches on an event: woken by the event, or the timeout path", async () => {
@@ -456,6 +500,13 @@ describe("triggers and sweeps", () => {
     const { sweepAutomations } = await import("../../src/automations/runs.ts")
     await runtimeFor(bindings).runPromise(sweepAutomations(at9))
     expect(sent.filter((s) => s.key === dateAutomation).map((s) => s.contactId)).toEqual([today])
+    // Each entry carries the date it's about (HAL-3411).
+    expect(sent.find((s) => s.key === dateAutomation)?.data).toEqual({
+      field: "birthday",
+      date: "1990-10-17",
+      offsetDays: 0,
+      years: 36,
+    })
     // At another hour, nothing for it.
     const later = recording()
     await runtimeFor(later.bindings).runPromise(sweepAutomations(Date.UTC(2026, 9, 17, 10, 5)))
@@ -481,5 +532,17 @@ describe("triggers and sweeps", () => {
     const night = recording()
     await runtimeFor(night.bindings).runPromise(sweepAutomations(Date.UTC(2026, 9, 18, 2, 0)))
     expect(night.sent.filter((s) => s.key === segmentAutomation)).toHaveLength(2)
+    // Entering, a segment run is told which segment (HAL-3411).
+    const { enterAutomation } = await import("../../src/automations/runs.ts")
+    const member = night.sent.find((s) => s.key === segmentAutomation)?.contactId as string
+    const entered = await runtimeFor(env).runPromise(enterAutomation(segmentAutomation, member, null))
+    expect(entered).toMatch(/^entered: /)
+    const row = await env.DB.prepare("select trigger_data from automation_runs where id = ?")
+      .bind(entered.slice("entered: ".length))
+      .first<{ trigger_data: string }>()
+    expect(JSON.parse(row?.trigger_data ?? "null")).toEqual({
+      segmentId: segment.id,
+      segmentName: `S ${tag}`,
+    })
   })
 })

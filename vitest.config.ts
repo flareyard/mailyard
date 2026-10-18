@@ -8,6 +8,7 @@ const UNIT = [
   "test/kit/**/*.test.ts",
   "test/templates/kit.test.ts",
   "test/templates/library.test.ts",
+  "test/automations/triggerData.test.ts",
   "test/live/**/*.test.ts",
 ]
 
