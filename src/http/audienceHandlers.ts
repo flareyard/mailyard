@@ -44,6 +44,7 @@ import {
   listTopics,
   type TopicInvalid,
   type TopicNotFound,
+  topicStats,
   updateTopic,
 } from "../domain/topics.ts"
 import { unsubscribeToken, unsubscribeUrl } from "../domain/unsubscribe.ts"
@@ -118,8 +119,9 @@ export const audienceErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
             message: err.message ?? "Invalid request.",
           })
         case "ContactConflict":
-        case "SegmentInUse":
           return new Conflict({ message: err.message ?? "Conflict." })
+        case "SegmentInUse":
+          return new Conflict({ message: err.message ?? "Conflict.", reason: "in-use" })
         default:
           return e
       }
@@ -240,6 +242,9 @@ export const TopicsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
+      stats: p(({ query }) =>
+        requireScope("read").pipe(Effect.andThen(topicStats(query.range ?? "30d")), audienceErrors),
+      ),
       list: p(() =>
         requireScope("read").pipe(
           Effect.andThen(listTopics()),

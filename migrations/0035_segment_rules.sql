@@ -1,0 +1,1 @@
+CREATE INDEX `messages_out_contact` ON `messages_out` (`contact_id`,`created_at`);

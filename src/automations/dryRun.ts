@@ -103,7 +103,8 @@ const evaluate = (
   facts: {
     readonly eventsAt: (name: string, since: number, until: number) => number
     readonly topicState: (topicId: string) => string | null
-    readonly campaign: (campaignId: string, activity: string) => boolean
+    /** Campaign mail the contact received, opened or clicked: one campaign, or any; optionally since `since`. */
+    readonly campaign: (campaignId: string | undefined, activity: string, since?: number) => boolean
   },
 ): boolean => {
   if (isGroup(rule)) {
@@ -117,6 +118,10 @@ const evaluate = (
       if (rule.op === "exists") return exists
       if (rule.op === "missing") return !exists
       if (!exists) return rule.op === "neq" || rule.op === "notContains"
+      if (rule.op === "in")
+        return (Array.isArray(rule.value) ? rule.value : []).some((x) =>
+          typeof x === "string" ? String(raw).toLowerCase() === x.toLowerCase() : raw === x,
+        )
       const v = rule.value
       const text = String(raw).toLowerCase()
       const want = String(v ?? "").toLowerCase()
@@ -176,7 +181,11 @@ const evaluate = (
         ),
       )
     case "campaign": {
-      const did = facts.campaign(rule.campaignId, rule.activity)
+      const did = facts.campaign(
+        rule.campaignId,
+        rule.activity,
+        rule.withinDays ? now - rule.withinDays * DAY : undefined,
+      )
       return rule.did === false ? !did : did
     }
     case "created":
@@ -266,6 +275,8 @@ export const dryRun = Effect.fn("automations.dryRun")(function* (automationId: s
         db
           .select({
             campaignId: messagesOut.campaignId,
+            stream: messagesOut.stream,
+            createdAt: messagesOut.createdAt,
             status: messagesOut.status,
             opened: messagesOut.firstOpenedAt,
             clicked: messagesOut.firstClickedAt,
@@ -292,10 +303,11 @@ export const dryRun = Effect.fn("automations.dryRun")(function* (automationId: s
     eventsAt: (name: string, since: number, until: number) =>
       allEvents.filter((e) => e.name === name && e.at >= since && e.at <= until).length,
     topicState: (topicId: string) => topicStates.get(topicId) ?? null,
-    campaign: (campaignId: string, activity: string) =>
+    campaign: (campaignId: string | undefined, activity: string, since?: number) =>
       campaignRows.some(
         (r) =>
-          r.campaignId === campaignId &&
+          (campaignId ? r.campaignId === campaignId : r.stream === "campaign") &&
+          (since === undefined || r.createdAt >= since) &&
           (activity === "received"
             ? r.status === "sent" || r.status === "delivered"
             : activity === "opened"

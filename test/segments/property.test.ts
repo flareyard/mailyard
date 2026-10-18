@@ -160,10 +160,19 @@ const fieldMatches = (
   p: Person,
   op: FieldOp,
   field: string,
-  value: string | number | boolean | undefined,
+  value: string | number | boolean | ReadonlyArray<string | number | boolean> | undefined,
 ) => {
   const v = asSql(fieldValue(p, field))
-  const b = value === undefined ? undefined : asSql(value)
+  if (op === "in")
+    return (
+      v !== null &&
+      (Array.isArray(value) ? value : []).some((x) => {
+        const b = asSql(x)
+        return typeof b === "string" ? typeof v === "string" && lower(v) === b.toLowerCase() : v === b
+      })
+    )
+  const b =
+    value === undefined || Array.isArray(value) ? undefined : asSql(value as string | number | boolean)
   switch (op) {
     case "exists":
       return v !== null

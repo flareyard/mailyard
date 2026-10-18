@@ -15,6 +15,7 @@ import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
 import { SendBlocked } from "../mail/send.ts"
 import { LABEL_COLORS } from "../mailbox/types.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
+import { Rule as SegmentRule } from "../segments/rules.ts"
 import { ApiKeyAuth, Forbidden } from "./Auth.ts"
 import { withRawRoutes } from "./rawRoutes.ts"
 
@@ -2623,6 +2624,28 @@ export class TopicsApi extends HttpApiGroup.make("topics")
       success: Schema.Struct({ topics: Schema.Array(TopicSchema) }),
       error: Forbidden,
     }),
+    HttpApiEndpoint.get("stats", "/v1/topics/stats", {
+      query: { range: Schema.optionalKey(Schema.Literals(["7d", "30d", "90d"])) },
+      success: Schema.Struct({
+        range: Schema.Literals(["7d", "30d", "90d"]),
+        minimumSubscribers: Schema.Number,
+        /** Unarchived topics. Rates are fractions of the subscribers at the range's start, null under the minimum. */
+        topics: Schema.Array(
+          Schema.Struct({
+            topicId: Schema.String,
+            name: Schema.String,
+            subscribers: Schema.Number,
+            joined: Schema.Number,
+            left: Schema.Number,
+            subscribersAtStart: Schema.Number,
+            insufficientData: Schema.Boolean,
+            growthRate: Schema.NullOr(Schema.Number),
+            unsubscribeRate: Schema.NullOr(Schema.Number),
+          }),
+        ),
+      }),
+      error: Forbidden,
+    }),
     HttpApiEndpoint.post("create", "/v1/topics", {
       payload: Schema.Struct({
         name: Schema.String,
@@ -2701,11 +2724,27 @@ export class FormsApi extends HttpApiGroup.make("forms")
 
 // Segments: saved audiences as a rule tree (docs/email-ui.html: Segment builder)
 
+/**
+ * A rule tree in a request. Decoded by the segment code itself, so a bad tree is a 400 whose `field`
+ * names the rule at fault (`filter.rules[1].rules[0]`); its shape is `SegmentRule`.
+ */
+const SegmentRuleInput = Schema.Unknown.annotate({
+  description:
+    "A SegmentRule tree (see the SegmentRule schema). A tree that can't work is a 400 with the rule's path in `field`.",
+})
+
 export const SegmentSchema = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
-  /** The rule tree (src/segments/rules.ts); its shape is validated on save. */
-  filter: Schema.Unknown,
+  filter: SegmentRule,
+  /** Campaigns built on it and automations whose draft or live graph names it; delete refuses while any do. */
+  usedBy: Schema.Array(
+    Schema.Struct({
+      type: Schema.Literals(["campaign", "automation"]),
+      id: Schema.String,
+      name: Schema.String,
+    }),
+  ),
   count: Schema.NullOr(Schema.Number),
   countedAt: Schema.NullOr(Schema.Number),
   createdAt: Schema.Number,
@@ -2719,9 +2758,19 @@ export class SegmentsApi extends HttpApiGroup.make("segments")
       error: Forbidden,
     }),
     HttpApiEndpoint.post("preview", "/v1/segments/preview", {
-      payload: Schema.Struct({ filter: Schema.Unknown }),
+      payload: Schema.Struct({ filter: SegmentRuleInput }),
       success: Schema.Struct({
         count: Schema.Number,
+        /** Who a campaign to it would mail (subscribed contacts), and who it would leave out, by why. */
+        sendable: Schema.Number,
+        excluded: Schema.Struct({
+          unconfirmed: Schema.Number,
+          unsubscribed: Schema.Number,
+          bounced: Schema.Number,
+          complained: Schema.Number,
+          suppressed: Schema.Number,
+        }),
+        tookMs: Schema.Number,
         sample: Schema.Array(ContactSchema),
         /** The condition it runs over `contacts`, with `?` for each of `params`. */
         sql: Schema.String,
@@ -2730,7 +2779,8 @@ export class SegmentsApi extends HttpApiGroup.make("segments")
       error: [Forbidden, InvalidRequest],
     }),
     HttpApiEndpoint.post("create", "/v1/segments", {
-      payload: Schema.Struct({ name: Schema.String, filter: Schema.Unknown }),
+      /** A filter that decodes but can't work is a 400 whose `field` is the path of the rule at fault. */
+      payload: Schema.Struct({ name: Schema.String, filter: SegmentRuleInput }),
       success: SegmentSchema,
       error: [Forbidden, InvalidRequest],
     }),
@@ -2743,7 +2793,7 @@ export class SegmentsApi extends HttpApiGroup.make("segments")
       params: { id: Schema.String },
       payload: Schema.Struct({
         name: Schema.optionalKey(Schema.String),
-        filter: Schema.optionalKey(Schema.Unknown),
+        filter: Schema.optionalKey(SegmentRuleInput),
       }),
       success: SegmentSchema,
       error: [Forbidden, NotFound, InvalidRequest],

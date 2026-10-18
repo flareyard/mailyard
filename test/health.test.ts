@@ -237,6 +237,7 @@ describe("GET /openapi.json", () => {
       "/v1/templates/{id}/rollback",
       "/v1/templates/{id}/test",
       "/v1/topics",
+      "/v1/topics/stats",
       "/v1/topics/{id}",
       "/v1/track",
       "/v1/uploads",

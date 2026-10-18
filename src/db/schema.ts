@@ -456,6 +456,8 @@ export const messagesOut = sqliteTable(
     index("messages_out_created").on(t.createdAt),
     index("messages_out_stream").on(t.stream, t.createdAt),
     index("messages_out_template").on(t.templateId, t.createdAt),
+    /** Segment campaign rules and the dry run read a contact's campaign mail (HAL-3423). */
+    index("messages_out_contact").on(t.contactId, t.createdAt),
   ],
 )
 

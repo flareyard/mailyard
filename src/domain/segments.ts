@@ -1,8 +1,8 @@
-import { asc, count, desc, eq } from "drizzle-orm"
+import { and, asc, count, desc, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { campaigns, contacts, segments } from "../db/schema.ts"
+import { automations, automationVersions, campaigns, contacts, segments } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import {
   compile,
@@ -30,7 +30,70 @@ export class SegmentInUse extends Schema.TaggedError<SegmentInUse>()("SegmentInU
 
 type SegmentRow = typeof segments.$inferSelect
 
-const describe = (s: SegmentRow) => ({
+type Use = { readonly type: "campaign" | "automation"; readonly id: string; readonly name: string }
+
+/** Every segment id a value mentions as `segmentId` (an automation's trigger, a campaign graph). */
+const segmentIdsIn = (value: unknown): Set<string> => {
+  const found = new Set<string>()
+  const walk = (v: unknown) => {
+    if (Array.isArray(v)) for (const x of v) walk(x)
+    else if (v && typeof v === "object")
+      for (const [k, x] of Object.entries(v)) {
+        if (k === "segmentId" && typeof x === "string") found.add(x)
+        else walk(x)
+      }
+  }
+  walk(value)
+  return found
+}
+
+/**
+ * What uses each segment (HAL-3423): campaigns built on it, and automations whose draft or live
+ * graph names it. Campaigns and automations are written by people, a few dozen at most, so they're
+ * read whole.
+ */
+export const segmentUsage = Effect.gen(function* () {
+  const database = yield* Database
+  const byCampaign = yield* database.query("segments.usageCampaigns", (db) =>
+    db
+      .select({ id: campaigns.id, name: campaigns.name, segmentId: campaigns.segmentId })
+      .from(campaigns)
+      .all(),
+  )
+  const autos = yield* database.query("segments.usageAutomations", (db) =>
+    db
+      .select({ id: automations.id, name: automations.name, graph: automations.graph })
+      .from(automations)
+      .all(),
+  )
+  const live = yield* database.query("segments.usageLive", (db) =>
+    db
+      .select({ automationId: automationVersions.automationId, graph: automationVersions.graph })
+      .from(automationVersions)
+      .innerJoin(
+        automations,
+        and(
+          eq(automations.id, automationVersions.automationId),
+          eq(automations.publishedVersion, automationVersions.version),
+        ),
+      )
+      .all(),
+  )
+  const usage = new Map<string, Array<Use>>()
+  const add = (segmentId: string, use: Use) => usage.set(segmentId, [...(usage.get(segmentId) ?? []), use])
+  for (const c of byCampaign) if (c.segmentId) add(c.segmentId, { type: "campaign", id: c.id, name: c.name })
+  for (const a of autos) {
+    const ids = new Set([
+      ...segmentIdsIn(a.graph),
+      ...live.filter((l) => l.automationId === a.id).flatMap((l) => [...segmentIdsIn(l.graph)]),
+    ])
+    for (const id of ids) add(id, { type: "automation", id: a.id, name: a.name })
+  }
+  return usage as ReadonlyMap<string, ReadonlyArray<Use>>
+})
+
+const describe = (s: SegmentRow, usedBy: ReadonlyArray<Use> = []) => ({
+  usedBy,
   id: s.id,
   name: s.name,
   filter: s.filter as Rule,
@@ -109,11 +172,20 @@ const countOf = (condition: ReturnType<typeof compile>) =>
 
 /** What a filter matches right now: the count, 20 of the newest matches, and the SQL it runs. */
 export const previewSegment = Effect.fn("segments.preview")(function* (filter: unknown) {
+  const started = Date.now()
   const { condition, query } = yield* prepare(filter)
   const database = yield* Database
-  const [n, sample] = yield* Effect.all(
+  const [byStatus, sample] = yield* Effect.all(
     [
-      countOf(condition),
+      // One grouped count: the total, and who a send would leave out and why (HAL-3423).
+      database.query("segments.byStatus", (db) =>
+        db
+          .select({ status: contacts.status, n: count() })
+          .from(contacts)
+          .where(condition)
+          .groupBy(contacts.status)
+          .all(),
+      ),
       database.query("segments.sample", (db) =>
         db
           .select()
@@ -127,8 +199,20 @@ export const previewSegment = Effect.fn("segments.preview")(function* (filter: u
     { concurrency: "unbounded" },
   )
   const now = Date.now()
+  const of = (s: string) => byStatus.find((r) => r.status === s)?.n ?? 0
+  const n = byStatus.reduce((a, r) => a + r.n, 0)
   return {
     count: n,
+    /** Who a campaign to this segment would mail: subscribed contacts. */
+    sendable: of("subscribed"),
+    excluded: {
+      unconfirmed: of("unconfirmed"),
+      unsubscribed: of("unsubscribed"),
+      bounced: of("bounced"),
+      complained: of("complained"),
+      suppressed: of("suppressed"),
+    },
+    tookMs: now - started,
     sample: sample.map((c) => describeContact(c, [], now)),
     sql: query.sql,
     params: query.params,
@@ -149,7 +233,8 @@ export const listSegments = Effect.fn("segments.list")(function* () {
   const rows = yield* database.query("segments.list", (db) =>
     db.select().from(segments).orderBy(asc(segments.name)).all(),
   )
-  return rows.map(describe)
+  const usage = yield* segmentUsage
+  return rows.map((r) => describe(r, usage.get(r.id) ?? []))
 })
 
 /** A segment, with its count recomputed: counts are cheap and a stale one misleads. */
@@ -168,7 +253,8 @@ export const getSegment = Effect.fn("segments.getView")(function* (id: string) {
       .returning()
       .get(),
   )
-  return describe(updated ?? row)
+  const usage = yield* segmentUsage
+  return describe(updated ?? row, usage.get(id) ?? [])
 })
 
 const checkName = (name: string) =>
@@ -250,22 +336,24 @@ export const updateSegment = Effect.fn("segments.update")(function* (
     before: { name: before.name, filter: before.filter },
     after: { name: row?.name, filter: row?.filter },
   })
-  return describe(row ?? before)
+  return describe(row ?? before, (yield* segmentUsage).get(id) ?? [])
 })
 
 /** A segment a campaign was built on stays: the campaign's report still points at it. */
 export const deleteSegment = Effect.fn("segments.delete")(function* (id: string, actor: string) {
   const row = yield* findSegment(id)
   const database = yield* Database
-  const used = yield* database.query("segments.usedBy", (db) =>
-    db
-      .select({ id: campaigns.id, name: campaigns.name })
-      .from(campaigns)
-      .where(eq(campaigns.segmentId, id))
-      .limit(1)
-      .get(),
-  )
-  if (used) return yield* new SegmentInUse({ message: `Campaign "${used.name}" uses this segment.` })
+  // Kept while anything uses it: a campaign's report points at it; an automation would stop matching.
+  const used = (yield* segmentUsage).get(id) ?? []
+  if (used.length > 0)
+    return yield* new SegmentInUse({
+      message: `${used
+        .slice(0, 3)
+        .map((u) => `${u.type === "campaign" ? "Campaign" : "Automation"} "${u.name}"`)
+        .join(
+          ", ",
+        )}${used.length > 3 ? ` and ${used.length - 3} more` : ""} ${used.length === 1 ? "uses" : "use"} this segment.`,
+    })
   yield* database.query("segments.delete", (db) => db.delete(segments).where(eq(segments.id, id)).run())
   yield* recordAudit({
     actor,
