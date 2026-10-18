@@ -6998,6 +6998,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                     ],
                                     "type": "object",
                                   },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "mail_received",
+                                        ],
+                                        "type": "string",
+                                      },
+                                      "mailboxIds": {
+                                        "items": {
+                                          "type": "string",
+                                        },
+                                        "maxItems": 50,
+                                        "type": "array",
+                                      },
+                                      "senderDomains": {
+                                        "items": {
+                                          "maxLength": 253,
+                                          "type": "string",
+                                        },
+                                        "maxItems": 50,
+                                        "type": "array",
+                                      },
+                                      "subjectContains": {
+                                        "maxLength": 200,
+                                        "minLength": 1,
+                                        "type": "string",
+                                      },
+                                    },
+                                    "required": [
+                                      "kind",
+                                    ],
+                                    "type": "object",
+                                  },
                                 ],
                               },
                               {
@@ -7381,6 +7416,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         "offsetDays",
                                         "hour",
                                         "repeat",
+                                      ],
+                                      "type": "object",
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "kind": {
+                                          "enum": [
+                                            "mail_received",
+                                          ],
+                                          "type": "string",
+                                        },
+                                        "mailboxIds": {
+                                          "items": {
+                                            "type": "string",
+                                          },
+                                          "maxItems": 50,
+                                          "type": "array",
+                                        },
+                                        "senderDomains": {
+                                          "items": {
+                                            "maxLength": 253,
+                                            "type": "string",
+                                          },
+                                          "maxItems": 50,
+                                          "type": "array",
+                                        },
+                                        "subjectContains": {
+                                          "maxLength": 200,
+                                          "minLength": 1,
+                                          "type": "string",
+                                        },
+                                      },
+                                      "required": [
+                                        "kind",
                                       ],
                                       "type": "object",
                                     },
@@ -8365,6 +8435,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         ],
                                         "type": "object",
                                       },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "mail_received",
+                                            ],
+                                            "type": "string",
+                                          },
+                                          "mailboxIds": {
+                                            "items": {
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "senderDomains": {
+                                            "items": {
+                                              "maxLength": 253,
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "subjectContains": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "kind",
+                                        ],
+                                        "type": "object",
+                                      },
                                     ],
                                   },
                                   "id": {
@@ -9207,6 +9312,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "offsetDays",
                                 "hour",
                                 "repeat",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "mail_received",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "senderDomains": {
+                                  "items": {
+                                    "maxLength": 253,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "subjectContains": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "kind",
                               ],
                               "type": "object",
                             },
@@ -9871,6 +10011,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         ],
                                         "type": "object",
                                       },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "mail_received",
+                                            ],
+                                            "type": "string",
+                                          },
+                                          "mailboxIds": {
+                                            "items": {
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "senderDomains": {
+                                            "items": {
+                                              "maxLength": 253,
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "subjectContains": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "kind",
+                                        ],
+                                        "type": "object",
+                                      },
                                     ],
                                   },
                                   "id": {
@@ -10716,6 +10891,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               ],
                               "type": "object",
                             },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "mail_received",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "senderDomains": {
+                                  "items": {
+                                    "maxLength": 253,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "subjectContains": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "kind",
+                              ],
+                              "type": "object",
+                            },
                           ],
                         },
                         {
@@ -11017,6 +11227,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         "offsetDays",
                                         "hour",
                                         "repeat",
+                                      ],
+                                      "type": "object",
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "kind": {
+                                          "enum": [
+                                            "mail_received",
+                                          ],
+                                          "type": "string",
+                                        },
+                                        "mailboxIds": {
+                                          "items": {
+                                            "type": "string",
+                                          },
+                                          "maxItems": 50,
+                                          "type": "array",
+                                        },
+                                        "senderDomains": {
+                                          "items": {
+                                            "maxLength": 253,
+                                            "type": "string",
+                                          },
+                                          "maxItems": 50,
+                                          "type": "array",
+                                        },
+                                        "subjectContains": {
+                                          "maxLength": 200,
+                                          "minLength": 1,
+                                          "type": "string",
+                                        },
+                                      },
+                                      "required": [
+                                        "kind",
                                       ],
                                       "type": "object",
                                     },
@@ -11998,6 +12243,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         ],
                                         "type": "object",
                                       },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "mail_received",
+                                            ],
+                                            "type": "string",
+                                          },
+                                          "mailboxIds": {
+                                            "items": {
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "senderDomains": {
+                                            "items": {
+                                              "maxLength": 253,
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "subjectContains": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "kind",
+                                        ],
+                                        "type": "object",
+                                      },
                                     ],
                                   },
                                   "id": {
@@ -12840,6 +13120,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "offsetDays",
                                 "hour",
                                 "repeat",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "mail_received",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "senderDomains": {
+                                  "items": {
+                                    "maxLength": 253,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "subjectContains": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "kind",
                               ],
                               "type": "object",
                             },
@@ -13833,6 +14148,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         ],
                                         "type": "object",
                                       },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "mail_received",
+                                            ],
+                                            "type": "string",
+                                          },
+                                          "mailboxIds": {
+                                            "items": {
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "senderDomains": {
+                                            "items": {
+                                              "maxLength": 253,
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "subjectContains": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "kind",
+                                        ],
+                                        "type": "object",
+                                      },
                                     ],
                                   },
                                   "id": {
@@ -14675,6 +15025,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "offsetDays",
                                 "hour",
                                 "repeat",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "mail_received",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "senderDomains": {
+                                  "items": {
+                                    "maxLength": 253,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "subjectContains": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "kind",
                               ],
                               "type": "object",
                             },
@@ -15318,6 +15703,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         ],
                                         "type": "object",
                                       },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "mail_received",
+                                            ],
+                                            "type": "string",
+                                          },
+                                          "mailboxIds": {
+                                            "items": {
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "senderDomains": {
+                                            "items": {
+                                              "maxLength": 253,
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "subjectContains": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "kind",
+                                        ],
+                                        "type": "object",
+                                      },
                                     ],
                                   },
                                   "id": {
@@ -16160,6 +16580,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "offsetDays",
                                 "hour",
                                 "repeat",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "mail_received",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "senderDomains": {
+                                  "items": {
+                                    "maxLength": 253,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "subjectContains": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "kind",
                               ],
                               "type": "object",
                             },
@@ -17175,6 +17630,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                         ],
                                         "type": "object",
                                       },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": [
+                                              "mail_received",
+                                            ],
+                                            "type": "string",
+                                          },
+                                          "mailboxIds": {
+                                            "items": {
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "senderDomains": {
+                                            "items": {
+                                              "maxLength": 253,
+                                              "type": "string",
+                                            },
+                                            "maxItems": 50,
+                                            "type": "array",
+                                          },
+                                          "subjectContains": {
+                                            "maxLength": 200,
+                                            "minLength": 1,
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "kind",
+                                        ],
+                                        "type": "object",
+                                      },
                                     ],
                                   },
                                   "id": {
@@ -18017,6 +18507,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "offsetDays",
                                 "hour",
                                 "repeat",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "mail_received",
+                                  ],
+                                  "type": "string",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "senderDomains": {
+                                  "items": {
+                                    "maxLength": 253,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 50,
+                                  "type": "array",
+                                },
+                                "subjectContains": {
+                                  "maxLength": 200,
+                                  "minLength": 1,
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "kind",
                               ],
                               "type": "object",
                             },

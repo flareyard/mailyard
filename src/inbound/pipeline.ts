@@ -6,6 +6,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import { fireMailReceived } from "../automations/mailTrigger.ts"
 import { Bindings } from "../Bindings.ts"
 import { inboundDeliveries, inboundMessages, mailboxes, mailboxRules } from "../db/schema.ts"
 import { PROBE_LOCAL, recordProbeArrival } from "../domain/testSend.ts"
@@ -388,6 +389,17 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
       // Forwards, auto-replies and rule webhooks run once: only for a newly stored copy, so a retried
       // filing never sends them twice. Their failures are logged, never raised.
       yield* effectsFor(mailboxId, plan, parsed, row, result.threadId)
+      // Automations that start on mail (HAL-3467): never for automated, list or spam mail.
+      yield* fireMailReceived({
+        mailboxId,
+        mailboxAddress: row.envelopeTo,
+        threadId: result.threadId,
+        messageId: result.id,
+        from: parsed.from,
+        subject: parsed.subject,
+        automated: parsed.automated || parsed.listId !== null,
+        spam: plan.spam.isSpam || plan.filing.folder === "spam",
+      })
     }
   }
   yield* update(row.id, { status: "filed", error: null, filedAt: Date.now() })
