@@ -288,6 +288,13 @@
       "when": 1792302333361,
       "tag": "0040_campaign_held",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1792303677622,
+      "tag": "0041_test_sends",
+      "breakpoints": true
     }
   ]
 }

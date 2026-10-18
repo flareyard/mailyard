@@ -1,9 +1,12 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import { Bindings } from "../Bindings.ts"
 import { apiKeys, domains, mailboxExports, mailboxes, mailboxMembers } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { SPAM_THRESHOLD } from "../rules/spam.ts"
+import { CloudflareZones, type RoutingRule } from "../services/CloudflareZones.ts"
 import { Database, queryIn } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import type { Caller } from "./apiKeys.ts"
@@ -20,6 +23,31 @@ export class MailboxInvalid extends Schema.TaggedError<MailboxInvalid>()("Mailbo
 export class MailboxConflict extends Schema.TaggedError<MailboxConflict>()("MailboxConflict", {
   message: Schema.String,
 }) {}
+
+/**
+ * Cloudflare already routes this address somewhere other than Mailyard (HAL-3378): an Email Routing
+ * rule for it outranks the catch-all, so its mail would never arrive here.
+ */
+export class RoutingRuleExists extends Schema.TaggedError<RoutingRuleExists>()("RoutingRuleExists", {
+  message: Schema.String,
+  ruleId: Schema.String,
+  /** Where the rule sends the mail: an address it forwards to, a Worker's name, or "drop". */
+  ruleDestination: Schema.String,
+  ruleAction: Schema.String,
+}) {}
+
+/** The Worker that receives a workspace's mail; a rule pointing at it is no conflict. */
+export const workerNameOf = (env: { readonly MAILYARD_WORKER_NAME?: string | undefined }) =>
+  env.MAILYARD_WORKER_NAME?.trim() || "mailyard-api"
+
+/** The enabled rule for exactly this address that sends its mail somewhere other than `worker`. */
+export const conflictingRule = (rules: ReadonlyArray<RoutingRule>, address: string, worker: string) =>
+  rules.find(
+    (r) =>
+      r.enabled !== false &&
+      r.matchers.some((m) => m.type === "literal" && m.value?.trim().toLowerCase() === address) &&
+      !r.actions.some((a) => a.type === "worker" && a.value?.includes(worker)),
+  )
 
 export type MailboxKind = (typeof mailboxes.$inferSelect)["kind"]
 type MailboxRow = typeof mailboxes.$inferSelect
@@ -270,7 +298,45 @@ export interface MailboxInput {
   readonly forwarding?: Forwarding | null | undefined
   /** Spam points at or above which mail goes to spam (1 to 20); null for the default. */
   readonly spamThreshold?: number | null | undefined
+  /** Point an Email Routing rule already on this address at Mailyard instead of refusing. */
+  readonly replaceRoutingRule?: boolean | undefined
 }
+
+/**
+ * Checks Cloudflare routes `address` to Mailyard. Without a zone token it can't look: "unchecked".
+ * A rule sending it elsewhere fails with RoutingRuleExists, unless `replace`, which repoints it.
+ */
+const ensureRouted = Effect.fn("mailboxes.ensureRouted")(function* (
+  address: string,
+  domain: { readonly name: string; readonly zoneId: string | null },
+  replace: boolean,
+) {
+  const zones = yield* CloudflareZones
+  if (!zones.connected) return "unchecked" as const
+  const zoneId = domain.zoneId ?? Option.getOrNull(Option.map(yield* zones.zoneFor(domain.name), (z) => z.id))
+  if (!zoneId) return "unchecked" as const
+  const rules = yield* zones.routingRules(zoneId)
+  if (Option.isNone(rules)) return "unchecked" as const
+  const worker = workerNameOf(yield* Bindings)
+  const rule = conflictingRule(rules.value, address, worker)
+  if (!rule) return "clear" as const
+  const action = rule.actions[0]
+  const destination = action?.type === "drop" ? "drop" : (action?.value?.[0] ?? action?.type ?? "unknown")
+  if (!replace)
+    return yield* new RoutingRuleExists({
+      message: `Cloudflare already routes ${address} ${action?.type === "drop" ? "to nowhere (drop)" : `to ${destination}`}, so its mail wouldn't reach Mailyard. Pass replaceRoutingRule to point it here.`,
+      ruleId: rule.id,
+      ruleDestination: destination,
+      ruleAction: action?.type ?? "unknown",
+    })
+  const done = yield* zones.routeToWorker(zoneId, rule, worker)
+  if (!done.ok)
+    return yield* new MailboxInvalid({
+      field: "replaceRoutingRule",
+      message: `Couldn't repoint the routing rule: ${done.message}`,
+    })
+  return "replaced" as const
+})
 
 export const createMailbox = Effect.fn("mailboxes.create")(function* (input: MailboxInput, actor: string) {
   const address = input.address.trim().toLowerCase()
@@ -318,6 +384,11 @@ export const createMailbox = Effect.fn("mailboxes.create")(function* (input: Mai
   const autoReply = yield* checkAutoReply(input.autoReply)
   const forwarding = yield* checkForwarding(input.forwarding, address)
   const spamThreshold = input.spamThreshold === undefined ? null : yield* checkThreshold(input.spamThreshold)
+  // A catch-all takes what no rule claims; only a named address can be shadowed by a rule.
+  const routing =
+    input.kind === "catch_all"
+      ? ("unchecked" as const)
+      : yield* ensureRouted(address, domain, input.replaceRoutingRule === true)
   const id = `mbx_${yield* (yield* Ids).next}`
   const now = Date.now()
   yield* database.query("mailboxes.insert", (db) =>
@@ -343,9 +414,9 @@ export const createMailbox = Effect.fn("mailboxes.create")(function* (input: Mai
     actor,
     action: "mailbox.created",
     target: id,
-    after: { address, kind: input.kind, targets },
+    after: { address, kind: input.kind, targets, routing },
   })
-  return yield* getMailbox(id)
+  return { ...(yield* getMailbox(id)), routing }
 })
 
 export type MailboxPatch = Omit<MailboxInput, "address" | "kind">

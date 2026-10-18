@@ -24,6 +24,7 @@ import {
   type MailboxConflict,
   type MailboxInvalid,
   type MailboxNotFound,
+  type RoutingRuleExists,
   setMembers,
   updateMailbox,
 } from "../domain/mailboxes.ts"
@@ -60,7 +61,7 @@ type MailboxHttp<E> = E extends MailboxNotFound
   ? NotFound
   : E extends MailboxInvalid
     ? InvalidRequest
-    : E extends MailboxConflict
+    : E extends MailboxConflict | RoutingRuleExists
       ? Conflict
       : E
 
@@ -95,6 +96,16 @@ const mailboxErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
         })
       case "MailboxConflict":
         return new Conflict({ message: (e as MailboxConflict).message })
+      case "RoutingRuleExists": {
+        const r = e as RoutingRuleExists
+        return new Conflict({
+          message: r.message,
+          reason: "routing-rule-exists",
+          ruleDestination: r.ruleDestination,
+          ruleAction: r.ruleAction,
+          ruleId: r.ruleId,
+        })
+      }
       default:
         return e
     }

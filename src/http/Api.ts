@@ -138,6 +138,10 @@ export class Conflict extends Schema.TaggedError<Conflict>()(
     /** With `reason: "stale"`: when the other save was, and whose (HAL-3428). */
     updatedAt: Schema.optionalKey(Schema.NullOr(Schema.Number)),
     updatedBy: Schema.optionalKey(Schema.NullOr(Schema.String)),
+    /** With `reason: "routing-rule-exists"` (HAL-3378): where Cloudflare's rule sends the mail now. */
+    ruleDestination: Schema.optionalKey(Schema.String),
+    ruleAction: Schema.optionalKey(Schema.String),
+    ruleId: Schema.optionalKey(Schema.String),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -1269,8 +1273,22 @@ export class MailboxesApi extends HttpApiGroup.make("mailboxes")
         kind: MailboxKindSchema,
         targets: Schema.optionalKey(Schema.Array(Schema.String)),
         ...MailboxSettings,
+        /**
+         * When Cloudflare already routes this address elsewhere (a forward, a drop, another Worker),
+         * the create answers 409 `reason: "routing-rule-exists"` with `ruleDestination`; true repoints
+         * that rule at Mailyard instead. Needs the zone token (CLOUDFLARE_DNS_TOKEN) with Email
+         * Routing Rules: Edit.
+         */
+        replaceRoutingRule: Schema.optionalKey(Schema.Boolean),
       }),
-      success: MailboxDetailSchema,
+      success: Schema.Struct({
+        ...MailboxDetailSchema.fields,
+        /**
+         * What the routing check found: `clear` (nothing else claims the address), `replaced` (a rule
+         * was repointed here) or `unchecked` (no zone token, or a catch-all, which no rule shadows).
+         */
+        routing: Schema.Literals(["clear", "replaced", "unchecked"]),
+      }),
       error: [Forbidden, NotFound, InvalidRequest, Conflict],
     }),
     HttpApiEndpoint.get("get", "/v1/mailboxes/:id", {
@@ -2986,6 +3004,37 @@ export class GovernorUnreachable extends Schema.TaggedError<GovernorUnreachable>
   { httpApiStatus: 503 },
 ) {}
 
+const TestSendSchema = Schema.Struct({
+  id: Schema.String,
+  from: Schema.String,
+  to: Schema.String,
+  /** Sent to Mailyard's probe address, so arrival and its verdicts are measured here. */
+  probe: Schema.Boolean,
+  messageId: Schema.NullOr(Schema.String),
+  /** `sending` → `sent` → `received` (probe, verdicts in) or `delivered` (any other address); `failed`. */
+  status: Schema.Literals(["sending", "sent", "delivered", "received", "failed"]),
+  error: Schema.NullOr(Schema.String),
+  sentAt: Schema.Number,
+  receivedAt: Schema.NullOr(Schema.Number),
+  /** From the send to the arrival (probe) or Email Service's delivered event. */
+  deliveryTimeMs: Schema.NullOr(Schema.Number),
+  /**
+   * What the receiving side's Authentication-Results said (probe only, once received): `pass`,
+   * `fail`, `softfail`, `neutral`, `none`, …; `dkim` is the sender's own signature when present.
+   * `dmarcPolicy` is the sender's published `p=` (none, quarantine, reject), null with no record.
+   */
+  authentication: Schema.NullOr(
+    Schema.Struct({
+      spf: Schema.NullOr(Schema.String),
+      spfDomain: Schema.NullOr(Schema.String),
+      dkim: Schema.NullOr(Schema.String),
+      dkimDomain: Schema.NullOr(Schema.String),
+      dmarc: Schema.NullOr(Schema.String),
+      dmarcPolicy: Schema.NullOr(Schema.String),
+    }),
+  ),
+})
+
 export class SendingApi extends HttpApiGroup.make("sending")
   .add(
     HttpApiEndpoint.get("governor", "/v1/sending/governor", {
@@ -3017,6 +3066,37 @@ export class SendingApi extends HttpApiGroup.make("sending")
       payload: GovernorPatchSchema,
       success: GovernorConfigSchema,
       error: [Forbidden, GovernorUnreachable],
+    }),
+    /**
+     * Sends one test message from `from` (an address on a sending domain). Without `to` it goes to
+     * Mailyard's probe address on a receiving domain (`mailyard-test@`, the sender's own domain when
+     * it receives), which reads the receiving side's SPF, DKIM and DMARC verdicts on arrival and
+     * drops the mail. With `to`, it reports delivery only. Poll `GET /v1/test-send/{id}`.
+     */
+    HttpApiEndpoint.post("startTestSend", "/v1/test-send", {
+      payload: Schema.Struct({ from: Schema.String, to: Schema.optionalKey(Schema.String) }),
+      success: TestSendSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("getTestSend", "/v1/test-send/:id", {
+      params: { id: Schema.String },
+      success: TestSendSchema,
+      error: [Forbidden, NotFound],
+    }),
+    /**
+     * The account's verified destination addresses (Email Routing). Mail to them is free and outside
+     * the daily quota, so they're good test recipients. `available: false` with a reason when the
+     * read token can't list them (it needs Email Routing Addresses: Read).
+     */
+    HttpApiEndpoint.get("verifiedAddresses", "/v1/verified-addresses", {
+      success: Schema.Union([
+        Schema.Struct({
+          available: Schema.Literal(true),
+          addresses: Schema.Array(Schema.Struct({ email: Schema.String, verifiedAt: Schema.Number })),
+        }),
+        Schema.Struct({ available: Schema.Literal(false), reason: Schema.String }),
+      ]),
+      error: Forbidden,
     }),
   )
   .middleware(ApiKeyAuth) {}

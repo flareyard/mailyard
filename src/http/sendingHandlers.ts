@@ -3,8 +3,10 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { listAlerts, resolveAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { eventCoverage } from "../domain/eventCoverage.ts"
+import { getTestSend, startTestSend } from "../domain/testSend.ts"
+import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Governor } from "../services/Governor.ts"
-import { GovernorUnreachable, MailApi, NotFound } from "./Api.ts"
+import { GovernorUnreachable, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 
 /** The governor being unreachable is a 503 the caller can retry, not a 500. */
@@ -24,6 +26,45 @@ export const SendingHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
+      startTestSend: p(({ payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("send")
+          const result = yield* startTestSend(payload, caller.keyId)
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "test_send.start",
+            target: result.id,
+            after: { from: result.from, to: result.to, probe: result.probe },
+          })
+          return result
+        }).pipe(
+          Effect.catchTag("TestSendInvalid", (e) =>
+            Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+          ),
+          Effect.catchTag("InvalidMessage", (e) =>
+            Effect.fail(new InvalidRequest({ field: "from", message: e.reason })),
+          ),
+          // The test is written right after the send; a missing row here is a fault, not input.
+          Effect.catchTag("TestSendNotFound", Effect.die),
+          Effect.catchTags({
+            DatabaseError: Effect.die,
+            BlobStoreError: Effect.die,
+            TrackingKeyMissing: Effect.die,
+          }),
+        ),
+      ),
+      getTestSend: p(({ params }) =>
+        requireScope("read").pipe(
+          Effect.andThen(getTestSend(params.id)),
+          Effect.catchTag("TestSendNotFound", (e) =>
+            Effect.fail(new NotFound({ message: `Test send ${e.id} not found.` })),
+          ),
+          Effect.catchTag("DatabaseError", Effect.die),
+        ),
+      ),
+      verifiedAddresses: p(() =>
+        requireScope("read").pipe(Effect.andThen(CloudflareEmail.use((c) => c.verifiedAddresses))),
+      ),
       governor: p(() =>
         requireScope("read").pipe(Effect.andThen(Governor.use((g) => g.overview)), reachable),
       ),

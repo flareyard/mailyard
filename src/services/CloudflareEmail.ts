@@ -163,10 +163,40 @@ const fetchJson = (url: string, token: string) =>
     }
   })
 
+/**
+ * Email Routing's destination addresses (HAL-3378): `GET /accounts/{id}/email/routing/addresses`,
+ * fields measured against Cloudflare's published API schema 2026-10-18. `verified` is the time it
+ * was verified, null until then. Sends to a verified one are free and outside the daily quota
+ * (developers.cloudflare.com/email-service/platform/limits, read 2026-10-18).
+ */
+const DestinationPage = Schema.Struct({
+  success: Schema.Boolean,
+  result: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.Array(
+        Schema.Struct({
+          email: Schema.String,
+          verified: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        }),
+      ),
+    ),
+  ),
+  result_info: Schema.optionalKey(Schema.Struct({ total_pages: Schema.optionalKey(Schema.Number) })),
+})
+
+export type VerifiedAddresses =
+  | {
+      readonly available: true
+      readonly addresses: ReadonlyArray<{ readonly email: string; readonly verifiedAt: number }>
+    }
+  | { readonly available: false; readonly reason: string }
+
 export class CloudflareEmail extends Context.Service<
   CloudflareEmail,
   {
     readonly connected: boolean
+    /** The account's verified destination addresses, which Mailyard can mail for free. */
+    readonly verifiedAddresses: Effect.Effect<VerifiedAddresses>
     readonly limits: Effect.Effect<Option.Option<Limits>>
     readonly reputation: Effect.Effect<Option.Option<Reputation>>
     /**
@@ -212,9 +242,43 @@ export class CloudflareEmail extends Context.Service<
       const readToken = token || env.CLOUDFLARE_EMAIL_WRITE_TOKEN
       const writeToken = env.CLOUDFLARE_EMAIL_WRITE_TOKEN
       const queueName = env.MAILYARD_EVENTS_QUEUE ?? EVENTS_QUEUE
+      const verifiedAddresses: Effect.Effect<VerifiedAddresses> = Effect.gen(function* () {
+        if (!account || !readToken)
+          return {
+            available: false,
+            reason: "Set CLOUDFLARE_ACCOUNT_ID and a read token to list the account's verified addresses.",
+          } as const
+        const addresses: Array<{ email: string; verifiedAt: number }> = []
+        for (let page = 1; page <= 20; page++) {
+          const { status, body } = yield* request(
+            `https://api.cloudflare.com/client/v4/accounts/${account}/email/routing/addresses?verified=true&per_page=50&page=${page}`,
+            readToken,
+            { method: "GET" },
+          )
+          const decoded = Schema.decodeUnknownOption(DestinationPage)(body)
+          if (status === 403 || status === 401)
+            return {
+              available: false,
+              reason:
+                "The read token can't see Email Routing's addresses: add Email Routing Addresses: Read.",
+            } as const
+          if (Option.isNone(decoded) || !decoded.value.success)
+            return {
+              available: false,
+              reason: status === 0 ? "Cloudflare didn't answer." : `Cloudflare answered ${status}.`,
+            } as const
+          for (const a of decoded.value.result ?? []) {
+            const at = a.verified ? Date.parse(a.verified) : Number.NaN
+            if (!Number.isNaN(at)) addresses.push({ email: a.email.toLowerCase(), verifiedAt: at })
+          }
+          if (page >= (decoded.value.result_info?.total_pages ?? 1)) break
+        }
+        return { available: true, addresses } as const
+      })
       if (!account || !token) {
         return CloudflareEmail.of({
           connected: false,
+          verifiedAddresses,
           limits: Effect.succeedNone,
           reputation: Effect.succeedNone,
           subscribedDomains: Effect.succeedNone,
@@ -268,6 +332,7 @@ export class CloudflareEmail extends Context.Service<
       })
       return CloudflareEmail.of({
         connected: true,
+        verifiedAddresses,
         limits,
         reputation,
         subscribedDomains,
