@@ -334,6 +334,7 @@ export const resendToNonOpeners = Effect.fn("campaigns.resend")(function* (
       topicId: campaign.topicId,
       templateId: campaign.templateId,
       bodyHtml: campaign.bodyHtml,
+      bodyBlocks: campaign.bodyBlocks,
       bodyText: campaign.bodyText,
       replyTo: campaign.replyTo,
       preheader: campaign.preheader,

@@ -15,10 +15,13 @@ import { recordAudit } from "../domain/audit.ts"
 import { parseParty, sendBulkMessage } from "../domain/outbox.ts"
 import { Ids } from "../kit/index.ts"
 import { Database, queryIn } from "../services/Database.ts"
+import type { BlocksDocument } from "../templates/document.ts"
+import { validateTemplate } from "../templates/render.ts"
 import { audiencePreview, audienceSql, audienceTooComplex, EXCLUDE_LIMITS } from "./audience.ts"
-import { checkCampaign } from "./checks.ts"
+import { checkCampaign, linksIn } from "./checks.ts"
 import { getCompliance } from "./compliance.ts"
 import { renderFor } from "./content.ts"
+import { linkStatuses } from "./links.ts"
 
 export class CampaignNotFound extends Schema.TaggedError<CampaignNotFound>()("CampaignNotFound", {
   id: Schema.String,
@@ -46,6 +49,7 @@ export const describeCampaign = (c: CampaignRow) => ({
   templateVersion: c.templateVersion,
   bodyHtml: c.bodyHtml,
   bodyText: c.bodyText,
+  bodyBlocks: c.bodyBlocks ?? null,
   fromAddress: c.fromAddress,
   replyTo: c.replyTo,
   subject: c.subject,
@@ -86,6 +90,8 @@ export interface CampaignInput {
   readonly templateId?: string | null | undefined
   readonly bodyHtml?: string | null | undefined
   readonly bodyText?: string | null | undefined
+  /** Block content: a template-kit document, in place of `bodyHtml`. */
+  readonly bodyBlocks?: BlocksDocument | null | undefined
   readonly fromAddress?: string | undefined
   readonly replyTo?: string | null | undefined
   readonly subject?: string | undefined
@@ -154,6 +160,17 @@ const validate = (next: Omit<CampaignRow, "id" | "status" | "createdAt">) =>
     if (next.replyTo && !EMAIL.test(parseParty(next.replyTo).email))
       return yield* bad("replyTo", "Not an email address.")
     if (next.templateId && next.bodyHtml) return yield* bad("bodyHtml", "Use a template or a body, not both.")
+    if (next.bodyBlocks) {
+      if (next.templateId) return yield* bad("bodyBlocks", "Use a template or blocks, not both.")
+      if (next.bodyHtml) return yield* bad("bodyBlocks", "Use blocks or an HTML body, not both.")
+      const invalid = validateTemplate({
+        kind: "blocks",
+        subject: next.subject,
+        source: JSON.stringify(next.bodyBlocks),
+        text: next.bodyText,
+      })
+      if (invalid) return yield* bad("bodyBlocks", invalid)
+    }
     if (next.templateId) {
       const t = yield* database.query("campaigns.template", (db) =>
         db
@@ -260,6 +277,7 @@ export const createCampaign = Effect.fn("campaigns.create")(function* (
     templateVersion: null,
     bodyHtml: input.bodyHtml ?? null,
     bodyText: input.bodyText ?? null,
+    bodyBlocks: input.bodyBlocks ?? null,
     fromAddress: input.fromAddress.trim(),
     replyTo: input.replyTo ?? null,
     subject: input.subject,
@@ -415,7 +433,12 @@ export const listCampaigns = Effect.fn("campaigns.list")(function* (query: {
 /** The message one contact would get (or a stand-in, without a contact), for the editor's preview. */
 export const renderCampaign = Effect.fn("campaigns.render")(function* (
   id: string,
-  options: { readonly contactId?: string | undefined; readonly variant?: "a" | "b" | undefined },
+  options: {
+    readonly contactId?: string | undefined
+    readonly variant?: "a" | "b" | undefined
+    /** Follow links not checked in the last hour now, rather than only report what's known. */
+    readonly checkLinks?: boolean | undefined
+  },
   origin: string,
 ) {
   const campaign = yield* findCampaign(id)
@@ -441,6 +464,11 @@ export const renderCampaign = Effect.fn("campaigns.render")(function* (
       : { contactId: null, email: "preview@example.com", name: "Preview", fields: {} },
     { origin, variant: options.variant ?? "a" },
   )
+  // The same results the links check keeps: a link it followed shows here without a second fetch.
+  const links = yield* linkStatuses(
+    linksIn(message.html ?? "", origin),
+    options.checkLinks ? { followOlderThan: 60 * 60_000 } : {},
+  )
   return {
     subject: message.subject,
     html: message.html ?? "",
@@ -448,6 +476,7 @@ export const renderCampaign = Effect.fn("campaigns.render")(function* (
     headers: message.headers ?? {},
     size,
     footerAdded,
+    links,
   }
 })
 

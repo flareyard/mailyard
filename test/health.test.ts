@@ -55,6 +55,7 @@ describe("D1 schema", () => {
       "inbound_daily_senders",
       "inbound_deliveries",
       "inbound_messages",
+      "link_checks",
       "mailbox_exports",
       "mailbox_imports",
       "mailbox_members",
