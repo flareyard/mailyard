@@ -38,5 +38,8 @@ export const entryTriggerData = (
       case "date":
         // The sweep brings the date as of the day it matched; any other entry gets it as of now.
         return data ? { ...data } : dateTriggerData(trigger, contact.fields[trigger.field], now)
+      case "mail_received":
+        // The message that started it, as the inbound pipeline handed it over.
+        return data ? { ...data } : null
     }
   })

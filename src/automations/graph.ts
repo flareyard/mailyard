@@ -41,6 +41,19 @@ export const TriggerConfig = Schema.Union([
     hour: Hour,
     repeat: Schema.Literals(["yearly", "once"]),
   }),
+  /**
+   * Mail arrives in a mailbox (HAL-3467): the sender becomes the contact (added unconfirmed if new,
+   * never subscribed). Optionally only for some mailboxes, sender domains, or subjects containing
+   * some text. Automated mail (auto-replies, bulk, lists) and spam never start a run.
+   */
+  Schema.Struct({
+    kind: Schema.Literal("mail_received"),
+    mailboxIds: Schema.optionalKey(Schema.Array(Schema.String).check(Schema.isMaxLength(50))),
+    senderDomains: Schema.optionalKey(
+      Schema.Array(Schema.String.check(Schema.isMaxLength(253))).check(Schema.isMaxLength(50)),
+    ),
+    subjectContains: Schema.optionalKey(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200))),
+  }),
 ])
 export type TriggerConfig = typeof TriggerConfig.Type
 

@@ -24,7 +24,7 @@ import { Database } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
 import { publishedVersion } from "./automations.ts"
 import { entryTriggerData } from "./entryData.ts"
-import { type Graph, nextNode, type Port, type Settings, triggerOf } from "./graph.ts"
+import { type Graph, nextNode, type Port, type Settings, type TriggerConfig, triggerOf } from "./graph.ts"
 import { missingDetail, renderAutomationMail } from "./mail.ts"
 import {
   runStep,
@@ -60,7 +60,7 @@ export class RunInvalid extends Schema.TaggedError<RunInvalid>()("RunInvalid", {
 export const AUTOMATION_QUEUE_NAME = "mailyard-automation-triggers"
 
 export const AutomationTriggerJob = Schema.Struct({
-  kind: Schema.Literals(["event", "created", "topic", "segment", "enter"]),
+  kind: Schema.Literals(["event", "created", "topic", "segment", "enter", "mail_received"]),
   contactId: Schema.String,
   /** The event name, the topic id, or (for `enter`) the automation id. */
   key: Schema.optionalKey(Schema.String),
@@ -101,6 +101,31 @@ export const fireTrigger = (job: Omit<AutomationTriggerJob, "at">) =>
     const env = yield* Bindings
     yield* Effect.promise(() => env.AUTOMATION_QUEUE.send({ ...job, at: Date.now() }))
   }).pipe(Effect.catchCause((cause) => Effect.logWarning("automations: could not queue a trigger", cause)))
+
+/**
+ * Whether a message matches a mail_received trigger's filters (HAL-3467): its mailbox, its sender's
+ * domain (or a subdomain of it), and words in its subject, each only when the trigger names them.
+ */
+export const mailMatches = (
+  trigger: Extract<TriggerConfig, { kind: "mail_received" }>,
+  data: Readonly<Record<string, unknown>> | null,
+) => {
+  if (!data) return false
+  const mailboxId = typeof data.mailboxId === "string" ? data.mailboxId : ""
+  const domain = typeof data.senderDomain === "string" ? data.senderDomain.toLowerCase() : ""
+  const subject = typeof data.subject === "string" ? data.subject.toLowerCase() : ""
+  if (trigger.mailboxIds?.length && !trigger.mailboxIds.includes(mailboxId)) return false
+  if (
+    trigger.senderDomains?.length &&
+    !trigger.senderDomains.some((d) => {
+      const want = d.trim().toLowerCase().replace(/^@/, "")
+      return domain === want || domain.endsWith(`.${want}`)
+    })
+  )
+    return false
+  if (trigger.subjectContains && !subject.includes(trigger.subjectContains.toLowerCase())) return false
+  return true
+}
 
 /** Whether a contact matches a rule tree right now. */
 export const contactMatches = (contactId: string, rule: Rule) =>
@@ -157,6 +182,8 @@ export const enterAutomation = Effect.fn("automations.enter")(function* (
   const trigger = triggerOf(graph)?.config
   if (trigger?.kind === "event" && trigger.filter && !(yield* contactMatches(contactId, trigger.filter)))
     return "skipped: filter not matched"
+  if (trigger?.kind === "mail_received" && !mailMatches(trigger, data))
+    return "skipped: the mail doesn't match the trigger"
   if (trigger?.kind === "segment") {
     const seg = yield* database.query("automations.enterSegment", (db) =>
       db.select({ filter: segments.filter }).from(segments).where(eq(segments.id, trigger.segmentId)).get(),
