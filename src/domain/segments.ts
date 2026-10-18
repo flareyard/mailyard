@@ -48,15 +48,20 @@ const segmentIdsIn = (value: unknown): Set<string> => {
 }
 
 /**
- * What uses each segment (HAL-3423): campaigns built on it, and automations whose draft or live
- * graph names it. Campaigns and automations are written by people, a few dozen at most, so they're
- * read whole.
+ * What uses each segment (HAL-3423): campaigns built on it or leaving it out (HAL-3429), and
+ * automations whose draft or live graph names it. Campaigns and automations are written by people,
+ * a few dozen at most, so they're read whole.
  */
 export const segmentUsage = Effect.gen(function* () {
   const database = yield* Database
   const byCampaign = yield* database.query("segments.usageCampaigns", (db) =>
     db
-      .select({ id: campaigns.id, name: campaigns.name, segmentId: campaigns.segmentId })
+      .select({
+        id: campaigns.id,
+        name: campaigns.name,
+        segmentId: campaigns.segmentId,
+        exclude: campaigns.exclude,
+      })
       .from(campaigns)
       .all(),
   )
@@ -81,7 +86,11 @@ export const segmentUsage = Effect.gen(function* () {
   )
   const usage = new Map<string, Array<Use>>()
   const add = (segmentId: string, use: Use) => usage.set(segmentId, [...(usage.get(segmentId) ?? []), use])
-  for (const c of byCampaign) if (c.segmentId) add(c.segmentId, { type: "campaign", id: c.id, name: c.name })
+  for (const c of byCampaign) {
+    // A segment a campaign leaves out is a use too: deleting it would quietly widen the audience.
+    const ids = new Set([...(c.segmentId ? [c.segmentId] : []), ...(c.exclude?.segmentIds ?? [])])
+    for (const id of ids) add(id, { type: "campaign", id: c.id, name: c.name })
+  }
   for (const a of autos) {
     const ids = new Set([
       ...segmentIdsIn(a.graph),

@@ -356,8 +356,203 @@ describe("campaigns: audience and test sends", () => {
     expect(preview).toEqual({
       matching: 7,
       sendable: 2,
-      excluded: { blocked: 2, unsubscribed: 1, unconfirmed: 1, notOnTopic: 1 },
+      excluded: {
+        blocked: 2,
+        unsubscribed: 1,
+        unconfirmed: 1,
+        notOnTopic: 1,
+        bySegment: [],
+        recentlySent: 0,
+      },
     })
+  })
+
+  it("leaves out excluded segments and the recently mailed, each counted once (HAL-3429)", async () => {
+    const domain = await sendingDomain()
+    const tag = uid()
+    const make = async (i: number, fields: Record<string, unknown> = {}) => {
+      const c = await json<{ id: string; email: string }>(
+        await call("/v1/contacts", {
+          method: "POST",
+          key: ADMIN,
+          json: { email: `x${i}-${tag}@example.net`, fields: { tag, ...fields } },
+        }),
+      )
+      await env.DB.prepare("update contacts set status = 'subscribed' where id = ?").bind(c.id).run()
+      return c
+    }
+    const plain = await make(1)
+    const second = await make(2)
+    await make(3, { vip: true })
+    await make(4, { staff: true })
+    // In both excluded segments: counted under the first.
+    await make(5, { vip: true, staff: true })
+    const mailed = await make(6)
+    const unsubscribed = await make(7, { vip: true })
+    await env.DB.prepare("update contacts set status = 'unsubscribed' where id = ?")
+      .bind(unsubscribed.id)
+      .run()
+    const segment = async (name: string, filter: unknown) =>
+      json<{ id: string }>(await call("/v1/segments", { method: "POST", key: ADMIN, json: { name, filter } }))
+    const all = await segment(`All ${tag}`, { type: "field", field: "tag", op: "eq", value: tag })
+    const vips = await segment(`VIP ${tag}`, { type: "field", field: "vip", op: "eq", value: true })
+    const staffers = await segment(`Staff ${tag}`, { type: "field", field: "staff", op: "eq", value: true })
+    // Another campaign mailed one contact two days ago, and another 40 days ago.
+    const other = `cmp_other_${tag}`
+    await env.DB.prepare(
+      "insert into campaigns (id, name, status, from_address, subject) values (?, 'Other', 'sent', 'a@b.co', 'S')",
+    )
+      .bind(other)
+      .run()
+    const sentTo = (contactId: string, daysAgo: number, campaignId = other) =>
+      env.DB.prepare(
+        "insert into messages_out (id, stream, campaign_id, contact_id, recipient, sender, subject, status, created_at) values (?, 'campaign', ?, ?, 'r@x.co', 'a@b.co', 'S', 'delivered', ?)",
+      )
+        .bind(`msg_${uid()}`, campaignId, contactId, Date.now() - daysAgo * 86_400_000)
+        .run()
+    await sentTo(mailed.id, 2)
+    await sentTo(plain.id, 40)
+
+    const { body: campaign } = await createCampaign({
+      name: "Ex",
+      fromAddress: `news@${domain}`,
+      subject: "Hi",
+      bodyHtml: "<p>Hi</p>",
+      segmentId: all.id,
+      exclude: { segmentIds: [vips.id, staffers.id], recentlySentDays: 7 },
+    })
+    expect(campaign).toMatchObject({ exclude: { segmentIds: [vips.id, staffers.id], recentlySentDays: 7 } })
+    // This campaign's own mail (a test send) isn't "recently sent".
+    await sentTo(second.id, 0, campaign.id as string)
+    const preview = async (id: string) =>
+      json<{
+        matching: number
+        sendable: number
+        excluded: {
+          bySegment: Array<{ segmentId: string; name: string; count: number }>
+          recentlySent: number
+        }
+      }>(await call(`/v1/campaigns/${id}/audience/preview`, { method: "POST", key: ADMIN }))
+    const p = await preview(campaign.id as string)
+    expect(p).toMatchObject({ matching: 7, sendable: 2 })
+    expect(p.excluded).toMatchObject({
+      unsubscribed: 1,
+      bySegment: [
+        { segmentId: vips.id, name: `VIP ${tag}`, count: 2 },
+        { segmentId: staffers.id, name: `Staff ${tag}`, count: 1 },
+      ],
+      recentlySent: 1,
+    })
+
+    // Widening the window to 60 days catches the contact mailed 40 days ago too.
+    const patched = await call(`/v1/campaigns/${campaign.id}`, {
+      method: "PATCH",
+      key: ADMIN,
+      json: { exclude: { segmentIds: [vips.id], recentlySentDays: 60 } },
+    })
+    expect(patched.status).toBe(200)
+    expect((await preview(campaign.id as string)).excluded).toMatchObject({
+      bySegment: [{ segmentId: vips.id, count: 2 }],
+      recentlySent: 2,
+    })
+    // An exclusion that leaves nobody out is stored as none.
+    const cleared = await json<{ exclude: unknown }>(
+      await call(`/v1/campaigns/${campaign.id}`, {
+        method: "PATCH",
+        key: ADMIN,
+        json: { exclude: { segmentIds: [], recentlySentDays: null } },
+      }),
+    )
+    expect(cleared.exclude).toBeNull()
+
+    const refused = async (exclude: unknown) => {
+      const r = await call(`/v1/campaigns/${campaign.id}`, { method: "PATCH", key: ADMIN, json: { exclude } })
+      return { status: r.status, field: (await json<{ field?: string }>(r)).field }
+    }
+    expect(await refused({ segmentIds: [all.id], recentlySentDays: null })).toEqual({
+      status: 400,
+      field: "exclude.segmentIds",
+    })
+    expect(await refused({ segmentIds: ["seg_nope"], recentlySentDays: null })).toMatchObject({ status: 400 })
+    expect(await refused({ segmentIds: [], recentlySentDays: 91 })).toMatchObject({
+      status: 400,
+      field: "exclude.recentlySentDays",
+    })
+    expect(await refused({ segmentIds: [], recentlySentDays: 1.5 })).toMatchObject({ status: 400 })
+    expect(
+      await refused({ segmentIds: Array.from({ length: 11 }, (_, i) => `seg_${i}`), recentlySentDays: null }),
+    ).toMatchObject({ status: 400, field: "exclude.segmentIds" })
+
+    // A segment a campaign leaves out is in use: deleting it would widen the audience.
+    await call(`/v1/campaigns/${campaign.id}`, {
+      method: "PATCH",
+      key: ADMIN,
+      json: { exclude: { segmentIds: [staffers.id], recentlySentDays: null } },
+    })
+    const del = await call(`/v1/segments/${staffers.id}`, { method: "DELETE", key: ADMIN })
+    expect(del.status).toBe(409)
+    const seg = await json<{ usedBy: Array<{ id: string }> }>(
+      await call(`/v1/segments/${staffers.id}`, { key: ADMIN }),
+    )
+    expect(seg.usedBy.map((u) => u.id)).toContain(campaign.id)
+  })
+
+  it("finds the recently mailed through messages_out(contact_id, created_at), not a scan", async () => {
+    const { audienceSql } = await import("../../src/campaigns/audience.ts")
+    const { runtimeFor } = await import("../../src/workers/inbound.ts")
+    const a = await runtimeFor(env).runPromise(
+      audienceSql({
+        id: "cmp_x",
+        segmentId: null,
+        topicId: null,
+        exclude: { segmentIds: [], recentlySentDays: 7 },
+      }),
+    )
+    const plan = await env.DB.prepare(`explain query plan select id from contacts where ${a.where}`)
+      .bind(...a.params)
+      .all<{ detail: string }>()
+    const details = plan.results.map((r) => r.detail)
+    expect(details.join(" ")).toContain("messages_out_contact")
+    expect(details.some((d) => /^SCAN m\b/.test(d))).toBe(false)
+  })
+
+  it("refuses exclusions too complex to run in one statement", async () => {
+    const domain = await sendingDomain()
+    const tag = uid()
+    // Each segment binds 40 values; with two excluded the audience needs over 90 parameters.
+    const wide = async (name: string) =>
+      json<{ id: string }>(
+        await call("/v1/segments", {
+          method: "POST",
+          key: ADMIN,
+          json: {
+            name,
+            filter: {
+              type: "field",
+              field: "code",
+              op: "in",
+              value: Array.from({ length: 40 }, (_, i) => `${name}-${i}`),
+            },
+          },
+        }),
+      )
+    const a = await wide(`a${tag}`)
+    const b = await wide(`b${tag}`)
+    const c = await wide(`c${tag}`)
+    const r = await call("/v1/campaigns", {
+      method: "POST",
+      key: ADMIN,
+      json: {
+        name: "Too much",
+        fromAddress: `news@${domain}`,
+        subject: "Hi",
+        bodyHtml: "<p>Hi</p>",
+        segmentId: a.id,
+        exclude: { segmentIds: [b.id, c.id], recentlySentDays: null },
+      },
+    })
+    expect(r.status).toBe(400)
+    expect(await json<{ field: string }>(r)).toMatchObject({ field: "exclude" })
   })
 
   it("test-sends to the seed list, marked [Test], with real unsubscribe headers, outside the quota", async () => {

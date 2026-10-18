@@ -428,6 +428,14 @@ export const campaigns = sqliteTable(
     }>(),
     /** Who last saved it, for the editor's conflict message. */
     updatedBy: text("updated_by"),
+    /**
+     * Who to leave out (HAL-3429): contacts in any of these segments, and anyone sent campaign mail
+     * in the last `recentlySentDays`. Null: nobody beyond the usual blocked and unsubscribed.
+     */
+    exclude: text("exclude", { mode: "json" }).$type<{
+      readonly segmentIds: ReadonlyArray<string>
+      readonly recentlySentDays: number | null
+    } | null>(),
     /** Opens (a pixel) and clicks (redirected links) for this campaign; both on unless switched off. */
     trackOpens: integer("track_opens", { mode: "boolean" }).notNull().default(true),
     trackClicks: integer("track_clicks", { mode: "boolean" }).notNull().default(true),

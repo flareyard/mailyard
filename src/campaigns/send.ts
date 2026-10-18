@@ -8,9 +8,9 @@ import { parseParty, sendBulkMessage } from "../domain/outbox.ts"
 import { resolveForSend } from "../domain/templates.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { chunksOf, Database } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
-import { audiencePreview, audienceSql } from "./audience.ts"
+import { audiencePreview, audienceSql, audienceTooComplex, idSliceFor } from "./audience.ts"
 import { CampaignInvalid, CampaignLocked, describeCampaign, findCampaign } from "./campaigns.ts"
 import { checkCampaign } from "./checks.ts"
 import { trackingOrigin } from "./compliance.ts"
@@ -71,6 +71,8 @@ export const scheduleCampaign = Effect.fn("campaigns.schedule")(function* (
       message: `Fix first: ${failing.map((c) => `${c.title} (${c.detail})`).join("; ")}`,
     })
   }
+  const tooComplex = audienceTooComplex(yield* audienceSql(campaign))
+  if (tooComplex) return yield* new CampaignInvalid({ field: "exclude", message: tooComplex })
   const audience = yield* audiencePreview(campaign)
   if (audience.sendable === 0)
     return yield* new CampaignInvalid({
@@ -334,10 +336,12 @@ export const sendChunk = Effect.fn("campaignSend.chunk")(function* (
   if (blob._tag === "None") return { state: "done", sent: 0, skipped: 0 } satisfies ChunkResult
   const entries = JSON.parse(new TextDecoder().decode(blob.value.body)) as ReadonlyArray<ChunkEntry>
   const database = yield* Database
+  const campaign = yield* findCampaign(id)
+  const a = yield* audienceSql(campaign)
   const ids = entries.map((e) => e.contactId)
-  // D1 binds at most 100 parameters a query: look the chunk up in slices.
-  const slices: Array<Array<string>> = []
-  for (let i = 0; i < ids.length; i += ID_SLICE) slices.push(ids.slice(i, i + ID_SLICE))
+  // D1 binds at most 100 parameters a query: look the chunk up in slices that leave room for the
+  // audience's own parameters (a complex segment and its exclusions can carry up to 90).
+  const slices = chunksOf(ids, idSliceFor(a, ID_SLICE))
   const sentAlready = new Set<string | null>()
   for (const slice of slices) {
     const rows = yield* database.query("campaignSend.sent", (db) =>
@@ -349,8 +353,6 @@ export const sendChunk = Effect.fn("campaignSend.chunk")(function* (
     )
     for (const r of rows) sentAlready.add(r.contactId)
   }
-  const campaign = yield* findCampaign(id)
-  const a = yield* audienceSql(campaign)
   const { DB } = yield* Bindings
   const eligible = new Map<string, { id: string; email: string; name: string | null; fields: string }>()
   for (const slice of slices) {

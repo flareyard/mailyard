@@ -53,7 +53,7 @@ const audience = async (n: number, opts: { quota?: number } = {}) => {
 
 const createCampaign = async (body: Record<string, unknown>) => {
   const response = await call("/v1/campaigns", { method: "POST", key: ADMIN, json: body })
-  if (response.status !== 200) throw new Error(`campaign: ${await response.text()}`)
+  if (response.status !== 200) throw new Error(`campaign: ${response.status} ${await response.text()}`)
   return json<{ id: string }>(response)
 }
 
@@ -305,6 +305,42 @@ describe("CampaignSend", () => {
     expect(await run()).toEqual({ state: "done", sent: 0, skipped: 2 })
     expect((await messages(campaign.id)).map((m) => m.contact_id).sort()).toEqual([ids[0], ids[3]])
   })
+
+  it("leaves out excluded segments at send time, even ones binding 80 values beside a full chunk", async () => {
+    const { domain, topicId, tag } = await audience(85)
+    const segment = async (name: string, filter: unknown) =>
+      json<{ id: string }>(await call("/v1/segments", { method: "POST", key: ADMIN, json: { name, filter } }))
+    const everyone = await segment(`All ${tag}`, { type: "field", field: "tag", op: "eq", value: tag })
+    // Two lists of 40 addresses, one of them in the audience: the lookup binds 82 parameters before
+    // any contact id, which with the old fixed slice of 80 ids went past D1's 100.
+    const list = (name: string, first: string) =>
+      segment(name, {
+        type: "field",
+        field: "email",
+        op: "in",
+        value: [first, ...Array.from({ length: 39 }, (_, i) => `${name}-${i}@example.net`)],
+      })
+    const listed = await list(`listed-${tag}`, `p0-${tag}@example.net`)
+    const other = await list(`other-${tag}`, `nobody-${tag}@example.net`)
+    const campaign = await createCampaign({
+      name: "Excl",
+      fromAddress: `news@${domain}`,
+      subject: "Hi",
+      bodyHtml: "<p>Hi</p>",
+      topicId,
+      segmentId: everyone.id,
+      exclude: { segmentIds: [listed.id, other.id], recentlySentDays: null },
+    })
+    await env.DB.prepare("update campaigns set status = 'sending' where id = ?").bind(campaign.id).run()
+    const ids = Array.from({ length: 85 }, (_, i) => `c_${tag}_${String(i).padStart(5, "0")}`)
+    const chunk = ids.map((contactId) => ({ contactId, domain: "example.net", variant: null }))
+    await env.STORE.put(`campaigns/${campaign.id}/audience/main/0.json`, JSON.stringify(chunk))
+    const result = await runtimeFor(env).runPromise(
+      sendChunk(campaign.id, "main", 0, { origin: "https://mailyard.test", notBefore: 0 }),
+    )
+    expect(result).toEqual({ state: "done", sent: 84, skipped: 1 })
+    expect((await messages(campaign.id)).map((m) => m.contact_id)).not.toContain(ids[0])
+  }, 60_000)
 
   it("refuses to schedule what would fail, reach nobody, or already went", async () => {
     const { domain, topicId } = await audience(1)

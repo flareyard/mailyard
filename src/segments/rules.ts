@@ -80,8 +80,14 @@ export const CampaignRule = Schema.Struct({
   type: Schema.Literal("campaign"),
   /** Left out: any campaign (HAL-3423). */
   campaignId: Schema.optionalKey(Schema.String),
+  /** `opened` and `clicked` count people only unless `includeMachine` is set. */
   activity: Schema.Literals(["received", "opened", "clicked"]),
   did: Schema.optionalKey(Schema.Boolean),
+  /**
+   * With `opened` or `clicked`: a machine's open or click (a privacy proxy fetching the pixel, a
+   * scanner following links) counts too (HAL-3429). Left out, only human ones count.
+   */
+  includeMachine: Schema.optionalKey(Schema.Boolean),
   /** Only campaign mail sent in the last `withinDays`. */
   withinDays: Schema.optionalKey(Days),
 })
@@ -187,6 +193,10 @@ export const validate = (root: Rule): RuleInvalid | null => {
       case "created":
         return rule.withinDays === undefined && rule.olderThanDays === undefined
           ? new RuleInvalid({ path, message: "Give withinDays, olderThanDays or both." })
+          : null
+      case "campaign":
+        return rule.includeMachine !== undefined && rule.activity === "received"
+          ? new RuleInvalid({ path, message: "includeMachine goes with opened or clicked." })
           : null
       default:
         return null
@@ -304,8 +314,12 @@ const compileLeaf = (rule: Leaf): SQL => {
         rule.activity === "received"
           ? sql`${messagesOut.status} in ('sent', 'delivered')`
           : rule.activity === "opened"
-            ? sql`${messagesOut.firstOpenedAt} is not null`
-            : sql`${messagesOut.firstClickedAt} is not null`
+            ? rule.includeMachine
+              ? sql`(${messagesOut.firstOpenedAt} is not null or ${messagesOut.machineOpens} > 0)`
+              : sql`${messagesOut.firstOpenedAt} is not null`
+            : rule.includeMachine
+              ? sql`(${messagesOut.firstClickedAt} is not null or ${messagesOut.machineClicks} > 0)`
+              : sql`${messagesOut.firstClickedAt} is not null`
       const which = rule.campaignId
         ? sql`${messagesOut.campaignId} = ${rule.campaignId}`
         : sql`${messagesOut.stream} = 'campaign'`

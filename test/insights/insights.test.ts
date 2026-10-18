@@ -3,9 +3,10 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { beforeAll, describe, expect, it } from "vitest"
 import { Bindings } from "../../src/Bindings.ts"
-import { forecast, reputation, usage } from "../../src/domain/insights.ts"
+import { forecast, planDays, reputation, usage } from "../../src/domain/insights.ts"
 import { CloudflareEmail } from "../../src/services/CloudflareEmail.ts"
 import { Database } from "../../src/services/Database.ts"
+import { Governor } from "../../src/services/Governor.ts"
 import { call, createKey, json } from "../helpers.ts"
 
 let key = ""
@@ -288,13 +289,16 @@ describe("with a read-only Cloudflare token", () => {
     },
   }
 
-  const run = <A, E>(effect: Effect.Effect<A, E, Database | CloudflareEmail | Bindings>) => {
+  const run = <A, E>(effect: Effect.Effect<A, E, Database | CloudflareEmail | Bindings | Governor>) => {
     const bindings = Layer.succeed(Bindings, {
       ...env,
       CLOUDFLARE_ACCOUNT_ID: "acc",
       CLOUDFLARE_EMAIL_READ_TOKEN: "tok",
     })
-    const layer = Layer.mergeAll(Database.layer, CloudflareEmail.layer).pipe(Layer.provideMerge(bindings))
+    const layer = Layer.mergeAll(
+      Database.layer,
+      Governor.layer.pipe(Layer.provideMerge(CloudflareEmail.layer)),
+    ).pipe(Layer.provideMerge(bindings))
     const real = globalThis.fetch
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new Request(input, init).url
@@ -311,8 +315,52 @@ describe("with a read-only Cloudflare token", () => {
     await seed([{ day: day(0), sent: 400 }])
     const u = await run(usage())
     expect(u.today).toMatchObject({ sent: 400, quota: 1000, remaining: 600, source: "cloudflare" })
+    // Bulk mail gets the quota less the transactional reserve (20%): 800 a day.
     const f = await run(forecast(2000))
-    expect(f).toMatchObject({ possible: true, quota: 1000, sendableToday: 600, additionalDays: 2 })
+    expect(f).toMatchObject({ possible: true, quota: 1000, sendableToday: 800, additionalDays: 2 })
+    if (!f.possible) throw new Error("not possible")
+    expect(f.days.map((d) => [d.available, d.queued, d.thisCampaign])).toEqual([
+      [800, 0, 800],
+      [800, 0, 800],
+      [800, 0, 400],
+    ])
+  })
+
+  it("forecasts from startAt behind what's already scheduled (HAL-3429)", async () => {
+    const tomorrow = Math.floor(Date.now() / 86_400_000) * 86_400_000 + 86_400_000
+    const id = `cmp_fc_${crypto.randomUUID().slice(0, 8)}`
+    // Scheduled for tomorrow, 1,000 recipients; a sending one with 300 of 500 gone.
+    await env.DB.batch([
+      env.DB.prepare(
+        "insert into campaigns (id, name, status, from_address, subject, send_at, audience_size) values (?, 'Q', 'scheduled', 'a@b.co', 'S', ?, 1000)",
+      ).bind(id, tomorrow + 3_600_000),
+      env.DB.prepare(
+        "insert into campaigns (id, name, status, from_address, subject, audience_size) values (?, 'Q2', 'sending', 'a@b.co', 'S', 500)",
+      ).bind(`${id}_s`),
+      env.DB.prepare("insert into campaign_engagement (campaign_id, sent) values (?, 300)").bind(`${id}_s`),
+    ])
+    try {
+      const f = await run(forecast(1000, { startAt: tomorrow + 7_200_000 }))
+      if (!f.possible) throw new Error("not possible")
+      expect(f.startAt).toBe(tomorrow + 7_200_000)
+      // Today: the sending campaign's 200. Tomorrow: the earlier one's 800 first, nothing left over.
+      // Then 200 more of it and 600 of ours, then our last 400.
+      expect(f.days.map((d) => [d.available, d.queued, d.thisCampaign])).toEqual([
+        [800, 200, 0],
+        [800, 800, 0],
+        [800, 200, 600],
+        [800, 0, 400],
+      ])
+      expect(f).toMatchObject({ sendableToday: 0, additionalDays: 2 })
+      expect(f.finishesBy).toBe(f.days[3]?.day)
+      // Planning the scheduled campaign itself doesn't queue it behind itself.
+      const self = await run(forecast(1000, { startAt: tomorrow + 3_600_000, campaignId: id }))
+      if (!self.possible) throw new Error("not possible")
+      expect(self.days.map((d) => d.queued)).toEqual([200, 0, 0])
+    } finally {
+      await env.DB.prepare("delete from campaign_engagement where campaign_id = ?").bind(`${id}_s`).run()
+      await env.DB.prepare("delete from campaigns where id in (?, ?)").bind(id, `${id}_s`).run()
+    }
   })
 
   it("reports Cloudflare's own verdict and the account's policy", async () => {
@@ -409,5 +457,55 @@ describe("delivery by day, delivery time and deferrals (HAL-3420)", () => {
     expect(that?.rates.insufficientData).toBe(false)
     const quiet = d.days.find((x) => x.totals.sent === 0)
     if (quiet) expect(quiet.rates).toMatchObject({ insufficientData: true, bounceRate: null })
+  })
+})
+
+describe("planDays (HAL-3429)", () => {
+  const DAY = 86_400_000
+  const now = 10 * DAY + 5_000
+
+  it("serves what started first, and the planned send last on a tie", () => {
+    const plan = planDays({
+      now,
+      todayAvailable: 50,
+      dailyAvailable: 100,
+      sends: [
+        { startAt: now, remaining: 120, mine: true },
+        { startAt: now, remaining: 30, mine: false },
+      ],
+    })
+    expect(plan?.days.map((d) => [d.available, d.queued, d.thisCampaign])).toEqual([
+      [50, 30, 20],
+      [100, 0, 100],
+    ])
+    expect(plan).toMatchObject({ startDay: 10, finishDay: 11 })
+  })
+
+  it("leaves days before the start to others, and treats a past start as now", () => {
+    const later = planDays({
+      now,
+      todayAvailable: 100,
+      dailyAvailable: 100,
+      sends: [{ startAt: now + 2 * DAY, remaining: 10, mine: true }],
+    })
+    expect(later?.days.map((d) => d.thisCampaign)).toEqual([0, 0, 10])
+    const past = planDays({
+      now,
+      todayAvailable: 100,
+      dailyAvailable: 100,
+      sends: [{ startAt: 0, remaining: 10, mine: true }],
+    })
+    expect(past?.days).toHaveLength(1)
+  })
+
+  it("gives up rather than promise a date when nothing is left for bulk mail", () => {
+    expect(
+      planDays({
+        now,
+        todayAvailable: 0,
+        dailyAvailable: 0,
+        sends: [{ startAt: now, remaining: 1, mine: true }],
+      }),
+    ).toBeNull()
   })
 })
