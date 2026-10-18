@@ -1719,7 +1719,20 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     "/v1/api-keys": {
       "get": {
         "operationId": "apiKeys.list",
-        "parameters": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "purpose",
+            "required": false,
+            "schema": {
+              "enum": [
+                "api",
+                "mcp",
+              ],
+              "type": "string",
+            },
+          },
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1794,6 +1807,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "prefix": {
                             "type": "string",
                           },
+                          "purpose": {
+                            "enum": [
+                              "api",
+                              "mcp",
+                            ],
+                            "type": "string",
+                          },
                           "revokedAt": {
                             "anyOf": [
                               {
@@ -1827,6 +1847,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "id",
                           "name",
                           "kind",
+                          "purpose",
                           "prefix",
                           "scopes",
                           "createdBy",
@@ -1907,6 +1928,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "name": {
                     "maxLength": 80,
                     "minLength": 1,
+                    "type": "string",
+                  },
+                  "purpose": {
+                    "enum": [
+                      "api",
+                      "mcp",
+                    ],
                     "type": "string",
                   },
                   "scopes": {
@@ -2005,6 +2033,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "prefix": {
                           "type": "string",
                         },
+                        "purpose": {
+                          "enum": [
+                            "api",
+                            "mcp",
+                          ],
+                          "type": "string",
+                        },
                         "revokedAt": {
                           "anyOf": [
                             {
@@ -2038,6 +2073,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "id",
                         "name",
                         "kind",
+                        "purpose",
                         "prefix",
                         "scopes",
                         "createdBy",
@@ -2060,6 +2096,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -2185,6 +2231,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "prefix": {
                       "type": "string",
                     },
+                    "purpose": {
+                      "enum": [
+                        "api",
+                        "mcp",
+                      ],
+                      "type": "string",
+                    },
                     "revokedAt": {
                       "anyOf": [
                         {
@@ -2218,6 +2271,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "id",
                     "name",
                     "kind",
+                    "purpose",
                     "prefix",
                     "scopes",
                     "createdBy",

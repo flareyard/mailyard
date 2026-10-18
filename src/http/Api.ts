@@ -177,11 +177,14 @@ export class ActionsApi extends HttpApiGroup.make("actions")
 // ---------------------------------------------------------------------------------------------
 
 const Scope = Schema.Literals(["send", "track", "read", "admin"])
+const KeyPurpose = Schema.Literals(["api", "mcp"])
 
 export const ApiKeySummary = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
   kind: Schema.Literals(["secret", "public"]),
+  /** `api` for code calling the API, `mcp` for an agent's key. A label: scopes decide access. */
+  purpose: KeyPurpose,
   prefix: Schema.String,
   scopes: Schema.Array(Schema.String),
   createdBy: Schema.NullOr(Schema.String),
@@ -193,6 +196,7 @@ export const ApiKeySummary = Schema.Struct({
 export class ApiKeysApi extends HttpApiGroup.make("apiKeys")
   .add(
     HttpApiEndpoint.get("list", "/v1/api-keys", {
+      query: { purpose: Schema.optionalKey(KeyPurpose) },
       success: Schema.Struct({ keys: Schema.Array(ApiKeySummary) }),
       error: Forbidden,
     }),
@@ -201,10 +205,12 @@ export class ApiKeysApi extends HttpApiGroup.make("apiKeys")
         name: Schema.NonEmptyString.check(Schema.isMaxLength(80)),
         kind: Schema.Literals(["secret", "public"]),
         scopes: Schema.optionalKey(Schema.Array(Scope)),
+        /** Defaults to `api`. Public keys are always `api`: /mcp refuses them. */
+        purpose: Schema.optionalKey(KeyPurpose),
       }),
       /** `key` is returned once, here, and never again. */
       success: Schema.Struct({ key: Schema.String, apiKey: ApiKeySummary }),
-      error: Forbidden,
+      error: [Forbidden, InvalidRequest],
     }),
     HttpApiEndpoint.delete("revoke", "/v1/api-keys/:id", {
       params: { id: Schema.String },

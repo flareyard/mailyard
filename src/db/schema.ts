@@ -595,6 +595,14 @@ export const apiKeys = sqliteTable(
      * are safe in a browser. Same split as Plunk, so its SDKs work unchanged.
      */
     kind: text("kind", { enum: ["secret", "public"] }).notNull(),
+    /**
+     * What the key is for: `api` (code calling the API) or `mcp` (an agent connected to /mcp). A label
+     * for the Integrations and API keys screens, never a permission: scopes and mailbox memberships
+     * decide what a key can do (HAL-3410).
+     */
+    purpose: text("purpose", { enum: ["api", "mcp"] })
+      .notNull()
+      .default("api"),
     /** The first characters of the key, shown in the UI so people can tell keys apart. */
     prefix: text("prefix").notNull(),
     /** SHA-256 of the full key. The key itself is shown once and never stored. */
