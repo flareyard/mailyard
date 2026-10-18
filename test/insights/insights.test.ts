@@ -126,9 +126,112 @@ describe("volume and providers", () => {
       streams: Array<string>
     }>(await call("/v1/stats/volume?range=7d", { key }))
     expect(v.days).toHaveLength(7)
-    expect(v.streams).toEqual(["campaign", "transactional"])
-    expect(v.days.at(-1)).toEqual({ day: day(0), byStream: { campaign: 7, transactional: 5 } })
-    expect(v.days.at(-2)?.byStream).toEqual({ campaign: 0, transactional: 0 })
+    // The governor's four streams, always all present (HAL-3419).
+    expect(v.streams).toEqual(["transactional", "campaign", "automation", "mailbox"])
+    expect(v.days.at(-1)).toEqual({
+      day: day(0),
+      byStream: { transactional: 5, campaign: 7, automation: 0, mailbox: 0 },
+    })
+    expect(v.days.at(-2)?.byStream).toEqual({ transactional: 0, campaign: 0, automation: 0, mailbox: 0 })
+  })
+
+  it("folds replies into mailbox and leaves tests and other apps' mail out", async () => {
+    await seed([
+      { day: day(1), stream: "reply", sent: 2 },
+      { day: day(1), stream: "mailbox", sent: 3 },
+      { day: day(1), stream: "test", sent: 9 },
+      { day: day(1), stream: "external", sent: 4 },
+    ])
+    const v = await json<{ days: Array<{ day: string; byStream: Record<string, number> }> }>(
+      await call("/v1/stats/volume?range=7d", { key }),
+    )
+    expect(v.days.find((d) => d.day === day(1))?.byStream).toMatchObject({ mailbox: 5 })
+  })
+
+  it("buckets the last 24 hours by the hour a message was first handed over (HAL-3419)", async () => {
+    const id = `m_${crypto.randomUUID().slice(0, 8)}`
+    const insert = (stream: string, n: string) =>
+      env.DB.prepare(
+        "insert into messages_out (id, stream, campaign_id, recipient, sender, subject, status) values (?, ?, ?, 'a@b.co', 'x@y.co', 'S', 'queued')",
+      )
+        .bind(`${id}-${n}`, stream, stream === "campaign" ? `cmp_${id}` : null)
+        .run()
+    await env.DB.prepare(
+      "insert into campaigns (id, name, from_address, subject, status, created_at, updated_at) values (?, 'C', 'x@y.co', 'S', 'sending', ?, ?)",
+    )
+      .bind(`cmp_${id}`, Date.now(), Date.now())
+      .run()
+    await insert("transactional", "1")
+    await insert("campaign", "2")
+    await insert("campaign", "3")
+    await insert("test", "4")
+    await insert("reply", "5")
+    const now = Date.now()
+    const mark = (n: string, status: string) =>
+      env.DB.prepare("update messages_out set status = ?, updated_at = ? where id = ?")
+        .bind(status, now, `${id}-${n}`)
+        .run()
+    for (const n of ["1", "2", "3", "4", "5"]) await mark(n, "sent")
+    // Later events don't count again.
+    await mark("2", "delivered")
+    await mark("1", "deferred")
+    await mark("1", "sent")
+    const v = await json<{ by: string; hours: Array<{ hour: string; byStream: Record<string, number> }> }>(
+      await call("/v1/stats/volume?by=hour", { key }),
+    )
+    expect(v.by).toBe("hour")
+    expect(v.hours).toHaveLength(24)
+    const current = v.hours.at(-1)
+    expect(current?.hour).toBe(new Date(Math.floor(now / 3_600_000) * 3_600_000).toISOString())
+    // transactional counted twice: it was deferred, then sent again, a second hand-over.
+    expect(current?.byStream).toMatchObject({ transactional: 2, campaign: 2, mailbox: 1 })
+    const rate = await env.DB.prepare(
+      "select sum(sent) as n from hourly_stats where campaign_id = ? and hour >= ?",
+    )
+      .bind(`cmp_${id}`, Math.floor(now / 3_600_000) - 1)
+      .first<{ n: number }>()
+    expect(rate?.n).toBe(2)
+  })
+
+  it("gives a campaign's rate over the trailing hour", async () => {
+    const { campaignRatePerHour } = await import("../../src/domain/insights.ts")
+    const { runtimeFor } = await import("../../src/workers/inbound.ts")
+    const c = `cmp_rate_${crypto.randomUUID().slice(0, 6)}`
+    const hour = Math.floor(Date.now() / 3_600_000)
+    await env.DB.prepare(
+      "insert into hourly_stats (hour, stream, campaign_id, sent) values (?, 'campaign', ?, 40), (?, 'campaign', ?, 100), (?, 'campaign', ?, 999)",
+    )
+      .bind(hour, c, hour - 1, c, hour - 3, c)
+      .run()
+    const rate = await runtimeFor(env).runPromise(campaignRatePerHour(c))
+    // This hour's 40, plus the share of last hour still inside the window; never the older hour.
+    const into = (Date.now() - hour * 3_600_000) / 3_600_000
+    expect(Math.abs(rate - Math.round(40 + 100 * (1 - into)))).toBeLessThanOrEqual(1)
+    expect(rate).toBeLessThanOrEqual(140)
+  })
+
+  it("reads hourly_stats by its keys", async () => {
+    const detail = async (sql: string, ...args: Array<unknown>) =>
+      (
+        await env.DB.prepare(`explain query plan ${sql}`)
+          .bind(...args)
+          .all<{ detail: string }>()
+      ).results
+        .map((r) => r.detail)
+        .join(" | ")
+    expect(
+      await detail(
+        "select hour, stream, sum(sent) from hourly_stats where hour >= ? group by hour, stream",
+        1,
+      ),
+    ).toMatch(/SEARCH hourly_stats USING (COVERING )?INDEX sqlite_autoindex_hourly_stats_1/)
+    expect(
+      await detail(
+        "select hour, sum(sent) from hourly_stats where campaign_id = ? and hour >= ? group by hour",
+        "c",
+        1,
+      ),
+    ).toMatch(/SEARCH hourly_stats USING (COVERING )?INDEX hourly_stats_campaign/)
   })
 
   it("ranks mailbox providers by volume", async () => {

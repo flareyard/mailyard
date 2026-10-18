@@ -211,6 +211,13 @@
       "when": 1792288958682,
       "tag": "0029_domain_zone",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1792289787251,
+      "tag": "0030_hourly_stats",
+      "breakpoints": true
     }
   ]
 }

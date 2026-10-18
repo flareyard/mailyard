@@ -26,6 +26,7 @@ import {
   scheduleCampaign,
 } from "../campaigns/send.ts"
 import { recordAudit } from "../domain/audit.ts"
+import { campaignRatePerHour } from "../domain/insights.ts"
 import { parseParty } from "../domain/outbox.ts"
 import { Governor } from "../services/Governor.ts"
 import { Conflict, GovernorUnreachable, InvalidRequest, MailApi, NotFound } from "./Api.ts"
@@ -199,7 +200,9 @@ export const CampaignsHandlers = HttpApiBuilder.group(
               remaining,
             }),
           )
-          return { ...pace, remaining }
+          const ratePerHour =
+            pace.paused || campaign.status === "paused" ? null : yield* campaignRatePerHour(params.id)
+          return { ...pace, remaining, ratePerHour }
         }).pipe(
           Effect.catchTag("GovernorUnavailable", () =>
             Effect.fail(

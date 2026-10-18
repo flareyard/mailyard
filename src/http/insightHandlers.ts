@@ -25,7 +25,7 @@ export const InsightsHandlers = HttpApiBuilder.group(
       usage: p(() => read(usage())),
       forecast: p(({ query }) => read(forecast(query.recipients))),
       delivery: p(({ query }) => read(deliveryStats(query.range ?? "7d"))),
-      volume: p(({ query }) => read(volumeStats(query.range ?? "30d"))),
+      volume: p(({ query }) => read(volumeStats(query.range ?? "30d", query.by ?? "day"))),
       providers: p(({ query }) => read(providerStats(query.range ?? "30d"))),
       reputation: p(() => read(reputation())),
     })

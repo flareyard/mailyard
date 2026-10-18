@@ -42,6 +42,7 @@ describe("D1 schema", () => {
       "events",
       "exports",
       "forms",
+      "hourly_stats",
       "idempotency_keys",
       "inbound_daily",
       "inbound_daily_senders",

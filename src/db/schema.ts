@@ -728,6 +728,27 @@ export const dailyStats = sqliteTable(
 )
 
 /**
+ * Messages first handed to Email Service, per UTC hour, stream (the governor's four: transactional,
+ * campaign, automation, mailbox) and campaign (`""` for none), kept by a trigger on `messages_out`
+ * (migration 0030) so the 24-hour chart and a campaign's send rate read at most a few dozen rows
+ * (HAL-3419). Test sends aren't counted. Pruned after 8 days.
+ */
+export const hourlyStats = sqliteTable(
+  "hourly_stats",
+  {
+    /** Epoch hour: milliseconds / 3,600,000, floored. */
+    hour: integer("hour").notNull(),
+    stream: text("stream").notNull(),
+    campaignId: text("campaign_id").notNull().default(""),
+    sent: integer("sent").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.hour, t.stream, t.campaignId] }),
+    index("hourly_stats_campaign").on(t.campaignId, t.hour),
+  ],
+)
+
+/**
  * Idempotency-Key records. A repeat with the same key and the same body replays the stored response;
  * the same key with a different body is refused with 409, as Plunk does. Kept for 24 hours.
  */
