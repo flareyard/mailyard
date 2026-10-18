@@ -6,6 +6,7 @@ import { engagementOf } from "../domain/contacts.ts"
 import { isGroup, type Rule } from "../segments/rules.ts"
 import { Database } from "../services/Database.ts"
 import { AutomationNotFound, AutomationNotReady, publishedVersion } from "./automations.ts"
+import { entryTriggerData } from "./entryData.ts"
 import {
   DEFAULT_SETTINGS,
   Graph,
@@ -15,7 +16,7 @@ import {
   structuralIssues,
   triggerOf,
 } from "./graph.ts"
-import { renderAutomationMail } from "./mail.ts"
+import { missingDetail, renderAutomationMail } from "./mail.ts"
 import { runStep, type SendInput, type SendResult, type StepContext } from "./steps/index.ts"
 
 /**
@@ -345,7 +346,13 @@ export const dryRun = Effect.fn("automations.dryRun")(function* (automationId: s
 
   // A send, rendered for real and recorded, never delivered.
   const renderLayer = yield* Effect.context<Effect.Services<ReturnType<typeof renderAutomationMail>>>()
-  const triggerData = input.triggerData ?? null
+  // What the run would carry as `trigger`: the given data, or what the trigger kind fills in (HAL-3411).
+  const triggerData = yield* entryTriggerData(
+    triggerOf(graph)?.config,
+    { createdAt: sim.createdAt, fields: sim.fields },
+    input.triggerData ?? null,
+    start,
+  )
   const simulateSend = async (send: SendInput): Promise<SendResult> => {
     pendingSend = undefined
     if (["bounced", "complained", "suppressed"].includes(sim.status))
@@ -365,19 +372,33 @@ export const dryRun = Effect.fn("automations.dryRun")(function* (automationId: s
           detail: `The contact would already have had ${cap.max} automation email${cap.max === 1 ? "" : "s"} in ${cap.days} days.`,
         }
     }
-    const mail = await Effect.runPromiseWith(renderLayer)(
-      renderAutomationMail({
-        templateId: send.templateId,
-        version: send.version,
-        subject: send.subject,
-        fromAddress: send.fromAddress,
-        topicId: send.topicId,
-        origin,
-        automationName: a.name,
-        contact: { id: sim.id ?? "dry-run", email: sim.email, name: sim.name, fields: sim.fields },
-        triggerData,
-      }),
+    const render = renderAutomationMail({
+      templateId: send.templateId,
+      version: send.version,
+      subject: send.subject,
+      fromAddress: send.fromAddress,
+      topicId: send.topicId,
+      origin,
+      automationName: a.name,
+      contact: { id: sim.id ?? "dry-run", email: sim.email, name: sim.name, fields: sim.fields },
+      triggerData,
+    })
+    const rendered = await Effect.runPromiseWith(renderLayer)(
+      render.pipe(
+        Effect.map((mail) => ({ mail })),
+        Effect.catchTag("MissingMergeData", (e) =>
+          Effect.succeed({
+            skipped: {
+              status: "skipped",
+              reason: "missing_data",
+              detail: missingDetail(e.missing),
+            } satisfies SendResult,
+          }),
+        ),
+      ),
     )
+    if ("skipped" in rendered) return rendered.skipped
+    const { mail } = rendered
     simulatedSends.push(now)
     pendingSend = { to: sim.email, subject: mail.message.subject, preview: mail.preview }
     return { status: "sent", messageId: "dry-run", subject: mail.message.subject, preview: mail.preview }

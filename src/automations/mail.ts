@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
 import { getCompliance } from "../campaigns/compliance.ts"
 import { footer, withFooter } from "../campaigns/content.ts"
 import { topics } from "../db/schema.ts"
@@ -9,7 +10,25 @@ import { resolveForSend } from "../domain/templates.ts"
 import { unsubscribeHeaders } from "../domain/unsubscribe.ts"
 import type { Outgoing } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
-import { renderTemplate } from "../templates/render.ts"
+import { missingVariables, renderTemplate, templateTexts, variablesOf } from "../templates/render.ts"
+
+/**
+ * A required placeholder with no value for this contact (HAL-3411). The send is skipped and the
+ * step says which: a blank link or a "Hi ," is worse than no email.
+ */
+export class MissingMergeData extends Schema.TaggedError<MissingMergeData>()("MissingMergeData", {
+  missing: Schema.Array(Schema.String),
+}) {}
+
+/** The template couldn't be rendered at all (bad syntax in a version that was saved before the checks). */
+export class AutomationMailInvalid extends Schema.TaggedError<AutomationMailInvalid>()(
+  "AutomationMailInvalid",
+  { message: Schema.String },
+) {}
+
+/** What the skip says: `name, trigger.offer_url`. */
+export const missingDetail = (missing: ReadonlyArray<string>) =>
+  `The template needs ${missing.map((m) => `{{ ${m} }}`).join(", ")}, which ${missing.length === 1 ? "has" : "have"} no value for this contact.`
 
 /**
  * One automation email, rendered the way campaign mail is: the template at the version the step
@@ -63,23 +82,24 @@ export const renderAutomationMail = Effect.fn("automations.renderMail")(function
     mailDomain,
   })
   const source = { ...resolved.source, ...(input.subject ? { subject: input.subject } : {}) }
+  const vars = {
+    ...input.contact.fields,
+    email: input.contact.email,
+    name: input.contact.name,
+    unsubscribe_url: links.url,
+    preferences_url: preferences.url,
+    trigger: input.triggerData ?? {},
+    automation: { name: input.automationName },
+    topic: topic?.name ?? null,
+  }
+  const missing = missingVariables(variablesOf(...templateTexts(source)).required, vars)
+  if (missing.length > 0) return yield* new MissingMergeData({ missing })
   const rendered = yield* Effect.try({
-    try: () =>
-      renderTemplate(
-        source,
-        {
-          ...input.contact.fields,
-          email: input.contact.email,
-          name: input.contact.name,
-          unsubscribe_url: links.url,
-          preferences_url: preferences.url,
-          trigger: input.triggerData ?? {},
-          automation: { name: input.automationName },
-          topic: topic?.name ?? null,
-        },
-        brand,
-      ),
-    catch: (e) => new Error(`The template didn't render: ${e instanceof Error ? e.message : String(e)}`),
+    try: () => renderTemplate(source, vars, brand),
+    catch: (e) =>
+      new AutomationMailInvalid({
+        message: `The template didn't render: ${e instanceof Error ? e.message : String(e)}`,
+      }),
   })
   const needsFooter = !rendered.html.includes(links.url) && !rendered.html.includes(preferences.url)
   const block = footer({

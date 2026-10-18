@@ -47,7 +47,7 @@ export type SendResult =
     }
   | {
       readonly status: "skipped"
-      readonly reason: "cadence" | "suppressed" | "unsubscribed"
+      readonly reason: "cadence" | "suppressed" | "unsubscribed" | "missing_data"
       readonly detail: string
     }
   /** The governor can't send it yet (pacing or the daily quota): try this step again at `retryAt`. */

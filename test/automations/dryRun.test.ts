@@ -24,7 +24,10 @@ const setup = async () => {
   const domain = `dry-${uid()}.test`
   setDns(goodDomain(domain))
   await admin("/v1/domains", "POST", { name: domain, sending: true, receiving: false })
-  const template = async (subject: string, body = "<p>Hi {{ name }}, you're on {{ plan }}.</p>") =>
+  const template = async (
+    subject: string,
+    body = '<p>Hi {{ name ?? "there" }}, you\'re on {{ plan ?? "the free plan" }}.</p>',
+  ) =>
     (
       await json<{ id: string }>(
         await admin("/v1/templates", "POST", {
@@ -259,5 +262,46 @@ describe("automation dry run", () => {
       (await admin(`/v1/automations/${id}/dry-run`, "POST", { contact: { email: "d@example.com" } })).status,
     ).toBe(409)
     expect((await admin("/v1/automations/aut_nope/dry-run", "POST", {})).status).toBe(404)
+  })
+
+  it("skips a send whose template needs data the contact doesn't have, and fills a date trigger's data (HAL-3411)", async () => {
+    const { from, template } = await setup()
+    const card = await template(
+      "Happy {{ trigger.years }}th, {{ first_name }}",
+      "<p>{{ first_name }}, it's your {{ trigger.years }}th birthday ({{ trigger.date }}).</p>",
+    )
+    const id = await create(
+      {
+        nodes: [
+          {
+            id: "t",
+            type: "trigger",
+            config: { kind: "date", field: "birthday", offsetDays: 0, hour: 9, repeat: "yearly" },
+          },
+          { id: "s", type: "send", config: { templateId: card, version: "published" } },
+          { id: "x", type: "exit", config: {} },
+        ],
+        edges: [
+          { from: "t", to: "s" },
+          { from: "s", to: "x" },
+        ],
+      },
+      settingsFor(from),
+    )
+    const year = new Date().getUTCFullYear()
+    const ok = await dry(id, {
+      contact: { email: "ada@example.com", fields: { first_name: "Ada", birthday: "1990-10-17" } },
+    })
+    const sent = ok.path.find((p) => p.nodeId === "s")
+    expect(sent?.outcome).toBe("would-send")
+    expect(sent?.send?.subject).toBe(`Happy ${year - 1990}th, Ada`)
+
+    const missing = await dry(id, {
+      contact: { email: "bo@example.com", fields: { birthday: "1990-10-17" } },
+    })
+    const skipped = missing.path.find((p) => p.nodeId === "s")
+    expect(skipped?.outcome).toBe("skipped")
+    expect(skipped?.detail).toContain("{{ first_name }}")
+    expect(missing.sends).toBe(0)
   })
 })
