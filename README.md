@@ -45,6 +45,7 @@ Until the Flareyard platform deploys it with your OAuth token, Mailyard deploys 
    - `DEFAULT_FROM` (optional).
    - The SMTP fallback and the read-only Cloudflare token are optional too (`cloudflare-app.json`).
    - `CLOUDFLARE_DNS_TOKEN` (optional) lets the domain screens show zone status, nameservers, registrar, DNSSEC and complaints, list the account's other zones, and fix records: Zone, DNS and Email Sending: Read, plus Email Routing and Email Sending: Edit for fixing. With Email Routing Rules: Edit too, creating a mailbox catches a routing rule that already sends that address elsewhere, and can repoint it at Mailyard.
+   - `CLOUDFLARE_ANALYTICS_TOKEN` (optional, Analytics: Read and Zone: Read) fills the Inbound screen's upstream rejections: mail Email Routing refused for failing DMARC, SPF or DKIM before it reached Mailyard. Cloudflare keeps 31 days of it.
    - The read-only token with Email Routing Addresses: Read also lists the account's verified addresses, which a test send can mail for free.
 
    For example: `printf %s "$VALUE" | wrangler secret put ADMIN_KEY`.

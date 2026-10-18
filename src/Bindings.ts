@@ -95,6 +95,8 @@ export interface Env {
    * Fix records button. Without it those fields are null and fixing is refused with a reason.
    */
   readonly CLOUDFLARE_DNS_TOKEN?: string
+  /** Analytics Read on the receiving zones: what Email Routing rejects upstream (HAL-3393). Optional. */
+  readonly CLOUDFLARE_ANALYTICS_TOKEN?: string
   /** The Worker Email Routing hands mail to, when it isn't "mailyard-api": a rule pointing at it is ours. */
   readonly MAILYARD_WORKER_NAME?: string
   /** Hours a conversation may wait for a reply before the Overview counts it as waiting; 24 by default. */

@@ -5096,11 +5096,25 @@ export class OverviewApi extends HttpApiGroup.make("overview")
         rejected: Schema.Struct({
           total: Schema.Number,
           noSuchAddress: Schema.Number,
+          /** Email Routing rejected these for failing DMARC (HAL-3393); null without its analytics. */
           dmarcFail: Schema.NullOr(Schema.Number),
+          /** Rejected for failing SPF or DKIM without a DMARC fail. */
+          authFail: Schema.NullOr(Schema.Number),
+          /** Everything Email Routing rejected before mail reached Mailyard. */
+          upstreamRejected: Schema.NullOr(Schema.Number),
+          /** Listed senders: no Email Routing analytics dimension exposes them, so always null. */
           rbl: Schema.NullOr(Schema.Number),
+          upstream: Schema.Struct({
+            connected: Schema.Boolean,
+            /** Why the upstream numbers are null, when they are. */
+            reason: Schema.NullOr(Schema.String),
+            zones: Schema.Number,
+            /** The first day counted: Cloudflare keeps 31 days. */
+            from: Schema.NullOr(Schema.String),
+          }),
         }).annotate({
           description:
-            "Mailyard's own refusals (no such address). Email Routing rejects DMARC failures and listed senders before mail reaches Mailyard, so those are null until its analytics are read.",
+            "`total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN.",
         }),
         held: Schema.Number,
         spam: Schema.Number,
