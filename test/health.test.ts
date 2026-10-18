@@ -23,6 +23,7 @@ describe("D1 schema", () => {
     ).all<{ name: string }>()
     expect(results.map((r) => r.name)).toEqual([
       "alerts",
+      "api_key_usage",
       "api_keys",
       "audience_daily",
       "audit",
@@ -86,6 +87,7 @@ describe("GET /openapi.json", () => {
       "/v1/alerts/{id}/resolve",
       "/v1/api-keys",
       "/v1/api-keys/{id}",
+      "/v1/api-keys/{id}/rotate",
       "/v1/automations",
       "/v1/automations/summary",
       "/v1/automations/{id}",

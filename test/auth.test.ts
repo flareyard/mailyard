@@ -131,3 +131,118 @@ describe("key purpose (HAL-3410)", () => {
     expect((await list("?purpose=api")).find((k) => k.id === "k_old")?.purpose).toBe("api")
   })
 })
+
+describe("key usage and rotation (HAL-3414)", () => {
+  type Key = { id: string; requests24h?: number; revokedAt: number | null; scopes: string[]; purpose: string }
+  const keys = async (query = "?include=usage") =>
+    (await json<{ keys: Array<Key> }>(await call(`/v1/api-keys${query}`, { key: ADMIN }))).keys
+
+  it("counts each key's requests in the last 24 hours, only when asked", async () => {
+    const { key, apiKey } = await createKey("secret", ["read"])
+    for (let i = 0; i < 3; i++) expect((await call("/v1/contacts", { key })).status).toBe(200)
+    expect((await keys()).find((k) => k.id === apiKey.id)?.requests24h).toBe(3)
+    expect((await keys("")).find((k) => k.id === apiKey.id)?.requests24h).toBeUndefined()
+    // An hour from yesterday's window drops out; one from 30-odd days ago is pruned by the cron.
+    const hour = Math.floor(Date.now() / 3_600_000)
+    await env.DB.prepare("insert into api_key_usage (key_id, hour, requests) values (?, ?, 5), (?, ?, 7)")
+      .bind(apiKey.id, hour - 24, apiKey.id, hour - 31 * 24)
+      .run()
+    expect((await keys()).find((k) => k.id === apiKey.id)?.requests24h).toBe(3)
+    const { runtimeFor } = await import("../src/workers/inbound.ts")
+    const { pruneKeyUsage } = await import("../src/domain/apiKeys.ts")
+    await runtimeFor(env).runPromise(pruneKeyUsage())
+    const left = await env.DB.prepare("select count(*) as n from api_key_usage where key_id = ?")
+      .bind(apiKey.id)
+      .first<{ n: number }>()
+    expect(left?.n).toBe(2)
+    // Reads at most 24 rows a key, from the (key, hour) primary key.
+    const plan = await env.DB.prepare(
+      "explain query plan select key_id, sum(requests) from api_key_usage where key_id in (?, ?) and hour >= ? group by key_id",
+    )
+      .bind("a", "b", hour - 23)
+      .all<{ detail: string }>()
+    expect(plan.results.map((r) => r.detail).join(" | ")).toMatch(
+      /SEARCH api_key_usage USING (COVERING )?INDEX sqlite_autoindex_api_key_usage_1 \(key_id=\? AND hour>\?\)/,
+    )
+  })
+
+  it("rotates a key: same scopes, purpose and mailboxes; the old one works through its grace period", async () => {
+    const created = await json<{ key: string; apiKey: Key }>(
+      await call("/v1/api-keys", {
+        method: "POST",
+        key: ADMIN,
+        json: { name: "Deploy", kind: "secret", scopes: ["read", "send"], purpose: "mcp" },
+      }),
+    )
+    const domain = `rot-${crypto.randomUUID().slice(0, 6)}.test`
+    await call("/v1/domains", { method: "POST", key: ADMIN, json: { name: domain } })
+    const mailbox = await json<{ id: string }>(
+      await call("/v1/mailboxes", {
+        method: "POST",
+        key: ADMIN,
+        json: { address: `sam@${domain}`, kind: "user" },
+      }),
+    )
+    const shared = await call(`/v1/mailboxes/${mailbox.id}/members`, {
+      method: "PUT",
+      key: ADMIN,
+      json: { members: [{ apiKeyId: created.apiKey.id, role: "member" }] },
+    })
+    expect(shared.status).toBe(200)
+
+    const rotated = await json<{ key: string; apiKey: Key; previous: { id: string; revokedAt: number } }>(
+      await call(`/v1/api-keys/${created.apiKey.id}/rotate`, {
+        method: "POST",
+        key: ADMIN,
+        json: { graceSeconds: 3600 },
+      }),
+    )
+    expect(rotated.apiKey.id).not.toBe(created.apiKey.id)
+    expect(rotated.apiKey).toMatchObject({ scopes: ["read", "send"], purpose: "mcp", revokedAt: null })
+    expect(rotated.previous.id).toBe(created.apiKey.id)
+    expect(rotated.previous.revokedAt).toBeGreaterThan(Date.now() + 3500_000)
+    // Both work during the grace period.
+    expect((await call("/v1/contacts", { key: created.key })).status).toBe(200)
+    expect((await call("/v1/contacts", { key: rotated.key })).status).toBe(200)
+    {
+      const members = await env.DB.prepare(
+        "select api_key_id, role from mailbox_members where mailbox_id = ?",
+      )
+        .bind(mailbox.id)
+        .all<{ api_key_id: string; role: string }>()
+      expect(members.results.map((m) => m.api_key_id).sort()).toEqual(
+        [created.apiKey.id, rotated.apiKey.id].sort(),
+      )
+    }
+    // When the grace period is over, the old key is revoked.
+    await env.DB.prepare("update api_keys set revoked_at = ? where id = ?")
+      .bind(Date.now() - 1, created.apiKey.id)
+      .run()
+    const refused = await call("/v1/contacts", { key: created.key })
+    expect(refused.status).toBe(401)
+    expect(await json<{ reason: string }>(refused)).toMatchObject({ reason: "revoked" })
+    // A revoked key can't be rotated again, and the grace period is capped at a week.
+    expect(
+      (await call(`/v1/api-keys/${created.apiKey.id}/rotate`, { method: "POST", key: ADMIN, json: {} }))
+        .status,
+    ).toBe(404)
+    expect(
+      (
+        await call(`/v1/api-keys/${rotated.apiKey.id}/rotate`, {
+          method: "POST",
+          key: ADMIN,
+          json: { graceSeconds: 700_000 },
+        })
+      ).status,
+    ).toBe(400)
+  })
+
+  it("rotates with no grace period by default: the old key stops at once", async () => {
+    const { key, apiKey } = await createKey("secret", ["read"])
+    const rotated = await json<{ key: string }>(
+      await call(`/v1/api-keys/${apiKey.id}/rotate`, { method: "POST", key: ADMIN, json: {} }),
+    )
+    expect((await call("/v1/contacts", { key })).status).toBe(401)
+    expect((await call("/v1/contacts", { key: rotated.key })).status).toBe(200)
+  })
+})
