@@ -12,6 +12,7 @@
  *   sign-in link to …@rate-limited.example           → 429
  */
 import type { paths } from "../api/schema"
+import { MAIL_OVERRIDES } from "../mail/fixtures.ts"
 
 type Json<P extends keyof paths, M extends "get" | "post", S extends number = 200> = paths[P][M] extends {
   responses: { [K in S]: { content: { "application/json": infer R } } }
@@ -154,6 +155,21 @@ export const OVERRIDES: readonly Override[] = [
 /** The override answering this request, if any. */
 export async function findOverride(request: Request): Promise<Answer | undefined> {
   const url = new URL(request.url)
+  // ── Mail (HAL-3308): mail/fixtures.ts answers first; an answer of undefined falls through to the designs.
+  for (const o of MAIL_OVERRIDES) {
+    if (o.method !== request.method) continue
+    const m = url.pathname.match(o.path)
+    if (!m) continue
+    let body: unknown = null
+    if (request.method !== "GET") {
+      try {
+        body = await request.clone().json()
+      } catch {}
+    }
+    const answer = await o.answer(m, body, url)
+    if (answer) return answer
+  }
+  // ── end Mail
   for (const o of OVERRIDES) {
     if (o.method !== request.method) continue
     const m = url.pathname.match(o.path)

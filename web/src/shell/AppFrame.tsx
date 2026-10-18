@@ -11,6 +11,9 @@ import { type Me, useMe, useSessionActions } from "../auth/session.ts"
 import { fixturesEnabled } from "../fixtures/mode.ts"
 import { num } from "../lib/format.ts"
 import { foldersKey, useMailboxLive } from "../live/useMailboxLive.ts"
+import { agentFor } from "../mail/logic.ts"
+import { agentsQuery } from "../mail/queries.ts"
+import { AgentBadge } from "../mail/ui.tsx"
 import { Icon } from "../ui/icons.tsx"
 import { Wordmark } from "../ui/Wordmark.tsx"
 import { AlertsBell, AlertsDrawer } from "./AlertsDrawer.tsx"
@@ -172,6 +175,8 @@ function Sidebar({ me, onToggle }: { me: Me | undefined; onToggle: () => void })
   const mailboxes = useQuery(mailboxesQuery)
   const path = useRouterState({ select: (s) => s.location.pathname })
   const boxes = (mailboxes.data?.mailboxes ?? []).filter((m) => m.holdsMail)
+  // An agent's mailbox carries the Agent badge (HAL-3460; design ops/settings/agent-in-mail).
+  const agents = useQuery(agentsQuery)
   const folders = useQueries({
     queries: boxes.map((b) => ({
       queryKey: foldersKey(b.id),
@@ -247,6 +252,7 @@ function Sidebar({ me, onToggle }: { me: Me | undefined; onToggle: () => void })
                       address={b.address}
                       unread={unread(i)}
                       current={isCurrent(`/mail/${b.id}`)}
+                      agent={agentFor(b.id, agents.data?.agents)?.name}
                     />
                   ))}
                 </ul>
@@ -268,11 +274,13 @@ function MailboxNavItem({
   address,
   unread,
   current,
+  agent,
 }: {
   id: string
   address: string
   unread: number
   current: boolean
+  agent?: string | undefined
 }) {
   useMailboxLive(id)
   const local = address.split("@")[0]
@@ -282,10 +290,11 @@ function MailboxNavItem({
         className="nav-item"
         to="/mail/$mailboxId"
         params={{ mailboxId: id }}
-        title={address}
+        title={agent ? `${address} · agent mailbox (${agent})` : address}
         {...(current ? { "aria-current": "page" as const } : {})}
       >
         <span className="nav-label">{local}@</span>
+        {agent ? <AgentBadge name={agent} short /> : null}
         {unread ? (
           <span className="nav-count">
             {unread}
