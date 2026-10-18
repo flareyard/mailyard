@@ -3,7 +3,14 @@ import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { Bindings } from "../Bindings.ts"
-import { dailyStats, domains, hourlyStats, webhookDeliveries } from "../db/schema.ts"
+import {
+  dailyStats,
+  deferralDaily,
+  deliveryTimes,
+  domains,
+  hourlyStats,
+  webhookDeliveries,
+} from "../db/schema.ts"
 import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
 import { eventCoverage } from "./eventCoverage.ts"
@@ -87,9 +94,139 @@ export const ratesOf = (t: Totals, minimum = 100) => {
   }
 }
 
-export const deliveryStats = Effect.fn("insights.delivery")(function* (range: Range) {
-  const totals = yield* totalsSince(since(range))
-  return { range, from: since(range), totals, rates: ratesOf(totals) }
+/** Upper bounds of the delivery-time buckets (migration 0031's trigger uses the same ones); the last is open. */
+export const DELIVERY_BUCKETS_MS = [
+  1000, 2000, 5000, 10_000, 30_000, 60_000, 120_000, 300_000, 600_000, 1_800_000, 3_600_000, 10_800_000,
+  21_600_000, 86_400_000,
+] as const
+
+/**
+ * The median and 95th percentile from the histogram, to the bucket: each is the upper bound of the
+ * bucket it falls in (null in the last, open one: a day or more). Null with no deliveries.
+ */
+export const quantilesOf = (counts: ReadonlyArray<number>) => {
+  const total = counts.reduce((a, b) => a + b, 0)
+  if (total === 0) return { medianMs: null, p95Ms: null, samples: 0 }
+  const at = (q: number) => {
+    let seen = 0
+    for (let i = 0; i < counts.length; i++) {
+      seen += counts[i] ?? 0
+      if (seen >= q * total) return DELIVERY_BUCKETS_MS[i] ?? null
+    }
+    return null
+  }
+  return { medianMs: at(0.5), p95Ms: at(0.95), samples: total }
+}
+
+const deliveryTime = (from: string) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const rows = yield* database.query("stats.deliveryTimes", (db) =>
+      db
+        .select({ bucket: deliveryTimes.bucket, n: sum(deliveryTimes.n) })
+        .from(deliveryTimes)
+        .where(gte(deliveryTimes.day, from))
+        .groupBy(deliveryTimes.bucket)
+        .all(),
+    )
+    const counts = Array.from({ length: DELIVERY_BUCKETS_MS.length + 1 }, (_, i) =>
+      Number(rows.find((r) => r.bucket === i)?.n ?? 0),
+    )
+    return {
+      ...quantilesOf(counts),
+      approximate: true as const,
+      buckets: counts.map((n, i) => ({ underMs: DELIVERY_BUCKETS_MS[i] ?? null, n })),
+    }
+  })
+
+export const deliveryStats = Effect.fn("insights.delivery")(function* (range: Range, by?: "day") {
+  const from = since(range)
+  const totals = yield* totalsSince(from)
+  const time = yield* deliveryTime(from)
+  if (by !== "day") return { range, from, totals, rates: ratesOf(totals), deliveryTime: time, days: [] }
+  const database = yield* Database
+  const rows = yield* database.query("stats.deliveryByDay", (db) =>
+    db
+      .select({
+        day: dailyStats.day,
+        sent: sum(dailyStats.sent),
+        delivered: sum(dailyStats.delivered),
+        deferred: sum(dailyStats.deferred),
+        bouncedHard: sum(dailyStats.bouncedHard),
+        bouncedSoft: sum(dailyStats.bouncedSoft),
+        complained: sum(dailyStats.complained),
+        rejected: sum(dailyStats.rejected),
+        failed: sum(dailyStats.failed),
+      })
+      .from(dailyStats)
+      .where(gte(dailyStats.day, from))
+      .groupBy(dailyStats.day)
+      .all(),
+  )
+  const zero = {
+    sent: 0,
+    delivered: 0,
+    deferred: 0,
+    bouncedHard: 0,
+    bouncedSoft: 0,
+    complained: 0,
+    rejected: 0,
+    failed: 0,
+  }
+  const days: Array<string> = []
+  for (let i = DAYS[range] - 1; i >= 0; i--) days.push(dayKey(Date.now() - i * 86_400_000))
+  return {
+    range,
+    from,
+    totals,
+    rates: ratesOf(totals),
+    deliveryTime: time,
+    days: days.map((day) => {
+      const r = rows.find((x) => x.day === day)
+      const t = r
+        ? {
+            sent: Number(r.sent),
+            delivered: Number(r.delivered),
+            deferred: Number(r.deferred),
+            bouncedHard: Number(r.bouncedHard),
+            bouncedSoft: Number(r.bouncedSoft),
+            complained: Number(r.complained),
+            rejected: Number(r.rejected),
+            failed: Number(r.failed),
+          }
+        : zero
+      return { day, totals: t, rates: ratesOf(t) }
+    }),
+  }
+})
+
+/** `GET /v1/stats/deferrals`: why mail was deferred, most common first. */
+export const deferralStats = Effect.fn("insights.deferrals")(function* (range: Range) {
+  const database = yield* Database
+  const rows = yield* database.query("stats.deferrals", (db) =>
+    db
+      .select({
+        reason: deferralDaily.reason,
+        smtpStatus: deferralDaily.smtpStatus,
+        provider: deferralDaily.provider,
+        count: sum(deferralDaily.n),
+      })
+      .from(deferralDaily)
+      .where(gte(deferralDaily.day, since(range)))
+      .groupBy(deferralDaily.reason, deferralDaily.smtpStatus, deferralDaily.provider)
+      .orderBy(sql`sum(${deferralDaily.n}) desc`)
+      .limit(50)
+      .all(),
+  )
+  return {
+    range,
+    reasons: rows.map((r) => ({
+      reason: r.reason,
+      smtpStatus: r.smtpStatus || null,
+      provider: r.provider || null,
+      count: Number(r.count),
+    })),
+  }
 })
 
 /** The governor's four streams, the keys every byStream carries (HAL-3419). */

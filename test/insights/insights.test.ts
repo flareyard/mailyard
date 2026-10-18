@@ -320,3 +320,94 @@ describe("with a read-only Cloudflare token", () => {
     expect(r).toMatchObject({ status: "healthy", source: "cloudflare", policySource: "account" })
   })
 })
+
+describe("delivery by day, delivery time and deferrals (HAL-3420)", () => {
+  const event = (messageId: string, type: string, at: number, extra: Record<string, string | null> = {}) =>
+    env.DB.prepare(
+      "insert into message_events (message_id, type, at, provider, smtp_response, detail) values (?, ?, ?, ?, ?, ?)",
+    )
+      .bind(messageId, type, at, extra.provider ?? null, extra.smtp ?? null, extra.detail ?? null)
+      .run()
+
+  it("buckets each delivery's time from its last sent event", async () => {
+    const t = Date.now()
+    const m = `dt_${crypto.randomUUID().slice(0, 8)}`
+    await event(`${m}a`, "sent", t)
+    await event(`${m}a`, "delivered", t + 3_000)
+    await event(`${m}b`, "sent", t - 600_000)
+    // A retry: the second sent counts, not the first.
+    await event(`${m}b`, "sent", t)
+    await event(`${m}b`, "delivered", t + 1_500)
+    // Delivered with no sent event (mail from before the trail) isn't counted.
+    await event(`${m}c`, "delivered", t)
+    const rows = await env.DB.prepare("select bucket, n from delivery_times where day = ? order by bucket")
+      .bind(new Date(t).toISOString().slice(0, 10))
+      .all<{ bucket: number; n: number }>()
+    expect(rows.results).toEqual(
+      expect.arrayContaining([
+        { bucket: 1, n: 1 },
+        { bucket: 2, n: 1 },
+      ]),
+    )
+    const d = await json<{
+      deliveryTime: { medianMs: number | null; p95Ms: number | null; samples: number }
+    }>(await call("/v1/stats/delivery?range=7d", { key }))
+    expect(d.deliveryTime.samples).toBeGreaterThanOrEqual(2)
+    expect(d.deliveryTime.medianMs).not.toBeNull()
+  })
+
+  it("takes quantiles to the bucket", async () => {
+    const { quantilesOf } = await import("../../src/domain/insights.ts")
+    expect(quantilesOf([0, 0, 0])).toEqual({ medianMs: null, p95Ms: null, samples: 0 })
+    // 10 under 1 s, 9 under 2 s, 1 a day or more.
+    const counts = Array.from({ length: 15 }, () => 0)
+    counts[0] = 10
+    counts[1] = 9
+    counts[14] = 1
+    expect(quantilesOf(counts)).toEqual({ medianMs: 1000, p95Ms: 2000, samples: 20 })
+    counts[14] = 5
+    expect(quantilesOf(counts).p95Ms).toBeNull()
+  })
+
+  it("counts deferral reasons with the SMTP status and provider", async () => {
+    const t = Date.now()
+    const m = `df_${crypto.randomUUID().slice(0, 8)}`
+    for (const n of [1, 2])
+      await event(`${m}${n}`, "deferred", t, {
+        provider: "gmail",
+        smtp: "421 4.7.0 Try again later, closing connection.",
+      })
+    await event(`${m}3`, "deferred", t, { detail: "SendDeferred: E_RATE: try later" })
+    const body = await json<{
+      reasons: Array<{ reason: string; smtpStatus: string | null; provider: string | null; count: number }>
+    }>(await call("/v1/stats/deferrals?range=7d", { key }))
+    expect(body.reasons).toEqual(
+      expect.arrayContaining([
+        {
+          reason: "421 4.7.0 Try again later, closing connection.",
+          smtpStatus: "421 4.7.0",
+          provider: "gmail",
+          count: 2,
+        },
+        { reason: "SendDeferred: E_RATE: try later", smtpStatus: null, provider: null, count: 1 },
+      ]),
+    )
+  })
+
+  it("gives every day in the range its own totals and rates", async () => {
+    await seed([{ day: day(3), sent: 200, delivered: 190, bouncedHard: 4 }])
+    const d = await json<{
+      days: Array<{
+        day: string
+        totals: { sent: number }
+        rates: { insufficientData: boolean; bounceRate: number | null }
+      }>
+    }>(await call("/v1/stats/delivery?range=7d&by=day", { key }))
+    expect(d.days).toHaveLength(7)
+    const that = d.days.find((x) => x.day === day(3))
+    expect(that?.totals.sent).toBeGreaterThanOrEqual(200)
+    expect(that?.rates.insufficientData).toBe(false)
+    const quiet = d.days.find((x) => x.totals.sent === 0)
+    if (quiet) expect(quiet.rates).toMatchObject({ insufficientData: true, bounceRate: null })
+  })
+})

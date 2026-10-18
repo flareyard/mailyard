@@ -787,8 +787,46 @@ export class InsightsApi extends HttpApiGroup.make("insights")
       error: Forbidden,
     }),
     HttpApiEndpoint.get("delivery", "/v1/stats/delivery", {
+      query: {
+        range: Schema.optionalKey(Range),
+        /** `day`: per-day totals and rates too, each with its own `insufficientData`. */
+        by: Schema.optionalKey(Schema.Literal("day")),
+      },
+      success: Schema.Struct({
+        range: Range,
+        from: Schema.String,
+        totals: Totals,
+        rates: Rates,
+        /**
+         * From each message's sent event to its delivered event, to the bucket: each quantile is the
+         * upper bound of its bucket (null in the open last one, a day or more). Null with no deliveries.
+         */
+        deliveryTime: Schema.Struct({
+          medianMs: NullableNum,
+          p95Ms: NullableNum,
+          samples: Num,
+          approximate: Schema.Literal(true),
+          buckets: Schema.Array(Schema.Struct({ underMs: NullableNum, n: Num })),
+        }),
+        /** With by=day: every day in the range, oldest first. */
+        days: Schema.Array(Schema.Struct({ day: Schema.String, totals: Totals, rates: Rates })),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("deferrals", "/v1/stats/deferrals", {
       query: { range: Schema.optionalKey(Range) },
-      success: Schema.Struct({ range: Range, from: Schema.String, totals: Totals, rates: Rates }),
+      success: Schema.Struct({
+        range: Range,
+        /** At most 50, most common first. `smtpStatus` is the response's leading code ("421 4.7.0"), when it has one. */
+        reasons: Schema.Array(
+          Schema.Struct({
+            reason: Schema.String,
+            smtpStatus: Schema.NullOr(Schema.String),
+            provider: Schema.NullOr(Schema.String),
+            count: Num,
+          }),
+        ),
+      }),
       error: Forbidden,
     }),
     HttpApiEndpoint.get("volume", "/v1/stats/volume", {
