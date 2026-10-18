@@ -3012,6 +3012,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.list"];
+        put?: never;
+        post: operations["agents.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.get"];
+        put?: never;
+        post?: never;
+        delete: operations["agents.remove"];
+        options?: never;
+        head?: never;
+        patch: operations["agents.update"];
+        trace?: never;
+    };
+    "/v1/api-keys/{id}/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.getLimits"];
+        put: operations["agents.putLimits"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["approvals.list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["approvals.get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approvals.approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approvals.reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/mcp": {
         parameters: {
             query?: never;
@@ -3133,6 +3245,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mailboxes/{id}/wait": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wait for new mail (long-poll, HAL-3461)
+         * @description Blocks until mail newer than `since` is in the mailbox, at once if it already is, else answers 204 at the timeout. Sent copies don't count. Wait again from the `cursor` (also in `x-mailyard-cursor`). `reset: true` means the cursor was older than the kept log: refetch, then wait from `cursor`. Without `since` it waits for mail from now on. For an agent that can't run a webhook receiver.
+         */
+        get: operations["mail.wait"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3154,6 +3286,34 @@ export interface components {
             /** @enum {string} */
             reason?: "missing" | "format" | "unknown" | "revoked" | "session-expired";
             revokedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+        };
+        ConflictEncoded: {
+            /** @enum {string} */
+            _tag: "Conflict";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+            reason?: string;
+            updatedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+            updatedBy?: string | null;
+            ruleDestination?: string;
+            ruleAction?: string;
+            ruleId?: string;
+            aliasIds?: string[];
+            limit?: number | ("Infinity" | "-Infinity" | "NaN");
+            sentToday?: number | ("Infinity" | "-Infinity" | "NaN");
+            resetsAt?: number | ("Infinity" | "-Infinity" | "NaN");
+            notAllowed?: string[];
+            deletesAt?: number | ("Infinity" | "-Infinity" | "NaN");
+            claimedBy?: string;
+            claimedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+        };
+        NotFoundEncoded: {
+            /** @enum {string} */
+            _tag: "NotFound";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
         };
         ForbiddenEncoded: {
             /** @enum {string} */
@@ -3178,23 +3338,6 @@ export interface components {
             field: string;
             message: string;
         };
-        ConflictEncoded: {
-            /** @enum {string} */
-            _tag: "Conflict";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            message: string;
-            reason?: string;
-            updatedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
-            updatedBy?: string | null;
-            ruleDestination?: string;
-            ruleAction?: string;
-            ruleId?: string;
-            aliasIds?: string[];
-            deletesAt?: number | ("Infinity" | "-Infinity" | "NaN");
-            claimedBy?: string;
-            claimedAt?: number | ("Infinity" | "-Infinity" | "NaN");
-        };
         GoneEncoded: {
             /** @enum {string} */
             _tag: "Gone";
@@ -3203,13 +3346,6 @@ export interface components {
             message: string;
             /** @enum {string} */
             reason: "expired" | "used" | "revoked";
-        };
-        NotFoundEncoded: {
-            /** @enum {string} */
-            _tag: "NotFound";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            message: string;
         };
         NoSystemSenderEncoded: {
             /** @enum {string} */
@@ -3505,6 +3641,11 @@ export interface operations {
                                 status: string;
                             }[];
                             timestamp: string;
+                            approval?: {
+                                id: string;
+                                /** @enum {string} */
+                                status: "pending";
+                            };
                         };
                     };
                 };
@@ -5401,15 +5542,23 @@ export interface operations {
                             id: string;
                             url: string;
                             description: string | null;
-                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected") | "*")[];
                             enabled: boolean;
+                            filter: {
+                                mailboxIds?: string[];
+                                streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                                campaignIds?: string[];
+                                topicIds?: string[];
+                            } | null;
+                            paused: boolean;
+                            held: number | ("Infinity" | "-Infinity" | "NaN");
                             lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
-                        events: ("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched")[];
+                        events: ("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected")[];
                     };
                 };
             };
@@ -5454,9 +5603,21 @@ export interface operations {
                 "application/json": {
                     url: string;
                     description?: string;
-                    events: [
+                    events?: [
                         string
                     ];
+                    filter?: {
+                        mailboxIds?: string[];
+                        streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                        campaignIds?: string[];
+                        topicIds?: string[];
+                    } | null;
+                    preset?: {
+                        /** @enum {string} */
+                        kind: "agent-wake";
+                        mailboxId: string;
+                    };
+                    paused?: boolean;
                 };
             };
         };
@@ -5472,8 +5633,16 @@ export interface operations {
                             id: string;
                             url: string;
                             description: string | null;
-                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected") | "*")[];
                             enabled: boolean;
+                            filter: {
+                                mailboxIds?: string[];
+                                streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                                campaignIds?: string[];
+                                topicIds?: string[];
+                            } | null;
+                            paused: boolean;
+                            held: number | ("Infinity" | "-Infinity" | "NaN");
                             lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5543,8 +5712,16 @@ export interface operations {
                         id: string;
                         url: string;
                         description: string | null;
-                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected") | "*")[];
                         enabled: boolean;
+                        filter: {
+                            mailboxIds?: string[];
+                            streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                            campaignIds?: string[];
+                            topicIds?: string[];
+                        } | null;
+                        paused: boolean;
+                        held: number | ("Infinity" | "-Infinity" | "NaN");
                         lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5612,8 +5789,16 @@ export interface operations {
                         id: string;
                         url: string;
                         description: string | null;
-                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected") | "*")[];
                         enabled: boolean;
+                        filter: {
+                            mailboxIds?: string[];
+                            streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                            campaignIds?: string[];
+                            topicIds?: string[];
+                        } | null;
+                        paused: boolean;
+                        held: number | ("Infinity" | "-Infinity" | "NaN");
                         lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5678,6 +5863,13 @@ export interface operations {
                         string
                     ];
                     enabled?: boolean;
+                    filter?: {
+                        mailboxIds?: string[];
+                        streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                        campaignIds?: string[];
+                        topicIds?: string[];
+                    } | null;
+                    paused?: boolean;
                 };
             };
         };
@@ -5692,8 +5884,16 @@ export interface operations {
                         id: string;
                         url: string;
                         description: string | null;
-                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected") | "*")[];
                         enabled: boolean;
+                        filter: {
+                            mailboxIds?: string[];
+                            streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                            campaignIds?: string[];
+                            topicIds?: string[];
+                        } | null;
+                        paused: boolean;
+                        held: number | ("Infinity" | "-Infinity" | "NaN");
                         lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5771,8 +5971,16 @@ export interface operations {
                             id: string;
                             url: string;
                             description: string | null;
-                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected") | "*")[];
                             enabled: boolean;
+                            filter: {
+                                mailboxIds?: string[];
+                                streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                                campaignIds?: string[];
+                                topicIds?: string[];
+                            } | null;
+                            paused: boolean;
+                            held: number | ("Infinity" | "-Infinity" | "NaN");
                             lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5824,7 +6032,7 @@ export interface operations {
     "webhooks.deliveries": {
         parameters: {
             query?: {
-                status?: "pending" | "succeeded" | "retrying" | "dead";
+                status?: "pending" | "succeeded" | "retrying" | "dead" | "paused";
                 cursor?: string;
                 limit?: string;
             };
@@ -5848,7 +6056,7 @@ export interface operations {
                             eventId: string;
                             eventType: string;
                             /** @enum {string} */
-                            status: "pending" | "succeeded" | "retrying" | "dead";
+                            status: "pending" | "succeeded" | "retrying" | "dead" | "paused";
                             attempts: number | ("Infinity" | "-Infinity" | "NaN");
                             lastStatusCode: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastError: string | null;
@@ -5857,6 +6065,7 @@ export interface operations {
                             nextAttemptAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             payload: unknown;
+                            requestId: string | null;
                         }[];
                         nextCursor: string | null;
                     };
@@ -5989,7 +6198,7 @@ export interface operations {
                     "application/json": {
                         id: string;
                         /** @enum {string} */
-                        status: "pending" | "succeeded" | "retrying" | "dead";
+                        status: "pending" | "succeeded" | "retrying" | "dead" | "paused";
                     };
                 };
             };
@@ -6040,7 +6249,17 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).
+                     * @enum {string}
+                     */
+                    event?: "message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected";
+                } | null;
+            };
+        };
         responses: {
             /** @description Success */
             200: {
@@ -6051,6 +6270,7 @@ export interface operations {
                     "application/json": {
                         deliveryId: string;
                         eventId: string;
+                        eventType: string;
                     };
                 };
             };
@@ -11468,8 +11688,13 @@ export interface operations {
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
                         };
-                        sendAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        sendAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         undoUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        approval: {
+                            id: string;
+                            /** @enum {string} */
+                            status: "pending";
+                        } | null;
                     };
                 };
             };
@@ -17375,7 +17600,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "open" | "resolved" | "all";
-                kind?: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed";
+                kind?: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending";
                 severity?: "info" | "warning" | "critical";
                 cursor?: string;
                 limit?: string;
@@ -17399,7 +17624,7 @@ export interface operations {
                              * @description What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).
                              * @enum {string}
                              */
-                            kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed";
+                            kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending";
                             /** @enum {string} */
                             severity: "info" | "warning" | "critical";
                             title: string;
@@ -17478,7 +17703,7 @@ export interface operations {
                          * @description What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).
                          * @enum {string}
                          */
-                        kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed";
+                        kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending";
                         /** @enum {string} */
                         severity: "info" | "warning" | "critical";
                         title: string;
@@ -28720,6 +28945,965 @@ export interface operations {
             };
         };
     };
+    "agents.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agents: {
+                            id: string;
+                            name: string;
+                            mailbox: {
+                                id: string;
+                                address: string | null;
+                            };
+                            key: {
+                                id: string;
+                                prefix: string;
+                                scopes: ("send" | "track" | "read" | "admin")[];
+                                lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                revoked: boolean;
+                            } | null;
+                            limits: {
+                                sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                /** @enum {string} */
+                                recipients: "any" | "contacts" | "domains";
+                                allowDomains: string[];
+                                requireApproval: boolean;
+                            } | null;
+                            sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                            pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    address: string;
+                    displayName?: string;
+                    scopes?: ("send" | "track" | "read" | "admin")[];
+                    limits?: {
+                        sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        /** @enum {string} */
+                        recipients: "any" | "contacts" | "domains";
+                        allowDomains: string[];
+                        requireApproval: boolean;
+                    };
+                    wake?: {
+                        url: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agent: {
+                            id: string;
+                            name: string;
+                            mailbox: {
+                                id: string;
+                                address: string | null;
+                            };
+                            key: {
+                                id: string;
+                                prefix: string;
+                                scopes: ("send" | "track" | "read" | "admin")[];
+                                lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                revoked: boolean;
+                            } | null;
+                            limits: {
+                                sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                /** @enum {string} */
+                                recipients: "any" | "contacts" | "domains";
+                                allowDomains: string[];
+                                requireApproval: boolean;
+                            } | null;
+                            sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                            pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        };
+                        key: string;
+                        mcp: {
+                            url: string;
+                            command: string;
+                        };
+                        wake: {
+                            endpointId: string;
+                            secret: string;
+                        } | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        mailbox: {
+                            id: string;
+                            address: string | null;
+                        };
+                        key: {
+                            id: string;
+                            prefix: string;
+                            scopes: ("send" | "track" | "read" | "admin")[];
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            revoked: boolean;
+                        } | null;
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                        pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        mailbox: {
+                            id: string;
+                            address: string | null;
+                        };
+                        key: {
+                            id: string;
+                            prefix: string;
+                            scopes: ("send" | "track" | "read" | "admin")[];
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            revoked: boolean;
+                        } | null;
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                        pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    limits?: {
+                        sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        /** @enum {string} */
+                        recipients: "any" | "contacts" | "domains";
+                        allowDomains: string[];
+                        requireApproval: boolean;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        mailbox: {
+                            id: string;
+                            address: string | null;
+                        };
+                        key: {
+                            id: string;
+                            prefix: string;
+                            scopes: ("send" | "track" | "read" | "admin")[];
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            revoked: boolean;
+                        } | null;
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                        pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.getLimits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.putLimits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    limits: {
+                        sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        /** @enum {string} */
+                        recipients: "any" | "contacts" | "domains";
+                        allowDomains: string[];
+                        requireApproval: boolean;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.list": {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected" | "failed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approvals: {
+                            id: string;
+                            keyId: string;
+                            /** @enum {string} */
+                            kind: "transactional" | "draft";
+                            mailboxId: string | null;
+                            draftId: string | null;
+                            recipients: string[];
+                            subject: string;
+                            from: string | null;
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected" | "failed";
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            decidedBy: string | null;
+                            reason: string | null;
+                            result: Record<string, never> | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        keyId: string;
+                        /** @enum {string} */
+                        kind: "transactional" | "draft";
+                        mailboxId: string | null;
+                        draftId: string | null;
+                        recipients: string[];
+                        subject: string;
+                        from: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "failed";
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        decidedBy: string | null;
+                        reason: string | null;
+                        result: Record<string, never> | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        keyId: string;
+                        /** @enum {string} */
+                        kind: "transactional" | "draft";
+                        mailboxId: string | null;
+                        draftId: string | null;
+                        recipients: string[];
+                        subject: string;
+                        from: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "failed";
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        decidedBy: string | null;
+                        reason: string | null;
+                        result: Record<string, never> | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        keyId: string;
+                        /** @enum {string} */
+                        kind: "transactional" | "draft";
+                        mailboxId: string | null;
+                        draftId: string | null;
+                        recipients: string[];
+                        subject: string;
+                        from: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "failed";
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        decidedBy: string | null;
+                        reason: string | null;
+                        result: Record<string, never> | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "mcp.rpc": {
         parameters: {
             query?: never;
@@ -29155,6 +30339,110 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+        };
+    };
+    "mail.wait": {
+        parameters: {
+            query?: {
+                /** @description The cursor from the last answer. */
+                since?: number;
+                /** @description Seconds to wait. */
+                timeout?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The mailbox. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mail arrived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        cursor: number;
+                        reset: boolean;
+                        messages: {
+                            id?: string;
+                            threadId?: string;
+                            subject?: string;
+                            from?: Record<string, never> | null;
+                            snippet?: string;
+                            receivedAt?: number;
+                            folder?: string;
+                            seen?: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description Nothing arrived before the timeout; the cursor is in x-mailyard-cursor. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description since or timeout isn't valid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
+                };
+            };
+            /** @description No key or session, or one that no longer works. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
+                };
+            };
+            /** @description The key can't read this mailbox. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
+                };
+            };
+            /** @description No such mailbox. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
                 };
             };
         };

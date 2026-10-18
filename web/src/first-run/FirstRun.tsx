@@ -8,6 +8,7 @@ import { type MouseEvent, type ReactNode, useEffect } from "react"
 import { useCapabilities } from "../auth/capabilities.ts"
 import { Gated } from "../auth/NoPermission.tsx"
 import { fixturesEnabled } from "../fixtures/mode.ts"
+import type { OverviewSearch } from "../routes/_app/index.tsx"
 import { usePageTitle } from "../shell/title.tsx"
 import { Icon } from "../ui/icons.tsx"
 import { PanelSkeleton } from "../ui/Panel.tsx"
@@ -241,7 +242,7 @@ function Complete() {
                 <span className="row-sub">{stepSub(st, false)}</span>
               </span>
               {st.status !== "done" ? (
-                <Link className="link-quiet" to="/" search={(prev) => ({ ...prev, step: st.id })}>
+                <Link className="link-quiet" from="/" to="/" search={(prev) => ({ ...prev, step: st.id })}>
                   {st.status === "skipped" ? "Do it now" : "Open"}
                 </Link>
               ) : null}
@@ -257,6 +258,7 @@ function Complete() {
           ) : (
             <Link
               className="btn btn-primary"
+              from="/"
               to="/"
               search={(prev) => ({ ...(prev.range ? { range: prev.range } : {}) })}
               onClick={() => s.remember((m) => ({ ...m, handedOver: true, started: true }))}
@@ -317,11 +319,14 @@ function StepLink({
 }) {
   const router = useRouter()
   const navigate = useNavigate()
-  const href = router.buildLocation({ to: "/", search: (prev) => ({ ...prev, step }) }).href
+  const href = router.buildLocation({
+    to: "/",
+    search: (prev) => ({ ...(prev as OverviewSearch), step }),
+  }).href
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
     e.preventDefault()
-    navigate({ to: "/", search: (prev) => ({ ...prev, step }) })
+    navigate({ from: "/", to: "/", search: (prev) => ({ ...prev, step }) })
   }
   return (
     <a

@@ -1,0 +1,116 @@
+/*
+ * Fixes for the ops screens where the design stylesheets collide (tokens only). audience.css makes every
+ * `.kv dd` a flex row, which breaks ops.css's key-value lists; the ops section layouts carry `.ops`, so the
+ * ops rule wins there without touching Audience.
+ */
+.ops .kv dd {
+  display: block;
+  padding: 8px 0;
+}
+.ops .kv dt {
+  display: block;
+  padding: 8px 12px 8px 0;
+}
+.ops .kv {
+  gap: 0;
+}
+@media (max-width: 767px) {
+  .ops .kv dt {
+    padding-bottom: 0;
+  }
+  .ops .kv dd {
+    padding-top: 2px;
+  }
+}
+
+/*
+ * `.rtable.is-wide`: a table with too many columns for a tablet turns into cards below 1200 px instead of 768,
+ * the same card layout as ops.css §4 (API keys: eight columns plus actions).
+ */
+@media (max-width: 1199px) {
+  .ops .rtable.is-wide thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .ops .rtable.is-wide,
+  .ops .rtable.is-wide tbody,
+  .ops .rtable.is-wide tr,
+  .ops .rtable.is-wide td {
+    display: block;
+    width: 100%;
+  }
+  .ops .rtable.is-wide tr {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-300);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+  }
+  .ops .rtable.is-wide tr:last-child {
+    border-bottom: 0;
+  }
+  .ops .rtable.is-wide td {
+    padding: 0;
+    border: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    grid-column: 1 / -1;
+  }
+  .ops .rtable.is-wide td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    width: 112px;
+    font: var(--text-label-12);
+    color: var(--my-muted);
+  }
+  .ops .rtable.is-wide td.is-head {
+    grid-column: 1;
+  }
+  .ops .rtable.is-wide td.is-head::before {
+    display: none;
+  }
+  .ops .rtable.is-wide td.is-aside {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+  .ops .rtable.is-wide td.is-aside::before {
+    display: none;
+  }
+  .ops .rtable.is-wide td.r {
+    text-align: left;
+  }
+  .ops .rtable.is-wide td.actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .ops .rtable.is-wide td.actions::before {
+    display: none;
+  }
+  .ops .rtable.is-wide tbody tr:hover td {
+    background: none;
+  }
+}
+
+/* Links, chips and labels that stand alone as tap targets: at least 24 px tall at every width. */
+.ops .agent-name a,
+.ops .rtable .cell-sub a.link,
+.ops .rtable .cell-main > a,
+.ops .ev-body a.link,
+.ops .kv dd a.link,
+.ops .chk-body a.link,
+.ops .hint a.link,
+.ops a.link-quiet,
+.ops td > a.tag,
+.ops .filterbar .field > .label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+.ops label.switch {
+  min-height: 24px;
+}

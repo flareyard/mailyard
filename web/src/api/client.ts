@@ -8,6 +8,7 @@
  */
 import createClient, { type Middleware } from "openapi-fetch"
 import { fixtureFetch, fixturesEnabled } from "../fixtures/mode.ts"
+import { noteResponse } from "../ops/deletion.ts"
 import type { paths } from "./schema"
 
 export type { components, paths } from "./schema"
@@ -63,12 +64,26 @@ const errors: Middleware = {
   },
 }
 
+/**
+ * A workspace being deleted (HAL-3448) says so on every response with `x-workspace-deleting: <deletesAt>`.
+ * Every answer, refusals included, updates the shell's banner, so the countdown costs no extra request.
+ * Registered after `errors`: openapi-fetch runs onResponse last-registered first, so this sees a refusal
+ * before `errors` throws it.
+ */
+const deleting: Middleware = {
+  onResponse({ response }) {
+    noteResponse(response)
+    return response
+  },
+}
+
 export const api = createClient<paths>({
   baseUrl: typeof window === "undefined" ? "http://localhost" : window.location.origin,
   credentials: "same-origin",
   ...(fixturesEnabled() ? { fetch: fixtureFetch } : {}),
 })
 api.use(errors)
+api.use(deleting)
 
 /** Unwraps an openapi-fetch result for TanStack Query: the data, or the ApiError the middleware threw. */
 export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {

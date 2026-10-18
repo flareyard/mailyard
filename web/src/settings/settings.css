@@ -1,0 +1,86 @@
+/* Settings (HAL-3309, S-A): only what the design CSS doesn't already cover. Tokens only. */
+.st-iframe-preview {
+  display: block;
+  width: 100%;
+  height: 520px;
+  border: 0;
+  background: var(--background-100);
+}
+.st-rule-drag {
+  opacity: 0.5;
+}
+.st-rule-over {
+  box-shadow: 0 -2px 0 0 var(--gray-1000) inset;
+}
+.st-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+.st-chips .input {
+  width: min(180px, 100%);
+  height: 32px;
+}
+.st-seg-wrap {
+  flex-wrap: wrap;
+}
+.st-preview-html {
+  display: block;
+  width: 100%;
+  min-height: 260px;
+  border: 1px solid var(--my-border);
+  border-radius: var(--radius-medium);
+  background: var(--background-100);
+}
+.st-member-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.st-member-add .select {
+  width: auto;
+  max-width: 100%;
+  height: 36px;
+}
+.st-kv-wide dd {
+  min-width: 0;
+}
+.st-chips .chip {
+  height: 28px;
+}
+.st-chips .chip button {
+  width: 24px;
+  height: 24px;
+}
+
+/*
+ * Rules at phone width: ops.css §17 keeps three columns (grip, position, rule) at every width but hides the grip
+ * under 768 px, which left the rule itself in a 28 px column. The grip stays: it's how the order changes from
+ * the keyboard (Alt ↑/↓) and by drag.
+ */
+@media (max-width: 767px) {
+  .ops .rule .grip {
+    display: grid;
+  }
+}
+
+/* Catch-all per domain: the choice sits beside the domain, and below it on a phone so the hint keeps its width. */
+.st-catchall .st-catchall-ctl {
+  width: auto;
+  max-width: 100%;
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+@media (max-width: 559px) {
+  .st-catchall {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .st-catchall .st-catchall-ctl {
+    grid-row: auto;
+    grid-column: 1;
+    justify-self: start;
+  }
+}

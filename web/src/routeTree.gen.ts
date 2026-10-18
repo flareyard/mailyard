@@ -23,7 +23,50 @@ import { Route as AppMailRouteImport } from './routes/_app/mail'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppTransactionalRouteImport } from './routes/_app/transactional'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as AppAnalyticsIndexRouteImport } from './routes/_app/analytics/index'
+import { Route as AppAnalyticsAudienceRouteImport } from './routes/_app/analytics/audience'
+import { Route as AppAnalyticsEngagementRouteImport } from './routes/_app/analytics/engagement'
+import { Route as AppAnalyticsInboundRouteImport } from './routes/_app/analytics/inbound'
+import { Route as AppAnalyticsReputationRouteImport } from './routes/_app/analytics/reputation'
+import { Route as AppAnalyticsSendingRouteImport } from './routes/_app/analytics/sending'
+import { Route as AppAnalyticsUsageRouteImport } from './routes/_app/analytics/usage'
+import { Route as AppDomainsIndexRouteImport } from './routes/_app/domains/index'
+import { Route as AppDomainsIdRouteImport } from './routes/_app/domains/$id'
+import { Route as AppDomainsDmarcRouteImport } from './routes/_app/domains/dmarc'
+import { Route as AppDomainsImportRouteImport } from './routes/_app/domains/import'
+import { Route as AppDomainsReputationRouteImport } from './routes/_app/domains/reputation'
 import { Route as AppMailMailboxIdRouteImport } from './routes/_app/mail/$mailboxId'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
+import { Route as AppSettingsAiRouteImport } from './routes/_app/settings/ai'
+import { Route as AppSettingsAuditRouteImport } from './routes/_app/settings/audit'
+import { Route as AppSettingsBrandRouteImport } from './routes/_app/settings/brand'
+import { Route as AppSettingsDangerRouteImport } from './routes/_app/settings/danger'
+import { Route as AppSettingsDataRouteImport } from './routes/_app/settings/data'
+import { Route as AppSettingsGmailModeRouteImport } from './routes/_app/settings/gmail-mode'
+import { Route as AppSettingsMailboxesRouteImport } from './routes/_app/settings/mailboxes'
+import { Route as AppSettingsMembersRouteImport } from './routes/_app/settings/members'
+import { Route as AppSettingsRulesRouteImport } from './routes/_app/settings/rules'
+import { Route as AppSettingsSendingRouteImport } from './routes/_app/settings/sending'
+import { Route as AppSettingsSessionsRouteImport } from './routes/_app/settings/sessions'
+import { Route as AppSettingsTrackingRouteImport } from './routes/_app/settings/tracking'
+import { Route as AppTransactionalIndexRouteImport } from './routes/_app/transactional/index'
+import { Route as AppTransactionalKeysRouteImport } from './routes/_app/transactional/keys'
+import { Route as AppTransactionalQuickstartRouteImport } from './routes/_app/transactional/quickstart'
+import { Route as AppSettingsIntegrationsIndexRouteImport } from './routes/_app/settings/integrations.index'
+import { Route as AppSettingsIntegrationsApprovalsRouteImport } from './routes/_app/settings/integrations.approvals'
+import { Route as AppSettingsMailboxesIdRouteImport } from './routes/_app/settings/mailboxes_.$id'
+import { Route as AppTransactionalMessagesIndexRouteImport } from './routes/_app/transactional/messages.index'
+import { Route as AppTransactionalMessagesIdRouteImport } from './routes/_app/transactional/messages.$id'
+import { Route as AppTransactionalSuppressionsIndexRouteImport } from './routes/_app/transactional/suppressions.index'
+import { Route as AppTransactionalSuppressionsEmailRouteImport } from './routes/_app/transactional/suppressions.$email'
+import { Route as AppTransactionalSuppressionsImportRouteImport } from './routes/_app/transactional/suppressions.import'
+import { Route as AppTransactionalTemplatesIndexRouteImport } from './routes/_app/transactional/templates.index'
+import { Route as AppTransactionalWebhooksIndexRouteImport } from './routes/_app/transactional/webhooks.index'
+import { Route as AppTransactionalWebhooksIdRouteImport } from './routes/_app/transactional/webhooks.$id'
+import { Route as AppSettingsIntegrationsAgentsIdRouteImport } from './routes/_app/settings/integrations.agents.$id'
+import { Route as AppTransactionalTemplatesIdIndexRouteImport } from './routes/_app/transactional/templates.$id.index'
+import { Route as AppTransactionalTemplatesIdPreviewRouteImport } from './routes/_app/transactional/templates.$id.preview'
+import { Route as AppTransactionalTemplatesIdVersionsRouteImport } from './routes/_app/transactional/templates.$id.versions'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -94,43 +137,355 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppAnalyticsIndexRoute = AppAnalyticsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppAnalyticsAudienceRoute = AppAnalyticsAudienceRouteImport.update({
+  id: '/audience',
+  path: '/audience',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppAnalyticsEngagementRoute = AppAnalyticsEngagementRouteImport.update({
+  id: '/engagement',
+  path: '/engagement',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppAnalyticsInboundRoute = AppAnalyticsInboundRouteImport.update({
+  id: '/inbound',
+  path: '/inbound',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppAnalyticsReputationRoute = AppAnalyticsReputationRouteImport.update({
+  id: '/reputation',
+  path: '/reputation',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppAnalyticsSendingRoute = AppAnalyticsSendingRouteImport.update({
+  id: '/sending',
+  path: '/sending',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppAnalyticsUsageRoute = AppAnalyticsUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => AppAnalyticsRoute,
+} as any)
+const AppDomainsIndexRoute = AppDomainsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppDomainsRoute,
+} as any)
+const AppDomainsIdRoute = AppDomainsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppDomainsRoute,
+} as any)
+const AppDomainsDmarcRoute = AppDomainsDmarcRouteImport.update({
+  id: '/dmarc',
+  path: '/dmarc',
+  getParentRoute: () => AppDomainsRoute,
+} as any)
+const AppDomainsImportRoute = AppDomainsImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AppDomainsRoute,
+} as any)
+const AppDomainsReputationRoute = AppDomainsReputationRouteImport.update({
+  id: '/reputation',
+  path: '/reputation',
+  getParentRoute: () => AppDomainsRoute,
+} as any)
 const AppMailMailboxIdRoute = AppMailMailboxIdRouteImport.update({
   id: '/$mailboxId',
   path: '/$mailboxId',
   getParentRoute: () => AppMailRoute,
 } as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsAiRoute = AppSettingsAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsAuditRoute = AppSettingsAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsBrandRoute = AppSettingsBrandRouteImport.update({
+  id: '/brand',
+  path: '/brand',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsDangerRoute = AppSettingsDangerRouteImport.update({
+  id: '/danger',
+  path: '/danger',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsDataRoute = AppSettingsDataRouteImport.update({
+  id: '/data',
+  path: '/data',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsGmailModeRoute = AppSettingsGmailModeRouteImport.update({
+  id: '/gmail-mode',
+  path: '/gmail-mode',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsMailboxesRoute = AppSettingsMailboxesRouteImport.update({
+  id: '/mailboxes',
+  path: '/mailboxes',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsMembersRoute = AppSettingsMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsRulesRoute = AppSettingsRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsSendingRoute = AppSettingsSendingRouteImport.update({
+  id: '/sending',
+  path: '/sending',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsSessionsRoute = AppSettingsSessionsRouteImport.update({
+  id: '/sessions',
+  path: '/sessions',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsTrackingRoute = AppSettingsTrackingRouteImport.update({
+  id: '/tracking',
+  path: '/tracking',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppTransactionalIndexRoute = AppTransactionalIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppTransactionalRoute,
+} as any)
+const AppTransactionalKeysRoute = AppTransactionalKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => AppTransactionalRoute,
+} as any)
+const AppTransactionalQuickstartRoute =
+  AppTransactionalQuickstartRouteImport.update({
+    id: '/quickstart',
+    path: '/quickstart',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppSettingsIntegrationsIndexRoute =
+  AppSettingsIntegrationsIndexRouteImport.update({
+    id: '/integrations/',
+    path: '/integrations/',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
+const AppSettingsIntegrationsApprovalsRoute =
+  AppSettingsIntegrationsApprovalsRouteImport.update({
+    id: '/integrations/approvals',
+    path: '/integrations/approvals',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
+const AppSettingsMailboxesIdRoute = AppSettingsMailboxesIdRouteImport.update({
+  id: '/mailboxes_/$id',
+  path: '/mailboxes/$id',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppTransactionalMessagesIndexRoute =
+  AppTransactionalMessagesIndexRouteImport.update({
+    id: '/messages/',
+    path: '/messages/',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalMessagesIdRoute =
+  AppTransactionalMessagesIdRouteImport.update({
+    id: '/messages/$id',
+    path: '/messages/$id',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalSuppressionsIndexRoute =
+  AppTransactionalSuppressionsIndexRouteImport.update({
+    id: '/suppressions/',
+    path: '/suppressions/',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalSuppressionsEmailRoute =
+  AppTransactionalSuppressionsEmailRouteImport.update({
+    id: '/suppressions/$email',
+    path: '/suppressions/$email',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalSuppressionsImportRoute =
+  AppTransactionalSuppressionsImportRouteImport.update({
+    id: '/suppressions/import',
+    path: '/suppressions/import',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalTemplatesIndexRoute =
+  AppTransactionalTemplatesIndexRouteImport.update({
+    id: '/templates/',
+    path: '/templates/',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalWebhooksIndexRoute =
+  AppTransactionalWebhooksIndexRouteImport.update({
+    id: '/webhooks/',
+    path: '/webhooks/',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalWebhooksIdRoute =
+  AppTransactionalWebhooksIdRouteImport.update({
+    id: '/webhooks/$id',
+    path: '/webhooks/$id',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppSettingsIntegrationsAgentsIdRoute =
+  AppSettingsIntegrationsAgentsIdRouteImport.update({
+    id: '/integrations/agents/$id',
+    path: '/integrations/agents/$id',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
+const AppTransactionalTemplatesIdIndexRoute =
+  AppTransactionalTemplatesIdIndexRouteImport.update({
+    id: '/templates/$id/',
+    path: '/templates/$id/',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalTemplatesIdPreviewRoute =
+  AppTransactionalTemplatesIdPreviewRouteImport.update({
+    id: '/templates/$id/preview',
+    path: '/templates/$id/preview',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
+const AppTransactionalTemplatesIdVersionsRoute =
+  AppTransactionalTemplatesIdVersionsRouteImport.update({
+    id: '/templates/$id/versions',
+    path: '/templates/$id/versions',
+    getParentRoute: () => AppTransactionalRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/claim': typeof ClaimRoute
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
-  '/analytics': typeof AppAnalyticsRoute
+  '/analytics': typeof AppAnalyticsRouteWithChildren
   '/audience': typeof AppAudienceRoute
   '/automations': typeof AppAutomationsRoute
   '/campaigns': typeof AppCampaignsRoute
-  '/domains': typeof AppDomainsRoute
+  '/domains': typeof AppDomainsRouteWithChildren
   '/mail': typeof AppMailRouteWithChildren
-  '/settings': typeof AppSettingsRoute
-  '/transactional': typeof AppTransactionalRoute
+  '/settings': typeof AppSettingsRouteWithChildren
+  '/transactional': typeof AppTransactionalRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
+  '/analytics/audience': typeof AppAnalyticsAudienceRoute
+  '/analytics/engagement': typeof AppAnalyticsEngagementRoute
+  '/analytics/inbound': typeof AppAnalyticsInboundRoute
+  '/analytics/reputation': typeof AppAnalyticsReputationRoute
+  '/analytics/sending': typeof AppAnalyticsSendingRoute
+  '/analytics/usage': typeof AppAnalyticsUsageRoute
+  '/domains/$id': typeof AppDomainsIdRoute
+  '/domains/dmarc': typeof AppDomainsDmarcRoute
+  '/domains/import': typeof AppDomainsImportRoute
+  '/domains/reputation': typeof AppDomainsReputationRoute
   '/mail/$mailboxId': typeof AppMailMailboxIdRoute
+  '/settings/ai': typeof AppSettingsAiRoute
+  '/settings/audit': typeof AppSettingsAuditRoute
+  '/settings/brand': typeof AppSettingsBrandRoute
+  '/settings/danger': typeof AppSettingsDangerRoute
+  '/settings/data': typeof AppSettingsDataRoute
+  '/settings/gmail-mode': typeof AppSettingsGmailModeRoute
+  '/settings/mailboxes': typeof AppSettingsMailboxesRoute
+  '/settings/members': typeof AppSettingsMembersRoute
+  '/settings/rules': typeof AppSettingsRulesRoute
+  '/settings/sending': typeof AppSettingsSendingRoute
+  '/settings/sessions': typeof AppSettingsSessionsRoute
+  '/settings/tracking': typeof AppSettingsTrackingRoute
+  '/transactional/keys': typeof AppTransactionalKeysRoute
+  '/transactional/quickstart': typeof AppTransactionalQuickstartRoute
+  '/analytics/': typeof AppAnalyticsIndexRoute
+  '/domains/': typeof AppDomainsIndexRoute
+  '/settings/': typeof AppSettingsIndexRoute
+  '/transactional/': typeof AppTransactionalIndexRoute
+  '/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
+  '/settings/mailboxes/$id': typeof AppSettingsMailboxesIdRoute
+  '/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
+  '/transactional/suppressions/$email': typeof AppTransactionalSuppressionsEmailRoute
+  '/transactional/suppressions/import': typeof AppTransactionalSuppressionsImportRoute
+  '/transactional/webhooks/$id': typeof AppTransactionalWebhooksIdRoute
+  '/settings/integrations/': typeof AppSettingsIntegrationsIndexRoute
+  '/transactional/messages/': typeof AppTransactionalMessagesIndexRoute
+  '/transactional/suppressions/': typeof AppTransactionalSuppressionsIndexRoute
+  '/transactional/templates/': typeof AppTransactionalTemplatesIndexRoute
+  '/transactional/webhooks/': typeof AppTransactionalWebhooksIndexRoute
+  '/settings/integrations/agents/$id': typeof AppSettingsIntegrationsAgentsIdRoute
+  '/transactional/templates/$id/preview': typeof AppTransactionalTemplatesIdPreviewRoute
+  '/transactional/templates/$id/versions': typeof AppTransactionalTemplatesIdVersionsRoute
+  '/transactional/templates/$id/': typeof AppTransactionalTemplatesIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/claim': typeof ClaimRoute
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
-  '/analytics': typeof AppAnalyticsRoute
   '/audience': typeof AppAudienceRoute
   '/automations': typeof AppAutomationsRoute
   '/campaigns': typeof AppCampaignsRoute
-  '/domains': typeof AppDomainsRoute
   '/mail': typeof AppMailRouteWithChildren
-  '/settings': typeof AppSettingsRoute
-  '/transactional': typeof AppTransactionalRoute
   '/invite/$token': typeof InviteTokenRoute
   '/': typeof AppIndexRoute
+  '/analytics/audience': typeof AppAnalyticsAudienceRoute
+  '/analytics/engagement': typeof AppAnalyticsEngagementRoute
+  '/analytics/inbound': typeof AppAnalyticsInboundRoute
+  '/analytics/reputation': typeof AppAnalyticsReputationRoute
+  '/analytics/sending': typeof AppAnalyticsSendingRoute
+  '/analytics/usage': typeof AppAnalyticsUsageRoute
+  '/domains/$id': typeof AppDomainsIdRoute
+  '/domains/dmarc': typeof AppDomainsDmarcRoute
+  '/domains/import': typeof AppDomainsImportRoute
+  '/domains/reputation': typeof AppDomainsReputationRoute
   '/mail/$mailboxId': typeof AppMailMailboxIdRoute
+  '/settings/ai': typeof AppSettingsAiRoute
+  '/settings/audit': typeof AppSettingsAuditRoute
+  '/settings/brand': typeof AppSettingsBrandRoute
+  '/settings/danger': typeof AppSettingsDangerRoute
+  '/settings/data': typeof AppSettingsDataRoute
+  '/settings/gmail-mode': typeof AppSettingsGmailModeRoute
+  '/settings/mailboxes': typeof AppSettingsMailboxesRoute
+  '/settings/members': typeof AppSettingsMembersRoute
+  '/settings/rules': typeof AppSettingsRulesRoute
+  '/settings/sending': typeof AppSettingsSendingRoute
+  '/settings/sessions': typeof AppSettingsSessionsRoute
+  '/settings/tracking': typeof AppSettingsTrackingRoute
+  '/transactional/keys': typeof AppTransactionalKeysRoute
+  '/transactional/quickstart': typeof AppTransactionalQuickstartRoute
+  '/analytics': typeof AppAnalyticsIndexRoute
+  '/domains': typeof AppDomainsIndexRoute
+  '/settings': typeof AppSettingsIndexRoute
+  '/transactional': typeof AppTransactionalIndexRoute
+  '/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
+  '/settings/mailboxes/$id': typeof AppSettingsMailboxesIdRoute
+  '/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
+  '/transactional/suppressions/$email': typeof AppTransactionalSuppressionsEmailRoute
+  '/transactional/suppressions/import': typeof AppTransactionalSuppressionsImportRoute
+  '/transactional/webhooks/$id': typeof AppTransactionalWebhooksIdRoute
+  '/settings/integrations': typeof AppSettingsIntegrationsIndexRoute
+  '/transactional/messages': typeof AppTransactionalMessagesIndexRoute
+  '/transactional/suppressions': typeof AppTransactionalSuppressionsIndexRoute
+  '/transactional/templates': typeof AppTransactionalTemplatesIndexRoute
+  '/transactional/webhooks': typeof AppTransactionalWebhooksIndexRoute
+  '/settings/integrations/agents/$id': typeof AppSettingsIntegrationsAgentsIdRoute
+  '/transactional/templates/$id/preview': typeof AppTransactionalTemplatesIdPreviewRoute
+  '/transactional/templates/$id/versions': typeof AppTransactionalTemplatesIdVersionsRoute
+  '/transactional/templates/$id': typeof AppTransactionalTemplatesIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -138,17 +493,60 @@ export interface FileRoutesById {
   '/claim': typeof ClaimRoute
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
-  '/_app/analytics': typeof AppAnalyticsRoute
+  '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/audience': typeof AppAudienceRoute
   '/_app/automations': typeof AppAutomationsRoute
   '/_app/campaigns': typeof AppCampaignsRoute
-  '/_app/domains': typeof AppDomainsRoute
+  '/_app/domains': typeof AppDomainsRouteWithChildren
   '/_app/mail': typeof AppMailRouteWithChildren
-  '/_app/settings': typeof AppSettingsRoute
-  '/_app/transactional': typeof AppTransactionalRoute
+  '/_app/settings': typeof AppSettingsRouteWithChildren
+  '/_app/transactional': typeof AppTransactionalRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/analytics/audience': typeof AppAnalyticsAudienceRoute
+  '/_app/analytics/engagement': typeof AppAnalyticsEngagementRoute
+  '/_app/analytics/inbound': typeof AppAnalyticsInboundRoute
+  '/_app/analytics/reputation': typeof AppAnalyticsReputationRoute
+  '/_app/analytics/sending': typeof AppAnalyticsSendingRoute
+  '/_app/analytics/usage': typeof AppAnalyticsUsageRoute
+  '/_app/domains/$id': typeof AppDomainsIdRoute
+  '/_app/domains/dmarc': typeof AppDomainsDmarcRoute
+  '/_app/domains/import': typeof AppDomainsImportRoute
+  '/_app/domains/reputation': typeof AppDomainsReputationRoute
   '/_app/mail/$mailboxId': typeof AppMailMailboxIdRoute
+  '/_app/settings/ai': typeof AppSettingsAiRoute
+  '/_app/settings/audit': typeof AppSettingsAuditRoute
+  '/_app/settings/brand': typeof AppSettingsBrandRoute
+  '/_app/settings/danger': typeof AppSettingsDangerRoute
+  '/_app/settings/data': typeof AppSettingsDataRoute
+  '/_app/settings/gmail-mode': typeof AppSettingsGmailModeRoute
+  '/_app/settings/mailboxes': typeof AppSettingsMailboxesRoute
+  '/_app/settings/members': typeof AppSettingsMembersRoute
+  '/_app/settings/rules': typeof AppSettingsRulesRoute
+  '/_app/settings/sending': typeof AppSettingsSendingRoute
+  '/_app/settings/sessions': typeof AppSettingsSessionsRoute
+  '/_app/settings/tracking': typeof AppSettingsTrackingRoute
+  '/_app/transactional/keys': typeof AppTransactionalKeysRoute
+  '/_app/transactional/quickstart': typeof AppTransactionalQuickstartRoute
+  '/_app/analytics/': typeof AppAnalyticsIndexRoute
+  '/_app/domains/': typeof AppDomainsIndexRoute
+  '/_app/settings/': typeof AppSettingsIndexRoute
+  '/_app/transactional/': typeof AppTransactionalIndexRoute
+  '/_app/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
+  '/_app/settings/mailboxes_/$id': typeof AppSettingsMailboxesIdRoute
+  '/_app/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
+  '/_app/transactional/suppressions/$email': typeof AppTransactionalSuppressionsEmailRoute
+  '/_app/transactional/suppressions/import': typeof AppTransactionalSuppressionsImportRoute
+  '/_app/transactional/webhooks/$id': typeof AppTransactionalWebhooksIdRoute
+  '/_app/settings/integrations/': typeof AppSettingsIntegrationsIndexRoute
+  '/_app/transactional/messages/': typeof AppTransactionalMessagesIndexRoute
+  '/_app/transactional/suppressions/': typeof AppTransactionalSuppressionsIndexRoute
+  '/_app/transactional/templates/': typeof AppTransactionalTemplatesIndexRoute
+  '/_app/transactional/webhooks/': typeof AppTransactionalWebhooksIndexRoute
+  '/_app/settings/integrations/agents/$id': typeof AppSettingsIntegrationsAgentsIdRoute
+  '/_app/transactional/templates/$id/preview': typeof AppTransactionalTemplatesIdPreviewRoute
+  '/_app/transactional/templates/$id/versions': typeof AppTransactionalTemplatesIdVersionsRoute
+  '/_app/transactional/templates/$id/': typeof AppTransactionalTemplatesIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -166,23 +564,105 @@ export interface FileRouteTypes {
     | '/settings'
     | '/transactional'
     | '/invite/$token'
+    | '/analytics/audience'
+    | '/analytics/engagement'
+    | '/analytics/inbound'
+    | '/analytics/reputation'
+    | '/analytics/sending'
+    | '/analytics/usage'
+    | '/domains/$id'
+    | '/domains/dmarc'
+    | '/domains/import'
+    | '/domains/reputation'
     | '/mail/$mailboxId'
+    | '/settings/ai'
+    | '/settings/audit'
+    | '/settings/brand'
+    | '/settings/danger'
+    | '/settings/data'
+    | '/settings/gmail-mode'
+    | '/settings/mailboxes'
+    | '/settings/members'
+    | '/settings/rules'
+    | '/settings/sending'
+    | '/settings/sessions'
+    | '/settings/tracking'
+    | '/transactional/keys'
+    | '/transactional/quickstart'
+    | '/analytics/'
+    | '/domains/'
+    | '/settings/'
+    | '/transactional/'
+    | '/settings/integrations/approvals'
+    | '/settings/mailboxes/$id'
+    | '/transactional/messages/$id'
+    | '/transactional/suppressions/$email'
+    | '/transactional/suppressions/import'
+    | '/transactional/webhooks/$id'
+    | '/settings/integrations/'
+    | '/transactional/messages/'
+    | '/transactional/suppressions/'
+    | '/transactional/templates/'
+    | '/transactional/webhooks/'
+    | '/settings/integrations/agents/$id'
+    | '/transactional/templates/$id/preview'
+    | '/transactional/templates/$id/versions'
+    | '/transactional/templates/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/claim'
     | '/sign-in'
     | '/signed-out'
-    | '/analytics'
     | '/audience'
     | '/automations'
     | '/campaigns'
-    | '/domains'
     | '/mail'
-    | '/settings'
-    | '/transactional'
     | '/invite/$token'
     | '/'
+    | '/analytics/audience'
+    | '/analytics/engagement'
+    | '/analytics/inbound'
+    | '/analytics/reputation'
+    | '/analytics/sending'
+    | '/analytics/usage'
+    | '/domains/$id'
+    | '/domains/dmarc'
+    | '/domains/import'
+    | '/domains/reputation'
     | '/mail/$mailboxId'
+    | '/settings/ai'
+    | '/settings/audit'
+    | '/settings/brand'
+    | '/settings/danger'
+    | '/settings/data'
+    | '/settings/gmail-mode'
+    | '/settings/mailboxes'
+    | '/settings/members'
+    | '/settings/rules'
+    | '/settings/sending'
+    | '/settings/sessions'
+    | '/settings/tracking'
+    | '/transactional/keys'
+    | '/transactional/quickstart'
+    | '/analytics'
+    | '/domains'
+    | '/settings'
+    | '/transactional'
+    | '/settings/integrations/approvals'
+    | '/settings/mailboxes/$id'
+    | '/transactional/messages/$id'
+    | '/transactional/suppressions/$email'
+    | '/transactional/suppressions/import'
+    | '/transactional/webhooks/$id'
+    | '/settings/integrations'
+    | '/transactional/messages'
+    | '/transactional/suppressions'
+    | '/transactional/templates'
+    | '/transactional/webhooks'
+    | '/settings/integrations/agents/$id'
+    | '/transactional/templates/$id/preview'
+    | '/transactional/templates/$id/versions'
+    | '/transactional/templates/$id'
   id:
     | '__root__'
     | '/_app'
@@ -199,7 +679,50 @@ export interface FileRouteTypes {
     | '/_app/transactional'
     | '/invite/$token'
     | '/_app/'
+    | '/_app/analytics/audience'
+    | '/_app/analytics/engagement'
+    | '/_app/analytics/inbound'
+    | '/_app/analytics/reputation'
+    | '/_app/analytics/sending'
+    | '/_app/analytics/usage'
+    | '/_app/domains/$id'
+    | '/_app/domains/dmarc'
+    | '/_app/domains/import'
+    | '/_app/domains/reputation'
     | '/_app/mail/$mailboxId'
+    | '/_app/settings/ai'
+    | '/_app/settings/audit'
+    | '/_app/settings/brand'
+    | '/_app/settings/danger'
+    | '/_app/settings/data'
+    | '/_app/settings/gmail-mode'
+    | '/_app/settings/mailboxes'
+    | '/_app/settings/members'
+    | '/_app/settings/rules'
+    | '/_app/settings/sending'
+    | '/_app/settings/sessions'
+    | '/_app/settings/tracking'
+    | '/_app/transactional/keys'
+    | '/_app/transactional/quickstart'
+    | '/_app/analytics/'
+    | '/_app/domains/'
+    | '/_app/settings/'
+    | '/_app/transactional/'
+    | '/_app/settings/integrations/approvals'
+    | '/_app/settings/mailboxes_/$id'
+    | '/_app/transactional/messages/$id'
+    | '/_app/transactional/suppressions/$email'
+    | '/_app/transactional/suppressions/import'
+    | '/_app/transactional/webhooks/$id'
+    | '/_app/settings/integrations/'
+    | '/_app/transactional/messages/'
+    | '/_app/transactional/suppressions/'
+    | '/_app/transactional/templates/'
+    | '/_app/transactional/webhooks/'
+    | '/_app/settings/integrations/agents/$id'
+    | '/_app/transactional/templates/$id/preview'
+    | '/_app/transactional/templates/$id/versions'
+    | '/_app/transactional/templates/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -310,6 +833,90 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/analytics/': {
+      id: '/_app/analytics/'
+      path: '/'
+      fullPath: '/analytics/'
+      preLoaderRoute: typeof AppAnalyticsIndexRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/analytics/audience': {
+      id: '/_app/analytics/audience'
+      path: '/audience'
+      fullPath: '/analytics/audience'
+      preLoaderRoute: typeof AppAnalyticsAudienceRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/analytics/engagement': {
+      id: '/_app/analytics/engagement'
+      path: '/engagement'
+      fullPath: '/analytics/engagement'
+      preLoaderRoute: typeof AppAnalyticsEngagementRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/analytics/inbound': {
+      id: '/_app/analytics/inbound'
+      path: '/inbound'
+      fullPath: '/analytics/inbound'
+      preLoaderRoute: typeof AppAnalyticsInboundRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/analytics/reputation': {
+      id: '/_app/analytics/reputation'
+      path: '/reputation'
+      fullPath: '/analytics/reputation'
+      preLoaderRoute: typeof AppAnalyticsReputationRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/analytics/sending': {
+      id: '/_app/analytics/sending'
+      path: '/sending'
+      fullPath: '/analytics/sending'
+      preLoaderRoute: typeof AppAnalyticsSendingRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/analytics/usage': {
+      id: '/_app/analytics/usage'
+      path: '/usage'
+      fullPath: '/analytics/usage'
+      preLoaderRoute: typeof AppAnalyticsUsageRouteImport
+      parentRoute: typeof AppAnalyticsRoute
+    }
+    '/_app/domains/': {
+      id: '/_app/domains/'
+      path: '/'
+      fullPath: '/domains/'
+      preLoaderRoute: typeof AppDomainsIndexRouteImport
+      parentRoute: typeof AppDomainsRoute
+    }
+    '/_app/domains/$id': {
+      id: '/_app/domains/$id'
+      path: '/$id'
+      fullPath: '/domains/$id'
+      preLoaderRoute: typeof AppDomainsIdRouteImport
+      parentRoute: typeof AppDomainsRoute
+    }
+    '/_app/domains/dmarc': {
+      id: '/_app/domains/dmarc'
+      path: '/dmarc'
+      fullPath: '/domains/dmarc'
+      preLoaderRoute: typeof AppDomainsDmarcRouteImport
+      parentRoute: typeof AppDomainsRoute
+    }
+    '/_app/domains/import': {
+      id: '/_app/domains/import'
+      path: '/import'
+      fullPath: '/domains/import'
+      preLoaderRoute: typeof AppDomainsImportRouteImport
+      parentRoute: typeof AppDomainsRoute
+    }
+    '/_app/domains/reputation': {
+      id: '/_app/domains/reputation'
+      path: '/reputation'
+      fullPath: '/domains/reputation'
+      preLoaderRoute: typeof AppDomainsReputationRouteImport
+      parentRoute: typeof AppDomainsRoute
+    }
     '/_app/mail/$mailboxId': {
       id: '/_app/mail/$mailboxId'
       path: '/$mailboxId'
@@ -317,8 +924,269 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMailMailboxIdRouteImport
       parentRoute: typeof AppMailRoute
     }
+    '/_app/settings/': {
+      id: '/_app/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/ai': {
+      id: '/_app/settings/ai'
+      path: '/ai'
+      fullPath: '/settings/ai'
+      preLoaderRoute: typeof AppSettingsAiRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/audit': {
+      id: '/_app/settings/audit'
+      path: '/audit'
+      fullPath: '/settings/audit'
+      preLoaderRoute: typeof AppSettingsAuditRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/brand': {
+      id: '/_app/settings/brand'
+      path: '/brand'
+      fullPath: '/settings/brand'
+      preLoaderRoute: typeof AppSettingsBrandRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/danger': {
+      id: '/_app/settings/danger'
+      path: '/danger'
+      fullPath: '/settings/danger'
+      preLoaderRoute: typeof AppSettingsDangerRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/data': {
+      id: '/_app/settings/data'
+      path: '/data'
+      fullPath: '/settings/data'
+      preLoaderRoute: typeof AppSettingsDataRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/gmail-mode': {
+      id: '/_app/settings/gmail-mode'
+      path: '/gmail-mode'
+      fullPath: '/settings/gmail-mode'
+      preLoaderRoute: typeof AppSettingsGmailModeRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/mailboxes': {
+      id: '/_app/settings/mailboxes'
+      path: '/mailboxes'
+      fullPath: '/settings/mailboxes'
+      preLoaderRoute: typeof AppSettingsMailboxesRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/members': {
+      id: '/_app/settings/members'
+      path: '/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof AppSettingsMembersRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/rules': {
+      id: '/_app/settings/rules'
+      path: '/rules'
+      fullPath: '/settings/rules'
+      preLoaderRoute: typeof AppSettingsRulesRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/sending': {
+      id: '/_app/settings/sending'
+      path: '/sending'
+      fullPath: '/settings/sending'
+      preLoaderRoute: typeof AppSettingsSendingRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/sessions': {
+      id: '/_app/settings/sessions'
+      path: '/sessions'
+      fullPath: '/settings/sessions'
+      preLoaderRoute: typeof AppSettingsSessionsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/tracking': {
+      id: '/_app/settings/tracking'
+      path: '/tracking'
+      fullPath: '/settings/tracking'
+      preLoaderRoute: typeof AppSettingsTrackingRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/transactional/': {
+      id: '/_app/transactional/'
+      path: '/'
+      fullPath: '/transactional/'
+      preLoaderRoute: typeof AppTransactionalIndexRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/keys': {
+      id: '/_app/transactional/keys'
+      path: '/keys'
+      fullPath: '/transactional/keys'
+      preLoaderRoute: typeof AppTransactionalKeysRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/quickstart': {
+      id: '/_app/transactional/quickstart'
+      path: '/quickstart'
+      fullPath: '/transactional/quickstart'
+      preLoaderRoute: typeof AppTransactionalQuickstartRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/settings/integrations/': {
+      id: '/_app/settings/integrations/'
+      path: '/integrations'
+      fullPath: '/settings/integrations/'
+      preLoaderRoute: typeof AppSettingsIntegrationsIndexRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/integrations/approvals': {
+      id: '/_app/settings/integrations/approvals'
+      path: '/integrations/approvals'
+      fullPath: '/settings/integrations/approvals'
+      preLoaderRoute: typeof AppSettingsIntegrationsApprovalsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/mailboxes_/$id': {
+      id: '/_app/settings/mailboxes_/$id'
+      path: '/mailboxes/$id'
+      fullPath: '/settings/mailboxes/$id'
+      preLoaderRoute: typeof AppSettingsMailboxesIdRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/transactional/messages/': {
+      id: '/_app/transactional/messages/'
+      path: '/messages'
+      fullPath: '/transactional/messages/'
+      preLoaderRoute: typeof AppTransactionalMessagesIndexRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/messages/$id': {
+      id: '/_app/transactional/messages/$id'
+      path: '/messages/$id'
+      fullPath: '/transactional/messages/$id'
+      preLoaderRoute: typeof AppTransactionalMessagesIdRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/suppressions/': {
+      id: '/_app/transactional/suppressions/'
+      path: '/suppressions'
+      fullPath: '/transactional/suppressions/'
+      preLoaderRoute: typeof AppTransactionalSuppressionsIndexRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/suppressions/$email': {
+      id: '/_app/transactional/suppressions/$email'
+      path: '/suppressions/$email'
+      fullPath: '/transactional/suppressions/$email'
+      preLoaderRoute: typeof AppTransactionalSuppressionsEmailRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/suppressions/import': {
+      id: '/_app/transactional/suppressions/import'
+      path: '/suppressions/import'
+      fullPath: '/transactional/suppressions/import'
+      preLoaderRoute: typeof AppTransactionalSuppressionsImportRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/templates/': {
+      id: '/_app/transactional/templates/'
+      path: '/templates'
+      fullPath: '/transactional/templates/'
+      preLoaderRoute: typeof AppTransactionalTemplatesIndexRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/webhooks/': {
+      id: '/_app/transactional/webhooks/'
+      path: '/webhooks'
+      fullPath: '/transactional/webhooks/'
+      preLoaderRoute: typeof AppTransactionalWebhooksIndexRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/webhooks/$id': {
+      id: '/_app/transactional/webhooks/$id'
+      path: '/webhooks/$id'
+      fullPath: '/transactional/webhooks/$id'
+      preLoaderRoute: typeof AppTransactionalWebhooksIdRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/settings/integrations/agents/$id': {
+      id: '/_app/settings/integrations/agents/$id'
+      path: '/integrations/agents/$id'
+      fullPath: '/settings/integrations/agents/$id'
+      preLoaderRoute: typeof AppSettingsIntegrationsAgentsIdRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/transactional/templates/$id/': {
+      id: '/_app/transactional/templates/$id/'
+      path: '/templates/$id'
+      fullPath: '/transactional/templates/$id/'
+      preLoaderRoute: typeof AppTransactionalTemplatesIdIndexRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/templates/$id/preview': {
+      id: '/_app/transactional/templates/$id/preview'
+      path: '/templates/$id/preview'
+      fullPath: '/transactional/templates/$id/preview'
+      preLoaderRoute: typeof AppTransactionalTemplatesIdPreviewRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/transactional/templates/$id/versions': {
+      id: '/_app/transactional/templates/$id/versions'
+      path: '/templates/$id/versions'
+      fullPath: '/transactional/templates/$id/versions'
+      preLoaderRoute: typeof AppTransactionalTemplatesIdVersionsRouteImport
+      parentRoute: typeof AppTransactionalRoute
+    }
   }
 }
+
+interface AppAnalyticsRouteChildren {
+  AppAnalyticsAudienceRoute: typeof AppAnalyticsAudienceRoute
+  AppAnalyticsEngagementRoute: typeof AppAnalyticsEngagementRoute
+  AppAnalyticsInboundRoute: typeof AppAnalyticsInboundRoute
+  AppAnalyticsReputationRoute: typeof AppAnalyticsReputationRoute
+  AppAnalyticsSendingRoute: typeof AppAnalyticsSendingRoute
+  AppAnalyticsUsageRoute: typeof AppAnalyticsUsageRoute
+  AppAnalyticsIndexRoute: typeof AppAnalyticsIndexRoute
+}
+
+const AppAnalyticsRouteChildren: AppAnalyticsRouteChildren = {
+  AppAnalyticsAudienceRoute: AppAnalyticsAudienceRoute,
+  AppAnalyticsEngagementRoute: AppAnalyticsEngagementRoute,
+  AppAnalyticsInboundRoute: AppAnalyticsInboundRoute,
+  AppAnalyticsReputationRoute: AppAnalyticsReputationRoute,
+  AppAnalyticsSendingRoute: AppAnalyticsSendingRoute,
+  AppAnalyticsUsageRoute: AppAnalyticsUsageRoute,
+  AppAnalyticsIndexRoute: AppAnalyticsIndexRoute,
+}
+
+const AppAnalyticsRouteWithChildren = AppAnalyticsRoute._addFileChildren(
+  AppAnalyticsRouteChildren,
+)
+
+interface AppDomainsRouteChildren {
+  AppDomainsIdRoute: typeof AppDomainsIdRoute
+  AppDomainsDmarcRoute: typeof AppDomainsDmarcRoute
+  AppDomainsImportRoute: typeof AppDomainsImportRoute
+  AppDomainsReputationRoute: typeof AppDomainsReputationRoute
+  AppDomainsIndexRoute: typeof AppDomainsIndexRoute
+}
+
+const AppDomainsRouteChildren: AppDomainsRouteChildren = {
+  AppDomainsIdRoute: AppDomainsIdRoute,
+  AppDomainsDmarcRoute: AppDomainsDmarcRoute,
+  AppDomainsImportRoute: AppDomainsImportRoute,
+  AppDomainsReputationRoute: AppDomainsReputationRoute,
+  AppDomainsIndexRoute: AppDomainsIndexRoute,
+}
+
+const AppDomainsRouteWithChildren = AppDomainsRoute._addFileChildren(
+  AppDomainsRouteChildren,
+)
 
 interface AppMailRouteChildren {
   AppMailMailboxIdRoute: typeof AppMailMailboxIdRoute
@@ -331,27 +1199,113 @@ const AppMailRouteChildren: AppMailRouteChildren = {
 const AppMailRouteWithChildren =
   AppMailRoute._addFileChildren(AppMailRouteChildren)
 
+interface AppSettingsRouteChildren {
+  AppSettingsAiRoute: typeof AppSettingsAiRoute
+  AppSettingsAuditRoute: typeof AppSettingsAuditRoute
+  AppSettingsBrandRoute: typeof AppSettingsBrandRoute
+  AppSettingsDangerRoute: typeof AppSettingsDangerRoute
+  AppSettingsDataRoute: typeof AppSettingsDataRoute
+  AppSettingsGmailModeRoute: typeof AppSettingsGmailModeRoute
+  AppSettingsMailboxesRoute: typeof AppSettingsMailboxesRoute
+  AppSettingsMembersRoute: typeof AppSettingsMembersRoute
+  AppSettingsRulesRoute: typeof AppSettingsRulesRoute
+  AppSettingsSendingRoute: typeof AppSettingsSendingRoute
+  AppSettingsSessionsRoute: typeof AppSettingsSessionsRoute
+  AppSettingsTrackingRoute: typeof AppSettingsTrackingRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+  AppSettingsIntegrationsApprovalsRoute: typeof AppSettingsIntegrationsApprovalsRoute
+  AppSettingsMailboxesIdRoute: typeof AppSettingsMailboxesIdRoute
+  AppSettingsIntegrationsIndexRoute: typeof AppSettingsIntegrationsIndexRoute
+  AppSettingsIntegrationsAgentsIdRoute: typeof AppSettingsIntegrationsAgentsIdRoute
+}
+
+const AppSettingsRouteChildren: AppSettingsRouteChildren = {
+  AppSettingsAiRoute: AppSettingsAiRoute,
+  AppSettingsAuditRoute: AppSettingsAuditRoute,
+  AppSettingsBrandRoute: AppSettingsBrandRoute,
+  AppSettingsDangerRoute: AppSettingsDangerRoute,
+  AppSettingsDataRoute: AppSettingsDataRoute,
+  AppSettingsGmailModeRoute: AppSettingsGmailModeRoute,
+  AppSettingsMailboxesRoute: AppSettingsMailboxesRoute,
+  AppSettingsMembersRoute: AppSettingsMembersRoute,
+  AppSettingsRulesRoute: AppSettingsRulesRoute,
+  AppSettingsSendingRoute: AppSettingsSendingRoute,
+  AppSettingsSessionsRoute: AppSettingsSessionsRoute,
+  AppSettingsTrackingRoute: AppSettingsTrackingRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
+  AppSettingsIntegrationsApprovalsRoute: AppSettingsIntegrationsApprovalsRoute,
+  AppSettingsMailboxesIdRoute: AppSettingsMailboxesIdRoute,
+  AppSettingsIntegrationsIndexRoute: AppSettingsIntegrationsIndexRoute,
+  AppSettingsIntegrationsAgentsIdRoute: AppSettingsIntegrationsAgentsIdRoute,
+}
+
+const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
+  AppSettingsRouteChildren,
+)
+
+interface AppTransactionalRouteChildren {
+  AppTransactionalKeysRoute: typeof AppTransactionalKeysRoute
+  AppTransactionalQuickstartRoute: typeof AppTransactionalQuickstartRoute
+  AppTransactionalIndexRoute: typeof AppTransactionalIndexRoute
+  AppTransactionalMessagesIdRoute: typeof AppTransactionalMessagesIdRoute
+  AppTransactionalSuppressionsEmailRoute: typeof AppTransactionalSuppressionsEmailRoute
+  AppTransactionalSuppressionsImportRoute: typeof AppTransactionalSuppressionsImportRoute
+  AppTransactionalWebhooksIdRoute: typeof AppTransactionalWebhooksIdRoute
+  AppTransactionalMessagesIndexRoute: typeof AppTransactionalMessagesIndexRoute
+  AppTransactionalSuppressionsIndexRoute: typeof AppTransactionalSuppressionsIndexRoute
+  AppTransactionalTemplatesIndexRoute: typeof AppTransactionalTemplatesIndexRoute
+  AppTransactionalWebhooksIndexRoute: typeof AppTransactionalWebhooksIndexRoute
+  AppTransactionalTemplatesIdPreviewRoute: typeof AppTransactionalTemplatesIdPreviewRoute
+  AppTransactionalTemplatesIdVersionsRoute: typeof AppTransactionalTemplatesIdVersionsRoute
+  AppTransactionalTemplatesIdIndexRoute: typeof AppTransactionalTemplatesIdIndexRoute
+}
+
+const AppTransactionalRouteChildren: AppTransactionalRouteChildren = {
+  AppTransactionalKeysRoute: AppTransactionalKeysRoute,
+  AppTransactionalQuickstartRoute: AppTransactionalQuickstartRoute,
+  AppTransactionalIndexRoute: AppTransactionalIndexRoute,
+  AppTransactionalMessagesIdRoute: AppTransactionalMessagesIdRoute,
+  AppTransactionalSuppressionsEmailRoute:
+    AppTransactionalSuppressionsEmailRoute,
+  AppTransactionalSuppressionsImportRoute:
+    AppTransactionalSuppressionsImportRoute,
+  AppTransactionalWebhooksIdRoute: AppTransactionalWebhooksIdRoute,
+  AppTransactionalMessagesIndexRoute: AppTransactionalMessagesIndexRoute,
+  AppTransactionalSuppressionsIndexRoute:
+    AppTransactionalSuppressionsIndexRoute,
+  AppTransactionalTemplatesIndexRoute: AppTransactionalTemplatesIndexRoute,
+  AppTransactionalWebhooksIndexRoute: AppTransactionalWebhooksIndexRoute,
+  AppTransactionalTemplatesIdPreviewRoute:
+    AppTransactionalTemplatesIdPreviewRoute,
+  AppTransactionalTemplatesIdVersionsRoute:
+    AppTransactionalTemplatesIdVersionsRoute,
+  AppTransactionalTemplatesIdIndexRoute: AppTransactionalTemplatesIdIndexRoute,
+}
+
+const AppTransactionalRouteWithChildren =
+  AppTransactionalRoute._addFileChildren(AppTransactionalRouteChildren)
+
 interface AppRouteChildren {
-  AppAnalyticsRoute: typeof AppAnalyticsRoute
+  AppAnalyticsRoute: typeof AppAnalyticsRouteWithChildren
   AppAudienceRoute: typeof AppAudienceRoute
   AppAutomationsRoute: typeof AppAutomationsRoute
   AppCampaignsRoute: typeof AppCampaignsRoute
-  AppDomainsRoute: typeof AppDomainsRoute
+  AppDomainsRoute: typeof AppDomainsRouteWithChildren
   AppMailRoute: typeof AppMailRouteWithChildren
-  AppSettingsRoute: typeof AppSettingsRoute
-  AppTransactionalRoute: typeof AppTransactionalRoute
+  AppSettingsRoute: typeof AppSettingsRouteWithChildren
+  AppTransactionalRoute: typeof AppTransactionalRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAnalyticsRoute: AppAnalyticsRoute,
+  AppAnalyticsRoute: AppAnalyticsRouteWithChildren,
   AppAudienceRoute: AppAudienceRoute,
   AppAutomationsRoute: AppAutomationsRoute,
   AppCampaignsRoute: AppCampaignsRoute,
-  AppDomainsRoute: AppDomainsRoute,
+  AppDomainsRoute: AppDomainsRouteWithChildren,
   AppMailRoute: AppMailRouteWithChildren,
-  AppSettingsRoute: AppSettingsRoute,
-  AppTransactionalRoute: AppTransactionalRoute,
+  AppSettingsRoute: AppSettingsRouteWithChildren,
+  AppTransactionalRoute: AppTransactionalRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
 }
 

@@ -80,7 +80,7 @@ export async function fixtureFetch(request: Request): Promise<Response> {
     await new Promise((r) => setTimeout(r, 120))
     return Response.json(override.body, {
       status: override.status,
-      headers: { "x-fixture-screen": "override" },
+      headers: { "x-fixture-screen": "override", ...override.headers },
     })
   }
   const hit = findFixture(await load(), request.method, url)

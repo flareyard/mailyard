@@ -1,0 +1,73 @@
+/* Analytics (HAL-3309): only what the design CSS doesn't already cover. Tokens only. */
+.ana-note {
+  margin-bottom: 16px;
+}
+.ana-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.ana-fieldset legend {
+  margin-bottom: 6px;
+}
+.ana-check {
+  width: 16px;
+  height: 16px;
+}
+.ana-big {
+  margin-bottom: 16px;
+}
+.ana-fig-small {
+  font-size: 22px;
+}
+.ana-fig-note {
+  font: var(--text-label-13);
+  margin-top: 6px;
+}
+.ana-fg {
+  color: var(--my-fg);
+}
+.ana-unit {
+  font-family: var(--font-sans);
+}
+.pick .p-sub.mono {
+  overflow-wrap: anywhere;
+}
+.ana-pill-sm {
+  height: 18px;
+}
+.ana-rate-head {
+  margin-bottom: 8px;
+}
+.ana-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ana-legend {
+  margin-bottom: 12px;
+}
+.ana-after {
+  margin-top: 10px;
+}
+.ana-mono-sm {
+  font-size: 12px;
+}
+.ana-hint-gap {
+  margin-bottom: 8px;
+}
+.ana-hint-top {
+  margin-top: 8px;
+}
+.ana-split18 {
+  height: 18px;
+}
+.ana-split14 {
+  height: 14px;
+}
+.ana-thresh {
+  text-decoration: none;
+  color: inherit;
+}
+.ana-meter {
+  height: 10px;
+}

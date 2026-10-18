@@ -1,15 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { SectionPending } from "../../ui/SectionPending.tsx"
+import { AnalyticsLayout } from "../../analytics/Layout.tsx"
+import { parseSearch } from "../../analytics/logic.ts"
+import { fixturesEnabled } from "../../fixtures/mode.ts"
 
-// TEMPORARY until HAL-3309 lands (see SectionPending).
+/** Analytics (HAL-3309): every role, read-only. The range and the export sheet live in the URL. */
 export const Route = createFileRoute("/_app/analytics")({
   staticData: { title: "Analytics" },
-  component: () => (
-    <SectionPending
-      title="Analytics"
-      issue="HAL-3309"
-      icon="analytics"
-      what="Volume, delivery, engagement and inbound over time."
-    />
-  ),
+  validateSearch: (s: Record<string, unknown>) => parseSearch(s, fixturesEnabled()),
+  component: AnalyticsLayout,
 })
