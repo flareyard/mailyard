@@ -48,7 +48,14 @@ const { state } = vi.hoisted(() => {
             { id: "whk_1", url: "https://h.x/a", deadLetters: 2, lastFailureAt: null, lastSuccessAt: null },
           ],
         },
-        hermes: { connected: false, lane: null, mailboxes: [], since: null },
+        hermes: {
+          connected: false,
+          lane: null,
+          mailboxes: [],
+          allMailboxes: false,
+          available: false,
+          since: null,
+        },
         siblings: [
           {
             app: "support-inbox",
@@ -90,9 +97,8 @@ describe("linked apps", () => {
     expect(await screen.findByText(/you see the counts/)).toBeTruthy()
     expect(screen.queryByText("Hermes key")).toBeNull()
     expect(screen.getByText(/Its key shows to people who can manage keys/)).toBeTruthy()
-    // The Hermes lane switch waits on HAL-3306 and stays disabled with its reason.
-    expect(screen.getByRole("button", { name: "Turn the lane on" }).getAttribute("aria-disabled")).toBe(
-      "true",
-    )
+    // Without a bound queue the Hermes card says the lane can't go on yet, and links to the lane settings.
+    expect(screen.getByText(/queue isn’t bound in this deploy/)).toBeTruthy()
+    expect(screen.getByText("Turn the lane on")).toBeTruthy()
   })
 })

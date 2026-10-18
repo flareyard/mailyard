@@ -6,6 +6,7 @@
  *
  * The Settings layout's `?fx=` picks a designed state, so every one is reachable by URL:
  *   integrations          empty · error · loading (the agent list); no-keys (the summary without keys.manage)
+ *   integrations (lane)   mail-events-bad (saving answers 400 on mailboxIds) · lane-unavailable (no queue bound)
  *   alerts                empty · error · bad-target (saving answers 400 on the first webhook row)
  *   integrations/agents/… error · loading · new; the id `agt_missing` answers 404
  *   new agent sheet       the address `hermes@…` answers 409 (taken)
@@ -816,6 +817,18 @@ const alertSettings = (channels: AlertChannel[], defaultEmail: string | null): A
 })
 const ALERT_PAGES = ["/settings/alerts", "/settings/integrations"]
 
+// ── Hermes lane (HAL-3306) ───────────────────────────────────────────────────────────────────────────────────
+type MailEvents = Json<"/v1/settings/mail-events", "get">
+let mailEvents: MailEvents = {
+  enabled: true,
+  mailboxIds: ["mbx_support", "mbx_hermes"],
+  types: null,
+  since: NOW - 16 * DAY,
+  queue: "mailyard-mail-events",
+  version: 3,
+  available: true,
+}
+
 // ── Linked apps (HAL-3466) ───────────────────────────────────────────────────────────────────────────────────
 type Integrations = Json<"/v1/integrations", "get">
 const integrations = (withKeys: boolean): Integrations => ({
@@ -901,6 +914,8 @@ const integrations = (withKeys: boolean): Integrations => ({
     connected: true,
     lane: "email",
     mailboxes: ["support@coursified.app", "hermes@coursified.app"],
+    allMailboxes: false,
+    available: true,
     since: NOW - 16 * DAY,
   },
   siblings: [
@@ -922,6 +937,42 @@ const DANGER = ["/settings/danger"]
 const AUDIT_PAGES = ["/settings/audit", "/settings/integrations/agents"]
 
 export const SETTINGS_AGENTS_OVERRIDES: readonly Override[] = [
+  // Hermes lane
+  {
+    method: "GET",
+    path: new Scoped(/^\/v1\/settings\/mail-events$/, () => on(...AGENT_PAGES)),
+    answer: () => {
+      const s = fx()
+      if (s === "error") return refusal(500, "InternalError", "The mail-events settings couldn’t be read.")
+      if (s === "lane-unavailable")
+        return ok({ ...mailEvents, enabled: false, since: null, available: false })
+      return ok(mailEvents)
+    },
+  },
+  {
+    method: "PUT",
+    path: new Scoped(/^\/v1\/settings\/mail-events$/, () => on(...AGENT_PAGES)),
+    answer: (_, body) => {
+      const b = (body ?? {}) as {
+        enabled?: boolean
+        mailboxIds?: string[] | null
+        types?: MailEvents["types"]
+      }
+      if (fx() === "mail-events-bad")
+        return refusal(400, "InvalidRequest", `No mailbox ${(b.mailboxIds ?? ["mbx_gone"]).at(-1)}.`, {
+          field: "mailboxIds",
+        })
+      mailEvents = {
+        ...mailEvents,
+        enabled: Boolean(b.enabled),
+        mailboxIds: b.mailboxIds ?? null,
+        types: b.types ?? null,
+        since: b.enabled ? (mailEvents.enabled ? mailEvents.since : Date.now()) : null,
+        version: Number(mailEvents.version) + 1,
+      }
+      return ok(mailEvents)
+    },
+  },
   // Linked apps
   {
     method: "GET",

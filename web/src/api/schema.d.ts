@@ -292,6 +292,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/mail-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.getMailEvents"];
+        put: operations["settings.putMailEvents"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/audit": {
         parameters: {
             query?: never;
@@ -5579,6 +5595,133 @@ export interface operations {
                             criticalEmail: string | null;
                             note: string | null;
                         };
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.getMailEvents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        mailboxIds: string[] | null;
+                        types: ("message.received" | "message.sent" | "thread.assigned" | "delivery")[] | null;
+                        since: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        queue: string;
+                        version: number | ("Infinity" | "-Infinity" | "NaN");
+                        available: boolean;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.putMailEvents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                    mailboxIds?: string[] | null;
+                    types?: ("message.received" | "message.sent" | "thread.assigned" | "delivery")[] | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        mailboxIds: string[] | null;
+                        types: ("message.received" | "message.sent" | "thread.assigned" | "delivery")[] | null;
+                        since: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        queue: string;
+                        version: number | ("Infinity" | "-Infinity" | "NaN");
+                        available: boolean;
                     };
                 };
             };
@@ -30226,7 +30369,9 @@ export interface operations {
                             connected: boolean;
                             lane: string | null;
                             mailboxes: string[];
+                            allMailboxes: boolean;
                             since: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            available: boolean;
                         };
                         siblings: {
                             app: string;

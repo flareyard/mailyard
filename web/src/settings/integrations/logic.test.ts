@@ -10,6 +10,11 @@ import {
   DEFAULT_LIMITS,
   describeLimits,
   isLocalPart,
+  laneBody,
+  laneDirty,
+  laneField,
+  laneForm,
+  laneProblems,
   limitsProblems,
   localOf,
   mcpUrl,
@@ -158,5 +163,30 @@ describe("agent activity (HAL-3461)", () => {
   })
   it("builds the long-poll line", () => {
     expect(waitCurl("https://m.x/", "mbx_1")).toContain("https://m.x/v1/mailboxes/mbx_1/wait?timeout=50")
+  })
+})
+
+describe("Hermes lane (HAL-3306)", () => {
+  it("reads null as all and writes all as null", () => {
+    const f = laneForm({ enabled: true, mailboxIds: null, types: ["message.received"] })
+    expect(f).toMatchObject({ allMailboxes: true, allTypes: false, types: ["message.received"] })
+    expect(laneBody(f)).toEqual({ enabled: true, mailboxIds: null, types: ["message.received"] })
+    expect(laneBody({ ...f, allMailboxes: false, mailboxIds: ["mbx_1"], allTypes: true })).toEqual({
+      enabled: true,
+      mailboxIds: ["mbx_1"],
+      types: null,
+    })
+  })
+  it("knows what's unsaved and what's missing", () => {
+    const saved = laneForm({ enabled: false, mailboxIds: ["a", "b"], types: null })
+    expect(laneDirty(saved, { ...saved, mailboxIds: ["b", "a"] })).toBe(false)
+    expect(laneDirty(saved, { ...saved, enabled: true })).toBe(true)
+    expect(laneProblems({ ...saved, mailboxIds: [] }).mailboxIds).toMatch(/at least one mailbox/)
+    expect(laneProblems(saved)).toEqual({})
+  })
+  it("maps a 400 field", () => {
+    expect(laneField("mailboxIds")).toBe("mailboxIds")
+    expect(laneField("types")).toBe("types")
+    expect(laneField("enabled")).toBeNull()
   })
 })

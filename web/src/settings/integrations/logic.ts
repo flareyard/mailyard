@@ -472,3 +472,71 @@ export function isHttpsUrl(v: string): boolean {
     return false
   }
 }
+
+export const LANE_TYPES = [
+  { value: "message.received", label: "Mail received" },
+  { value: "message.sent", label: "Mail sent" },
+  { value: "thread.assigned", label: "Thread assigned" },
+  { value: "delivery", label: "Delivery results" },
+] as const
+export type LaneType = (typeof LANE_TYPES)[number]["value"]
+
+export type LaneForm = {
+  enabled: boolean
+  allMailboxes: boolean
+  mailboxIds: string[]
+  allTypes: boolean
+  types: LaneType[]
+}
+
+/** The form from `GET /v1/settings/mail-events`: null means every mailbox, or every type. */
+export function laneForm(s: {
+  enabled: boolean
+  mailboxIds: readonly string[] | null
+  types: readonly LaneType[] | null
+}): LaneForm {
+  return {
+    enabled: s.enabled,
+    allMailboxes: s.mailboxIds === null,
+    mailboxIds: [...(s.mailboxIds ?? [])],
+    allTypes: s.types === null,
+    types: [...(s.types ?? [])],
+  }
+}
+
+/** The PUT body: "all" is null, a picked list is that list. */
+export function laneBody(f: LaneForm): {
+  enabled: boolean
+  mailboxIds: string[] | null
+  types: LaneType[] | null
+} {
+  return {
+    enabled: f.enabled,
+    mailboxIds: f.allMailboxes ? null : [...f.mailboxIds],
+    types: f.allTypes ? null : [...f.types],
+  }
+}
+
+/** Whether the form differs from what's saved (list order aside). */
+export function laneDirty(saved: LaneForm, f: LaneForm): boolean {
+  const norm = (x: LaneForm) =>
+    JSON.stringify({
+      ...laneBody(x),
+      mailboxIds: laneBody(x).mailboxIds?.slice().sort() ?? null,
+      types: laneBody(x).types?.slice().sort() ?? null,
+    })
+  return norm(saved) !== norm(f)
+}
+
+/** Problems before a round trip: a picked list can't be empty. */
+export function laneProblems(f: LaneForm): { mailboxIds?: string; types?: string } {
+  const p: { mailboxIds?: string; types?: string } = {}
+  if (!f.allMailboxes && f.mailboxIds.length === 0) p.mailboxIds = "Pick at least one mailbox, or choose all."
+  if (!f.allTypes && f.types.length === 0) p.types = "Pick at least one kind of event, or choose all."
+  return p
+}
+
+/** Where a 400 from PUT /v1/settings/mail-events belongs: `mailboxIds` or `types`, else the card. */
+export function laneField(field: unknown): "mailboxIds" | "types" | null {
+  return field === "mailboxIds" || field === "types" ? field : null
+}

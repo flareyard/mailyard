@@ -236,3 +236,5 @@ settings/alerts?fx=empty
 settings/alerts?fx=error
 settings/alerts?fx=bad-target
 settings/integrations?fx=no-keys
+settings/integrations?fx=mail-events-bad
+settings/integrations?fx=lane-unavailable

@@ -21,6 +21,7 @@ import { alertSettingsQuery } from "../alerts/AlertsPage.tsx"
 import { AgentNewSheet } from "./AgentNewSheet.tsx"
 import { ConnectSheet } from "./ConnectSheet.tsx"
 import { AgentStatusPill, PlannedTag, RepoPill, ScopeTags, SectionHead } from "./common.tsx"
+import { HermesLane } from "./HermesLane.tsx"
 import { RevokeKeySheet, RotateKeySheet } from "./KeySheets.tsx"
 import { LinkedApps } from "./LinkedApps.tsx"
 import { agentStatus, capPercent, localOf, MCP_PROTOCOLS, mcpUrl } from "./logic.ts"
@@ -47,6 +48,7 @@ export function Integrations() {
     <>
       <SectionHead title="Integrations" sub="Agents and apps that work with this workspace." />
       <LinkedApps />
+      <HermesLane />
       <AgentMailboxes admin={admin} onNew={() => open({ sheet: "agent-new" })} />
       <McpServer admin={admin} onConnect={() => open({ sheet: "connect" })} />
       <OAuthApps />

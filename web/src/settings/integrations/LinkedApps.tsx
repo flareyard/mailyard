@@ -3,14 +3,14 @@
  * read-only summary of what is linked to this workspace and whether it's healthy. The MCP server with its keys
  * (only to callers with `keys.manage`; otherwise `keys: null` and the counts alone), webhooks with the failing
  * endpoints, Hermes, and one card per sibling Flareyard app. Nothing here writes: every action is a link to
- * where the thing is managed. The Hermes lane switch waits on `PUT /v1/settings/mail-events` (HAL-3306).
+ * where the thing is managed; the Hermes lane itself is set in the panel below (HAL-3306).
  */
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { api, unwrap } from "../../api/client.ts"
 import { fmtInt, num } from "../../lib/format.ts"
 import { CopyChip } from "../../ops/Copy.tsx"
-import { BuiltPill, NeedsRoute, PlannedPill, Time } from "../../ops/kit.tsx"
+import { BuiltPill, Time } from "../../ops/kit.tsx"
 import { Icon } from "../../ui/icons.tsx"
 import { Panel } from "../../ui/Panel.tsx"
 import { ScopeTags } from "./common.tsx"
@@ -180,14 +180,14 @@ function HermesCard({ h }: { h: Integrations["hermes"] }) {
           <>
             <li>
               Mailboxes:{" "}
-              {h.mailboxes.length
-                ? h.mailboxes.map((m, i) => (
+              {h.allMailboxes
+                ? "All mailboxes"
+                : h.mailboxes.map((m, i) => (
                     <span key={m}>
                       {i ? ", " : ""}
                       <span className="mono">{localOf(m)}</span>
                     </span>
-                  ))
-                : "every mailbox"}
+                  ))}
             </li>
             {h.since ? (
               <li>
@@ -198,20 +198,15 @@ function HermesCard({ h }: { h: Integrations["hermes"] }) {
         ) : (
           <li>Hermes reads mail events from the mail-events queue once its lane is on.</li>
         )}
+        {h.available ? null : (
+          <li className="muted">
+            The mail-events queue isn’t bound in this deploy, so the lane can’t go on yet.
+          </li>
+        )}
       </ul>
-      <div className="cluster" style={{ gap: 8 }}>
-        <NeedsRoute
-          method="PUT"
-          path="/v1/settings/mail-events"
-          issue="HAL-3306"
-          what="Switching the Hermes lane"
-        >
-          <button className="btn btn-secondary btn-sm" type="button">
-            {h.connected ? "Turn the lane off" : "Turn the lane on"}
-          </button>
-        </NeedsRoute>
-        <PlannedPill issue="HAL-3306" />
-      </div>
+      <a className="panel-link" href="#h-mail-events">
+        {h.connected ? "Lane settings" : "Turn the lane on"}
+      </a>
     </article>
   )
 }
