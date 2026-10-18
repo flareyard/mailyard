@@ -22,7 +22,9 @@
     "smoke:prod": "bun tools/smoke/prod.ts",
     "web:build": "cd web && bun run build",
     "web:check": "cd web && bun run typecheck && bun run test",
-    "check:ui": "cd web && bun run audit"
+    "check:ui": "cd web && bun run audit",
+    "site:deploy": "wrangler deploy --config site/wrangler.jsonc",
+    "site:audit": "cd web && node e2e/responsive-audit.mjs --base ${SITE_BASE:-http://127.0.0.1:4401} --pages \"\" --anon --assert --out test-results/audit/site"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",

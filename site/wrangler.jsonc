@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Mailyard's landing page (HAL-3334): static files only, no Worker script, so serving it runs no code and costs
+  // nothing per request. The founder's deployment answers at mailyard.flareyard.dev (a custom domain set on the
+  // account, not here, because other deployers don't own that name). Deploy: `bun run site:deploy`.
+  "name": "mailyard-site",
+  "compatibility_date": "2026-10-16",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  }
+}
