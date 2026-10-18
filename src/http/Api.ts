@@ -12,6 +12,7 @@ import {
 } from "../automations/graph.ts"
 import { TrackingOriginCheck } from "../campaigns/compliance.ts"
 import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
+import { MAIL_EVENT_TYPES } from "../contracts/mailEvents.ts"
 import { ALERT_KINDS } from "../domain/alerts.ts"
 import { BrandSettings } from "../domain/brand.ts"
 import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
@@ -713,6 +714,16 @@ const AlertSettingsView = Schema.Struct({
   }),
 })
 
+const MailEventsLaneView = Schema.Struct({
+  enabled: Schema.Boolean,
+  mailboxIds: Schema.NullOr(Schema.Array(Schema.String)),
+  types: Schema.NullOr(Schema.Array(Schema.Literals(MAIL_EVENT_TYPES))),
+  since: Schema.NullOr(Schema.Number),
+  queue: Schema.String,
+  version: Schema.Number,
+  available: Schema.Boolean,
+})
+
 export class SettingsApi extends HttpApiGroup.make("settings")
   .add(
     HttpApiEndpoint.get("getBrand", "/v1/settings/brand", { success: BrandSettingsSchema, error: Forbidden }),
@@ -744,6 +755,27 @@ export class SettingsApi extends HttpApiGroup.make("settings")
     HttpApiEndpoint.put("putAlertSettings", "/v1/settings/alerts", {
       payload: AlertSettingsPayload,
       success: AlertSettingsView,
+      error: [Forbidden, InvalidRequest],
+    }),
+    /**
+     * The mail-events lane (HAL-3306): mailbox mail, handovers and deliveries on the
+     * `mailyard-mail-events` Queue, for Hermes. Off until turned on; `docs/mail-events.md` is the
+     * contract. `available` is false where the queue isn't bound (off Cloudflare).
+     */
+    HttpApiEndpoint.get("getMailEvents", "/v1/settings/mail-events", {
+      success: MailEventsLaneView,
+      error: Forbidden,
+    }),
+    /** Turns the lane on or off, and picks its mailboxes (null for all) and event types (null for all). */
+    HttpApiEndpoint.put("putMailEvents", "/v1/settings/mail-events", {
+      payload: Schema.Struct({
+        enabled: Schema.Boolean,
+        mailboxIds: Schema.optionalKey(
+          Schema.NullOr(Schema.Array(Schema.String).check(Schema.isMaxLength(500))),
+        ),
+        types: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Literals(MAIL_EVENT_TYPES)))),
+      }),
+      success: MailEventsLaneView,
       error: [Forbidden, InvalidRequest],
     }),
     /**
@@ -5478,12 +5510,17 @@ export class IntegrationsApi extends HttpApiGroup.make("integrations")
             }),
           ),
         }),
-        /** The Hermes email lane (HAL-3306). */
+        /** The Hermes email lane (HAL-3306): on when `PUT /v1/settings/mail-events` turned it on. */
         hermes: Schema.Struct({
           connected: Schema.Boolean,
+          /** The queue's name while the lane is on. */
           lane: Schema.NullOr(Schema.String),
+          /** The mailboxes it carries; empty with `allMailboxes`. */
           mailboxes: Schema.Array(Schema.String),
+          allMailboxes: Schema.Boolean,
           since: NullableTime,
+          /** False where the queue isn't bound (off Cloudflare). */
+          available: Schema.Boolean,
         }),
         /** Sibling Flareyard apps, recognised by an MCP key named for them. */
         siblings: Schema.Array(

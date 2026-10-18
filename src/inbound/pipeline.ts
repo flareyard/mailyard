@@ -9,6 +9,7 @@ import * as Schema from "effect/Schema"
 import { fireMailReceived } from "../automations/mailTrigger.ts"
 import { Bindings } from "../Bindings.ts"
 import { inboundDeliveries, inboundMessages, mailboxes, mailboxRules } from "../db/schema.ts"
+import { publishMailEvent } from "../domain/mailEvents.ts"
 import { PROBE_LOCAL, recordProbeArrival } from "../domain/testSend.ts"
 import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
 import { emitSafely } from "../domain/webhooks.ts"
@@ -389,6 +390,31 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
       // Forwards, auto-replies and rule webhooks run once: only for a newly stored copy, so a retried
       // filing never sends them twice. Their failures are logged, never raised.
       yield* effectsFor(mailboxId, plan, parsed, row, result.threadId)
+      // The mail-events lane (HAL-3306), for Hermes: the message, and a rule's handover if any.
+      yield* publishMailEvent({
+        type: "message.received",
+        mailboxId,
+        threadId: result.threadId,
+        messageId: result.id,
+        internetMessageId: parsed.messageId,
+        from: parsed.from ? { email: parsed.from.address, name: parsed.from.name } : null,
+        to: row.envelopeTo,
+        subject: parsed.subject,
+        snippet: parsed.snippet,
+        folder: plan.filing.folder,
+        spam: plan.spam.isSpam,
+        automated: parsed.automated || parsed.listId !== null,
+        attachments: parsed.attachments.filter((a) => !a.related).length,
+        at: row.receivedAt,
+      })
+      if (plan.filing.assignee)
+        yield* publishMailEvent({
+          type: "thread.assigned",
+          mailboxId,
+          threadId: result.threadId,
+          assignee: plan.filing.assignee,
+          by: "rule",
+        })
       // Automations that start on mail (HAL-3467): never for automated, list or spam mail.
       yield* fireMailReceived({
         mailboxId,
