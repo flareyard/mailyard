@@ -2233,6 +2233,22 @@ const ContactStatusSchema = Schema.Literals([
 ])
 const SubscriptionStateSchema = Schema.Literals(["subscribed", "unconfirmed", "unsubscribed"])
 const EngagementSchema = Schema.Literals(["active", "cooling", "dormant"])
+/** One value, or several joined by commas (`subscribed,unconfirmed`): any of them matches. */
+const commaList = (values: ReadonlyArray<string>) =>
+  Schema.String.check(
+    Schema.isPattern(new RegExp(`^(${values.join("|")})(,(${values.join("|")}))*$`)),
+  ).annotate({
+    description: `One of ${values.join(", ")}, or several joined by commas (any matches).`,
+  })
+const StatusList = commaList([
+  "subscribed",
+  "unconfirmed",
+  "unsubscribed",
+  "bounced",
+  "complained",
+  "suppressed",
+])
+const EngagementList = commaList(["active", "cooling", "dormant"])
 const Fields = Schema.Record(Schema.String, Schema.Unknown)
 
 export const ContactSchema = Schema.Struct({
@@ -2242,7 +2258,16 @@ export const ContactSchema = Schema.Struct({
   status: ContactStatusSchema,
   fields: Fields,
   topics: Schema.Array(
-    Schema.Struct({ topicId: Schema.String, name: Schema.String, state: SubscriptionStateSchema }),
+    Schema.Struct({
+      topicId: Schema.String,
+      name: Schema.String,
+      state: SubscriptionStateSchema,
+      /** When the state last changed, and how: form, import, api, unsubscribe link, one-click, admin. */
+      changedAt: Schema.optionalKey(Schema.Number),
+      source: Schema.optionalKey(Schema.String),
+      /** The consent on record: when they confirmed (double opt-in) or were last subscribed. */
+      confirmedAt: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+    }),
   ),
   engagement: EngagementSchema,
   lastActivityAt: Schema.NullOr(Schema.Number),
@@ -2250,6 +2275,71 @@ export const ContactSchema = Schema.Struct({
   lastOpenedAt: Schema.NullOr(Schema.Number),
   lastClickedAt: Schema.NullOr(Schema.Number),
   createdAt: Schema.Number,
+  /** On a single contact: why mail to them is held back, or null. Not on list rows. */
+  suppression: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.Struct({
+        reason: Schema.Literals(["hard_bounce", "complaint", "unsubscribe", "manual"]),
+        source: Schema.Literals(["cloudflare", "events", "manual", "import"]),
+        detail: Schema.NullOr(Schema.String),
+        /** The message whose bounce or complaint added it. */
+        messageId: Schema.NullOr(Schema.String),
+        /** Only bulk mail (campaigns, automations) is held back; transactional still goes. */
+        bulkOnly: Schema.Boolean,
+        createdAt: Schema.Number,
+        cloudflare: Schema.Struct({
+          synced: Schema.Boolean,
+          id: Schema.NullOr(Schema.String),
+          checkedAt: Schema.NullOr(Schema.Number),
+        }),
+      }),
+    ),
+  ),
+})
+
+const BulkFilterSchema = Schema.Struct({
+  q: Schema.optionalKey(Schema.String),
+  status: Schema.optionalKey(StatusList),
+  topicId: Schema.optionalKey(Schema.String),
+  engagement: Schema.optionalKey(EngagementList),
+  segmentId: Schema.optionalKey(Schema.String),
+  field: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+  event: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
+})
+
+const BulkJobSchema = Schema.Struct({
+  id: Schema.String,
+  status: Schema.Literals(["queued", "running", "done", "failed"]),
+  action: Schema.Record(Schema.String, Schema.Unknown),
+  filter: Schema.Record(Schema.String, Schema.Unknown),
+  /** Matching contacts when the job was made. */
+  total: Schema.Number,
+  processed: Schema.Number,
+  updated: Schema.Number,
+  skipped: Schema.Number,
+  /** The first 100. */
+  errors: Schema.Array(Schema.Struct({ id: Schema.String, message: Schema.String })),
+  error: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  finishedAt: Schema.NullOr(Schema.Number),
+})
+
+const ContactFieldSchema = Schema.Struct({
+  key: Schema.String,
+  /** What people read; the key until someone names it. */
+  label: Schema.String,
+  /** Inferred from the first value written, or set by hand. */
+  type: Schema.Literals(["string", "number", "boolean", "date"]),
+  createdAt: Schema.Number,
+  updatedAt: Schema.NullOr(Schema.Number),
+  /** Segments whose rules read it, and automations that set or test it. */
+  usedBy: Schema.Array(
+    Schema.Struct({
+      type: Schema.Literals(["segment", "automation"]),
+      id: Schema.String,
+      name: Schema.String,
+    }),
+  ),
 })
 
 const TimelineItemSchema = Schema.Union([
@@ -2279,6 +2369,41 @@ const TimelineItemSchema = Schema.Union([
     from: Schema.NullOr(SubscriptionStateSchema),
     to: SubscriptionStateSchema,
     source: Schema.String,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("delivery"),
+    id: Schema.String,
+    at: Schema.Number,
+    /** delivered, deferred, bounced, failed, rejected, complained, opened, clicked, unsubscribed… */
+    event: Schema.String,
+    messageId: Schema.NullOr(Schema.String),
+    subject: Schema.NullOr(Schema.String),
+    data: Schema.NullOr(Fields),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("consent"),
+    id: Schema.String,
+    at: Schema.Number,
+    topicId: Schema.String,
+    topic: Schema.String,
+    source: Schema.String,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("reply"),
+    id: Schema.String,
+    at: Schema.Number,
+    subject: Schema.NullOr(Schema.String),
+    to: Schema.String,
+    inReplyTo: Schema.NullOr(Schema.String),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("automation"),
+    id: Schema.String,
+    at: Schema.Number,
+    automationId: Schema.String,
+    automation: Schema.NullOr(Schema.String),
+    state: Schema.String,
+    finishedAt: Schema.NullOr(Schema.Number),
   }),
 ])
 
@@ -2310,9 +2435,9 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
     HttpApiEndpoint.get("list", "/v1/contacts", {
       query: {
         q: Schema.optionalKey(Schema.String),
-        status: Schema.optionalKey(ContactStatusSchema),
+        status: Schema.optionalKey(StatusList),
         topicId: Schema.optionalKey(Schema.String),
-        engagement: Schema.optionalKey(EngagementSchema),
+        engagement: Schema.optionalKey(EngagementList),
         /** A saved segment's rules. */
         segmentId: Schema.optionalKey(Schema.String),
         /** `key:op:value`, as a segment field rule; repeat it to AND several. */
@@ -2380,7 +2505,14 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
     }),
     HttpApiEndpoint.get("timeline", "/v1/contacts/:id/timeline", {
       params: { id: Schema.String },
-      query: { cursor: Schema.optionalKey(Schema.String), limit: Limit },
+      query: {
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Limit,
+        /** Only these kinds: event, message, delivery, subscription, consent, reply, automation, comma-separated. */
+        kind: Schema.optionalKey(
+          commaList(["event", "message", "delivery", "subscription", "consent", "reply", "automation"]),
+        ),
+      },
       success: Schema.Struct({
         items: Schema.Array(TimelineItemSchema),
         nextCursor: Schema.NullOr(Schema.String),
@@ -2403,7 +2535,10 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
     }),
     HttpApiEndpoint.post("bulk", "/v1/contacts/bulk", {
       payload: Schema.Struct({
-        ids: Schema.Array(Schema.String),
+        /** Up to 1,000 contact ids. Give `ids` or `filter`, not both. */
+        ids: Schema.optionalKey(Schema.Array(Schema.String)),
+        /** The contacts list's filters. Up to 1,000 matches are done at once; more become a job. */
+        filter: Schema.optionalKey(BulkFilterSchema),
         action: Schema.Union([
           Schema.Struct({
             action: Schema.Literal("addTopic"),
@@ -2418,12 +2553,41 @@ export class ContactsApi extends HttpApiGroup.make("contacts")
           Schema.Struct({ action: Schema.Literal("delete") }),
         ]),
       }),
-      success: Schema.Struct({
-        updated: Schema.Number,
-        skipped: Schema.Number,
-        errors: Schema.Array(Schema.Struct({ id: Schema.String, message: Schema.String })),
-      }),
+      success: Schema.Union([
+        Schema.Struct({
+          /** Done in this request (ids, or a filter matching at most 1,000). */
+          mode: Schema.optionalKey(Schema.Literal("sync")),
+          updated: Schema.Number,
+          skipped: Schema.Number,
+          errors: Schema.Array(Schema.Struct({ id: Schema.String, message: Schema.String })),
+        }),
+        Schema.Struct({
+          /** More than 1,000 matched: a Workflow does it; watch `GET /v1/contacts/bulk/{id}`. */
+          mode: Schema.Literal("async"),
+          job: BulkJobSchema,
+        }),
+      ]),
       error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.get("bulkJob", "/v1/contacts/bulk/:id", {
+      params: { id: Schema.String },
+      success: BulkJobSchema,
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("fields", "/v1/contact-fields", {
+      success: Schema.Struct({
+        fields: Schema.Array(ContactFieldSchema),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.patch("updateField", "/v1/contact-fields/:key", {
+      params: { key: Schema.String },
+      payload: Schema.Struct({
+        label: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isMaxLength(120)))),
+        type: Schema.optionalKey(Schema.Literals(["string", "number", "boolean", "date"])),
+      }),
+      success: ContactFieldSchema,
+      error: [Forbidden, NotFound],
     }),
     HttpApiEndpoint.get("export", "/v1/contacts/:id/export", {
       params: { id: Schema.String },

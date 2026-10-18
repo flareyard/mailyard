@@ -25928,6 +25928,362 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/contact-fields": {
+      "get": {
+        "operationId": "contacts.fields",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "key": {
+                            "type": "string",
+                          },
+                          "label": {
+                            "type": "string",
+                          },
+                          "type": {
+                            "enum": [
+                              "string",
+                              "number",
+                              "boolean",
+                              "date",
+                            ],
+                            "type": "string",
+                          },
+                          "updatedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "usedBy": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                },
+                                "name": {
+                                  "type": "string",
+                                },
+                                "type": {
+                                  "enum": [
+                                    "segment",
+                                    "automation",
+                                  ],
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "type",
+                                "id",
+                                "name",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type",
+                          "createdAt",
+                          "updatedAt",
+                          "usedBy",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "fields",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "contacts",
+        ],
+      },
+    },
+    "/v1/contact-fields/{key}": {
+      "patch": {
+        "operationId": "contacts.updateField",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "anyOf": [
+                      {
+                        "maxLength": 120,
+                        "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "type": {
+                    "enum": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "date",
+                    ],
+                    "type": "string",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "key": {
+                      "type": "string",
+                    },
+                    "label": {
+                      "type": "string",
+                    },
+                    "type": {
+                      "enum": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "date",
+                      ],
+                      "type": "string",
+                    },
+                    "updatedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "usedBy": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "type": {
+                            "enum": [
+                              "segment",
+                              "automation",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "type",
+                          "id",
+                          "name",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "type",
+                    "createdAt",
+                    "updatedAt",
+                    "usedBy",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "contacts",
+        ],
+      },
+    },
     "/v1/contacts": {
       "get": {
         "operationId": "contacts.list",
@@ -25945,14 +26301,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "name": "status",
             "required": false,
             "schema": {
-              "enum": [
-                "subscribed",
-                "unconfirmed",
-                "unsubscribed",
-                "bounced",
-                "complained",
-                "suppressed",
-              ],
+              "description": "One of subscribed, unconfirmed, unsubscribed, bounced, complained, suppressed, or several joined by commas (any matches).",
               "type": "string",
             },
           },
@@ -25969,11 +26318,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "name": "engagement",
             "required": false,
             "schema": {
-              "enum": [
-                "active",
-                "cooling",
-                "dormant",
-              ],
+              "description": "One of active, cooling, dormant, or several joined by commas (any matches).",
               "type": "string",
             },
           },
@@ -26208,11 +26553,175 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "string",
                           },
+                          "suppression": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "bulkOnly": {
+                                    "type": "boolean",
+                                  },
+                                  "cloudflare": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "checkedAt": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "number",
+                                              },
+                                              {
+                                                "enum": [
+                                                  "Infinity",
+                                                  "-Infinity",
+                                                  "NaN",
+                                                ],
+                                                "type": "string",
+                                              },
+                                            ],
+                                          },
+                                          {
+                                            "type": "null",
+                                          },
+                                        ],
+                                      },
+                                      "id": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                          },
+                                          {
+                                            "type": "null",
+                                          },
+                                        ],
+                                      },
+                                      "synced": {
+                                        "type": "boolean",
+                                      },
+                                    },
+                                    "required": [
+                                      "synced",
+                                      "id",
+                                      "checkedAt",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "createdAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "detail": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "messageId": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "reason": {
+                                    "enum": [
+                                      "hard_bounce",
+                                      "complaint",
+                                      "unsubscribe",
+                                      "manual",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "source": {
+                                    "enum": [
+                                      "cloudflare",
+                                      "events",
+                                      "manual",
+                                      "import",
+                                    ],
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "reason",
+                                  "source",
+                                  "detail",
+                                  "messageId",
+                                  "bulkOnly",
+                                  "createdAt",
+                                  "cloudflare",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "topics": {
                             "items": {
                               "additionalProperties": false,
                               "properties": {
+                                "changedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "confirmedAt": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
                                 "name": {
+                                  "type": "string",
+                                },
+                                "source": {
                                   "type": "string",
                                 },
                                 "state": {
@@ -26558,11 +27067,175 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "suppression": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "bulkOnly": {
+                              "type": "boolean",
+                            },
+                            "cloudflare": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "checkedAt": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "id": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "synced": {
+                                  "type": "boolean",
+                                },
+                              },
+                              "required": [
+                                "synced",
+                                "id",
+                                "checkedAt",
+                              ],
+                              "type": "object",
+                            },
+                            "createdAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "detail": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "messageId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "reason": {
+                              "enum": [
+                                "hard_bounce",
+                                "complaint",
+                                "unsubscribe",
+                                "manual",
+                              ],
+                              "type": "string",
+                            },
+                            "source": {
+                              "enum": [
+                                "cloudflare",
+                                "events",
+                                "manual",
+                                "import",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "reason",
+                            "source",
+                            "detail",
+                            "messageId",
+                            "bulkOnly",
+                            "createdAt",
+                            "cloudflare",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "topics": {
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "changedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "confirmedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "name": {
+                            "type": "string",
+                          },
+                          "source": {
                             "type": "string",
                           },
                           "state": {
@@ -26761,6 +27434,55 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                   },
+                  "filter": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "engagement": {
+                        "description": "One of active, cooling, dormant, or several joined by commas (any matches).",
+                        "type": "string",
+                      },
+                      "event": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                          },
+                          {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                        ],
+                      },
+                      "field": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                          },
+                          {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                        ],
+                      },
+                      "q": {
+                        "type": "string",
+                      },
+                      "segmentId": {
+                        "type": "string",
+                      },
+                      "status": {
+                        "description": "One of subscribed, unconfirmed, unsubscribed, bounced, complained, suppressed, or several joined by commas (any matches).",
+                        "type": "string",
+                      },
+                      "topicId": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
                   "ids": {
                     "items": {
                       "type": "string",
@@ -26769,7 +27491,6 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   },
                 },
                 "required": [
-                  "ids",
                   "action",
                 ],
                 "type": "object",
@@ -26783,8 +27504,368 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "content": {
               "application/json": {
                 "schema": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "errors": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "message": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "message",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "mode": {
+                          "enum": [
+                            "sync",
+                          ],
+                          "type": "string",
+                        },
+                        "skipped": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "updated": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "updated",
+                        "skipped",
+                        "errors",
+                      ],
+                      "type": "object",
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "job": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "action": {
+                              "type": "object",
+                            },
+                            "createdAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "error": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "errors": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                  },
+                                  "message": {
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "message",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
+                            "filter": {
+                              "type": "object",
+                            },
+                            "finishedAt": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "id": {
+                              "type": "string",
+                            },
+                            "processed": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "skipped": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "status": {
+                              "enum": [
+                                "queued",
+                                "running",
+                                "done",
+                                "failed",
+                              ],
+                              "type": "string",
+                            },
+                            "total": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "updated": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "action",
+                            "filter",
+                            "total",
+                            "processed",
+                            "updated",
+                            "skipped",
+                            "errors",
+                            "error",
+                            "createdAt",
+                            "finishedAt",
+                          ],
+                          "type": "object",
+                        },
+                        "mode": {
+                          "enum": [
+                            "async",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "mode",
+                        "job",
+                      ],
+                      "type": "object",
+                    },
+                  ],
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "contacts",
+        ],
+      },
+    },
+    "/v1/contacts/bulk/{id}": {
+      "get": {
+        "operationId": "contacts.bulkJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "action": {
+                      "type": "object",
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "errors": {
                       "items": {
                         "additionalProperties": false,
@@ -26804,7 +27885,74 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "filter": {
+                      "type": "object",
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "processed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "skipped": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "running",
+                        "done",
+                        "failed",
+                      ],
+                      "type": "string",
+                    },
+                    "total": {
                       "anyOf": [
                         {
                           "type": "number",
@@ -26836,25 +27984,24 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                   },
                   "required": [
+                    "id",
+                    "status",
+                    "action",
+                    "filter",
+                    "total",
+                    "processed",
                     "updated",
                     "skipped",
                     "errors",
+                    "error",
+                    "createdAt",
+                    "finishedAt",
                   ],
                   "type": "object",
                 },
               },
             },
             "description": "Success",
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvalidRequestEncoded",
-                },
-              },
-            },
-            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -27154,11 +28301,175 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "suppression": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "bulkOnly": {
+                              "type": "boolean",
+                            },
+                            "cloudflare": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "checkedAt": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "id": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "synced": {
+                                  "type": "boolean",
+                                },
+                              },
+                              "required": [
+                                "synced",
+                                "id",
+                                "checkedAt",
+                              ],
+                              "type": "object",
+                            },
+                            "createdAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "detail": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "messageId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "reason": {
+                              "enum": [
+                                "hard_bounce",
+                                "complaint",
+                                "unsubscribe",
+                                "manual",
+                              ],
+                              "type": "string",
+                            },
+                            "source": {
+                              "enum": [
+                                "cloudflare",
+                                "events",
+                                "manual",
+                                "import",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "reason",
+                            "source",
+                            "detail",
+                            "messageId",
+                            "bulkOnly",
+                            "createdAt",
+                            "cloudflare",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "topics": {
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "changedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "confirmedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "name": {
+                            "type": "string",
+                          },
+                          "source": {
                             "type": "string",
                           },
                           "state": {
@@ -27446,11 +28757,175 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "suppression": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "bulkOnly": {
+                              "type": "boolean",
+                            },
+                            "cloudflare": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "checkedAt": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "id": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "synced": {
+                                  "type": "boolean",
+                                },
+                              },
+                              "required": [
+                                "synced",
+                                "id",
+                                "checkedAt",
+                              ],
+                              "type": "object",
+                            },
+                            "createdAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "detail": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "messageId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "reason": {
+                              "enum": [
+                                "hard_bounce",
+                                "complaint",
+                                "unsubscribe",
+                                "manual",
+                              ],
+                              "type": "string",
+                            },
+                            "source": {
+                              "enum": [
+                                "cloudflare",
+                                "events",
+                                "manual",
+                                "import",
+                              ],
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "reason",
+                            "source",
+                            "detail",
+                            "messageId",
+                            "bulkOnly",
+                            "createdAt",
+                            "cloudflare",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "topics": {
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "changedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "confirmedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "name": {
+                            "type": "string",
+                          },
+                          "source": {
                             "type": "string",
                           },
                           "state": {
@@ -27907,6 +29382,15 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "type": "string",
             },
           },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "description": "One of event, message, delivery, subscription, consent, reply, automation, or several joined by commas (any matches).",
+              "type": "string",
+            },
+          },
         ],
         "responses": {
           "200": {
@@ -28106,6 +29590,263 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "from",
                               "to",
                               "source",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "at": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "data": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "event": {
+                                "type": "string",
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                              "kind": {
+                                "enum": [
+                                  "delivery",
+                                ],
+                                "type": "string",
+                              },
+                              "messageId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "subject": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "event",
+                              "messageId",
+                              "subject",
+                              "data",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "at": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                              "kind": {
+                                "enum": [
+                                  "consent",
+                                ],
+                                "type": "string",
+                              },
+                              "source": {
+                                "type": "string",
+                              },
+                              "topic": {
+                                "type": "string",
+                              },
+                              "topicId": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "topicId",
+                              "topic",
+                              "source",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "at": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                              "inReplyTo": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "kind": {
+                                "enum": [
+                                  "reply",
+                                ],
+                                "type": "string",
+                              },
+                              "subject": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "to": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "subject",
+                              "to",
+                              "inReplyTo",
+                            ],
+                            "type": "object",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "at": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "automation": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "automationId": {
+                                "type": "string",
+                              },
+                              "finishedAt": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                              "kind": {
+                                "enum": [
+                                  "automation",
+                                ],
+                                "type": "string",
+                              },
+                              "state": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "automationId",
+                              "automation",
+                              "state",
+                              "finishedAt",
                             ],
                             "type": "object",
                           },
@@ -28396,11 +30137,175 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           ],
                           "type": "string",
                         },
+                        "suppression": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "bulkOnly": {
+                                  "type": "boolean",
+                                },
+                                "cloudflare": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "checkedAt": {
+                                      "anyOf": [
+                                        {
+                                          "anyOf": [
+                                            {
+                                              "type": "number",
+                                            },
+                                            {
+                                              "enum": [
+                                                "Infinity",
+                                                "-Infinity",
+                                                "NaN",
+                                              ],
+                                              "type": "string",
+                                            },
+                                          ],
+                                        },
+                                        {
+                                          "type": "null",
+                                        },
+                                      ],
+                                    },
+                                    "id": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                        },
+                                        {
+                                          "type": "null",
+                                        },
+                                      ],
+                                    },
+                                    "synced": {
+                                      "type": "boolean",
+                                    },
+                                  },
+                                  "required": [
+                                    "synced",
+                                    "id",
+                                    "checkedAt",
+                                  ],
+                                  "type": "object",
+                                },
+                                "createdAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "detail": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "messageId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "reason": {
+                                  "enum": [
+                                    "hard_bounce",
+                                    "complaint",
+                                    "unsubscribe",
+                                    "manual",
+                                  ],
+                                  "type": "string",
+                                },
+                                "source": {
+                                  "enum": [
+                                    "cloudflare",
+                                    "events",
+                                    "manual",
+                                    "import",
+                                  ],
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "reason",
+                                "source",
+                                "detail",
+                                "messageId",
+                                "bulkOnly",
+                                "createdAt",
+                                "cloudflare",
+                              ],
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
                         "topics": {
                           "items": {
                             "additionalProperties": false,
                             "properties": {
+                              "changedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "confirmedAt": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
                               "name": {
+                                "type": "string",
+                              },
+                              "source": {
                                 "type": "string",
                               },
                               "state": {
@@ -62713,11 +64618,175 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "string",
                           },
+                          "suppression": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "bulkOnly": {
+                                    "type": "boolean",
+                                  },
+                                  "cloudflare": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "checkedAt": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "number",
+                                              },
+                                              {
+                                                "enum": [
+                                                  "Infinity",
+                                                  "-Infinity",
+                                                  "NaN",
+                                                ],
+                                                "type": "string",
+                                              },
+                                            ],
+                                          },
+                                          {
+                                            "type": "null",
+                                          },
+                                        ],
+                                      },
+                                      "id": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                          },
+                                          {
+                                            "type": "null",
+                                          },
+                                        ],
+                                      },
+                                      "synced": {
+                                        "type": "boolean",
+                                      },
+                                    },
+                                    "required": [
+                                      "synced",
+                                      "id",
+                                      "checkedAt",
+                                    ],
+                                    "type": "object",
+                                  },
+                                  "createdAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "detail": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "messageId": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "reason": {
+                                    "enum": [
+                                      "hard_bounce",
+                                      "complaint",
+                                      "unsubscribe",
+                                      "manual",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "source": {
+                                    "enum": [
+                                      "cloudflare",
+                                      "events",
+                                      "manual",
+                                      "import",
+                                    ],
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "reason",
+                                  "source",
+                                  "detail",
+                                  "messageId",
+                                  "bulkOnly",
+                                  "createdAt",
+                                  "cloudflare",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "topics": {
                             "items": {
                               "additionalProperties": false,
                               "properties": {
+                                "changedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                "confirmedAt": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                        },
+                                        {
+                                          "enum": [
+                                            "Infinity",
+                                            "-Infinity",
+                                            "NaN",
+                                          ],
+                                          "type": "string",
+                                        },
+                                      ],
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
                                 "name": {
+                                  "type": "string",
+                                },
+                                "source": {
                                   "type": "string",
                                 },
                                 "state": {

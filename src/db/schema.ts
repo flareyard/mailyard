@@ -126,6 +126,8 @@ export const subscriptions = sqliteTable(
     /** How the state last changed: form, import, api, unsubscribe link, one-click header, admin. */
     source: text("source").notNull(),
     changedAt: integer("changed_at").notNull(),
+    /** When the contact confirmed (double opt-in) or was first subscribed: the consent on record (HAL-3422). */
+    confirmedAt: integer("confirmed_at"),
   },
   (t) => [
     primaryKey({ columns: [t.contactId, t.topicId] }),
@@ -213,6 +215,44 @@ export const alerts = sqliteTable(
 )
 
 /** Events a contact did, sent through `track()`, used by segments and automation triggers. */
+/**
+ * Every custom field contacts have (HAL-3422): its key, a label people can change, and a type
+ * inferred from the first value written (string, number, boolean, date). A trigger on `contacts`
+ * (migration 0033) adds new keys as any writer sets them, so imports, forms, the API and automations
+ * all register theirs.
+ */
+export const contactFields = sqliteTable("contact_fields", {
+  key: text("key").primaryKey(),
+  label: text("label"),
+  type: text("type", { enum: ["string", "number", "boolean", "date"] }).notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at"),
+})
+
+/**
+ * A bulk action over a filter too big for one request (HAL-3422): ContactBulkWorkflow pages through
+ * the matching contacts by id, 500 at a time, and keeps the counts here.
+ */
+export const contactBulkJobs = sqliteTable("contact_bulk_jobs", {
+  id: text("id").primaryKey(),
+  filter: text("filter", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+  action: text("action", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+  status: text("status", { enum: ["queued", "running", "done", "failed"] }).notNull(),
+  /** Matching contacts when the job was created. */
+  total: integer("total").notNull(),
+  processed: integer("processed").notNull().default(0),
+  updated: integer("updated").notNull().default(0),
+  skipped: integer("skipped").notNull().default(0),
+  /** The first 100 errors. */
+  errors: text("errors", { mode: "json" }).$type<Array<{ id: string; message: string }>>().notNull(),
+  /** The last contact id processed: the next page starts after it. */
+  cursor: text("cursor"),
+  error: text("error"),
+  createdBy: text("created_by").notNull(),
+  createdAt: integer("created_at").notNull(),
+  finishedAt: integer("finished_at"),
+})
+
 export const events = sqliteTable(
   "events",
   {
@@ -918,6 +958,8 @@ export const inboundMessages = sqliteTable(
     uniqueIndex("inbound_messages_recipient").on(t.sha256, t.envelopeTo),
     index("inbound_messages_status").on(t.status, t.receivedAt),
     index("inbound_messages_received").on(t.receivedAt),
+    /** The contact timeline's replies (HAL-3422). */
+    index("inbound_messages_from").on(t.fromAddress, t.receivedAt),
   ],
 )
 
