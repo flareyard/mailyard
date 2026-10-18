@@ -24,6 +24,10 @@ export class Mailboxes extends Context.Service<
     >
     /** How many messages the mailbox holds. */
     count(mailboxId: string): Effect.Effect<number, MailboxUnavailable>
+    /** The messages it holds and the bytes they take in R2. */
+    storage(
+      mailboxId: string,
+    ): Effect.Effect<{ readonly messages: number; readonly bytes: number }, MailboxUnavailable>
     /** Deletes everything the mailbox stores. Only after an export (src/domain/mailboxes.ts). */
     erase(mailboxId: string): Effect.Effect<void, MailboxUnavailable>
     /** Gives a sent copy the Message-ID Email Service assigned it. */
@@ -46,6 +50,14 @@ export class Mailboxes extends Context.Service<
         count: (mailboxId) =>
           Effect.tryPromise({
             try: () => MAILBOX.get(MAILBOX.idFromName(mailboxId)).count(),
+            catch: (cause) => new MailboxUnavailable({ mailboxId, cause }),
+          }),
+        storage: (mailboxId) =>
+          Effect.tryPromise({
+            try: async () => {
+              const s = await MAILBOX.get(MAILBOX.idFromName(mailboxId)).storage()
+              return { messages: s.messages, bytes: s.bytes }
+            },
             catch: (cause) => new MailboxUnavailable({ mailboxId, cause }),
           }),
         setMessageId: (mailboxId, id, messageId) =>

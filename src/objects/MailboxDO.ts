@@ -227,6 +227,10 @@ export class MailboxDO extends DurableObject<Env> {
     return this.store.count()
   }
 
+  storage() {
+    return this.store.storage()
+  }
+
   threads(filter: ThreadFilter = {}) {
     return this.store.threads(filter)
   }

@@ -61,6 +61,7 @@ import {
 } from "./public.ts"
 import { handleQueue } from "./queue.ts"
 import { handleScheduled } from "./scheduled.ts"
+import { handleStatsCsv, STATS_CSV_PATH } from "./statsCsv.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleUnsubscribe } from "./unsubscribe.ts"
 import { handleUploads, UPLOADS_PATH } from "./uploads.ts"
@@ -130,6 +131,8 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   const attachment = ATTACHMENT_PATH.exec(path)
   if (attachment && request.method === "GET")
     return handleAttachment(request, env, d(attachment[1]), d(attachment[2]), d(attachment[3]))
+  const statsCsv = STATS_CSV_PATH.exec(path)
+  if (statsCsv) return handleStatsCsv(request, env, statsCsv[1] ?? "")
   const messageRaw = MESSAGE_RAW_PATH.exec(path)
   if (messageRaw && request.method === "GET") return handleMessageRaw(request, env, d(messageRaw[1]))
   const file = FILE_PATH.exec(path)

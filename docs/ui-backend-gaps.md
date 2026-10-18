@@ -575,12 +575,12 @@ What the Transactional, Domains, Analytics, Settings and public-page designs nee
 | 3.1 | Rates per day: `GET /v1/stats/delivery?range=&by=day` | Sending → Rates over time; Reputation history | **Built**, HAL-3420: `?by=day` adds `days: [{ day, totals, rates }]`, each with its own `insufficientData`. |
 | 3.2 | Delivery time | Sending → Delivery time, median | **Built**, HAL-3420: `deliveryTime: { medianMs, p95Ms, samples, approximate, buckets }` from a histogram kept by a trigger on delivered events. |
 | 3.3 | `GET /v1/stats/deferrals?range=` | Sending → Deferral reasons | **Built**, HAL-3420: `{ range, reasons: [{ reason, smtpStatus, provider, count }] }`, top 50. |
-| 3.4 | `GET /v1/stats/engagement?range=&by=` | `engagement.html` | `{ range, estimate: true, campaigns: [{ id, name, delivered, uniqueOpens, machineOpens, uniqueClicks, unsubscribed }], automationSteps: [{ automationId, step, delivered, uniqueClicks }], byHour: number[7][24], unsubscribesByTopic: [{ topicId, name, count }] }`. PR #25's campaign report covers one campaign; this is across all. |
+| 3.4 | `GET /v1/stats/engagement?range=&by=` | `engagement.html` | **Built**, HAL-3421: `{ range, estimate, campaigns: [{ …, openRate, clickRate }], byHour (Mon–Sun × 24 UTC hours), unsubscribesByTopic }`, from trigger-kept rollups. |
 | 3.5 | `GET /v1/stats/inbound` with `by=day` and `topSenders` | `inbound.html` | **Built** (HAL-3362): `days` and `topSenders` are on `GET /v1/stats/inbound`. |
 | 3.6 | `GET /v1/stats/response-times?range=` | Inbound → Response times | **Built** (HAL-3362): `{ range, mailboxes: [{ mailboxId, address, assignees: [{ assigneeId, name, threads, answered, firstResponseMedianMin, firstResponseP90Min, resolutionMedianHours: null }] }], unavailable }`. Resolution needs a resolved-at the store doesn't keep yet: HAL-3392. |
 | 3.7 | `GET /v1/stats/audience` | `audience.html` | **Built** (HAL-3362), as foundation 3.3. |
-| 3.8 | `GET /v1/usage/storage` | Usage → Mail held in R2 | `{ totalBytes, byMailbox: [{ mailboxId, address, bytes }] }`. |
-| 3.9 | CSV export | Every chart → CSV; Export sheet | `format=csv` on each stats endpoint, or `GET /v1/stats/export?range=&charts=` returning a zip. Rates stay fractions in the CSV. |
+| 3.8 | `GET /v1/usage/storage` | Usage → Mail held in R2 | **Built**, HAL-3421: `{ totalBytes, mailBytes, exportsBytes, uploadsBytes, byMailbox: [{ mailboxId, address, messages, bytes }] }`, from recorded sizes. |
+| 3.9 | CSV export | Every chart → CSV; Export sheet | **Built**, HAL-3421: `GET /v1/stats/{chart}.csv` for volume, delivery, providers, deferrals, engagement, engagement-hours, unsubscribes, inbound, audience; rates stay fractions. |
 
 **Used as-is:** `GET /v1/stats/providers` (`providers[].{ provider, delivered, deferred, bounced, complained, total }`), `GET /v1/usage/forecast?recipients=` (both union arms: `possible: true` with `sendableToday, additionalDays, finishesBy, cost.{ billedAfter, extraUsd }`, and `possible: false` with `reason`), `GET /v1/usage` including `today.source: "cloudflare-unreachable"` (Usage · quota unknown).
 

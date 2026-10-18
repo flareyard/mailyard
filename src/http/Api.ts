@@ -813,6 +813,60 @@ export class InsightsApi extends HttpApiGroup.make("insights")
       }),
       error: Forbidden,
     }),
+    HttpApiEndpoint.get("engagement", "/v1/stats/engagement", {
+      query: { range: Schema.optionalKey(Range) },
+      success: Schema.Struct({
+        range: Range,
+        from: Schema.String,
+        /** Opens are estimates: privacy proxies open mail for people, so machine opens are counted apart. */
+        estimate: Schema.Literal(true),
+        /** Campaigns started in the range, newest first, at most 100. Rates are fractions of delivered. */
+        campaigns: Schema.Array(
+          Schema.Struct({
+            id: Schema.String,
+            name: Schema.String,
+            startedAt: Num,
+            delivered: Num,
+            uniqueOpens: Num,
+            machineOpens: Num,
+            uniqueClicks: Num,
+            unsubscribed: Num,
+            openRate: NullableNum,
+            clickRate: NullableNum,
+          }),
+        ),
+        /** First human opens and clicks of bulk mail, Monday first, by UTC hour. */
+        byHour: Schema.Array(
+          Schema.Struct({
+            weekday: Schema.Literals(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]),
+            hours: Schema.Array(Schema.Struct({ hour: Num, opens: Num, clicks: Num })),
+          }),
+        ),
+        unsubscribesByTopic: Schema.Array(
+          Schema.Struct({ topicId: Schema.String, name: Schema.String, unsubscribed: Num }),
+        ),
+      }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("storage", "/v1/usage/storage", {
+      success: Schema.Struct({
+        totalBytes: Num,
+        mailBytes: Num,
+        exportsBytes: Num,
+        uploadsBytes: Num,
+        /** Largest first; a mailbox that didn't answer has null counts and isn't in the total. */
+        byMailbox: Schema.Array(
+          Schema.Struct({
+            mailboxId: Schema.String,
+            address: Schema.String,
+            messages: NullableNum,
+            bytes: NullableNum,
+          }),
+        ),
+        measuredAt: Num,
+      }),
+      error: Forbidden,
+    }),
     HttpApiEndpoint.get("deferrals", "/v1/stats/deferrals", {
       query: { range: Schema.optionalKey(Range) },
       success: Schema.Struct({

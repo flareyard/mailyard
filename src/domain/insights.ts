@@ -39,7 +39,7 @@ const DAYS: Record<Range, number> = { "24h": 1, "7d": 7, "30d": 30 }
 
 const dayKey = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 /** First UTC day included in a range ending today. */
-const since = (range: Range, now = Date.now()) => dayKey(now - (DAYS[range] - 1) * 86_400_000)
+export const since = (range: Range, now = Date.now()) => dayKey(now - (DAYS[range] - 1) * 86_400_000)
 
 const sum = (column: AnySQLiteColumn) => sql<number>`coalesce(sum(${column}), 0)`
 

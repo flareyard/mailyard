@@ -161,7 +161,10 @@ export const subscriptionChanges = sqliteTable(
     source: text("source").notNull(),
     at: integer("at").notNull(),
   },
-  (t) => [index("subscription_changes_contact").on(t.contactId, t.at)],
+  (t) => [
+    index("subscription_changes_contact").on(t.contactId, t.at),
+    index("subscription_changes_to").on(t.to, t.at),
+  ],
 )
 
 /** A public signup form: whoever submits it is added to its topics, confirming by email where the topic asks. */
@@ -778,6 +781,32 @@ export const deferralDaily = sqliteTable(
     n: integer("n").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.day, t.provider, t.smtpStatus, t.reason] })],
+)
+
+/**
+ * Each campaign's engagement, counted as it happens by triggers on `messages_out` and `events`
+ * (migration 0032), so comparing campaigns reads one row each rather than their mail (HAL-3421).
+ * `machineOpens` counts messages with any machine open (privacy proxies, scanners).
+ */
+export const campaignEngagement = sqliteTable("campaign_engagement", {
+  campaignId: text("campaign_id").primaryKey(),
+  delivered: integer("delivered").notNull().default(0),
+  uniqueOpens: integer("unique_opens").notNull().default(0),
+  machineOpens: integer("machine_opens").notNull().default(0),
+  uniqueClicks: integer("unique_clicks").notNull().default(0),
+  unsubscribed: integer("unsubscribed").notNull().default(0),
+})
+
+/** First human opens and clicks of bulk mail (campaigns and automations) per UTC day and hour (HAL-3421). */
+export const engagementHourly = sqliteTable(
+  "engagement_hourly",
+  {
+    day: text("day").notNull(),
+    hour: integer("hour").notNull(),
+    opens: integer("opens").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.hour] })],
 )
 
 /**
