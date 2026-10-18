@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import { Bindings } from "../Bindings.ts"
 import { domains } from "../db/schema.ts"
+import { cloudflareApi } from "../services/cloudflareApi.ts"
 import { Database } from "../services/Database.ts"
 
 /**
@@ -16,7 +17,6 @@ import { Database } from "../services/Database.ts"
  */
 
 const GRAPHQL = "https://api.cloudflare.com/client/v4/graphql"
-const API = "https://api.cloudflare.com/client/v4"
 /** How far back Cloudflare keeps Email Routing analytics. */
 export const RETENTION_DAYS = 31
 const CACHE_MS = 5 * 60_000
@@ -89,15 +89,19 @@ const post = (token: string, zone: string, from: string, to: string) =>
   })
 
 /** A domain's zone id: the one stored with the domain, else looked up by name with the token. */
-const zoneOf = (token: string, name: string) =>
+/** A zone id by name, through Flareyard's relay when installed there (HAL-3558), else directly. */
+const zoneOf = (lookup: { readonly base: string; readonly key: string }, name: string) =>
   Effect.promise(async () => {
     const labels = name.toLowerCase().split(".")
     for (let i = 0; labels.length - i >= 2; i++) {
       try {
-        const response = await fetch(`${API}/zones?name=${encodeURIComponent(labels.slice(i).join("."))}`, {
-          headers: { authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(10_000),
-        })
+        const response = await fetch(
+          `${lookup.base}/zones?name=${encodeURIComponent(labels.slice(i).join("."))}`,
+          {
+            headers: { authorization: `Bearer ${lookup.key}` },
+            signal: AbortSignal.timeout(10_000),
+          },
+        )
         const body = (await response.json().catch(() => null)) as { result?: Array<{ id: string }> } | null
         const id = body?.result?.[0]?.id
         if (id) return id
@@ -117,7 +121,11 @@ export const upstreamRejections = Effect.fn("overview.upstreamRejections")(funct
   now = Date.now(),
 ) {
   const env = yield* Bindings
+  // GraphQL goes straight to Cloudflare: Flareyard's relay doesn't pass /graphql (contract v1.3). The
+  // zone lookup uses the relay when there is one.
   const token = env.CLOUDFLARE_ANALYTICS_TOKEN
+  const relay = cloudflareApi(env, token)
+  const lookup = { base: relay.base, key: relay.token ?? token ?? "" }
   if (!token)
     return notConnected(
       "Set CLOUDFLARE_ANALYTICS_TOKEN (Analytics Read on the receiving zones) to count what Email Routing rejects before Mailyard sees it.",
@@ -142,7 +150,7 @@ export const upstreamRejections = Effect.fn("overview.upstreamRejections")(funct
   )
   const zones = new Set<string>()
   for (const d of receiving) {
-    const zone = d.zoneId ?? (yield* zoneOf(token, d.name))
+    const zone = d.zoneId ?? (yield* zoneOf(lookup, d.name))
     if (zone) zones.add(zone)
   }
   if (receiving.length > 0 && zones.size === 0)

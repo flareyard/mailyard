@@ -5,10 +5,11 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import type { WriteOutcome } from "./CloudflareEmail.ts"
+import { cloudflareApi, relayRefusal } from "./cloudflareApi.ts"
 
 /**
- * The zones a workspace's domains live in, read and repaired with the optional CLOUDFLARE_DNS_TOKEN
- * (HAL-3365). Field names measured against the live API on 2026-10-18: `GET /zones` (status,
+ * The zones a workspace's domains live in, read and repaired through Flareyard's relay (the user's
+ * OAuth grant, HAL-3558) or, self-hosted, the optional CLOUDFLARE_DNS_TOKEN (HAL-3365). Field names measured against the live API on 2026-10-18: `GET /zones` (status,
  * name_servers, original_name_servers, original_registrar), `GET /zones/{id}/dnssec` (status),
  * `GET /zones/{id}/email/sending/subdomains` (id, name, return_path_domain), and the complaints count,
  * whose window is at most seven days.
@@ -70,16 +71,18 @@ const Envelope = <A extends Schema.Top>(result: A) =>
     errors: Schema.optionalKey(Schema.Array(Schema.Struct({ message: Schema.String }))),
   })
 
-const API = "https://api.cloudflare.com/client/v4"
 const DAY = 86_400_000
 
-const call = (token: string, method: string, path: string, body?: unknown) =>
+/** Where the calls go and with what key: Flareyard's relay, or Cloudflare with the zone token (HAL-3558). */
+type Auth = { readonly base: string; readonly key: string }
+
+const call = (token: Auth, method: string, path: string, body?: unknown) =>
   Effect.promise(async (): Promise<{ status: number; body: unknown }> => {
     try {
-      const response = await fetch(`${API}${path}`, {
+      const response = await fetch(`${token.base}${path}`, {
         method,
         headers: {
-          authorization: `Bearer ${token}`,
+          authorization: `Bearer ${token.key}`,
           ...(body !== undefined ? { "content-type": "application/json" } : {}),
         },
         ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -93,7 +96,7 @@ const call = (token: string, method: string, path: string, body?: unknown) =>
 
 const Loose = Envelope(Schema.Unknown)
 
-const read = <A, I>(token: string, path: string, schema: Schema.Codec<A, I>) =>
+const read = <A, I>(token: Auth, path: string, schema: Schema.Codec<A, I>) =>
   call(token, "GET", path).pipe(
     Effect.map(({ body }) =>
       Option.flatMap(Schema.decodeUnknownOption(Loose)(body), (e) =>
@@ -104,7 +107,7 @@ const read = <A, I>(token: string, path: string, schema: Schema.Codec<A, I>) =>
     ),
   )
 
-const write = (token: string, method: string, path: string, body?: unknown) =>
+const write = (token: Auth, method: string, path: string, body?: unknown) =>
   call(token, method, path, body).pipe(
     Effect.map(({ status, body: answer }): WriteOutcome<unknown> => {
       const decoded = Option.getOrUndefined(Schema.decodeUnknownOption(Loose)(answer))
@@ -114,7 +117,9 @@ const write = (token: string, method: string, path: string, body?: unknown) =>
       return {
         ok: false,
         status,
-        message: message || (status === 0 ? "Cloudflare didn't answer." : `Cloudflare answered ${status}.`),
+        message:
+          relayRefusal(answer) ??
+          (message || (status === 0 ? "Cloudflare didn't answer." : `Cloudflare answered ${status}.`)),
       }
     }),
   )
@@ -173,12 +178,14 @@ export class CloudflareZones extends Context.Service<
   static readonly layer = Layer.effect(
     CloudflareZones,
     Effect.gen(function* () {
-      const token = (yield* Bindings).CLOUDFLARE_DNS_TOKEN
-      if (!token) {
+      const env = yield* Bindings
+      const target = cloudflareApi(env, env.CLOUDFLARE_DNS_TOKEN)
+      if (!target.token) {
         const refused = Effect.succeed<WriteOutcome<unknown>>({
           ok: false,
           status: 0,
-          message: "No CLOUDFLARE_DNS_TOKEN: give Mailyard a zone token to fix records from here.",
+          message:
+            "Mailyard can't reach Cloudflare to fix records: install it through Flareyard, or set CLOUDFLARE_DNS_TOKEN.",
         })
         return CloudflareZones.of({
           connected: false,
@@ -196,6 +203,7 @@ export class CloudflareZones extends Context.Service<
           routeToWorker: () => refused,
         })
       }
+      const token: Auth = { base: target.base, key: target.token }
       const zoneFor = (name: string) =>
         Effect.gen(function* () {
           const labels = name.toLowerCase().split(".")

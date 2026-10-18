@@ -4,6 +4,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
+import { cloudflareApi, relayRefusal } from "./cloudflareApi.ts"
 
 /**
  * Read-only views of the account's Email Sending limits and reputation, from the Cloudflare API.
@@ -146,7 +147,9 @@ const refusal = (status: number, body: unknown) => {
   return {
     ok: false as const,
     status,
-    message: message || (status === 0 ? "Cloudflare didn't answer." : `Cloudflare answered ${status}.`),
+    message:
+      relayRefusal(body) ??
+      (message || (status === 0 ? "Cloudflare didn't answer." : `Cloudflare answered ${status}.`)),
   }
 }
 
@@ -238,9 +241,14 @@ export class CloudflareEmail extends Context.Service<
     CloudflareEmail,
     Effect.gen(function* () {
       const env = yield* Bindings
-      const { CLOUDFLARE_ACCOUNT_ID: account, CLOUDFLARE_EMAIL_READ_TOKEN: token } = env
-      const readToken = token || env.CLOUDFLARE_EMAIL_WRITE_TOKEN
-      const writeToken = env.CLOUDFLARE_EMAIL_WRITE_TOKEN
+      const account = env.CLOUDFLARE_ACCOUNT_ID
+      // Through Flareyard's relay one key does everything (HAL-3558); self-hosted, the pasted tokens.
+      const read = cloudflareApi(env, env.CLOUDFLARE_EMAIL_READ_TOKEN)
+      const write = cloudflareApi(env, env.CLOUDFLARE_EMAIL_WRITE_TOKEN)
+      const api = read.base
+      const token = read.token
+      const readToken = read.token || write.token
+      const writeToken = write.token
       const queueName = env.MAILYARD_EVENTS_QUEUE ?? EVENTS_QUEUE
       const verifiedAddresses: Effect.Effect<VerifiedAddresses> = Effect.gen(function* () {
         if (!account || !readToken)
@@ -251,7 +259,7 @@ export class CloudflareEmail extends Context.Service<
         const addresses: Array<{ email: string; verifiedAt: number }> = []
         for (let page = 1; page <= 20; page++) {
           const { status, body } = yield* request(
-            `https://api.cloudflare.com/client/v4/accounts/${account}/email/routing/addresses?verified=true&per_page=50&page=${page}`,
+            `${api}/accounts/${account}/email/routing/addresses?verified=true&per_page=50&page=${page}`,
             readToken,
             { method: "GET" },
           )
@@ -260,6 +268,7 @@ export class CloudflareEmail extends Context.Service<
             return {
               available: false,
               reason:
+                relayRefusal(body) ??
                 "The read token can't see Email Routing's addresses: add Email Routing Addresses: Read.",
             } as const
           if (Option.isNone(decoded) || !decoded.value.success)
@@ -282,10 +291,10 @@ export class CloudflareEmail extends Context.Service<
           limits: Effect.succeedNone,
           reputation: Effect.succeedNone,
           subscribedDomains: Effect.succeedNone,
-          suppressions: suppressionsApi(account, readToken, writeToken),
+          suppressions: suppressionsApi(api, account, readToken, writeToken),
         })
       }
-      const base = `https://api.cloudflare.com/client/v4/accounts/${account}`
+      const base = `${api}/accounts/${account}`
       const limits = fetchJson(`${base}/email/sending/limits`, token).pipe(
         Effect.map((body) =>
           Option.flatMap(Schema.decodeUnknownOption(LimitsEnvelope)(body), (d) =>
@@ -336,7 +345,7 @@ export class CloudflareEmail extends Context.Service<
         limits,
         reputation,
         subscribedDomains,
-        suppressions: suppressionsApi(account, readToken, writeToken),
+        suppressions: suppressionsApi(api, account, readToken, writeToken),
       })
     }),
   )
@@ -350,11 +359,12 @@ const NOT_CONNECTED = {
 }
 
 const suppressionsApi = (
+  api: string,
   account: string | undefined,
   readToken: string | undefined,
   writeToken: string | undefined,
 ): CloudflareEmail["Service"]["suppressions"] => {
-  const base = `https://api.cloudflare.com/client/v4/accounts/${account}/email/sending/suppressions`
+  const base = `${api}/accounts/${account}/email/sending/suppressions`
   const canRead = Boolean(account && readToken)
   const canWrite = Boolean(account && writeToken)
   const list = (query: string) =>

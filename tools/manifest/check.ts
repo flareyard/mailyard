@@ -72,6 +72,30 @@ export const crossFieldProblems = (m: Manifest): ReadonlyArray<string> => {
     }
   }
 
+  // v1.3: each relayed route runs under a scope the app asks for; the names are bindings of their own.
+  if (m.cloudflareApi) {
+    const api = m.cloudflareApi
+    const names = [api.url, api.token, ...(api.accountId ? [api.accountId] : [])]
+    for (const name of new Set(names.filter((n, i) => names.indexOf(n) !== i))) {
+      problems.push(`cloudflareApi names ${name} more than once.`)
+    }
+    for (const name of new Set(names)) {
+      if (secrets.includes(name)) problems.push(`cloudflareApi's ${name} clashes with a secret of that name.`)
+      if (settingNames.includes(name))
+        problems.push(`cloudflareApi's ${name} clashes with a setting of that name.`)
+    }
+    const routes = api.routes.map((r) => `${r.method} ${r.path}`)
+    for (const route of new Set(routes.filter((r, i) => routes.indexOf(r) !== i))) {
+      problems.push(`cloudflareApi route ${route} is listed more than once.`)
+    }
+    for (const r of api.routes) {
+      if (!all.includes(r.scope))
+        problems.push(
+          `cloudflareApi route ${r.method} ${r.path} needs ${r.scope}, which scopes.required or scopes.optional must list.`,
+        )
+    }
+  }
+
   if (m.domain.suggest && !m.domain.supported)
     problems.push("domain.suggest is set but domain.supported is false.")
   return problems

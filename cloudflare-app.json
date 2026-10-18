@@ -94,26 +94,6 @@
       "optional": true
     },
     {
-      "name": "CLOUDFLARE_ACCOUNT_ID",
-      "ask": "Your Cloudflare account ID, so the Overview can show your daily sending quota and reputation",
-      "optional": true
-    },
-    {
-      "name": "CLOUDFLARE_EMAIL_READ_TOKEN",
-      "ask": "A read-only API token with Email Sending: Read, Queues: Read and Email Routing Addresses: Read, for the quota, reputation, delivery-events check and the verified addresses a test can go to for free",
-      "optional": true
-    },
-    {
-      "name": "CLOUDFLARE_EMAIL_WRITE_TOKEN",
-      "ask": "An API token with Email Sending: Edit, so Mailyard can add to and remove from Cloudflare's suppression list",
-      "optional": true
-    },
-    {
-      "name": "CLOUDFLARE_DNS_TOKEN",
-      "ask": "A zone token (Zone, DNS, Email Sending: Read; Email Routing, Email Routing Rules, Email Sending: Edit) for zone status, record fixes and routing-rule conflicts",
-      "optional": true
-    },
-    {
       "name": "CLOUDFLARE_ANALYTICS_TOKEN",
       "ask": "A zone token with Analytics: Read (and Zone: Read, to find the zones) for the mail Email Routing rejects before Mailyard sees it",
       "optional": true
@@ -278,6 +258,139 @@
     "auth": {
       "bearer": "ADMIN_KEY"
     }
+  },
+  "cloudflareApi": {
+    "accountId": "CLOUDFLARE_ACCOUNT_ID",
+    "url": "FLAREYARD_CF_API",
+    "token": "FLAREYARD_CF_TOKEN",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/accounts/{account}/email/sending/limits",
+        "scope": "email-sending.write",
+        "why": "Show the daily sending quota on the Overview"
+      },
+      {
+        "method": "GET",
+        "path": "/accounts/{account}/email/sending/reputation",
+        "scope": "email-sending.write",
+        "why": "Show sending reputation and warn before Cloudflare suspends sending"
+      },
+      {
+        "method": "GET",
+        "path": "/accounts/{account}/email/sending/suppressions",
+        "scope": "email-sending.write",
+        "why": "Read Cloudflare's suppression list beside Mailyard's own"
+      },
+      {
+        "method": "POST",
+        "path": "/accounts/{account}/email/sending/suppressions",
+        "scope": "email-sending.write",
+        "why": "Add an address to Cloudflare's suppression list when you push one"
+      },
+      {
+        "method": "POST",
+        "path": "/accounts/{account}/email/sending/suppressions/bulk",
+        "scope": "email-sending.write",
+        "why": "Push an imported suppression list to Cloudflare in batches"
+      },
+      {
+        "method": "DELETE",
+        "path": "/accounts/{account}/email/sending/suppressions/{id}",
+        "scope": "email-sending.write",
+        "why": "Remove an address you unsuppress from Cloudflare's list too"
+      },
+      {
+        "method": "GET",
+        "path": "/accounts/{account}/email/routing/addresses",
+        "scope": "email-routing-rule.write",
+        "why": "List verified forwarding addresses, so a mailbox can forward to them"
+      },
+      {
+        "method": "GET",
+        "path": "/accounts/{account}/queues",
+        "scope": "queues.write",
+        "why": "Find the delivery-events queue, to check each sending domain's events reach it"
+      },
+      {
+        "method": "GET",
+        "path": "/accounts/{account}/event_subscriptions/subscriptions",
+        "scope": "queues.write",
+        "why": "Check each sending domain's delivery events are subscribed to Mailyard's queue"
+      },
+      {
+        "method": "GET",
+        "path": "/zones",
+        "scope": "zone.read",
+        "why": "Find the zone a domain lives in, and list zones to pick a domain from"
+      },
+      {
+        "method": "GET",
+        "path": "/zones/{zone}/dnssec",
+        "scope": "zone.read",
+        "why": "Show whether DNSSEC is on for a domain"
+      },
+      {
+        "method": "GET",
+        "path": "/zones/{zone}/dns_records",
+        "scope": "dns.write",
+        "why": "Read a domain's DMARC record before changing it"
+      },
+      {
+        "method": "POST",
+        "path": "/zones/{zone}/dns_records",
+        "scope": "dns.write",
+        "why": "Add a missing DMARC record when you fix a domain"
+      },
+      {
+        "method": "PATCH",
+        "path": "/zones/{zone}/dns_records/{id}",
+        "scope": "dns.write",
+        "why": "Change a domain's DMARC policy when you ask"
+      },
+      {
+        "method": "POST",
+        "path": "/zones/{zone}/email/routing/dns",
+        "scope": "email-routing-rule.write",
+        "why": "Re-add Email Routing's MX, SPF and DKIM records when you fix a receiving domain"
+      },
+      {
+        "method": "GET",
+        "path": "/zones/{zone}/email/routing/rules",
+        "scope": "email-routing-rule.write",
+        "why": "Find a routing rule that already sends a new mailbox's address elsewhere"
+      },
+      {
+        "method": "PUT",
+        "path": "/zones/{zone}/email/routing/rules/{id}",
+        "scope": "email-routing-rule.write",
+        "why": "Point that address's routing rule at Mailyard, when you choose to"
+      },
+      {
+        "method": "GET",
+        "path": "/zones/{zone}/email/sending/subdomains",
+        "scope": "email-sending.write",
+        "why": "Read a sending subdomain's records and complaints"
+      },
+      {
+        "method": "POST",
+        "path": "/zones/{zone}/email/sending/subdomains",
+        "scope": "email-sending.write",
+        "why": "Set up a sending subdomain when you fix a domain"
+      },
+      {
+        "method": "POST",
+        "path": "/zones/{zone}/email/sending/subdomains/{id}/dns",
+        "scope": "email-sending.write",
+        "why": "Re-apply a sending subdomain's records when you fix a domain"
+      },
+      {
+        "method": "GET",
+        "path": "/zones/{zone}/email/sending/subdomains/{id}/reputation/complaints",
+        "scope": "email-sending.write",
+        "why": "Count complaints for a sending domain on its screen"
+      }
+    ]
   },
   "cost": {
     "typicalMonthlyUsd": "$5 Workers Paid minimum; light use (under 3,000 emails a month) stays inside it. Beyond that, see cost.units (Cloudflare pricing pages, 2026-10-17).",
