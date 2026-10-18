@@ -13522,6 +13522,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "missing": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
                           "nodeId": {
                             "type": "string",
                           },
@@ -13773,6 +13779,216 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "automations",
+        ],
+      },
+    },
+    "/v1/automations/{id}/nodes/{nodeId}/test": {
+      "post": {
+        "operationId": "automations.testStep",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "nodeId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "contactId": {
+                    "type": "string",
+                  },
+                  "version": {
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "type": "integer",
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "contact": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "sample": {
+                          "type": "boolean",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "sample",
+                      ],
+                      "type": "object",
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "timeout",
+                            "network",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "nodeId": {
+                      "type": "string",
+                    },
+                    "ok": {
+                      "type": "boolean",
+                    },
+                    "response": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "tookMs": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "url": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "nodeId",
+                    "url",
+                    "status",
+                    "ok",
+                    "tookMs",
+                    "error",
+                    "response",
+                    "contact",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -41886,6 +42102,187 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "tags": [
           "domains",
+        ],
+      },
+    },
+    "/v1/events/{name}/keys": {
+      "get": {
+        "operationId": "automations.eventKeys",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "from": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "keys": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "example": {},
+                          "key": {
+                            "type": "string",
+                          },
+                          "seen": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "tag": {
+                            "type": "string",
+                          },
+                          "types": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                        },
+                        "required": [
+                          "key",
+                          "tag",
+                          "seen",
+                          "types",
+                          "example",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "name": {
+                      "type": "string",
+                    },
+                    "sampled": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "to": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "name",
+                    "sampled",
+                    "from",
+                    "to",
+                    "keys",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "automations",
         ],
       },
     },
@@ -78195,6 +78592,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "missing": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
                           "nodeId": {
                             "type": "string",
                           },
@@ -78242,6 +78645,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "port",
                           "detail",
                           "messageId",
+                          "missing",
                           "at",
                         ],
                         "type": "object",
@@ -78517,6 +78921,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "missing": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
                           "nodeId": {
                             "type": "string",
                           },
@@ -78564,6 +78974,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "port",
                           "detail",
                           "messageId",
+                          "missing",
                           "at",
                         ],
                         "type": "object",
@@ -78849,6 +79260,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "missing": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
                           "nodeId": {
                             "type": "string",
                           },
@@ -78896,6 +79313,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "port",
                           "detail",
                           "messageId",
+                          "missing",
                           "at",
                         ],
                         "type": "object",

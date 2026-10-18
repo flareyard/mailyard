@@ -12,6 +12,7 @@ import {
   setPaused,
   updateAutomation,
 } from "../automations/automations.ts"
+import { eventKeys, testWebhookStep } from "../automations/builderTools.ts"
 import { dryRun } from "../automations/dryRun.ts"
 import {
   automationWebhookSecret,
@@ -134,6 +135,29 @@ export const AutomationsHandlers = HttpApiBuilder.group(
             DatabaseError: Effect.die,
           }),
         ),
+      ),
+      testStep: p(({ params, payload }) =>
+        requireScope("admin", "automations.write").pipe(
+          Effect.andThen(
+            testWebhookStep({
+              automationId: params.id,
+              nodeId: params.nodeId,
+              version: payload.version,
+              contactId: payload.contactId,
+            }),
+          ),
+          Effect.catchTags({
+            AutomationNotFound: notFound,
+            StepNotTestable: invalid,
+            DatabaseError: Effect.die,
+          }),
+        ),
+      ),
+      eventKeys: p(({ params }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("read", "automations.read")
+          return yield* eventKeys({ name: params.name, withExamples: can(caller, "contacts.read") })
+        }).pipe(Effect.catchTag("DatabaseError", Effect.die)),
       ),
       dryRun: p(({ params, payload }) =>
         requireScope("read", "automations.read").pipe(

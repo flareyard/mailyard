@@ -25,6 +25,10 @@ export const send: StepDefinition<"send"> = {
     if (result.status === "sent")
       return { kind: "next", detail: `Sent "${result.subject}".`, messageId: result.messageId }
     if (result.status === "deferred") return { kind: "retry", until: result.retryAt, detail: result.detail }
-    return { kind: "next", detail: `Skipped: ${result.detail}` }
+    return {
+      kind: "next",
+      detail: `Skipped: ${result.detail}`,
+      ...(result.status === "skipped" && result.missing ? { missing: result.missing } : {}),
+    }
   },
 }

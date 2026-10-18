@@ -4073,6 +4073,9 @@ const AutomationRunDetail = Schema.Struct({
       port: Schema.NullOr(Schema.String),
       detail: Schema.String,
       messageId: Schema.NullOr(Schema.String),
+      /** A send skipped for missing merge data: the fields it needed, as the template names them
+       * (`first_name`, `trigger.offer_url`); empty otherwise (HAL-3417). */
+      missing: Schema.Array(Schema.String),
       at: Schema.Number,
     }),
   ),
@@ -4198,6 +4201,55 @@ export class AutomationsApi extends HttpApiGroup.make("automations")
       error: [Forbidden, NotFound, InvalidRequest],
     }),
     /**
+     * Sends one webhook step's request now, the way a run would (same body, same signature), marked
+     * `"test": true` with an `x-mailyard-test: true` header. The draft's step, or `version`'s; about
+     * `contactId`, or a sample contact. Nothing about any run changes (HAL-3417).
+     */
+    HttpApiEndpoint.post("testStep", "/v1/automations/:id/nodes/:nodeId/test", {
+      params: { id: Schema.String, nodeId: Schema.String },
+      payload: Schema.Struct({
+        version: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThan(0))),
+        contactId: Schema.optionalKey(Schema.String),
+      }),
+      success: Schema.Struct({
+        nodeId: Schema.String,
+        /** The URL without its query string, which can hold a token. */
+        url: Schema.String,
+        /** The HTTP status; 0 when no answer came. */
+        status: Schema.Number,
+        ok: Schema.Boolean,
+        tookMs: Schema.Number,
+        error: Schema.NullOr(Schema.Literals(["timeout", "network"])),
+        response: Schema.NullOr(Schema.String),
+        contact: Schema.Struct({ id: Schema.String, email: Schema.String, sample: Schema.Boolean }),
+      }),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /**
+     * The `trigger.*` keys an event carries, from its last 500 occurrences: nested objects as dotted
+     * keys, how often each appeared, its JSON types, and the newest example (shortened). Examples are
+     * null for callers who can't read contacts (HAL-3417).
+     */
+    HttpApiEndpoint.get("eventKeys", "/v1/events/:name/keys", {
+      params: { name: Schema.String },
+      success: Schema.Struct({
+        name: Schema.String,
+        sampled: Schema.Number,
+        from: Schema.NullOr(Schema.Number),
+        to: Schema.NullOr(Schema.Number),
+        keys: Schema.Array(
+          Schema.Struct({
+            key: Schema.String,
+            tag: Schema.String,
+            seen: Schema.Number,
+            types: Schema.Array(Schema.String),
+            example: Schema.Unknown,
+          }),
+        ),
+      }),
+      error: Forbidden,
+    }),
+    /**
      * Walks one contact (real, or made up) through the draft or a version in simulated time, with the
      * real step code: the path with times, every send rendered, where a cap or stop rule would end it.
      * Nothing is sent or written.
@@ -4232,6 +4284,8 @@ export class AutomationsApi extends HttpApiGroup.make("automations")
               "stopped",
             ]),
             detail: Schema.String,
+            /** A send skipped for missing merge data: the fields it needed (HAL-3417). */
+            missing: Schema.optionalKey(Schema.Array(Schema.String)),
             send: Schema.optionalKey(
               Schema.Struct({ to: Schema.String, subject: Schema.String, preview: Schema.String }),
             ),

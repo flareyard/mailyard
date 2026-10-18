@@ -363,7 +363,11 @@ const recordStep = (
   nodeId: string,
   outcome: "passed" | "waiting" | "sent" | "skipped" | "exited" | "failed",
   detail: string,
-  extra: { readonly port?: Port | undefined; readonly messageId?: string | undefined } = {},
+  extra: {
+    readonly port?: Port | undefined
+    readonly messageId?: string | undefined
+    readonly missing?: ReadonlyArray<string> | undefined
+  } = {},
 ) =>
   Effect.gen(function* () {
     const database = yield* Database
@@ -379,6 +383,7 @@ const recordStep = (
           port: extra.port ?? null,
           detail: detail.slice(0, 500),
           messageId: extra.messageId ?? null,
+          missing: extra.missing && extra.missing.length > 0 ? [...extra.missing] : null,
           at: Date.now(),
         })
         .onConflictDoNothing()
@@ -497,6 +502,7 @@ export const executeNode = Effect.fn("runs.execute")(function* (runId: string, n
   yield* recordStep(run, seq, nodeId, sent ? "sent" : skipped ? "skipped" : "passed", outcome.detail, {
     port: outcome.port,
     messageId: outcome.messageId,
+    missing: outcome.missing,
   })
   yield* setRun(runId, {
     state: "running",
@@ -668,6 +674,70 @@ export const holdRun = Effect.fn("runs.hold")(function* (runId: string, until: n
 const enc = new TextEncoder()
 const b64 = (bytes: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(bytes)))
 
+/**
+ * One signed POST to a webhook step's URL (Standard Webhooks headers, the automation's secret), with
+ * a 10-second timeout. Never throws: a network failure or timeout answers status 0 with `error` set.
+ * The run uses it, and so does the inspector's "Send a test request" (HAL-3417).
+ */
+export const postAutomationWebhook = Effect.fn("automations.postWebhook")(function* (input: {
+  readonly automationId: string
+  readonly deliveryId: string
+  readonly url: string
+  readonly body: Record<string, unknown>
+  readonly test?: boolean
+}) {
+  const secret = yield* automationWebhookSecret(input.automationId)
+  const body = JSON.stringify(input.body)
+  const timestamp = Math.floor(Date.now() / 1000)
+  const key = yield* Effect.promise(() =>
+    crypto.subtle.importKey(
+      "raw",
+      Uint8Array.from(atob(secret.slice(6)), (c) => c.charCodeAt(0)),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    ),
+  )
+  const signature = b64(
+    yield* Effect.promise(() =>
+      crypto.subtle.sign("HMAC", key, enc.encode(`${input.deliveryId}.${timestamp}.${body}`)),
+    ),
+  )
+  const started = Date.now()
+  return yield* Effect.promise(async () => {
+    try {
+      const response = await fetch(input.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "webhook-id": input.deliveryId,
+          "webhook-timestamp": String(timestamp),
+          "webhook-signature": `v1,${signature}`,
+          ...(input.test ? { "x-mailyard-test": "true" } : {}),
+        },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      })
+      const text = input.test ? await response.text().catch(() => "") : ""
+      return {
+        status: response.status,
+        tookMs: Date.now() - started,
+        error: null,
+        response: input.test ? text.slice(0, 500) : null,
+      }
+    } catch (cause) {
+      const timedOut =
+        cause instanceof Error && (cause.name === "TimeoutError" || cause.name === "AbortError")
+      return {
+        status: 0,
+        tookMs: Date.now() - started,
+        error: timedOut ? ("timeout" as const) : ("network" as const),
+        response: null,
+      }
+    }
+  })
+})
+
 /** The secret automation webhooks are signed with (Standard Webhooks), derived per automation. */
 export const automationWebhookSecret = Effect.fn("automations.webhookSecret")(function* (
   automationId: string,
@@ -738,50 +808,17 @@ const makeContext = (
         ),
       webhook: (url, payload) =>
         run$(
-          Effect.gen(function* () {
-            const secret = yield* automationWebhookSecret(run.automationId)
-            const body = JSON.stringify({
+          postAutomationWebhook({
+            automationId: run.automationId,
+            deliveryId: `${run.id}:${nodeId}`,
+            url,
+            body: {
               type: "automation.webhook",
               automationId: run.automationId,
               runId: run.id,
               step: nodeId,
               ...payload,
-            })
-            const id = `${run.id}:${nodeId}`
-            const timestamp = Math.floor(Date.now() / 1000)
-            const key = yield* Effect.promise(() =>
-              crypto.subtle.importKey(
-                "raw",
-                Uint8Array.from(atob(secret.slice(6)), (c) => c.charCodeAt(0)),
-                { name: "HMAC", hash: "SHA-256" },
-                false,
-                ["sign"],
-              ),
-            )
-            const signature = b64(
-              yield* Effect.promise(() =>
-                crypto.subtle.sign("HMAC", key, enc.encode(`${id}.${timestamp}.${body}`)),
-              ),
-            )
-            const status = yield* Effect.promise(async () => {
-              try {
-                const response = await fetch(url, {
-                  method: "POST",
-                  headers: {
-                    "content-type": "application/json",
-                    "webhook-id": id,
-                    "webhook-timestamp": String(timestamp),
-                    "webhook-signature": `v1,${signature}`,
-                  },
-                  body,
-                  signal: AbortSignal.timeout(10_000),
-                })
-                return response.status
-              } catch {
-                return 0
-              }
-            })
-            return { status }
+            },
           }),
         ),
     }
@@ -855,6 +892,7 @@ const sendForRun = (
           status: "skipped",
           reason: "missing_data",
           detail: missingDetail(e.missing),
+          missing: e.missing,
         } satisfies SendResult),
       ),
     )
@@ -1132,6 +1170,8 @@ export const getRun = Effect.fn("runs.getView")(function* (runId: string) {
       port: s.port,
       detail: s.detail,
       messageId: s.messageId,
+      /** A send skipped for missing merge data: the fields it needed; empty otherwise. */
+      missing: s.missing ?? [],
       at: s.at,
     })),
   }
