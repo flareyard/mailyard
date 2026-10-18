@@ -21,6 +21,7 @@ import {
   listRuns,
   retryRun,
 } from "../automations/runs.ts"
+import { redactGraph } from "../automations/secrets.ts"
 import { Conflict, InvalidRequest, MailApi, NotFound, NotReady } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
@@ -60,7 +61,12 @@ export const AutomationsHandlers = HttpApiBuilder.group(
       ),
       get: p(({ params }) =>
         requireScope("read").pipe(
-          Effect.andThen(getAutomation(params.id)),
+          Effect.flatMap((caller) =>
+            getAutomation(params.id).pipe(
+              // Secrets in step configs are for admins, who can change them (HAL-3412).
+              Effect.map((a) => (caller.scopes.includes("admin") ? a : { ...a, ...redactGraph(a.graph) })),
+            ),
+          ),
           Effect.catchTags({ AutomationNotFound: notFound, DatabaseError: Effect.die }),
         ),
       ),

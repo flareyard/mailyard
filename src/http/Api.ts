@@ -2797,6 +2797,11 @@ const AutomationDetail = Schema.Struct({
     Schema.String,
     Schema.Struct({ here: Schema.Number, passed: Schema.Number, failed: Schema.Number }),
   ),
+  /**
+   * True when secret step settings (a webhook's URL) came back redacted, as `https://host/•••`,
+   * because the key lacks `admin`. Saving a graph that still holds a redacted value keeps the stored one.
+   */
+  redacted: Schema.Boolean,
 })
 const AutomationRange = Schema.Literals(["24h", "7d", "30d"])
 

@@ -5790,6 +5790,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "redacted": {
+                      "type": "boolean",
+                    },
                     "settings": {
                       "additionalProperties": false,
                       "properties": {
@@ -6338,6 +6341,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "settings",
                     "issues",
                     "counts",
+                    "redacted",
                   ],
                   "type": "object",
                 },
@@ -8015,6 +8019,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "redacted": {
+                      "type": "boolean",
+                    },
                     "settings": {
                       "additionalProperties": false,
                       "properties": {
@@ -8563,6 +8570,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "settings",
                     "issues",
                     "counts",
+                    "redacted",
                   ],
                   "type": "object",
                 },
@@ -11343,6 +11351,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "redacted": {
+                      "type": "boolean",
+                    },
                     "settings": {
                       "additionalProperties": false,
                       "properties": {
@@ -11891,6 +11902,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "settings",
                     "issues",
                     "counts",
+                    "redacted",
                   ],
                   "type": "object",
                 },
@@ -13897,6 +13909,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "redacted": {
+                      "type": "boolean",
+                    },
                     "settings": {
                       "additionalProperties": false,
                       "properties": {
@@ -14445,6 +14460,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "settings",
                     "issues",
                     "counts",
+                    "redacted",
                   ],
                   "type": "object",
                 },
@@ -16101,6 +16117,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "redacted": {
+                      "type": "boolean",
+                    },
                     "settings": {
                       "additionalProperties": false,
                       "properties": {
@@ -16649,6 +16668,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "settings",
                     "issues",
                     "counts",
+                    "redacted",
                   ],
                   "type": "object",
                 },
@@ -18677,6 +18697,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "redacted": {
+                      "type": "boolean",
+                    },
                     "settings": {
                       "additionalProperties": false,
                       "properties": {
@@ -19225,6 +19248,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "settings",
                     "issues",
                     "counts",
+                    "redacted",
                   ],
                   "type": "object",
                 },

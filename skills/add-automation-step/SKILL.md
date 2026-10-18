@@ -30,4 +30,4 @@ An automation is a graph of nodes (`src/automations/graph.ts`). Every node type 
 
 - A step that only reads (a check) is a `branch` condition, not a new step: see `branch.ts` and the segment `Rule` it evaluates.
 - Settings every step can read: `ctx.settings` (sender, topic, cadence, quiet hours); `ctx.now` is simulated time in a dry run, so use it rather than `Date.now()`.
-- Secrets a step needs (a Slack webhook URL is one) live in the node's config or in a Worker secret read in `runs.ts`. Only admin keys can change a graph, but read keys can read it, configs included, until HAL-3412 redacts secret fields; prefer a Worker secret for anything that must stay private. Either way, keep secrets out of `detail`.
+- Secrets a step needs (a Slack webhook URL is one) live in the node's config or in a Worker secret read in `runs.ts`. A config field that holds one goes in `SECRET_FIELDS` (`src/automations/secrets.ts`): keys without `admin` then read it redacted (`https://host/•••`), and saving a graph that still holds the redacted value keeps the stored one. Keep secrets out of `detail` too.
