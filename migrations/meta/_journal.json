@@ -176,6 +176,13 @@
       "when": 1792282388547,
       "tag": "0024_api_key_purpose",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792285415924,
+      "tag": "0025_message_log",
+      "breakpoints": true
     }
   ]
 }

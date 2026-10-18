@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or } from "drizzle-orm"
+import { and, desc, eq, gte, lt, or } from "drizzle-orm"
 import type * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
@@ -8,10 +8,11 @@ import * as Option from "effect/Option"
 import * as Redacted from "effect/Redacted"
 import pkg from "../../package.json" with { type: "json" }
 import { Bindings } from "../Bindings.ts"
-import { messagesOut } from "../db/schema.ts"
+import { messageEvents, messagesOut } from "../db/schema.ts"
 import { authenticate, type Caller, createKey, listKeys, revokeKey, type Scope } from "../domain/apiKeys.ts"
 import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
+import { sentHeaders } from "../domain/messageRaw.ts"
 import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
 import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
 import type { ImapConnector } from "../imports/importer.ts"
@@ -319,9 +320,25 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
   }),
 )
 
+const SOURCE = {
+  transactional: "api",
+  campaign: "campaign",
+  automation: "automation",
+  reply: "mailbox",
+  mailbox: "mailbox",
+  test: "test",
+} as const
+
+/** An API send's key is stored as `apiKeyId:key:recipientIndex` to keep rows unique; show the caller's own. */
+const clientIdempotencyKey = (row: typeof messagesOut.$inferSelect) =>
+  row.idempotencyKey && row.stream === "transactional" && row.apiKeyId
+    ? row.idempotencyKey.slice(row.apiKeyId.length + 1).replace(/:\d+$/, "")
+    : row.idempotencyKey
+
 const summarizeMessage = (row: typeof messagesOut.$inferSelect) => ({
   id: row.id,
   stream: row.stream,
+  source: SOURCE[row.stream],
   recipient: row.recipient,
   sender: row.sender,
   subject: row.subject,
@@ -332,6 +349,7 @@ const summarizeMessage = (row: typeof messagesOut.$inferSelect) => ({
   attempts: row.attempts,
   cfMessageId: row.cfMessageId,
   templateId: row.templateId,
+  templateVersion: row.templateVersion,
   apiKeyId: row.apiKeyId,
   campaignId: row.campaignId,
   tracked: row.tracked,
@@ -377,6 +395,21 @@ export const MessagesHandlers = HttpApiBuilder.group(
                   and(
                     query.status ? eq(messagesOut.status, query.status) : undefined,
                     query.recipient ? eq(messagesOut.recipient, query.recipient.toLowerCase()) : undefined,
+                    query.stream ? eq(messagesOut.stream, query.stream) : undefined,
+                    query.templateId ? eq(messagesOut.templateId, query.templateId) : undefined,
+                    query.from !== undefined ? gte(messagesOut.createdAt, query.from) : undefined,
+                    query.to !== undefined ? lt(messagesOut.createdAt, query.to) : undefined,
+                    // Each branch is an index lookup: the primary key, the Cloudflare id, a recipient range.
+                    query.q
+                      ? or(
+                          eq(messagesOut.id, query.q.trim()),
+                          eq(messagesOut.cfMessageId, query.q.trim()),
+                          and(
+                            gte(messagesOut.recipient, query.q.trim().toLowerCase()),
+                            lt(messagesOut.recipient, `${query.q.trim().toLowerCase()}\uffff`),
+                          ),
+                        )
+                      : undefined,
                     cursorAt && cursorId
                       ? or(
                           lt(messagesOut.createdAt, Number(cursorAt)),
@@ -426,7 +459,34 @@ export const MessagesHandlers = HttpApiBuilder.group(
               }
             },
           })
-          return { ...summarizeMessage(row), smtpResponse: row.smtpResponse, rendered }
+          const trail = yield* database
+            .query("messages.events", (db) =>
+              db
+                .select()
+                .from(messageEvents)
+                .where(eq(messageEvents.messageId, row.id))
+                .orderBy(messageEvents.at, messageEvents.id)
+                .all(),
+            )
+            .pipe(Effect.orDie)
+          const sent = Option.isSome(blob) ? decodeRendered(new TextDecoder().decode(blob.value.body)) : null
+          return {
+            ...summarizeMessage(row),
+            smtpResponse: row.smtpResponse,
+            idempotencyKey: clientIdempotencyKey(row),
+            nextAttemptAt: row.nextAttemptAt,
+            events: trail.map((e) => ({
+              type: e.type,
+              at: e.at,
+              attempt: e.attempt,
+              provider: e.provider,
+              bounceType: e.bounceType,
+              smtpResponse: e.smtpResponse,
+              detail: e.detail,
+            })),
+            headers: sent ? sentHeaders(sent, row.cfMessageId) : [],
+            rendered,
+          }
         }),
       ),
     })

@@ -189,6 +189,23 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
       },
     },
   },
+  "/v1/messages/{id}/raw": {
+    get: {
+      tags: ["messages"],
+      operationId: "messages.raw",
+      summary: "A sent message's source (.eml)",
+      description:
+        "Rebuilt as RFC 5322 from the copy Mailyard stored when it sent the message, with Email Service's Message-ID. Email Service builds the MIME it transmits and adds its own headers (DKIM-Signature, Received), so this is what Mailyard sent, not a capture of the wire.",
+      security: bearer,
+      parameters: [idParam("id", "The message, as GET /v1/messages lists it.")],
+      responses: {
+        "200": bytes("The message.", "message/rfc822"),
+        "401": problem("No key, or not a key Mailyard knows."),
+        "403": problem("A public key, or a key without the read scope."),
+        "404": problem("No such message, or its copy is no longer stored."),
+      },
+    },
+  },
   "/v1/mailboxes/{id}/messages/{messageId}/attachments/{attachmentId}": {
     get: {
       tags: ["mail"],

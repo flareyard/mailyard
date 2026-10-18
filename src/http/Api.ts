@@ -235,9 +235,39 @@ export const MessageStatus = Schema.Literals([
   "complained",
 ])
 
+const MessageStream = Schema.Literals(["transactional", "campaign", "automation", "reply", "mailbox", "test"])
+/** What sent it: `api` (POST /v1/send), a campaign, an automation, a mailbox, or a campaign test send. */
+const MessageSource = Schema.Literals(["api", "campaign", "automation", "mailbox", "test"])
+
+export const MessageEvent = Schema.Struct({
+  type: Schema.Literals([
+    "accepted",
+    "sent",
+    "deferred",
+    "delivered",
+    "bounced",
+    "complained",
+    "failed",
+    "rejected",
+    "suppressed",
+    "opened",
+    "clicked",
+  ]),
+  at: Schema.Number,
+  /** Mailyard's attempt number when it changed, for sends and retries. */
+  attempt: Schema.NullOr(Schema.Number),
+  /** The receiving provider (gmail, outlook, …) Email Service reported. */
+  provider: Schema.NullOr(Schema.String),
+  bounceType: Schema.NullOr(Schema.String),
+  smtpResponse: Schema.NullOr(Schema.String),
+  /** Why an attempt failed or was deferred, in the sender's words. */
+  detail: Schema.NullOr(Schema.String),
+})
+
 export const MessageSummary = Schema.Struct({
   id: Schema.String,
   stream: Schema.String,
+  source: MessageSource,
   recipient: Schema.String,
   sender: Schema.String,
   subject: Schema.String,
@@ -248,6 +278,7 @@ export const MessageSummary = Schema.Struct({
   attempts: Schema.Number,
   cfMessageId: Schema.NullOr(Schema.String),
   templateId: Schema.NullOr(Schema.String),
+  templateVersion: Schema.NullOr(Schema.Number),
   apiKeyId: Schema.NullOr(Schema.String),
   campaignId: Schema.NullOr(Schema.String),
   tracked: Schema.Boolean,
@@ -265,6 +296,14 @@ export const MessageSummary = Schema.Struct({
 export const MessageDetail = Schema.Struct({
   ...MessageSummary.fields,
   smtpResponse: Schema.NullOr(Schema.String),
+  /** The Idempotency-Key the request carried (for API sends), or the internal one for runs. */
+  idempotencyKey: Schema.NullOr(Schema.String),
+  /** When Mailyard's own retry is due, while one is queued. */
+  nextAttemptAt: Schema.NullOr(Schema.Number),
+  /** The trail, oldest first. Messages sent before 2026-10-18 have none. */
+  events: Schema.Array(MessageEvent),
+  /** The headers Mailyard gave Email Service; it adds its own (Received, DKIM-Signature, …). */
+  headers: Schema.Array(Schema.Struct({ name: Schema.String, value: Schema.String })),
   rendered: Schema.NullOr(
     Schema.Struct({
       from: Schema.String,
@@ -285,6 +324,13 @@ export class MessagesApi extends HttpApiGroup.make("messages")
       query: {
         status: Schema.optionalKey(MessageStatus),
         recipient: Schema.optionalKey(Schema.String),
+        stream: Schema.optionalKey(MessageStream),
+        templateId: Schema.optionalKey(Schema.String),
+        /** A message id or Cloudflare message id (exact), or the start of a recipient address. */
+        q: Schema.optionalKey(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(254))),
+        /** Created at or after, and before, in epoch milliseconds. */
+        from: Schema.optionalKey(Schema.NumberFromString),
+        to: Schema.optionalKey(Schema.NumberFromString),
         cursor: Schema.optionalKey(Schema.String),
         limit: Schema.optionalKey(
           Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),

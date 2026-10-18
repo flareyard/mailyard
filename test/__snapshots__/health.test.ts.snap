@@ -56899,6 +56899,56 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
           },
           {
             "in": "query",
+            "name": "stream",
+            "required": false,
+            "schema": {
+              "enum": [
+                "transactional",
+                "campaign",
+                "automation",
+                "reply",
+                "mailbox",
+                "test",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "templateId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "maxLength": 254,
+              "minLength": 1,
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
             "name": "cursor",
             "required": false,
             "schema": {
@@ -57128,6 +57178,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "sender": {
                             "type": "string",
                           },
+                          "source": {
+                            "enum": [
+                              "api",
+                              "campaign",
+                              "automation",
+                              "mailbox",
+                              "test",
+                            ],
+                            "type": "string",
+                          },
                           "status": {
                             "enum": [
                               "queued",
@@ -57151,6 +57211,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "anyOf": [
                               {
                                 "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "templateVersion": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
                               },
                               {
                                 "type": "null",
@@ -57186,6 +57268,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "required": [
                           "id",
                           "stream",
+                          "source",
                           "recipient",
                           "sender",
                           "subject",
@@ -57196,6 +57279,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "attempts",
                           "cfMessageId",
                           "templateId",
+                          "templateVersion",
                           "apiKeyId",
                           "campaignId",
                           "tracked",
@@ -57389,6 +57473,117 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "events": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "at": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "attempt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "bounceType": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "detail": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "provider": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "smtpResponse": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "type": {
+                            "enum": [
+                              "accepted",
+                              "sent",
+                              "deferred",
+                              "delivered",
+                              "bounced",
+                              "complained",
+                              "failed",
+                              "rejected",
+                              "suppressed",
+                              "opened",
+                              "clicked",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "type",
+                          "at",
+                          "attempt",
+                          "provider",
+                          "bounceType",
+                          "smtpResponse",
+                          "detail",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "firstClickedAt": {
                       "anyOf": [
                         {
@@ -57433,8 +57628,37 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "headers": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                          },
+                          "value": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "value",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "id": {
                       "type": "string",
+                    },
+                    "idempotencyKey": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "machineClicks": {
                       "anyOf": [
@@ -57463,6 +57687,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "nextAttemptAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -57595,6 +57841,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "source": {
+                      "enum": [
+                        "api",
+                        "campaign",
+                        "automation",
+                        "mailbox",
+                        "test",
+                      ],
+                      "type": "string",
+                    },
                     "status": {
                       "enum": [
                         "queued",
@@ -57618,6 +57874,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "anyOf": [
                         {
                           "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "templateVersion": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
                         },
                         {
                           "type": "null",
@@ -57653,6 +57931,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "required": [
                     "id",
                     "stream",
+                    "source",
                     "recipient",
                     "sender",
                     "subject",
@@ -57663,6 +57942,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "attempts",
                     "cfMessageId",
                     "templateId",
+                    "templateVersion",
                     "apiKeyId",
                     "campaignId",
                     "tracked",
@@ -57675,6 +57955,10 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "createdAt",
                     "updatedAt",
                     "smtpResponse",
+                    "idempotencyKey",
+                    "nextAttemptAt",
+                    "events",
+                    "headers",
                     "rendered",
                   ],
                   "type": "object",
@@ -57729,6 +58013,114 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "bearer": [],
           },
         ],
+        "tags": [
+          "messages",
+        ],
+      },
+    },
+    "/v1/messages/{id}/raw": {
+      "get": {
+        "description": "Rebuilt as RFC 5322 from the copy Mailyard stored when it sent the message, with Email Service's Message-ID. Email Service builds the MIME it transmits and adds its own headers (DKIM-Signature, Received), so this is what Mailyard sent, not a capture of the wire.",
+        "operationId": "messages.raw",
+        "parameters": [
+          {
+            "description": "The message, as GET /v1/messages lists it.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "message/rfc822": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                },
+              },
+            },
+            "description": "The message.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key, or not a key Mailyard knows.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "A public key, or a key without the read scope.",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No such message, or its copy is no longer stored.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "A sent message's source (.eml)",
         "tags": [
           "messages",
         ],
