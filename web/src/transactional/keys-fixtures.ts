@@ -256,6 +256,7 @@ const EVENTS: Hooks["events"] = [
   "approval.pending",
   "approval.approved",
   "approval.rejected",
+  "alert.raised",
 ]
 
 function seedHooks(): Hook[] {

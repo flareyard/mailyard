@@ -38,6 +38,7 @@ import { Route as AppDomainsReputationRouteImport } from './routes/_app/domains/
 import { Route as AppMailMailboxIdRouteImport } from './routes/_app/mail/$mailboxId'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAiRouteImport } from './routes/_app/settings/ai'
+import { Route as AppSettingsAlertsRouteImport } from './routes/_app/settings/alerts'
 import { Route as AppSettingsAuditRouteImport } from './routes/_app/settings/audit'
 import { Route as AppSettingsBrandRouteImport } from './routes/_app/settings/brand'
 import { Route as AppSettingsDangerRouteImport } from './routes/_app/settings/danger'
@@ -210,6 +211,11 @@ const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
 const AppSettingsAiRoute = AppSettingsAiRouteImport.update({
   id: '/ai',
   path: '/ai',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsAlertsRoute = AppSettingsAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSettingsAuditRoute = AppSettingsAuditRouteImport.update({
@@ -399,6 +405,7 @@ export interface FileRoutesByFullPath {
   '/domains/reputation': typeof AppDomainsReputationRoute
   '/mail/$mailboxId': typeof AppMailMailboxIdRoute
   '/settings/ai': typeof AppSettingsAiRoute
+  '/settings/alerts': typeof AppSettingsAlertsRoute
   '/settings/audit': typeof AppSettingsAuditRoute
   '/settings/brand': typeof AppSettingsBrandRoute
   '/settings/danger': typeof AppSettingsDangerRoute
@@ -454,6 +461,7 @@ export interface FileRoutesByTo {
   '/domains/reputation': typeof AppDomainsReputationRoute
   '/mail/$mailboxId': typeof AppMailMailboxIdRoute
   '/settings/ai': typeof AppSettingsAiRoute
+  '/settings/alerts': typeof AppSettingsAlertsRoute
   '/settings/audit': typeof AppSettingsAuditRoute
   '/settings/brand': typeof AppSettingsBrandRoute
   '/settings/danger': typeof AppSettingsDangerRoute
@@ -515,6 +523,7 @@ export interface FileRoutesById {
   '/_app/domains/reputation': typeof AppDomainsReputationRoute
   '/_app/mail/$mailboxId': typeof AppMailMailboxIdRoute
   '/_app/settings/ai': typeof AppSettingsAiRoute
+  '/_app/settings/alerts': typeof AppSettingsAlertsRoute
   '/_app/settings/audit': typeof AppSettingsAuditRoute
   '/_app/settings/brand': typeof AppSettingsBrandRoute
   '/_app/settings/danger': typeof AppSettingsDangerRoute
@@ -576,6 +585,7 @@ export interface FileRouteTypes {
     | '/domains/reputation'
     | '/mail/$mailboxId'
     | '/settings/ai'
+    | '/settings/alerts'
     | '/settings/audit'
     | '/settings/brand'
     | '/settings/danger'
@@ -631,6 +641,7 @@ export interface FileRouteTypes {
     | '/domains/reputation'
     | '/mail/$mailboxId'
     | '/settings/ai'
+    | '/settings/alerts'
     | '/settings/audit'
     | '/settings/brand'
     | '/settings/danger'
@@ -691,6 +702,7 @@ export interface FileRouteTypes {
     | '/_app/domains/reputation'
     | '/_app/mail/$mailboxId'
     | '/_app/settings/ai'
+    | '/_app/settings/alerts'
     | '/_app/settings/audit'
     | '/_app/settings/brand'
     | '/_app/settings/danger'
@@ -936,6 +948,13 @@ declare module '@tanstack/react-router' {
       path: '/ai'
       fullPath: '/settings/ai'
       preLoaderRoute: typeof AppSettingsAiRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/alerts': {
+      id: '/_app/settings/alerts'
+      path: '/alerts'
+      fullPath: '/settings/alerts'
+      preLoaderRoute: typeof AppSettingsAlertsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/audit': {
@@ -1201,6 +1220,7 @@ const AppMailRouteWithChildren =
 
 interface AppSettingsRouteChildren {
   AppSettingsAiRoute: typeof AppSettingsAiRoute
+  AppSettingsAlertsRoute: typeof AppSettingsAlertsRoute
   AppSettingsAuditRoute: typeof AppSettingsAuditRoute
   AppSettingsBrandRoute: typeof AppSettingsBrandRoute
   AppSettingsDangerRoute: typeof AppSettingsDangerRoute
@@ -1221,6 +1241,7 @@ interface AppSettingsRouteChildren {
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAiRoute: AppSettingsAiRoute,
+  AppSettingsAlertsRoute: AppSettingsAlertsRoute,
   AppSettingsAuditRoute: AppSettingsAuditRoute,
   AppSettingsBrandRoute: AppSettingsBrandRoute,
   AppSettingsDangerRoute: AppSettingsDangerRoute,

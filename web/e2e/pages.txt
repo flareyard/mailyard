@@ -231,3 +231,8 @@ settings/danger?sheet=mailbox&mailbox=mbx_founder
 settings/danger?sheet=mailbox&mailbox=mbx_founder&fx=export
 settings/danger?sheet=mailbox&mailbox=mbx_founder&fx=aliases
 settings/integrations/agents/agt_hermes?sheet=wake
+settings/alerts
+settings/alerts?fx=empty
+settings/alerts?fx=error
+settings/alerts?fx=bad-target
+settings/integrations?fx=no-keys

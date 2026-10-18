@@ -1,13 +1,14 @@
 /**
  * Settings → Integrations (design: settings/integrations*.html, HANDOFF-ops §19–21, §32–33), top to bottom:
- * linked apps, agent mailboxes (HAL-3460, live), the MCP server (HAL-3303), apps connected with OAuth
- * (HAL-3462, a proposal), keys for agents (HAL-3410), the tools table, alert channels (HAL-3465), starting
+ * linked apps (HAL-3466, live), agent mailboxes (HAL-3460, live), the MCP server (HAL-3303), apps connected with OAuth
+ * (HAL-3462, a proposal), keys for agents (HAL-3410), the tools table, alert channels (HAL-3465, live), starting
  * automations from mail (HAL-3467) and reshaping Mailyard with your own agent (in your repo).
  *
  * Planned panels say what they'll do and stay disabled with their issue; none of them shows invented rows.
  */
 import { useQuery } from "@tanstack/react-query"
 import { getRouteApi, Link } from "@tanstack/react-router"
+import { api, unwrap } from "../../api/client.ts"
 import { Gated } from "../../auth/NoPermission.tsx"
 import { useMe } from "../../auth/session.ts"
 import { fmtInt, num } from "../../lib/format.ts"
@@ -15,11 +16,13 @@ import { CopyChip } from "../../ops/Copy.tsx"
 import { BuiltPill, Empty, PlannedPill, Time } from "../../ops/kit.tsx"
 import { isAdmin } from "../../ops/roles.ts"
 import { Icon } from "../../ui/icons.tsx"
-import { Panel } from "../../ui/Panel.tsx"
+import { Panel, PanelError } from "../../ui/Panel.tsx"
+import { alertSettingsQuery } from "../alerts/AlertsPage.tsx"
 import { AgentNewSheet } from "./AgentNewSheet.tsx"
 import { ConnectSheet } from "./ConnectSheet.tsx"
 import { AgentStatusPill, PlannedTag, RepoPill, ScopeTags, SectionHead } from "./common.tsx"
 import { RevokeKeySheet, RotateKeySheet } from "./KeySheets.tsx"
+import { LinkedApps } from "./LinkedApps.tsx"
 import { agentStatus, capPercent, localOf, MCP_PROTOCOLS, mcpUrl } from "./logic.ts"
 import { agentsQuery, approvalsQuery, mcpKeysQuery, webhooksQuery } from "./queries.ts"
 import { ToolsPanel } from "./ToolsPanel.tsx"
@@ -61,158 +64,6 @@ export function Integrations() {
       {search.rotate && admin ? <RotateKeySheet keyId={search.rotate} onClose={close} /> : null}
       {search.revoke && admin ? <RevokeKeySheet keyId={search.revoke} onClose={close} /> : null}
     </>
-  )
-}
-
-/** Linked apps (HAL-3466 planned): the two cards the built endpoints can fill, and the ones that need it. */
-function LinkedApps() {
-  const keys = useQuery(mcpKeysQuery)
-  const hooks = useQuery(webhooksQuery)
-  const live = (keys.data?.keys ?? []).filter((k) => !k.revokedAt || (num(k.revokedAt) ?? 0) > Date.now())
-  const last = [...live].sort((a, b) => (num(b.lastUsedAt) ?? 0) - (num(a.lastUsedAt) ?? 0))[0]
-  const endpoints = hooks.data?.webhooks ?? []
-  const failing = endpoints.filter(
-    (w) => (num(w.deadLetters) ?? 0) > 0 || (num(w.lastFailureAt) ?? 0) > (num(w.lastSuccessAt) ?? 0),
-  ).length
-  const off = endpoints.filter((w) => !w.enabled).length
-  const origin = typeof window === "undefined" ? "" : window.location.origin
-  return (
-    <section
-      className="panel"
-      data-endpoint="GET /v1/integrations (planned, HAL-3466) · GET /v1/api-keys?purpose=mcp · GET /v1/webhooks (built)"
-      aria-labelledby="h-links"
-    >
-      <header className="panel-head">
-        <h2 className="panel-title" id="h-links">
-          Linked apps
-        </h2>
-        <div className="cluster">
-          <PlannedPill issue="HAL-3466" />
-        </div>
-      </header>
-      <div className="panel-body">
-        <p className="muted" style={{ margin: "0 0 12px" }}>
-          What is linked to this workspace and whether it’s healthy. Read-only: each app is managed where it
-          lives.
-        </p>
-        <div className="lk-grid">
-          <article className="lk-card">
-            <header>
-              <span className="lk-icon">
-                <Icon name="plug" />
-              </span>
-              <h3>MCP server</h3>
-            </header>
-            <p className="lk-state">
-              <b>
-                {keys.isPending
-                  ? "Checking…"
-                  : keys.isError
-                    ? "Keys didn’t load"
-                    : `${fmtInt(live.length)} ${live.length === 1 ? "key" : "keys"} in use`}
-              </b>
-            </p>
-            <ul className="lk-lines">
-              <li>
-                {last?.lastUsedAt ? (
-                  <>
-                    Last call <Time value={last.lastUsedAt} />, by {last.name}
-                  </>
-                ) : (
-                  "No agent has called it yet."
-                )}
-              </li>
-              <li>
-                <span className="mono">{mcpUrl(origin).replace(/^https?:\/\//, "")}</span>
-              </li>
-            </ul>
-            <a className="panel-link" href="#h-mcp">
-              Keys and tools
-            </a>
-          </article>
-          <article className="lk-card">
-            <header>
-              <span className="lk-icon">
-                <Icon name="webhook" />
-              </span>
-              <h3>Webhooks</h3>
-            </header>
-            <p className="lk-state">
-              <b>
-                {hooks.isPending
-                  ? "Checking…"
-                  : hooks.isError
-                    ? "Endpoints didn’t load"
-                    : endpoints.length === 0
-                      ? "No endpoints"
-                      : failing
-                        ? `${failing} of ${endpoints.length} failing`
-                        : `${endpoints.length} healthy`}
-              </b>
-            </p>
-            <ul className="lk-lines">
-              <li>
-                {fmtInt(endpoints.length)} endpoints · {fmtInt(failing)} failing · {fmtInt(off)} disabled
-              </li>
-              <li>Health from each endpoint’s last delivery and its dead letters.</li>
-            </ul>
-            <Link className="panel-link" to="/transactional/webhooks">
-              Manage webhooks
-            </Link>
-          </article>
-          <article className="lk-card">
-            <header>
-              <span className="lk-icon">
-                <Icon name="bot" />
-              </span>
-              <h3>Hermes</h3>
-            </header>
-            <p className="lk-state">
-              <b>Unknown until the summary ships</b>
-            </p>
-            <ul className="lk-lines">
-              <li>
-                Whether Hermes is linked, its lane and mailboxes come from{" "}
-                <span className="mono">GET /v1/integrations</span> <PlannedTag issue="HAL-3466" />.
-              </li>
-              <li>
-                Hermes reads mail events from the mail-events queue, and can run as an agent mailbox below.
-              </li>
-            </ul>
-            <a className="panel-link" href="https://flareyard.dev/apps">
-              About Hermes
-            </a>
-          </article>
-          <article className="lk-card">
-            <header>
-              <span className="lk-icon">
-                <Icon name="inbound" />
-              </span>
-              <h3>Support Inbox</h3>
-            </header>
-            <p className="lk-state">
-              <b>Not linked</b>
-            </p>
-            <ul className="lk-lines">
-              <li>
-                A Flareyard app for assignments, SLAs and canned replies. It links over MCP with its own key,
-                which shows up under Keys for agents.
-              </li>
-            </ul>
-            <a className="panel-link" href="https://flareyard.dev/apps">
-              Install from Flareyard
-            </a>
-          </article>
-        </div>
-      </div>
-      <footer className="panel-foot">
-        <span>
-          Until <span className="mono">GET /v1/integrations</span> ships, these cards are built from{" "}
-          <span className="mono">GET /v1/api-keys?purpose=mcp</span> and{" "}
-          <span className="mono">GET /v1/webhooks</span> (both built); the Hermes card needs the summary.
-        </span>
-      </footer>
-    </section>
   )
 }
 
@@ -614,52 +465,120 @@ function AgentKeys({
   )
 }
 
+/** A summary of Settings → Alerts (HAL-3465, live): the channels and who gets critical mail. */
 function AlertChannels() {
+  const q = useQuery(alertSettingsQuery)
+  const hooks = useQuery(webhooksQuery)
+  const hookName = (id: string) => {
+    const h = hooks.data?.webhooks.find((w) => w.id === id)
+    return h ? (h.description ?? h.url) : id
+  }
   return (
-    <section
-      className="panel"
-      data-endpoint="GET /v1/settings/alerts · PUT /v1/settings/alerts { channels } · alert.raised event (planned, HAL-3465)"
-      aria-labelledby="h-alert-channels"
-    >
-      <header className="panel-head">
-        <h2 className="panel-title" id="h-alert-channels">
-          Alert channels
-        </h2>
-        <div className="cluster">
-          <PlannedPill issue="HAL-3465" />
-          <Gated
-            allowed={false}
-            reason="Alert channels aren’t built yet"
-            who="Planned · HAL-3465. Until then alerts show in the bell only."
-            side="right"
-          >
-            <button className="btn btn-secondary btn-sm" type="button">
+    <Panel
+      id="alert-channels"
+      title="Alert channels"
+      to="/settings/alerts"
+      linkLabel="Manage"
+      endpoint="GET /v1/settings/alerts · alert.raised event (built, HAL-3465)"
+      query={q}
+      meta={<BuiltPill issue="HAL-3465" />}
+      isEmpty={(d) => d.channels.length === 0}
+      empty={
+        <Empty
+          icon="bell"
+          title="Alerts show only in the app"
+          action={
+            <Link className="btn btn-secondary btn-sm" to="/settings/alerts">
               Add a channel
-            </button>
-          </Gated>
-        </div>
-      </header>
-      <div className="panel-body">
-        <Empty icon="bell" title="Alerts show only in the app">
-          Email addresses and webhooks that hear about alerts when nobody has Mailyard open: each alert sent
-          once, and again if it gets worse.
+            </Link>
+          }
+        >
+          {q.data?.effective.note ??
+            "Add an email address or a webhook to hear about alerts when nobody has Mailyard open."}
+          {q.data?.effective.criticalEmail ? (
+            <>
+              {" "}
+              Critical alerts go to <span className="mono">{q.data.effective.criticalEmail}</span>.
+            </>
+          ) : null}
         </Empty>
-      </div>
-      <footer className="panel-foot">
-        <span>
-          Webhook endpoints will also be able to subscribe to <span className="mono">alert.raised</span>{" "}
-          <PlannedTag issue="HAL-3465" />, with the alert’s kind, severity and title.
-        </span>
-      </footer>
-    </section>
+      }
+    >
+      {(d) => (
+        <>
+          <div className="table-wrap rtable-wrap">
+            <table className="rtable">
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  <th>Alerts</th>
+                  <th>Severity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.channels.map((c, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: channels have no id; their order is the list
+                  <tr key={i}>
+                    <td className="is-head">
+                      <div className="cell-main">
+                        <span className="mono" style={{ color: "var(--my-fg)" }}>
+                          {c.kind === "email" ? c.target : hookName(c.target)}
+                        </span>
+                        <span className="cell-sub">
+                          {c.kind === "email" ? "Email" : "Webhook · alert.raised"}
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="Alerts">
+                      {c.kinds?.length ? (
+                        <span className="scope-tags">
+                          {c.kinds.map((k) => (
+                            <span key={k} className="tag mono">
+                              {k}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        "Every kind"
+                      )}
+                    </td>
+                    <td data-label="Severity">
+                      {c.minSeverity === "critical"
+                        ? "Critical only"
+                        : c.minSeverity === "warning"
+                          ? "Warning and up"
+                          : "Info and up"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="hint" style={{ marginTop: 10 }}>
+            {d.effective.criticalEmail ? (
+              <>
+                Critical alerts also go to <span className="mono">{d.effective.criticalEmail}</span>.{" "}
+              </>
+            ) : null}
+            Each alert is sent once, and again if it gets worse.
+          </p>
+        </>
+      )}
+    </Panel>
   )
 }
 
+/** Automations started by a person's email (HAL-3467, live): the trigger lives in the automation canvas. */
 function MailTrigger() {
+  const q = useQuery({
+    queryKey: ["automations", "list", "all"],
+    queryFn: () => unwrap(api.GET("/v1/automations")),
+  })
+  const byMail = (q.data?.automations ?? []).filter((a) => a.trigger?.kind === "mail_received")
   return (
     <section
       className="panel"
-      data-endpoint="automation trigger { type: mail_received, mailboxIds?, senderDomains?, subjectContains? } (planned, HAL-3467)"
+      data-endpoint="GET /v1/automations · trigger { kind: mail_received, mailboxIds?, senderDomains?, subjectContains? } (built, HAL-3467)"
       aria-labelledby="h-mail-trigger"
     >
       <header className="panel-head">
@@ -667,27 +586,60 @@ function MailTrigger() {
           Start automations from mail
         </h2>
         <div className="cluster">
-          <PlannedPill issue="HAL-3467" />
+          <BuiltPill issue="HAL-3467" />
         </div>
       </header>
       <div className="panel-body">
         <div className="stack stack-12">
           <p className="muted" style={{ margin: 0 }}>
             Start an automation from a person’s email: tag the sender, add them to a list, or send a
-            follow-up. The trigger will live in the automation canvas, under Audience.
+            follow-up. The trigger lives in the automation canvas, under Automations.
           </p>
-          <div className="trigger-card">
-            <span className="tc-icon">
-              <Icon name="inbound" />
-            </span>
-            <div className="stack stack-4">
-              <b>When mail arrives</b>
-              <span className="t-small">
-                in a mailbox · from some sender domains · subject contains a phrase
+          {q.isError ? (
+            <PanelError error={q.error} onRetry={() => q.refetch()} what="Automations didn’t load" />
+          ) : byMail.length ? (
+            <ul className="list">
+              {byMail.map((a) => {
+                const t = a.trigger?.kind === "mail_received" ? a.trigger : null
+                return (
+                  <li key={a.id} className="list-row">
+                    <span className="grow">
+                      <Link className="row-title link" to={`/automations/${a.id}` as never}>
+                        {a.name}
+                      </Link>
+                      <span className="row-sub">
+                        {t?.mailboxIds?.length
+                          ? `in ${t.mailboxIds.length} mailbox${t.mailboxIds.length === 1 ? "" : "es"}`
+                          : "any mailbox"}
+                        {t?.senderDomains?.length ? ` · from ${t.senderDomains.join(", ")}` : ""}
+                        {t?.subjectContains ? ` · subject contains “${t.subjectContains}”` : ""}
+                      </span>
+                    </span>
+                    <span className={`pill ${a.status === "live" ? "pill-pass" : "pill-neutral"}`}>
+                      <span className="dot" />
+                      {a.status === "live" ? "Live" : a.status === "paused" ? "Paused" : "Draft"}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <div className="trigger-card">
+              <span className="tc-icon">
+                <Icon name="inbound" />
               </span>
-              <span className="hint">Automated mail (auto-replies, bounces, lists) never starts it.</span>
+              <div className="stack stack-4">
+                <b>When mail arrives</b>
+                <span className="t-small">
+                  in a mailbox · from some sender domains · subject contains a phrase
+                </span>
+                <span className="hint">
+                  {q.isPending ? "Checking your automations…" : "No automation starts from mail yet."}{" "}
+                  Automated mail (auto-replies, bounces, lists) never starts one.
+                </span>
+              </div>
             </div>
-          </div>
+          )}
           <div className="cluster">
             <Link className="btn btn-secondary btn-sm" to="/automations">
               Open automations

@@ -5,7 +5,8 @@
  * audit*, danger*) in the live shapes.
  *
  * The Settings layout's `?fx=` picks a designed state, so every one is reachable by URL:
- *   integrations          empty · error · loading (the agent list)
+ *   integrations          empty · error · loading (the agent list); no-keys (the summary without keys.manage)
+ *   alerts                empty · error · bad-target (saving answers 400 on the first webhook row)
  *   integrations/agents/… error · loading · new; the id `agt_missing` answers 404
  *   new agent sheet       the address `hermes@…` answers 409 (taken)
  *   approvals             empty · error · loading
@@ -789,12 +790,192 @@ const MAILBOX_409: Record<string, Answer> = {
   ),
 }
 
+// ── Alerts (HAL-3465) ────────────────────────────────────────────────────────────────────────────────────────
+type AlertSettings = Json<"/v1/settings/alerts", "get">
+type AlertChannel = AlertSettings["channels"][number]
+const OWNER_EMAIL = "halleluyah@coursified.app"
+let alertChannels: AlertChannel[] = [
+  { kind: "email", target: "ops@coursified.app", minSeverity: "warning" },
+  {
+    kind: "webhook",
+    target: "whk_01",
+    kinds: ["reputation_at_risk", "reputation_warning", "quota_100", "webhook_dead_letter"],
+    minSeverity: "critical",
+  },
+]
+let alertDefault: string | null = null
+const alertSettings = (channels: AlertChannel[], defaultEmail: string | null): AlertSettings => ({
+  channels,
+  defaultEmail,
+  effective: {
+    criticalEmail: defaultEmail ?? OWNER_EMAIL,
+    note: channels.length
+      ? null
+      : `No channels yet: critical alerts go to ${defaultEmail ?? `the owner, ${OWNER_EMAIL}`}; everything else stays in the bell.`,
+  },
+})
+const ALERT_PAGES = ["/settings/alerts", "/settings/integrations"]
+
+// ── Linked apps (HAL-3466) ───────────────────────────────────────────────────────────────────────────────────
+type Integrations = Json<"/v1/integrations", "get">
+const integrations = (withKeys: boolean): Integrations => ({
+  mcp: {
+    endpoint: `${ORIGIN}/mcp`,
+    keyCount: 4,
+    agentCount: 3,
+    lastUsedAt: NOW - 4 * MIN,
+    keys: withKeys
+      ? [
+          {
+            id: "key_01JAH7HM",
+            name: "Hermes",
+            prefix: "sk_Hm4pQ8x",
+            scopes: ["read", "send"],
+            lastUsedAt: NOW - 4 * MIN,
+            createdAt: NOW - 15 * DAY,
+            agent: {
+              id: "agt_hermes",
+              name: "Hermes",
+              mailboxId: "mbx_hermes",
+              address: "hermes@coursified.app",
+            },
+          },
+          {
+            id: "key_01JAHAEN",
+            name: "Enrolment helper",
+            prefix: "sk_En6tR3w",
+            scopes: ["read", "send"],
+            lastUsedAt: NOW - HOUR,
+            createdAt: NOW - 2 * DAY,
+            agent: {
+              id: "agt_enrol",
+              name: "Enrolment helper",
+              mailboxId: "mbx_enrol",
+              address: "enrol@coursified.app",
+            },
+          },
+          {
+            id: "key_01JAH8IB",
+            name: "Invoice bot",
+            prefix: "sk_Ib2wN5r",
+            scopes: ["send"],
+            lastUsedAt: NOW - 2 * DAY,
+            createdAt: NOW - 30 * DAY,
+            agent: {
+              id: "agt_invoices",
+              name: "Invoice bot",
+              mailboxId: "mbx_invoices",
+              address: "invoices@coursified.app",
+            },
+          },
+          {
+            id: "key_01JAG2C5",
+            name: "Claude Code (Halleluyah)",
+            prefix: "sk_Q4n8rWz",
+            scopes: ["read", "send"],
+            lastUsedAt: NOW - HOUR,
+            createdAt: NOW - 3 * DAY,
+            agent: null,
+          },
+        ]
+      : null,
+  },
+  webhooks: {
+    count: 3,
+    enabled: 3,
+    paused: 0,
+    failing: 1,
+    deadLetters: 3,
+    held: 0,
+    failingEndpoints: [
+      {
+        id: "whk_01",
+        url: "https://api.coursified.app/hooks/mail",
+        deadLetters: 3,
+        lastFailureAt: NOW - 11 * MIN,
+        lastSuccessAt: NOW - 4 * HOUR,
+      },
+    ],
+  },
+  hermes: {
+    connected: true,
+    lane: "email",
+    mailboxes: ["support@coursified.app", "hermes@coursified.app"],
+    since: NOW - 16 * DAY,
+  },
+  siblings: [
+    { app: "hermes", name: "Hermes", via: "queue", connected: true, keyId: null, lastUsedAt: NOW - 4 * MIN },
+    {
+      app: "support-inbox",
+      name: "Support Inbox",
+      via: "mcp",
+      connected: false,
+      keyId: null,
+      lastUsedAt: null,
+    },
+  ],
+})
+
 const AGENT_PAGES = ["/settings/integrations"]
 const DATA = ["/settings/data"]
 const DANGER = ["/settings/danger"]
 const AUDIT_PAGES = ["/settings/audit", "/settings/integrations/agents"]
 
 export const SETTINGS_AGENTS_OVERRIDES: readonly Override[] = [
+  // Linked apps
+  {
+    method: "GET",
+    path: new Scoped(/^\/v1\/integrations$/, () => on(...AGENT_PAGES)),
+    answer: () => {
+      const s = fx()
+      if (s === "error") return refusal(500, "InternalError", "The integrations summary couldn’t be read.")
+      if (s === "loading") return hang()
+      return ok(integrations(s !== "no-keys"))
+    },
+  },
+  // Alerts
+  {
+    method: "GET",
+    path: new Scoped(/^\/v1\/settings\/alerts$/, () => on(...ALERT_PAGES)),
+    answer: () => {
+      const s = fx()
+      if (s === "error") return refusal(500, "InternalError", "The alert settings couldn’t be read.")
+      if (s === "loading") return hang()
+      if (s === "empty") return ok(alertSettings([], null))
+      return ok(alertSettings(alertChannels, alertDefault))
+    },
+  },
+  {
+    method: "PUT",
+    path: new Scoped(/^\/v1\/settings\/alerts$/, () => on(...ALERT_PAGES)),
+    answer: (_, body) => {
+      const b = (body ?? {}) as { channels?: AlertChannel[]; defaultEmail?: string | null }
+      const channels = b.channels ?? []
+      const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      // `?fx=bad-target` refuses the first webhook channel as the API does for an unknown endpoint.
+      const bad =
+        fx() === "bad-target"
+          ? channels.findIndex((c) => c.kind === "webhook")
+          : channels.findIndex((c) => c.kind === "email" && !email.test(c.target))
+      const at = bad >= 0 ? channels[bad] : undefined
+      if (at)
+        return refusal(
+          400,
+          "InvalidRequest",
+          at.kind === "webhook"
+            ? `No webhook endpoint ${at.target}.`
+            : `${at.target} isn’t an email address.`,
+          { field: `channels[${bad}].target` },
+        )
+      if (b.defaultEmail && !email.test(b.defaultEmail))
+        return refusal(400, "InvalidRequest", `${b.defaultEmail} isn’t an email address.`, {
+          field: "defaultEmail",
+        })
+      alertChannels = channels
+      alertDefault = b.defaultEmail ?? null
+      return ok(alertSettings(alertChannels, alertDefault))
+    },
+  },
   // Agents
   {
     method: "GET",

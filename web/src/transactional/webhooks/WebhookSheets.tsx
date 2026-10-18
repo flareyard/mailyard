@@ -20,7 +20,6 @@ import {
   filterBody,
   groupEvents,
   host,
-  PLANNED_EVENTS,
   REPLAY_PAGE,
   type ReplayStep,
   replayAll,
@@ -147,7 +146,6 @@ export function EndpointSheet({
   const total = events.length
   const groups = groupEvents(events)
   const all = picked.includes("*")
-  const plannedEvents = PLANNED_EVENTS.filter((p) => !events.includes(p.event))
   return (
     <Sheet
       wide
@@ -237,20 +235,6 @@ export function EndpointSheet({
                 onToggle={(e) => setPicked(toggleEvent(picked, e))}
               />
             ))}
-            {plannedEvents.length ? (
-              <>
-                <span className="label tb-group">Planned</span>
-                {plannedEvents.map((p) => (
-                  <label key={p.event} className="pick is-planned" aria-disabled="true">
-                    <input className="tb-check" type="checkbox" disabled />
-                    <span className="p-name mono">{p.event}</span>
-                    <span className="p-sub">
-                      {p.sub} <span className="tag planned-tag">planned · {p.issue}</span>
-                    </span>
-                  </label>
-                ))}
-              </>
-            ) : null}
           </div>
           {tried && eventsProblem ? <span className="field-error">{eventsProblem}</span> : null}
         </fieldset>
@@ -626,6 +610,8 @@ function sampleData(event: string): Record<string, unknown> {
   if (event.startsWith("campaign.")) return { campaignId: "cmp_sample" }
   if (event.startsWith("approval."))
     return { approvalId: "apr_sample", agentId: "agt_sample", to: ["sample@example.com"] }
+  if (event.startsWith("alert."))
+    return { alertId: "alr_sample", kind: "reputation_at_risk", severity: "critical" }
   if (event === "event.tracked") return { event: "signed_up", email: "sample@example.com" }
   return {}
 }

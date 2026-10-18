@@ -75,6 +75,7 @@ const GROUPS: { label: string; test: (e: string) => boolean }[] = [
     test: (e) => e.startsWith("event.") || e.startsWith("campaign.") || e.startsWith("mail."),
   },
   { label: "Agent approvals", test: (e) => e.startsWith("approval.") },
+  { label: "Alerts", test: (e) => e.startsWith("alert.") },
 ]
 
 /** The picker's groups, from the API's own `events` list, so a new event appears without a UI change. */
@@ -147,11 +148,6 @@ export function filterSummary(
 /** The events a test can send: the endpoint's own, or every event for `*`. */
 export const testableEvents = (subscribed: readonly string[], all: readonly string[]) =>
   subscribed.includes("*") ? [...all] : subscribed.filter((e) => all.includes(e))
-
-/** Events designed ahead of the API: shown disabled with their issue until `events` lists them. */
-export const PLANNED_EVENTS: { event: string; sub: string; issue: string }[] = [
-  { event: "alert.raised", sub: "An alert opened or got worse", issue: "HAL-3465" },
-]
 
 export function toggleEvent(selected: readonly string[], e: string): string[] {
   if (e === "*") return selected.includes("*") ? [] : ["*"]

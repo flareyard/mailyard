@@ -58,6 +58,7 @@ describe("events", () => {
       "contact.created",
       "mail.received",
       "approval.pending",
+      "alert.raised",
       "x.y",
     ])
     expect(g.map((x) => x.label)).toEqual([
@@ -66,6 +67,7 @@ describe("events", () => {
       "Contacts",
       "Events, campaigns and mail",
       "Agent approvals",
+      "Alerts",
       "Other",
     ])
   })
@@ -159,5 +161,12 @@ describe("filters", () => {
     expect(
       webhookHealth({ enabled: true, paused: true, lastSuccessAt: 1, lastFailureAt: 2, deadLetters: 0 }),
     ).toBe("paused")
+  })
+})
+
+describe("alert.raised (HAL-3465)", () => {
+  it("is a real, testable event in its own group", () => {
+    expect(groupEvents(["alert.raised"])).toEqual([{ label: "Alerts", events: ["alert.raised"] }])
+    expect(testableEvents(["*"], ["message.sent", "alert.raised"])).toContain("alert.raised")
   })
 })
