@@ -680,8 +680,9 @@ export function logTitle(
 }
 
 /**
- * The contact field a skipped send was missing. `steps[].missing` isn't in the API (HAL-3417), so it's read
- * from the detail the API words: "Skipped: The template needs {{ first_name }}, which has no value…".
+ * The contact field a skipped send was missing: the first of `steps[].missing` / `path[].missing` (HAL-3417),
+ * else read from the detail the API words ("Skipped: The template needs {{ first_name }}, which has no value…")
+ * for runs recorded before `missing` existed.
  */
 export function missingField(
   detail: string | null | undefined,
@@ -691,6 +692,13 @@ export function missingField(
   const m = /needs \{\{\s*([A-Za-z_][A-Za-z0-9_.]*)\s*(?:\?\?[^}]*)?\}\}/.exec(detail ?? "")
   if (!m?.[1] || m[1].startsWith("trigger.")) return null
   return m[1]
+}
+
+/** Every placeholder a skipped send was missing, for "Skipped: missing first_name, plan" (HAL-3417). */
+export function missingKeys(detail: string | null | undefined, missing?: readonly string[] | null): string[] {
+  if (missing?.length) return [...missing]
+  const f = missingField(detail)
+  return f ? [f] : []
 }
 
 /** Run status words for the runs table's "Step now" column. */
@@ -725,7 +733,7 @@ export function overlayFromDryRun(d: DryRun): Overlay {
     if (!order.has(s.nodeId)) order.set(s.nodeId, ++i)
     if (s.outcome === "skipped") {
       skipped.add(s.nodeId)
-      const f = missingField(s.detail)
+      const f = missingField(s.detail, s.missing)
       if (f) why.set(s.nodeId, f)
     }
     const p =
@@ -754,7 +762,7 @@ export function overlayFromRun(r: RunDetail): Overlay {
     if (!order.has(s.nodeId)) order.set(s.nodeId, ++i)
     if (s.outcome === "skipped") {
       skipped.add(s.nodeId)
-      const f = missingField(s.detail)
+      const f = missingField(s.detail, s.missing)
       if (f) why.set(s.nodeId, f)
     }
     if (s.outcome === "failed") failed.add(s.nodeId)

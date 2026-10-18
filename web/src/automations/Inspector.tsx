@@ -18,6 +18,7 @@ import { ApiErrorCallout, CopyButton, Planned } from "../audience/kit/ui.tsx"
 import { useCapabilities } from "../auth/capabilities.ts"
 import { Gated } from "../auth/NoPermission.tsx"
 import { fixturesEnabled } from "../fixtures/mode.ts"
+import { fmtInt } from "../lib/format.ts"
 import { Icon } from "../ui/icons.tsx"
 import { NODE_ICON } from "./Canvas.tsx"
 import {
@@ -1042,8 +1043,8 @@ function WebhookForm({ node, ctx }: { node: Extract<GNode, { type: "webhook" }>;
   const id = useId()
   const caps = useCapabilities()
   const testPath = "/v1/automations/{id}/nodes/{nodeId}/test"
-  // Fixture mode answers every route, so a planned one stays planned there: it shows what production has today.
-  const testLive = !fixturesEnabled() && caps.has("POST", testPath)
+  // Built with HAL-3417; the capability check keeps it honest against a deploy that hasn't caught up.
+  const testLive = caps.has("POST", testPath)
   const hidden = node.config.url.includes("•••")
   const [payload, setPayload] = useState(() =>
     node.config.payload ? JSON.stringify(node.config.payload, null, 1) : "",
@@ -1053,20 +1054,16 @@ function WebhookForm({ node, ctx }: { node: Extract<GNode, { type: "webhook" }>;
     mutationFn: () =>
       unwrap(api.GET("/v1/automations/{id}/webhook-secret", { params: { path: { id: ctx.automationId } } })),
   })
+  // Sends one real request to the saved step's URL, as the draft has it (HAL-3417); a sample contact unless one
+  // is given. It needs automations.write; a step that isn't a webhook answers 400.
   const test = useMutation({
-    mutationFn: async () => {
-      const r = await fetch(
-        `/v1/automations/${encodeURIComponent(ctx.automationId)}/nodes/${encodeURIComponent(node.id)}/test`,
-        { method: "POST", credentials: "same-origin" },
-      )
-      const body = (await r.json().catch(() => ({}))) as {
-        status?: number
-        tookMs?: number
-        message?: string
-      }
-      if (!r.ok) throw new Error(body.message ?? `The test answered ${r.status}.`)
-      return body
-    },
+    mutationFn: () =>
+      unwrap(
+        api.POST("/v1/automations/{id}/nodes/{nodeId}/test", {
+          params: { path: { id: ctx.automationId, nodeId: node.id } },
+          body: {},
+        }),
+      ),
   })
   const canSecret = !ctx.redacted && ctx.editable
   return (
@@ -1186,38 +1183,75 @@ function WebhookForm({ node, ctx }: { node: Extract<GNode, { type: "webhook" }>;
         <span className="cluster cluster-8">
           <Gated
             allowed={testLive && ctx.editable}
-            reason={testLive ? ctx.reason : "Testing one step isn’t built yet"}
+            reason={testLive ? ctx.reason : "Testing one step isn’t on this deploy yet"}
             who={
               testLive
                 ? ctx.who
-                : "A dry run counts the webhook as answered 200 without calling it. A one-step test request arrives with HAL-3417."
+                : "A dry run counts the webhook as answered 200 without calling it. Deploy the latest Mailyard (HAL-3417) to send a real test request."
             }
           >
             <button
               className={`btn btn-secondary btn-sm${test.isPending ? " is-loading" : ""}`}
               type="button"
-              data-endpoint={`POST ${testPath} (planned, HAL-3417)`}
+              data-endpoint={`POST ${testPath}`}
+              disabled={test.isPending}
               onClick={() => test.mutate()}
             >
-              <Icon name="send" />
-              Test this step
+              {test.isPending ? <span className="spinner" aria-hidden="true" /> : <Icon name="send" />}
+              Send a test request
             </button>
           </Gated>
           {!testLive ? (
-            <Planned issue="HAL-3417" what="no endpoint sends one step's test request yet." />
+            <Planned issue="HAL-3417" what="this deploy doesn't have the one-step test yet." />
           ) : null}
         </span>
+        <span className="hint">
+          Sends one real request to the saved step’s URL, as the draft has it: save first to test an edit. It
+          posts a sample contact unless the run has one, signed like a real run.
+        </span>
         {test.data ? (
-          <p className="hint">
-            Answered {test.data.status ?? "—"} in {test.data.tookMs ?? "—"} ms.
-          </p>
+          <div
+            className={`callout ${test.data.ok ? "callout-ok" : "callout-error"}`}
+            role="status"
+            data-od-id="webhook-test-result"
+          >
+            <Icon name={test.data.ok ? "check-circle" : "x-circle"} />
+            <div className="stack stack-4" style={{ minWidth: 0 }}>
+              <span>
+                <b>
+                  {test.data.error === "timeout"
+                    ? "No answer in time."
+                    : test.data.error === "network"
+                      ? "The URL couldn’t be reached."
+                      : `Answered ${fmtInt(test.data.status)}${test.data.ok ? "" : ", outside 2xx: a run would retry, then fail"}.`}
+                </b>{" "}
+                {fmtInt(test.data.tookMs)} ms ·{" "}
+                <span className="mono" style={{ overflowWrap: "anywhere" }}>
+                  {test.data.url}
+                </span>
+              </span>
+              <span className="t-small muted">
+                As <span className="mono">{test.data.contact.email}</span>
+                {test.data.contact.sample ? " (a sample contact)" : ""}
+              </span>
+              {test.data.response ? (
+                <pre
+                  className="mono t-small"
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    margin: 0,
+                    maxHeight: 160,
+                    overflow: "auto",
+                  }}
+                >
+                  {test.data.response}
+                </pre>
+              ) : null}
+            </div>
+          </div>
         ) : null}
-        {test.isError ? (
-          <p className="field-error">
-            <Icon name="x-circle" />
-            <span>{(test.error as Error).message}</span>
-          </p>
-        ) : null}
+        {test.isError ? <ApiErrorCallout error={test.error} what="The test wasn’t sent." /> : null}
       </div>
       <p className="hint">
         An answer outside 2xx fails the step: it retries, and if it keeps failing the run fails and raises{" "}
@@ -1470,6 +1504,81 @@ function TemplateRow({
   )
 }
 
+/**
+ * An event trigger's data keys, as recent events carried them (`GET /v1/events/{name}/keys`, HAL-3417): each key
+ * with how often it was seen, its types and an example (null without `contacts.read`). Any key the app sends
+ * is there, so a key not seen yet can still be typed.
+ */
+function EventKeys({
+  event,
+  row,
+  custom,
+  setCustom,
+}: {
+  event: string
+  row: (key: string, hint: ReactNode) => ReactNode
+  custom: string
+  setCustom: (v: string) => void
+}) {
+  const caps = useCapabilities()
+  const live = caps.has("GET", "/v1/events/{name}/keys")
+  const q = useQuery({
+    queryKey: ["events", event, "keys"],
+    queryFn: () => unwrap(api.GET("/v1/events/{name}/keys", { params: { path: { name: event } } })),
+    enabled: live && Boolean(event),
+    staleTime: 60_000,
+  })
+  const keys = q.data?.keys ?? []
+  const example = (v: unknown) =>
+    v === null || v === undefined ? null : typeof v === "string" ? v : JSON.stringify(v).slice(0, 60)
+  return (
+    <>
+      <p className="hint">
+        An event trigger carries the event’s own <span className="mono">data</span>, so any key your app sends
+        to <span className="mono">POST /v1/track</span> is there.
+        {q.data
+          ? ` These are the keys on the last ${fmtInt(q.data.sampled)} ${event} events.`
+          : live
+            ? ""
+            : " This deploy can’t list the keys recent events carried yet (HAL-3417), so type the one you send."}
+      </p>
+      {!live ? <Planned issue="HAL-3417" what="this deploy doesn't list an event's data keys yet." /> : null}
+      {q.isPending && live ? <span className="sk sk-text" aria-hidden="true" /> : null}
+      {q.isError ? <ApiErrorCallout error={q.error} what="The event’s keys didn’t load." /> : null}
+      {keys.length ? (
+        <ul className="tkey-list">
+          {keys.map((k) =>
+            row(
+              k.key,
+              <>
+                Seen on {fmtInt(k.seen)} · {k.types.join(", ")}
+                {example(k.example) ? (
+                  <>
+                    {" "}
+                    · e.g. <span className="mono">{example(k.example)}</span>
+                  </>
+                ) : null}
+              </>,
+            ),
+          )}
+        </ul>
+      ) : q.data ? (
+        <p className="hint">No recent {event} event carried data yet.</p>
+      ) : null}
+      <div className="input-group">
+        <input
+          className="input mono"
+          aria-label="Another event data key"
+          placeholder="a key not seen yet"
+          value={custom}
+          onChange={(e) => setCustom(e.target.value.replace(/[^A-Za-z0-9_]/g, ""))}
+        />
+      </div>
+      {custom ? <ul className="tkey-list">{row(custom, "A key your app sends with the event")}</ul> : null}
+    </>
+  )
+}
+
 /** The keys a run's `trigger.*` holds for this trigger kind (TRIGGER_DATA_KEYS), with Insert and Copy. */
 function TriggerKeys({
   trigger,
@@ -1514,30 +1623,9 @@ function TriggerKeys({
         <h3 className="label" id={`tk-${trigger.kind}`}>
           {head}
         </h3>
-        {keys === "any" ? (
-          <Planned issue="HAL-3417" what="no endpoint lists an event's data keys yet." />
-        ) : null}
       </div>
-      {keys === "any" ? (
-        <>
-          <p className="hint">
-            An event trigger carries the event’s own <span className="mono">data</span>, so any key your app
-            sends to <span className="mono">POST /v1/track</span> is there. The API can’t list the keys recent
-            events carried yet (HAL-3417), so type the one you send.
-          </p>
-          <div className="input-group">
-            <input
-              className="input mono"
-              aria-label="Event data key"
-              placeholder="plan"
-              value={custom}
-              onChange={(e) => setCustom(e.target.value.replace(/[^A-Za-z0-9_]/g, ""))}
-            />
-          </div>
-          {custom ? (
-            <ul className="tkey-list">{row(custom, "A key your app sends with the event")}</ul>
-          ) : null}
-        </>
+      {keys === "any" && trigger.kind === "event" ? (
+        <EventKeys event={trigger.event} row={row} custom={custom} setCustom={setCustom} />
       ) : (
         <>
           <p className="hint">
@@ -1545,7 +1633,7 @@ function TriggerKeys({
             other <span className="mono">trigger.*</span> key can’t publish.
           </p>
           <ul className="tkey-list">
-            {keys.map((k) => {
+            {(keys === "any" ? [] : keys).map((k) => {
               const ex = triggerKeyExample(k, trigger, ctx.names)
               return row(
                 k,

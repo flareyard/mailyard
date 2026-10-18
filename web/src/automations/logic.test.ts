@@ -18,6 +18,7 @@ import {
   mailFilters,
   mailWhere,
   missingField,
+  missingKeys,
   notReadyIssues,
   overlayFromDryRun,
   overlayFromRun,
@@ -284,6 +285,18 @@ describe("trigger data and placeholders (HAL-3411)", () => {
     expect(insertAt("Hello ", 6, "{{ x }}").value).toBe("Hello {{ x }}")
   })
 
+  it("prefers steps[].missing over reading the detail (HAL-3417)", () => {
+    expect(
+      missingKeys("Skipped: The template needs {{ first_name }}, which has no value.", [
+        "first_name",
+        "plan",
+      ]),
+    ).toEqual(["first_name", "plan"])
+    expect(missingKeys("Skipped: The template needs {{ first_name }}, which has no value.", [])).toEqual([
+      "first_name",
+    ])
+    expect(missingKeys("Sent.", undefined)).toEqual([])
+  })
   it("words a mail_received trigger and reads its domains as the API matches them (HAL-3467)", () => {
     const t = {
       kind: "mail_received" as const,
@@ -397,7 +410,16 @@ describe("step logs", () => {
       exitedBy: null,
       finishedAt: 1,
       steps: [
-        { seq: 2, nodeId: "n_hook", outcome: "failed", port: null, detail: "x", messageId: null, at: 1 },
+        {
+          seq: 2,
+          nodeId: "n_hook",
+          outcome: "failed",
+          port: null,
+          detail: "x",
+          messageId: null,
+          missing: [],
+          at: 1,
+        },
         {
           seq: 1,
           nodeId: "n_waitev",
@@ -405,6 +427,7 @@ describe("step logs", () => {
           port: "timeout",
           detail: "x",
           messageId: null,
+          missing: [],
           at: 0,
         },
       ],

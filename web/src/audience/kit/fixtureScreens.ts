@@ -391,6 +391,44 @@ export async function screenFixture(request: Request): Promise<Answer | undefine
  */
 async function actionFixture(request: Request): Promise<Answer | undefined> {
   const url = new URL(request.url)
+  // HAL-3417's reads and the one-step test, which no design screen embeds: sample answers in the live shapes.
+  const keys = /^\/v1\/events\/([^/]+)\/keys$/.exec(url.pathname)
+  if (request.method === "GET" && keys)
+    return {
+      status: 200,
+      body: {
+        name: decodeURIComponent(keys[1] ?? ""),
+        sampled: 200,
+        from: Date.now() - 30 * 86_400_000,
+        to: Date.now() - 3_600_000,
+        keys: [
+          { key: "plan", tag: "trigger.plan", seen: 200, types: ["string"], example: "free" },
+          { key: "source", tag: "trigger.source", seen: 188, types: ["string"], example: "landing" },
+          {
+            key: "referrer",
+            tag: "trigger.referrer",
+            seen: 41,
+            types: ["string"],
+            example: "ada.okafor@gmail.com",
+          },
+        ],
+      },
+    }
+  const step = /^\/v1\/automations\/[^/]+\/nodes\/([^/]+)\/test$/.exec(url.pathname)
+  if (request.method === "POST" && step)
+    return {
+      status: 200,
+      body: {
+        nodeId: step[1],
+        url: "https://api.coursified.app/hooks/crm",
+        status: 200,
+        ok: true,
+        tookMs: 184,
+        error: null,
+        response: '{"ok":true,"flagged":"ada.okafor@gmail.com"}',
+        contact: { id: "con_01JA9K2M7Q", email: "ada.okafor@gmail.com", sample: true },
+      },
+    }
   if (request.method !== "POST") return undefined
   const t = await load()
   const from = (key: string, screen: string, has?: string) =>

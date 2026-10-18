@@ -15,6 +15,7 @@ import {
   type LogLook,
   logTitle,
   missingField,
+  missingKeys,
   type Names,
   type RunStep,
   runOutcomeLook,
@@ -86,9 +87,35 @@ function Item({
   )
 }
 
-function SkipFix({ detail, contactId, who }: { detail: string; contactId: string | null; who: string }) {
-  const field = missingField(detail)
-  if (!field || !contactId) return null
+function SkipFix({
+  detail,
+  missing,
+  contactId,
+  who,
+}: {
+  detail: string
+  missing?: readonly string[] | undefined
+  contactId: string | null
+  who: string
+}) {
+  const keys = missingKeys(detail, missing)
+  const field = missingField(detail, missing)
+  const contactKeys = keys.filter((k) => !k.startsWith("trigger."))
+  return (
+    <>
+      {keys.length ? (
+        <span className="pill pill-skip" data-od-id="skip-missing">
+          missing {keys.join(", ")}
+        </span>
+      ) : null}{" "}
+      {field && contactId && contactKeys.length ? (
+        <SkipLink field={field} contactId={contactId} who={who} />
+      ) : null}
+    </>
+  )
+}
+
+function SkipLink({ field, contactId, who }: { field: string; contactId: string; who: string }) {
   return (
     <AppLink
       className="link sl-fix"
@@ -137,7 +164,7 @@ export function DryRunLog({
             {s.outcome === "skipped" ? (
               <>
                 {" "}
-                <SkipFix detail={s.detail} contactId={contactId} who={who} />
+                <SkipFix detail={s.detail} missing={s.missing} contactId={contactId} who={who} />
               </>
             ) : null}
             {s.send ? (
@@ -194,7 +221,7 @@ export function RunLog({
             {s.outcome === "skipped" ? (
               <>
                 {" "}
-                <SkipFix detail={s.detail} contactId={contactId} who={who} />
+                <SkipFix detail={s.detail} missing={s.missing} contactId={contactId} who={who} />
               </>
             ) : null}
           </Item>
