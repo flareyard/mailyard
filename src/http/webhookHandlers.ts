@@ -40,20 +40,24 @@ export const WebhooksHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(listEndpoints()),
           Effect.map((webhooks) => ({ webhooks, events: [...WEBHOOK_EVENTS] })),
           dbDies,
         ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(Effect.andThen(createEndpoint(payload)), invalid, dbDies),
+        requireScope("admin", "webhooks.manage").pipe(
+          Effect.andThen(createEndpoint(payload)),
+          invalid,
+          dbDies,
+        ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getEndpoint(params.id)), notFound, dbDies),
+        requireScope("read", "settings.read").pipe(Effect.andThen(getEndpoint(params.id)), notFound, dbDies),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "webhooks.manage").pipe(
           Effect.andThen(updateEndpoint(params.id, payload)),
           notFound,
           invalid,
@@ -61,13 +65,21 @@ export const WebhooksHandlers = HttpApiBuilder.group(
         ),
       ),
       remove: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(deleteEndpoint(params.id)), notFound, dbDies),
+        requireScope("admin", "webhooks.manage").pipe(
+          Effect.andThen(deleteEndpoint(params.id)),
+          notFound,
+          dbDies,
+        ),
       ),
       rotateSecret: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(rotateSecret(params.id)), notFound, dbDies),
+        requireScope("admin", "webhooks.manage").pipe(
+          Effect.andThen(rotateSecret(params.id)),
+          notFound,
+          dbDies,
+        ),
       ),
       deliveries: p(({ params, query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(
             listDeliveries(params.id, {
               status: query.status,
@@ -80,13 +92,21 @@ export const WebhooksHandlers = HttpApiBuilder.group(
         ),
       ),
       replay: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(replay(params.id, params.deliveryId)), notFound, dbDies),
+        requireScope("admin", "webhooks.manage").pipe(
+          Effect.andThen(replay(params.id, params.deliveryId)),
+          notFound,
+          dbDies,
+        ),
       ),
       replayAll: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(replayDead(params.id)), notFound, dbDies),
+        requireScope("admin", "webhooks.manage").pipe(
+          Effect.andThen(replayDead(params.id)),
+          notFound,
+          dbDies,
+        ),
       ),
       test: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(sendTest(params.id)), notFound, dbDies),
+        requireScope("admin", "webhooks.manage").pipe(Effect.andThen(sendTest(params.id)), notFound, dbDies),
       ),
     })
   }),

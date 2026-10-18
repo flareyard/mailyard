@@ -43,11 +43,21 @@ export class Forbidden extends Schema.TaggedError<Forbidden>()(
     /**
      * `public-key`: a pk_ key, which can only track. `insufficient-scope`: the key lacks `required`.
      * `csrf`: a write signed in by the session cookie came from another origin (HAL-3358).
+     * `role`: a person's role doesn't allow it. `owner`: the owner can't be removed or demoted.
+     * `mailbox_role`: a mailbox viewer tried to change or send (HAL-3361).
      */
-    reason: Schema.optionalKey(Schema.Literals(["public-key", "insufficient-scope", "csrf"])),
+    reason: Schema.optionalKey(
+      Schema.Literals(["public-key", "insufficient-scope", "csrf", "role", "owner", "mailbox_role"]),
+    ),
+    /** The scope (for a key) or permission (for a person, `reason: "role"`) that was missing. */
     required: Schema.optionalKey(Schema.String),
     scopes: Schema.optionalKey(Schema.Array(Schema.String)),
     keyName: Schema.optionalKey(Schema.NullOr(Schema.String)),
+    /** `role`: the person's role, and the roles that may do this (HAL-3361). `mailbox_role`: their
+     * access in the mailbox (`viewer`), and who owns it. */
+    role: Schema.optionalKey(Schema.String),
+    allowedRoles: Schema.optionalKey(Schema.Array(Schema.String)),
+    owners: Schema.optionalKey(Schema.Array(Schema.String)),
   },
   { httpApiStatus: 403 },
 ) {}

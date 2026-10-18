@@ -112,6 +112,8 @@ export interface Env {
   readonly AUTH_LIMITER?: RateLimit
   /** Used when a send names no sender and its template has none. */
   readonly DEFAULT_FROM?: string
+  /** Who Mailyard's own mail (sign-in links, invitations) comes from; DEFAULT_FROM when unset (HAL-3361). */
+  readonly MAILYARD_SYSTEM_FROM?: string
   /** Optional SMTP fallback when Email Service can't take a message. */
   readonly SMTP_HOST?: string
   readonly SMTP_PORT?: string

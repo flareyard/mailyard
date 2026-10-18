@@ -38,13 +38,13 @@ export const SuppressionsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(listSuppressions(query)),
           Effect.catchTags({ SuppressionInvalid: invalid, DatabaseError: Effect.die }),
         ),
       ),
       add: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => addSuppression(payload, caller.keyId)),
           Effect.catchTags({
             SuppressionInvalid: invalid,
@@ -54,7 +54,7 @@ export const SuppressionsHandlers = HttpApiBuilder.group(
         ),
       ),
       import: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => startSuppressionImport(payload, caller.keyId)),
           Effect.catchTags({
             UploadNotFound: notFound("Upload"),
@@ -65,31 +65,31 @@ export const SuppressionsHandlers = HttpApiBuilder.group(
         ),
       ),
       imports: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(listSuppressionImports(query)),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       getImport: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(getSuppressionImport(params.id)),
           Effect.catchTags({ ImportNotFound: notFound("Import"), DatabaseError: Effect.die }),
         ),
       ),
       sync: p(() =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.andThen(syncWithCloudflare()),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "contacts.read").pipe(
           Effect.andThen(getSuppression(params.email)),
           Effect.catchTags({ SuppressionNotFound: missing, DatabaseError: Effect.die }),
         ),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => updateSuppression(params.email, payload, caller.keyId)),
           Effect.catchTags({
             SuppressionNotFound: missing,
@@ -99,7 +99,7 @@ export const SuppressionsHandlers = HttpApiBuilder.group(
         ),
       ),
       remove: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.erase").pipe(
           Effect.flatMap((caller) => removeSuppression(params.email, payload, caller.keyId)),
           Effect.catchTags({
             SuppressionNotFound: missing,
@@ -110,7 +110,7 @@ export const SuppressionsHandlers = HttpApiBuilder.group(
         ),
       ),
       push: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "contacts.write").pipe(
           Effect.flatMap((caller) => pushSuppression(params.email, caller.keyId)),
           Effect.catchTags({
             SuppressionNotFound: missing,

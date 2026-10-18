@@ -475,7 +475,7 @@ export const messagesOut = sqliteTable(
     id: text("id").primaryKey(),
     /** `test`: a campaign test send to the seed list, outside the quota and the campaign's numbers. */
     stream: text("stream", {
-      enum: ["transactional", "campaign", "automation", "reply", "mailbox", "test"],
+      enum: ["transactional", "campaign", "automation", "reply", "mailbox", "test", "system"],
     }).notNull(),
     cfMessageId: text("cf_message_id"),
     /** For mail sent from a mailbox: the mailbox, and the id of the sent copy filed in it. */
@@ -826,7 +826,9 @@ export const sessions = sqliteTable(
     tokenHash: text("token_hash").notNull(),
     /** The key the session was opened with, or `root` for the ADMIN_KEY. */
     keyId: text("key_id").notNull(),
-    via: text("via", { enum: ["session-key", "admin-key"] }).notNull(),
+    via: text("via", { enum: ["session-key", "admin-key", "session-member"] }).notNull(),
+    /** For `session-member` sessions: the person signed in (HAL-3361). `keyId` holds the same id. */
+    memberId: text("member_id"),
     /** For `admin-key` sessions: a fingerprint of the ADMIN_KEY, so rotating it ends them. */
     adminFingerprint: text("admin_fingerprint"),
     userAgent: text("user_agent"),
@@ -843,6 +845,76 @@ export const sessions = sqliteTable(
     endedAt: integer("ended_at"),
   },
   (t) => [uniqueIndex("sessions_token_hash").on(t.tokenHash), index("sessions_key").on(t.keyId, t.expiresAt)],
+)
+
+/**
+ * The people in the workspace (HAL-3361). Keys stay machine identities checked by scopes; a person
+ * signs in with an emailed link and is checked by role. One role each, from a fixed matrix in code
+ * (src/http/permissions.ts). Removing someone keeps the row (so the audit log still names them),
+ * ends their sessions, and frees their address for a new invite.
+ */
+export const members = sqliteTable(
+  "members",
+  {
+    id: text("id").primaryKey(),
+    /** Lower-cased. */
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    role: text("role", { enum: ["owner", "admin", "sender", "agent", "viewer"] }).notNull(),
+    /** IANA name for the snooze and schedule pickers; UTC until they choose. */
+    timeZone: text("time_zone").notNull().default("UTC"),
+    createdAt: integer("created_at").notNull(),
+    lastActiveAt: integer("last_active_at"),
+    removedAt: integer("removed_at"),
+  },
+  (t) => [uniqueIndex("members_email").on(t.email)],
+)
+
+/** One-time sign-in links: 15 minutes, used once, stored as the token's SHA-256. */
+export const signInLinks = sqliteTable(
+  "sign_in_links",
+  {
+    id: text("id").primaryKey(),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    usedAt: integer("used_at"),
+  },
+  (t) => [uniqueIndex("sign_in_links_token").on(t.tokenHash), index("sign_in_links_member").on(t.memberId)],
+)
+
+/**
+ * Invitations to join the workspace. The email is drafted with the invite and goes out only when the
+ * person inviting sends it. Seven days to accept; the token is stored as its SHA-256.
+ */
+export const invites = sqliteTable(
+  "invites",
+  {
+    id: text("id").primaryKey(),
+    /** Lower-cased. */
+    email: text("email").notNull(),
+    role: text("role", { enum: ["admin", "sender", "agent", "viewer"] }).notNull(),
+    /** Mailboxes given on accepting, with the access in each. */
+    mailboxes: text("mailboxes", { mode: "json" })
+      .$type<ReadonlyArray<{ readonly mailboxId: string; readonly access: "owner" | "member" | "viewer" }>>()
+      .notNull(),
+    message: text("message"),
+    tokenHash: text("token_hash").notNull(),
+    /** The member (or key) who invited. */
+    invitedBy: text("invited_by").notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    /** When the invitation email last went out, and how many times. */
+    sentAt: integer("sent_at"),
+    sendCount: integer("send_count").notNull().default(0),
+    acceptedAt: integer("accepted_at"),
+    acceptedBy: text("accepted_by"),
+    revokedAt: integer("revoked_at"),
+  },
+  (t) => [uniqueIndex("invites_token").on(t.tokenHash), index("invites_email").on(t.email)],
 )
 
 export const audit = sqliteTable(
@@ -1095,6 +1167,26 @@ export const mailboxMembers = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.mailboxId, t.apiKeyId] }), index("mailbox_members_key").on(t.apiKeyId)],
+)
+
+/**
+ * People given a mailbox (HAL-3361), beside the keys in `mailbox_members`. Owners and admins see
+ * every mailbox; senders and viewers read them all; agents see only these. `owner` and `member`
+ * send; `viewer` only reads.
+ */
+export const mailboxPeople = sqliteTable(
+  "mailbox_people",
+  {
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["owner", "member", "viewer"] }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.memberId] }), index("mailbox_people_member").on(t.memberId)],
 )
 
 /**

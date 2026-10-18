@@ -49,6 +49,7 @@ Before extending Mailyard at one of these points, read the skill's `SKILL.md` an
   - IMAP is read-only: `EXAMINE` and `BODY.PEEK[]`.
   - The password is sealed while the Workflow runs and wiped when it ends.
   - Exports write R2 multipart parts of exactly 8 MiB, because R2 needs equal non-final parts.
+- Access (HAL-3358, HAL-3361): keys are checked by scopes, people by role. Every endpoint calls `requireScope(scope, permission)`: the scope a key needs and the permission a person needs. The role matrix lives only in `src/domain/permissions.ts`, and `/v1/me.permissions` reads it. A new endpoint names both; a check that bypasses `requireScope` uses `can(caller, permission)`. Mailbox access goes through `requireMailbox` (`src/mail/access.ts`), which knows keys' and people's memberships.
 - D1 binds at most 100 parameters a statement. An `inArray` over a list that can grow goes through `queryIn` or `chunksOf` (`src/services/Database.ts`, 90 a chunk); a list that stays small gets a `// d1: bounded: <why>` comment. `test/d1Params.test.ts` fails on anything else (HAL-3425).
 - D1 is deployed (since 2026-10-17): migrations are append-only. Run `bun run db:generate --name <change>`, then `wrangler d1 migrations apply mailyard --remote` before deploying code that needs it. Never edit or regenerate a shipped migration.
 - DNS checks (`src/domain/dnsChecks.ts`) go through the `Dns` service over DoH. In tests, `test/dns.ts` answers DoH from a table, and `LIVE_DNS=1` runs the read-only check against bridgehook.dev.

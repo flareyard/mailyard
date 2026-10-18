@@ -2,12 +2,14 @@ import { and, desc, eq, gt, isNull, lt, ne, or } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { apiKeys, sessions, settings } from "../db/schema.ts"
+import { apiKeys, mailboxes, mailboxPeople, members, sessions, settings } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { type Caller, isRevoked, ROOT, recordUse, type Scope } from "./apiKeys.ts"
 import { customBrandSettings } from "./brand.ts"
 import { randomToken, sha256 } from "./crypto.ts"
+import { HOLDS_MAIL } from "./mailboxes.ts"
+import { permissionsOf, ROLE_SCOPES, SEES_ALL_MAILBOXES } from "./permissions.ts"
 
 /**
  * Browser sessions (HAL-3358). The web app signs in by posting an API key (or the ADMIN_KEY) to
@@ -27,12 +29,19 @@ export const SESSION_IDLE_MS = 14 * DAY
 /** …and never longer than this after it was opened. */
 export const SESSION_MAX_MS = 30 * DAY
 
-export type SessionVia = "session-key" | "admin-key"
+export type SessionVia = "session-key" | "admin-key" | "session-member"
 
 /** Why a session cookie was refused; every case answers `401 reason: "session-expired"`. */
 export class SessionExpired extends Schema.TaggedError<SessionExpired>()("SessionExpired", {
   message: Schema.String,
-  cause: Schema.Literals(["unknown", "ended", "expired", "key-revoked", "admin-key-changed"]),
+  cause: Schema.Literals([
+    "unknown",
+    "ended",
+    "expired",
+    "key-revoked",
+    "admin-key-changed",
+    "member-removed",
+  ]),
 }) {}
 
 export class SessionNotFound extends Schema.TaggedError<SessionNotFound>()("SessionNotFound", {
@@ -54,7 +63,10 @@ export const clientOf = (headers: Readonly<Record<string, string | undefined>>) 
   }
 }
 
-/** Opens a session for an authenticated caller. Returns the cookie's token, shown only here. */
+/**
+ * Opens a session for an authenticated caller: a key, the ADMIN_KEY, or a person who has just used
+ * a sign-in link or accepted an invite (HAL-3361). Returns the cookie's token, shown only here.
+ */
 export const openSession = Effect.fn("sessions.open")(function* (
   caller: Caller,
   client: ReturnType<typeof clientOf>,
@@ -69,7 +81,8 @@ export const openSession = Effect.fn("sessions.open")(function* (
     id,
     tokenHash: yield* Effect.promise(() => sha256(token)),
     keyId: caller.keyId,
-    via: (admin ? "admin-key" : "session-key") as SessionVia,
+    via: (caller.member ? "session-member" : admin ? "admin-key" : "session-key") as SessionVia,
+    memberId: caller.member?.id ?? null,
     adminFingerprint: admin && ADMIN_KEY ? yield* Effect.promise(() => adminFingerprint(ADMIN_KEY)) : null,
     ...client,
     createdAt: now,
@@ -113,7 +126,32 @@ export const resolveSession = Effect.fn("sessions.resolve")(function* (token: st
         : "Your session expired after 14 days unused. Sign in again.",
     )
   let caller: Caller
-  if (session.via === "admin-key") {
+  if (session.via === "session-member") {
+    const member = yield* database
+      .query("sessions.member", (db) =>
+        db
+          .select()
+          .from(members)
+          .where(eq(members.id, session.memberId ?? ""))
+          .get(),
+      )
+      .pipe(Effect.orDie)
+    if (!member || member.removedAt !== null)
+      return yield* expired("member-removed", "You've been removed from this workspace.")
+    caller = {
+      keyId: member.id,
+      kind: "secret",
+      scopes: ROLE_SCOPES[member.role],
+      sessionId: session.id,
+      member: { id: member.id, role: member.role, email: member.email, name: member.name },
+    }
+    if (member.lastActiveAt === null || now - member.lastActiveAt > MINUTE)
+      yield* database
+        .query("members.touch", (db) =>
+          db.update(members).set({ lastActiveAt: now }).where(eq(members.id, member.id)).run(),
+        )
+        .pipe(Effect.ignore)
+  } else if (session.via === "admin-key") {
     const current = ADMIN_KEY ? yield* Effect.promise(() => adminFingerprint(ADMIN_KEY)) : null
     if (current === null || current !== session.adminFingerprint)
       return yield* expired(
@@ -241,14 +279,17 @@ export const pruneSessions = Effect.fn("sessions.prune")(function* (now = Date.n
   )
 })
 
-const WorkspaceSetting = Schema.Struct({ id: Schema.String })
+const WorkspaceSetting = Schema.Struct({
+  id: Schema.String,
+  /** Set when the workspace is claimed (HAL-3361); the brand's name stands in until then. */
+  name: Schema.optionalKey(Schema.String),
+  claimedBy: Schema.optionalKey(Schema.String),
+  claimedAt: Schema.optionalKey(Schema.Number),
+})
+export type WorkspaceSetting = typeof WorkspaceSetting.Type
 
-/**
- * The workspace this deployment is. One per deployment for now; its id is minted on first read and
- * kept in settings so it stays the same across deploys. The name is the brand's, until claiming the
- * workspace (HAL-3361) gives it its own.
- */
-export const currentWorkspace = Effect.fn("workspace.current")(function* (origin: string) {
+/** The workspace's stored record, minting its id on first read. */
+export const workspaceSetting = Effect.fn("workspace.setting")(function* () {
   const database = yield* Database
   const read = database.query("settings.workspace", (db) =>
     db.select().from(settings).where(eq(settings.key, "workspace")).get(),
@@ -265,51 +306,43 @@ export const currentWorkspace = Effect.fn("workspace.current")(function* (origin
     row = yield* read
   }
   const setting = Schema.decodeUnknownOption(WorkspaceSetting)(row?.value)
+  return setting._tag === "Some" ? setting.value : ({ id: "ws_default" } as WorkspaceSetting)
+})
+
+export const putWorkspaceSetting = Effect.fn("workspace.put")(function* (value: WorkspaceSetting) {
+  const database = yield* Database
+  const now = Date.now()
+  yield* database.query("settings.workspace.put", (db) =>
+    db
+      .insert(settings)
+      .values({ key: "workspace", value, updatedAt: now })
+      .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: now } })
+      .run(),
+  )
+})
+
+/**
+ * The workspace this deployment is. One per deployment for now; its id is minted on first read and
+ * kept in settings so it stays the same across deploys. Its name is the one given when it was
+ * claimed (HAL-3361), else the brand's.
+ */
+export const currentWorkspace = Effect.fn("workspace.current")(function* (origin: string) {
+  const setting = yield* workspaceSetting()
   const brand = yield* customBrandSettings()
   return {
-    id: setting._tag === "Some" ? setting.value.id : "ws_default",
-    name: brand?.name ?? "Mailyard",
+    id: setting.id,
+    name: setting.name ?? brand?.name ?? "Mailyard",
     logoUrl: brand?.logoUrl ?? null,
     url: origin,
     host: new URL(origin).host,
+    claimed: setting.claimedAt !== undefined,
   }
 })
 
 /**
- * What each scope lets the app show, so screens can hide what the caller can't do instead of
- * failing on click. Scopes stay the source of truth; this is their reading for the UI. Mailbox
- * access is narrower still: a key reads only the mailboxes it's a member of (admin reads all).
+ * `GET /v1/me`: who the app is signed in as. A person (HAL-3361) brings `user`, `role` and the
+ * mailboxes they can open; a key or the admin key has neither, and `key` names the key instead.
  */
-const PERMISSIONS: Record<Scope, ReadonlyArray<string>> = {
-  read: [
-    "mail.read",
-    "contacts.read",
-    "campaigns.read",
-    "automations.read",
-    "templates.read",
-    "analytics.read",
-    "settings.read",
-  ],
-  send: ["mail.send", "email.send"],
-  track: ["events.track"],
-  admin: [
-    "mail.manage",
-    "contacts.write",
-    "campaigns.write",
-    "automations.write",
-    "templates.write",
-    "settings.write",
-    "domains.manage",
-    "keys.manage",
-    "webhooks.manage",
-    "exports.workspace",
-  ],
-}
-
-export const permissionsOf = (scopes: ReadonlyArray<Scope>) =>
-  [...new Set(scopes.flatMap((s) => PERMISSIONS[s] ?? []))].sort()
-
-/** `GET /v1/me`: who the app is signed in as. `user` and `role` stay null until people exist (HAL-3361). */
 export const describeCaller = Effect.fn("sessions.me")(function* (
   caller: Caller,
   origin: string,
@@ -318,15 +351,16 @@ export const describeCaller = Effect.fn("sessions.me")(function* (
   const database = yield* Database
   const workspace = yield* currentWorkspace(origin)
   const admin = caller.keyId === ROOT.keyId
-  const key = admin
-    ? null
-    : ((yield* database.query("apiKeys.me", (db) =>
-        db
-          .select({ id: apiKeys.id, name: apiKeys.name, prefix: apiKeys.prefix })
-          .from(apiKeys)
-          .where(eq(apiKeys.id, caller.keyId))
-          .get(),
-      )) ?? null)
+  const key =
+    admin || caller.member
+      ? null
+      : ((yield* database.query("apiKeys.me", (db) =>
+          db
+            .select({ id: apiKeys.id, name: apiKeys.name, prefix: apiKeys.prefix })
+            .from(apiKeys)
+            .where(eq(apiKeys.id, caller.keyId))
+            .get(),
+        )) ?? null)
   const session = caller.sessionId
     ? ((yield* database.query("sessions.me", (db) =>
         db
@@ -340,17 +374,57 @@ export const describeCaller = Effect.fn("sessions.me")(function* (
           .get(),
       )) ?? null)
     : null
+  const person = caller.member
+    ? ((yield* database.query("members.me", (db) =>
+        db.select().from(members).where(eq(members.id, caller.keyId)).get(),
+      )) ?? null)
+    : null
+  // The mailboxes a person can open: every one for a role that sees them all, else theirs, with
+  // their access in each (null where they read by role rather than by being given it).
+  const given = caller.member
+    ? yield* database.query("members.myMailboxes", (db) =>
+        db
+          .select({ id: mailboxes.id, address: mailboxes.address, access: mailboxPeople.role })
+          .from(mailboxPeople)
+          .innerJoin(mailboxes, eq(mailboxes.id, mailboxPeople.mailboxId))
+          .where(eq(mailboxPeople.memberId, caller.keyId))
+          .all(),
+      )
+    : []
+  const everyone =
+    caller.member && SEES_ALL_MAILBOXES.has(caller.member.role)
+      ? yield* database.query("members.allMailboxes", (db) =>
+          db
+            .select({ id: mailboxes.id, address: mailboxes.address, kind: mailboxes.kind })
+            .from(mailboxes)
+            .all(),
+        )
+      : []
+  const access = new Map(given.map((g) => [g.id, g.access]))
+  const myMailboxes = caller.member
+    ? SEES_ALL_MAILBOXES.has(caller.member.role)
+      ? everyone
+          .filter((m) => HOLDS_MAIL.has(m.kind))
+          .map((m) => ({ id: m.id, address: m.address, access: access.get(m.id) ?? null }))
+      : given.map((g) => ({ id: g.id, address: g.address, access: g.access as typeof g.access | null }))
+    : null
   return {
-    user: null,
+    user: person
+      ? { id: person.id, name: person.name, email: person.email, timeZone: person.timeZone }
+      : null,
     workspace,
-    role: null,
-    via: (admin ? "admin-key" : caller.sessionId ? "session-key" : "api-key") as
-      | "admin-key"
-      | "session-key"
-      | "api-key",
+    role: caller.member?.role ?? null,
+    via: (caller.member
+      ? "session-member"
+      : admin
+        ? "admin-key"
+        : caller.sessionId
+          ? "session-key"
+          : "api-key") as "session-member" | "admin-key" | "session-key" | "api-key",
     key,
     scopes: [...caller.scopes],
-    permissions: permissionsOf(caller.scopes),
+    permissions: permissionsOf(caller),
+    mailboxes: myMailboxes,
     workspaces: [workspace],
     session: session
       ? {

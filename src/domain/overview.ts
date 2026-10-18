@@ -13,7 +13,9 @@ import {
   inboundDailySenders,
   mailboxes,
   mailboxMembers,
+  mailboxPeople,
 } from "../db/schema.ts"
+import { seesAllMailboxes } from "../mail/access.ts"
 import { callMailbox } from "../mail/rpc.ts"
 import type { MailboxDO } from "../objects/MailboxDO.ts"
 import { Database, queryIn } from "../services/Database.ts"
@@ -44,10 +46,13 @@ const startOfDay = (day: string) => Date.parse(`${day}T00:00:00Z`)
 export const daysOf = (range: StatsRange, now = Date.now()) =>
   Array.from({ length: DAYS[range] }, (_, i) => dayKey(now - (DAYS[range] - 1 - i) * DAY))
 
-/** The mailboxes a caller can read: every one for root and admin keys, else their memberships. */
+/**
+ * The mailboxes a caller can read: every one for root and admin keys and for people whose role
+ * sees them all (HAL-3361), else the ones they've been given.
+ */
 export const readableMailboxes = Effect.fn("overview.mailboxes")(function* (caller: Caller) {
   const database = yield* Database
-  const all = caller.keyId === "root" || caller.scopes.includes("admin")
+  const all = seesAllMailboxes(caller)
   const rows = all
     ? yield* database.query("overview.allMailboxes", (db) =>
         db
@@ -55,16 +60,25 @@ export const readableMailboxes = Effect.fn("overview.mailboxes")(function* (call
           .from(mailboxes)
           .all(),
       )
-    : caller.scopes.includes("read")
-      ? yield* database.query("overview.memberMailboxes", (db) =>
+    : caller.member
+      ? yield* database.query("overview.personMailboxes", (db) =>
           db
             .select({ id: mailboxes.id, address: mailboxes.address, kind: mailboxes.kind })
-            .from(mailboxMembers)
-            .innerJoin(mailboxes, eq(mailboxes.id, mailboxMembers.mailboxId))
-            .where(eq(mailboxMembers.apiKeyId, caller.keyId))
+            .from(mailboxPeople)
+            .innerJoin(mailboxes, eq(mailboxes.id, mailboxPeople.mailboxId))
+            .where(eq(mailboxPeople.memberId, caller.keyId))
             .all(),
         )
-      : []
+      : caller.scopes.includes("read")
+        ? yield* database.query("overview.memberMailboxes", (db) =>
+            db
+              .select({ id: mailboxes.id, address: mailboxes.address, kind: mailboxes.kind })
+              .from(mailboxMembers)
+              .innerJoin(mailboxes, eq(mailboxes.id, mailboxMembers.mailboxId))
+              .where(eq(mailboxMembers.apiKeyId, caller.keyId))
+              .all(),
+          )
+        : []
   return rows.filter((m) => HOLDS_MAIL.has(m.kind)).slice(0, 100)
 })
 

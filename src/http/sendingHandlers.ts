@@ -28,7 +28,7 @@ export const SendingHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       startTestSend: p(({ payload }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("send")
+          const caller = yield* requireScope("send", "email.send")
           const result = yield* startTestSend(payload, caller.keyId)
           yield* recordAudit({
             actor: caller.keyId,
@@ -54,7 +54,7 @@ export const SendingHandlers = HttpApiBuilder.group(
         ),
       ),
       getTestSend: p(({ params }) =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(getTestSend(params.id)),
           Effect.catchTag("TestSendNotFound", (e) =>
             Effect.fail(new NotFound({ message: `Test send ${e.id} not found.` })),
@@ -63,20 +63,25 @@ export const SendingHandlers = HttpApiBuilder.group(
         ),
       ),
       verifiedAddresses: p(() =>
-        requireScope("read").pipe(Effect.andThen(CloudflareEmail.use((c) => c.verifiedAddresses))),
+        requireScope("read", "settings.read").pipe(
+          Effect.andThen(CloudflareEmail.use((c) => c.verifiedAddresses)),
+        ),
       ),
       governor: p(() =>
-        requireScope("read").pipe(Effect.andThen(Governor.use((g) => g.overview)), reachable),
+        requireScope("read", "analytics.read").pipe(
+          Effect.andThen(Governor.use((g) => g.overview)),
+          reachable,
+        ),
       ),
       events: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(eventCoverage()),
           Effect.map((domains) => ({ domains })),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       getSettings: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(Governor.use((g) => g.overview)),
           Effect.map((o) => o.config),
           reachable,
@@ -84,7 +89,7 @@ export const SendingHandlers = HttpApiBuilder.group(
       ),
       putSettings: p(({ payload }) =>
         Effect.gen(function* () {
-          const caller = yield* requireScope("admin")
+          const caller = yield* requireScope("admin", "settings.write")
           const governor = yield* Governor
           const before = (yield* governor.overview).config
           const after = yield* governor.configure(payload as Parameters<typeof governor.configure>[0])
@@ -109,13 +114,13 @@ export const AlertsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(listAlerts(query)),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       resolve: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "settings.write").pipe(
           Effect.flatMap((caller) => resolveAlert(params.id, caller.keyId)),
           Effect.catchTag("AlertNotFound", (e) =>
             Effect.fail(new NotFound({ message: `Alert ${e.id} not found.` })),

@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
 import { createUpload, MAX_UPLOAD_BYTES } from "../imports/contactImport.ts"
-import { authorize, problem } from "./auth.ts"
+import { authorize, problem, refuseUnless } from "./auth.ts"
 import { runtimeFor } from "./inbound.ts"
 
 export const UPLOADS_PATH = /^\/v1\/uploads$/
@@ -16,7 +16,8 @@ export const handleUploads = async (request: Request, env: Env) => {
   if (request.method !== "POST") return problem(405, "Use POST with the file as the request body.")
   const auth = await authorize(request, env)
   if (auth instanceof Response) return auth
-  if (!auth.caller.scopes.includes("admin")) return problem(403, 'This key lacks the "admin" scope.')
+  const refused = refuseUnless(auth.caller, "admin", "contacts.write")
+  if (refused) return refused
   const filename = (
     new URL(request.url).searchParams.get("filename") ??
     request.headers.get("x-filename") ??

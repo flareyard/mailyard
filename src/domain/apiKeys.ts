@@ -16,6 +16,18 @@ export interface Caller {
   readonly scopes: ReadonlyArray<Scope>
   /** Set when the request came with a browser session cookie rather than a Bearer key (HAL-3358). */
   readonly sessionId?: string | undefined
+  /**
+   * Set when a person is signed in (HAL-3361): checked by role, not scopes. `keyId` is then the
+   * member's id, so everything that records "who" records the person.
+   */
+  readonly member?:
+    | {
+        readonly id: string
+        readonly role: "owner" | "admin" | "sender" | "agent" | "viewer"
+        readonly email: string
+        readonly name: string
+      }
+    | undefined
 }
 
 /** The deploy-time ADMIN_KEY: everything, and the only way to mint the first API key. */

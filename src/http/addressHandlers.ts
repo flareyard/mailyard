@@ -23,11 +23,13 @@ import {
   listMailboxes,
   type MailboxConflict,
   type MailboxInvalid,
-  type MailboxNotFound,
+  MailboxNotFound,
   type RoutingRuleExists,
   setMembers,
   updateMailbox,
 } from "../domain/mailboxes.ts"
+import { isManager } from "../domain/permissions.ts"
+import { membershipIn, membershipsOf, seesAllMailboxes } from "../mail/access.ts"
 import { Database, type DatabaseError } from "../services/Database.ts"
 import type { MailboxUnavailable } from "../services/Mailboxes.ts"
 import { Conflict, FixRefused, InvalidRequest, MailApi, NotFound } from "./Api.ts"
@@ -121,18 +123,9 @@ const mailboxErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
 const requireAdminOrOwner = (mailboxId: string) =>
   Effect.gen(function* () {
     const caller = yield* CurrentCaller
-    if (caller.keyId === "root" || caller.scopes.includes("admin")) return caller
-    const database = yield* Database
-    const membership = yield* database
-      .query("mailboxes.ownerCheck", (db) =>
-        db
-          .select({ role: mailboxMembers.role })
-          .from(mailboxMembers)
-          .where(and(eq(mailboxMembers.mailboxId, mailboxId), eq(mailboxMembers.apiKeyId, caller.keyId)))
-          .get(),
-      )
-      .pipe(Effect.orDie)
-    if (membership?.role !== "owner") {
+    if (caller.keyId === "root" || isManager(caller)) return caller
+    const membership = yield* membershipIn(caller, mailboxId).pipe(Effect.orDie)
+    if (membership !== "owner") {
       return yield* new Forbidden({
         message: 'Changing a mailbox needs the "admin" scope or ownership of it.',
       })
@@ -147,41 +140,49 @@ export const DomainsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(() =>
-        requireScope("read").pipe(
+        requireScope("read", "settings.read").pipe(
           Effect.andThen(listDomains()),
           Effect.map((domains) => ({ domains })),
           infraDies,
         ),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "domains.manage").pipe(
           Effect.flatMap((caller) => createDomain(payload, caller.keyId)),
           domainErrors,
           infraDies,
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getDomain(params.id)), domainErrors, infraDies),
+        requireScope("read", "settings.read").pipe(
+          Effect.andThen(getDomain(params.id)),
+          domainErrors,
+          infraDies,
+        ),
       ),
       update: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "domains.manage").pipe(
           Effect.flatMap((caller) => updateDomain(params.id, payload, caller.keyId)),
           domainErrors,
           infraDies,
         ),
       ),
       remove: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "domains.manage").pipe(
           Effect.flatMap((caller) => deleteDomain(params.id, caller.keyId)),
           domainErrors,
           infraDies,
         ),
       ),
       recheck: p(({ params }) =>
-        requireScope("admin").pipe(Effect.andThen(recheckDomain(params.id)), domainErrors, infraDies),
+        requireScope("admin", "domains.manage").pipe(
+          Effect.andThen(recheckDomain(params.id)),
+          domainErrors,
+          infraDies,
+        ),
       ),
       fix: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "domains.manage").pipe(
           Effect.flatMap((caller) => fixDomain(params.id, caller.keyId)),
           Effect.catchTag("DomainFixRefused", (e) =>
             Effect.fail(new FixRefused({ reason: e.reason, message: e.message })),
@@ -190,7 +191,9 @@ export const DomainsHandlers = HttpApiBuilder.group(
           infraDies,
         ),
       ),
-      candidates: p(() => requireScope("read").pipe(Effect.andThen(domainCandidates()), infraDies)),
+      candidates: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(domainCandidates()), infraDies),
+      ),
     })
   }),
 )
@@ -202,26 +205,34 @@ export const MailboxesHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(({ query }) =>
-        requireScope("read").pipe(
-          Effect.andThen(listMailboxes({ domainId: query.domainId, kind: query.kind })),
-          Effect.map((mailboxes) => ({ mailboxes })),
-          infraDies,
-        ),
+        Effect.gen(function* () {
+          const caller = yield* requireScope("read", "mail.read")
+          const all = yield* listMailboxes({ domainId: query.domainId, kind: query.kind })
+          // An agent sees only the mailboxes they've been given (HAL-3361).
+          if (!caller.member || seesAllMailboxes(caller)) return { mailboxes: all }
+          const given = yield* membershipsOf(caller)
+          return { mailboxes: all.filter((m) => given.has(m.id)) }
+        }).pipe(infraDies),
       ),
       create: p(({ payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "mail.manage").pipe(
           Effect.flatMap((caller) => createMailbox(payload, caller.keyId)),
           mailboxErrors,
           infraDies,
         ),
       ),
       get: p(({ params }) =>
-        requireScope("read").pipe(Effect.andThen(getMailbox(params.id)), mailboxErrors, infraDies),
+        Effect.gen(function* () {
+          const caller = yield* requireScope("read", "mail.read")
+          if (caller.member && !seesAllMailboxes(caller) && !(yield* membershipIn(caller, params.id)))
+            return yield* new MailboxNotFound({ id: params.id })
+          return yield* getMailbox(params.id)
+        }).pipe(mailboxErrors, infraDies),
       ),
       update: p(({ params, payload }) =>
         Effect.gen(function* () {
           const caller = yield* requireAdminOrOwner(params.id)
-          if (payload.targets !== undefined && caller.keyId !== "root" && !caller.scopes.includes("admin")) {
+          if (payload.targets !== undefined && caller.keyId !== "root" && !isManager(caller)) {
             return yield* new Forbidden({
               message: 'Changing where an address delivers needs the "admin" scope.',
             })
@@ -230,14 +241,14 @@ export const MailboxesHandlers = HttpApiBuilder.group(
         }).pipe(mailboxErrors, infraDies),
       ),
       setMembers: p(({ params, payload }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "mail.manage").pipe(
           Effect.flatMap((caller) => setMembers(params.id, payload.members, caller.keyId)),
           mailboxErrors,
           infraDies,
         ),
       ),
       remove: p(({ params }) =>
-        requireScope("admin").pipe(
+        requireScope("admin", "mail.manage").pipe(
           Effect.flatMap((caller) => deleteMailbox(params.id, caller.keyId)),
           mailboxErrors,
           infraDies,
@@ -254,7 +265,7 @@ export const IdentitiesHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       list: p(() =>
-        requireScope("send").pipe(
+        requireScope("send", "mail.send").pipe(
           Effect.flatMap((caller) => identitiesFor(caller)),
           infraDies,
         ),

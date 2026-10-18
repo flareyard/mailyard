@@ -266,7 +266,8 @@ const counted = (stream: string) => (status: string) =>
  * returning the first attempt's row.
  */
 export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
-  readonly stream: "campaign" | "automation" | "test"
+  /** `system`: Mailyard's own mail to the people in the workspace (sign-in links, invites). */
+  readonly stream: "campaign" | "automation" | "test" | "system"
   readonly message: Outgoing
   readonly contactId: string | null
   readonly campaignId: string | null
@@ -344,7 +345,7 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
       .select({ email: suppressions.email })
       .from(suppressions)
       .where(
-        input.stream === "test"
+        input.stream === "test" || input.stream === "system"
           ? and(eq(suppressions.email, recipient), eq(suppressions.bulkOnly, false))
           : eq(suppressions.email, recipient),
       )

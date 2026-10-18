@@ -1,9 +1,17 @@
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { apiKeys, domains, mailboxExports, mailboxes, mailboxMembers } from "../db/schema.ts"
+import {
+  apiKeys,
+  domains,
+  mailboxExports,
+  mailboxes,
+  mailboxMembers,
+  mailboxPeople,
+  members,
+} from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { SPAM_THRESHOLD } from "../rules/spam.ts"
 import { CloudflareZones, type RoutingRule } from "../services/CloudflareZones.ts"
@@ -12,6 +20,7 @@ import { Mailboxes } from "../services/Mailboxes.ts"
 import type { Caller } from "./apiKeys.ts"
 import { activeKey, isRevoked } from "./apiKeys.ts"
 import { recordAudit } from "./audit.ts"
+import { can, isManager } from "./permissions.ts"
 
 export class MailboxNotFound extends Schema.TaggedError<MailboxNotFound>()("MailboxNotFound", {
   id: Schema.String,
@@ -131,7 +140,7 @@ export const getMailbox = Effect.fn("mailboxes.get")(function* (id: string) {
       )
     : []
   const byId = new Map(targetRows.map((t) => [t.id, t]))
-  const members = yield* database.query("mailboxes.members", (db) =>
+  const keyMembers = yield* database.query("mailboxes.members", (db) =>
     db
       .select({
         apiKeyId: mailboxMembers.apiKeyId,
@@ -143,6 +152,22 @@ export const getMailbox = Effect.fn("mailboxes.get")(function* (id: string) {
       .innerJoin(apiKeys, eq(apiKeys.id, mailboxMembers.apiKeyId))
       .where(eq(mailboxMembers.mailboxId, id))
       .orderBy(asc(apiKeys.name))
+      .all(),
+  )
+  const people = yield* database.query("mailboxes.people", (db) =>
+    db
+      .select({
+        memberId: mailboxPeople.memberId,
+        access: mailboxPeople.role,
+        name: members.name,
+        email: members.email,
+        role: members.role,
+        removedAt: members.removedAt,
+      })
+      .from(mailboxPeople)
+      .innerJoin(members, eq(members.id, mailboxPeople.memberId))
+      .where(eq(mailboxPeople.mailboxId, id))
+      .orderBy(asc(members.name))
       .all(),
   )
   const lastExport = yield* database.query("mailboxes.lastExport", (db) =>
@@ -162,12 +187,16 @@ export const getMailbox = Effect.fn("mailboxes.get")(function* (id: string) {
     forwarding: m.forwarding ?? null,
     spamThreshold: m.spamThreshold ?? SPAM_THRESHOLD,
     spamThresholdIsDefault: m.spamThreshold === null,
-    members: members.map((r) => ({
+    members: keyMembers.map((r) => ({
       apiKeyId: r.apiKeyId,
       name: r.name,
       role: r.role,
       revoked: isRevoked(r.revokedAt),
     })),
+    /** People given this mailbox (HAL-3361), with their access in it and their workspace role. */
+    people: people
+      .filter((r) => r.removedAt === null)
+      .map((r) => ({ memberId: r.memberId, name: r.name, email: r.email, access: r.access, role: r.role })),
     messageCount,
     lastExport: lastExport
       ? {
@@ -471,10 +500,16 @@ export const updateMailbox = Effect.fn("mailboxes.update")(function* (
   return yield* getMailbox(id)
 })
 
-/** Replaces who may use a mailbox. Only secret keys that aren't revoked can be members. */
+/**
+ * Replaces who may use a mailbox: keys (`{ apiKeyId, role }`, active secret keys only) and people
+ * (`{ memberId, access }`, current members only, HAL-3361). Both lists are replaced together.
+ */
 export const setMembers = Effect.fn("mailboxes.setMembers")(function* (
   id: string,
-  members: ReadonlyArray<{ readonly apiKeyId: string; readonly role: MemberRole }>,
+  entries: ReadonlyArray<
+    | { readonly apiKeyId: string; readonly role: MemberRole }
+    | { readonly memberId: string; readonly access: MemberRole }
+  >,
   actor: string,
 ) {
   const m = yield* findMailbox(id)
@@ -484,9 +519,14 @@ export const setMembers = Effect.fn("mailboxes.setMembers")(function* (
       message: "Aliases and groups have no members; give access to the mailboxes they reach.",
     })
   }
-  const ids = [...new Set(members.map((x) => x.apiKeyId))]
-  if (ids.length !== members.length)
+  const keyEntries = entries.flatMap((x) => ("apiKeyId" in x ? [x] : []))
+  const personEntries = entries.flatMap((x) => ("memberId" in x ? [x] : []))
+  const ids = [...new Set(keyEntries.map((x) => x.apiKeyId))]
+  if (ids.length !== keyEntries.length)
     return yield* new MailboxInvalid({ field: "members", message: "A key is listed twice." })
+  const personIds = [...new Set(personEntries.map((x) => x.memberId))]
+  if (personIds.length !== personEntries.length)
+    return yield* new MailboxInvalid({ field: "members", message: "A person is listed twice." })
   const database = yield* Database
   const keys = ids.length
     ? yield* queryIn("mailboxes.memberKeys", ids, (db, chunk) =>
@@ -501,22 +541,57 @@ export const setMembers = Effect.fn("mailboxes.setMembers")(function* (
   const bad = ids.find((k) => !usable.has(k))
   if (bad)
     return yield* new MailboxInvalid({ field: "members", message: `${bad} is not an active secret key.` })
-  const before = yield* database.query("mailboxes.membersBefore", (db) =>
-    db
-      .select({ apiKeyId: mailboxMembers.apiKeyId, role: mailboxMembers.role })
-      .from(mailboxMembers)
-      .where(eq(mailboxMembers.mailboxId, id))
-      .all(),
-  )
+  const people = personIds.length
+    ? yield* queryIn("mailboxes.memberPeople", personIds, (db, chunk) =>
+        db
+          .select({ id: members.id })
+          .from(members)
+          .where(and(inArray(members.id, chunk), isNull(members.removedAt)))
+          .all(),
+      )
+    : []
+  const current = new Set(people.map((p) => p.id))
+  const badPerson = personIds.find((p) => !current.has(p))
+  if (badPerson)
+    return yield* new MailboxInvalid({
+      field: "members",
+      message: `${badPerson} is not a member of the workspace.`,
+    })
+  const before = {
+    keys: yield* database.query("mailboxes.membersBefore", (db) =>
+      db
+        .select({ apiKeyId: mailboxMembers.apiKeyId, role: mailboxMembers.role })
+        .from(mailboxMembers)
+        .where(eq(mailboxMembers.mailboxId, id))
+        .all(),
+    ),
+    people: yield* database.query("mailboxes.peopleBefore", (db) =>
+      db
+        .select({ memberId: mailboxPeople.memberId, access: mailboxPeople.role })
+        .from(mailboxPeople)
+        .where(eq(mailboxPeople.mailboxId, id))
+        .all(),
+    ),
+  }
   yield* database.query("mailboxes.membersReplace", (db) =>
     db.batch([
       db.delete(mailboxMembers).where(eq(mailboxMembers.mailboxId, id)),
-      ...members.map((x) =>
+      db.delete(mailboxPeople).where(eq(mailboxPeople.mailboxId, id)),
+      ...keyEntries.map((x) =>
         db.insert(mailboxMembers).values({ mailboxId: id, apiKeyId: x.apiKeyId, role: x.role }),
+      ),
+      ...personEntries.map((x) =>
+        db.insert(mailboxPeople).values({ mailboxId: id, memberId: x.memberId, role: x.access }),
       ),
     ] as unknown as Parameters<typeof db.batch>[0]),
   )
-  yield* recordAudit({ actor, action: "mailbox.members", target: id, before, after: members })
+  yield* recordAudit({
+    actor,
+    action: "mailbox.members",
+    target: id,
+    before,
+    after: { keys: keyEntries, people: personEntries },
+  })
   return yield* getMailbox(id)
 })
 
@@ -613,7 +688,7 @@ export const identitiesFor = Effect.fn("mailboxes.identities")(function* (caller
   const byId = new Map(all.map((m) => [m.id, m]))
   const signatureOf = (m: (typeof all)[number]) =>
     m.signature ?? (m.targets ?? []).map((t) => byId.get(t)?.signature).find((x) => x) ?? null
-  if (caller.keyId === "root" || caller.scopes.includes("admin")) {
+  if (caller.keyId === "root" || isManager(caller)) {
     const sending = yield* database.query("identities.sendingDomains", (db) =>
       db
         .select({ name: domains.name })
@@ -636,13 +711,23 @@ export const identitiesFor = Effect.fn("mailboxes.identities")(function* (caller
       anyAddressOn: sending.map((d) => d.name),
     }
   }
-  const rows = yield* database.query("identities.member", (db) =>
-    db
-      .select({ mailboxId: mailboxMembers.mailboxId, role: mailboxMembers.role })
-      .from(mailboxMembers)
-      .where(eq(mailboxMembers.apiKeyId, caller.keyId))
-      .all(),
-  )
+  // A person sends from the mailboxes they've been given, if their role sends at all (HAL-3361).
+  if (caller.member && !can(caller, "mail.send")) return { identities: [], anyAddressOn: [] }
+  const rows = caller.member
+    ? yield* database.query("identities.person", (db) =>
+        db
+          .select({ mailboxId: mailboxPeople.mailboxId, role: mailboxPeople.role })
+          .from(mailboxPeople)
+          .where(eq(mailboxPeople.memberId, caller.keyId))
+          .all(),
+      )
+    : yield* database.query("identities.member", (db) =>
+        db
+          .select({ mailboxId: mailboxMembers.mailboxId, role: mailboxMembers.role })
+          .from(mailboxMembers)
+          .where(eq(mailboxMembers.apiKeyId, caller.keyId))
+          .all(),
+      )
   const sendable = new Set(rows.filter((r) => r.role !== "viewer").map((r) => r.mailboxId))
   const identities: Array<Identity> = []
   for (const m of all) {

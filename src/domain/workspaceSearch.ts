@@ -9,6 +9,7 @@ import type { SearchHit, ThreadSummary } from "../mailbox/types.ts"
 import { Database } from "../services/Database.ts"
 import type { Caller } from "./apiKeys.ts"
 import { readableMailboxes } from "./overview.ts"
+import { can, type Permission } from "./permissions.ts"
 
 /**
  * Search across the workspace (HAL-3363): the command palette (`/v1/search`) and "search all mail"
@@ -110,14 +111,16 @@ export const searchWorkspace = Effect.fn("search.workspace")(function* (
   const database = yield* Database
   const results: Array<Result> = []
   const readable = yield* readableMailboxes(caller)
-  const canReadWorkspace =
+  const keyReads =
     caller.keyId === "root" || caller.scopes.includes("read") || caller.scopes.includes("admin")
+  // A person sees each kind of result their role may read (HAL-3361); a key, everything it can read.
+  const may = (permission: Permission) => (caller.member ? can(caller, permission) : keyReads)
 
   if (want.has("mailbox")) {
     for (const m of readable.filter((x) => x.address.includes(lower)).slice(0, per))
       results.push({ type: "mailbox", id: m.id, title: m.address, subtitle: m.kind, url: `/mail/${m.id}` })
   }
-  if (canReadWorkspace && want.has("contact")) {
+  if (may("contacts.read") && want.has("contact")) {
     // Emails are stored lowercase and uniquely indexed: a prefix is a range on that index.
     const rows = yield* database.query("search.contacts", (db) =>
       db
@@ -137,7 +140,7 @@ export const searchWorkspace = Effect.fn("search.workspace")(function* (
         url: `/audience/contacts/${c.id}`,
       })
   }
-  if (canReadWorkspace && want.has("campaign")) {
+  if (may("campaigns.read") && want.has("campaign")) {
     const rows = yield* database.query("search.campaigns", (db) =>
       db
         .select({ id: campaigns.id, name: campaigns.name, status: campaigns.status })
@@ -156,7 +159,7 @@ export const searchWorkspace = Effect.fn("search.workspace")(function* (
         url: `/campaigns/${c.id}`,
       })
   }
-  if (canReadWorkspace && want.has("template")) {
+  if (may("templates.read") && want.has("template")) {
     const rows = yield* database.query("search.templates", (db) =>
       db
         .select({ id: templates.id, name: templates.name })
@@ -175,7 +178,7 @@ export const searchWorkspace = Effect.fn("search.workspace")(function* (
         url: `/transactional/templates/${t.id}`,
       })
   }
-  if (canReadWorkspace && want.has("domain")) {
+  if (may("settings.read") && want.has("domain")) {
     const rows = yield* database.query("search.domains", (db) =>
       db
         .select({

@@ -57,6 +57,8 @@ export default defineConfig({
                 MAILYARD_UNDO_SECONDS: "0.5",
                 // The public origin is the test host; requests through api.mailyard.test check link building (HAL-3483).
                 MAILYARD_PUBLIC_ORIGIN: "https://mailyard.test",
+                // Who sign-in links and invitations come from (HAL-3361).
+                MAILYARD_SYSTEM_FROM: "Mailyard <hello@people.mailyard.test>",
               },
             },
           })),

@@ -4,7 +4,7 @@ import type { Env } from "../Bindings.ts"
 import { auditCsv } from "../domain/auditLog.ts"
 import { logoKey } from "../domain/brand.ts"
 import { BlobStore } from "../kit/index.ts"
-import { authorize, problem } from "./auth.ts"
+import { authorize, problem, refuseUnless } from "./auth.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /**
@@ -34,8 +34,8 @@ export const handleBrandLogo = async (request: Request, env: Env, file: string) 
 export const handleAuditCsv = async (request: Request, env: Env) => {
   const auth = await authorize(request, env)
   if (auth instanceof Response) return auth
-  if (auth.caller.kind !== "secret" || !auth.caller.scopes.includes("admin"))
-    return problem(403, 'The audit log needs a secret key with the "admin" scope.', { required: "admin" })
+  const refused = refuseUnless(auth.caller, "admin", "settings.write")
+  if (refused) return refused
   const q = new URL(request.url).searchParams
   const num = (k: string) => {
     const v = q.get(k)
