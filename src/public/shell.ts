@@ -1,12 +1,14 @@
 import type { BrandSettings } from "../domain/brand.ts"
 import { toBrand } from "../domain/brand.ts"
+import { PUBLIC_CSS } from "./style.ts"
 
 /**
  * The look of the pages people reach from an email without logging in (HAL-3377): the preference
  * page, the confirmation and signup result pages, and "view in browser". A workspace with its own
  * brand gets its colours, logo and fonts; one without gets Flareyard's tokens (design/tokens in the
- * platform repo): Funnel Display and Sans, gray-1000 actions, light and dark. Phone first: one
- * column, 16px type, 44px targets, no horizontal scroll.
+ * platform repo): Funnel Display and Sans, gray-1000 actions, light and dark.
+ * Phone first: one column, 16px type, 44px targets, no horizontal scroll. v2 (public-v2 design):
+ * a Card with a header and a body on a dot grid, shadcn-style controls, the CSS in style.ts.
  */
 
 /** Text and double-quoted attributes: every attribute here is written in double quotes. */
@@ -65,7 +67,48 @@ const FLAREYARD_DARK: Palette = {
   warning: ["#201301", "#e8b367"],
   danger: ["#2a0a09", "#ff958d"],
 }
+/** WCAG relative luminance and contrast, for the brand's dark-mode colours below. */
+const channel = (hex: string, i: number) => {
+  const c = Number.parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+}
+const luminance = (hex: string) =>
+  0.2126 * channel(hex, 0) + 0.7152 * channel(hex, 1) + 0.0722 * channel(hex, 2)
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
+  return (hi + 0.05) / (lo + 0.05)
+}
+const mixWhite = (hex: string, t: number) =>
+  `#${[0, 1, 2]
+    .map((i) => {
+      const c = Number.parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16)
+      return Math.round(c + (255 - c) * t)
+        .toString(16)
+        .padStart(2, "0")
+    })
+    .join("")}`
+/** The brand colour lifted toward white just far enough to reach `ratio` against a dark surface. */
+const readableOn = (color: string, surface: string, ratio: number) => {
+  let t = 0
+  let out = color
+  while (contrast(out, surface) < ratio && t < 1) {
+    t = Math.round((t + 0.05) * 100) / 100
+    out = mixWhite(color, t)
+  }
+  return out
+}
+
 /** A custom brand keeps its accent in dark mode; the neutrals turn dark around it. */
+const darkAccent = (color: string) => {
+  const surface = "#17181b" // BRAND_DARK_NEUTRALS.surface
+  const accent = readableOn(color, surface, 3)
+  return {
+    accent,
+    onAccent: contrast("#ffffff", accent) >= 4.5 ? "#ffffff" : "#0f1012",
+    emphasis: readableOn(color, surface, 3),
+    emphasisText: readableOn(color, surface, 5),
+  }
+}
 const BRAND_DARK_NEUTRALS = {
   bg: "#0f1012",
   surface: "#17181b",
@@ -127,6 +170,10 @@ export const pageTheme = (brand: BrandSettings | null): PageTheme => {
     dark: {
       ...light,
       ...BRAND_DARK_NEUTRALS,
+      // On near-black a dark accent disappears: lift the button to 3:1 against the card (keeping a light
+      // label while it reads at 4.5:1), the focus ring and glow to 3:1, and the badge text to 5:1, since
+      // it sits on a 7% tint of the accent. #2E5BFF keeps its button and ring; its badge text is #6284ff.
+      ...darkAccent(c.indigo),
       success: FLAREYARD_DARK.success,
       warning: FLAREYARD_DARK.warning,
       danger: FLAREYARD_DARK.danger,
@@ -134,8 +181,63 @@ export const pageTheme = (brand: BrandSettings | null): PageTheme => {
   }
 }
 
-const vars = (p: Palette) =>
-  `--bg:${p.bg};--surface:${p.surface};--fg:${p.fg};--body:${p.body};--muted:${p.muted};--border:${p.border};--accent:${p.accent};--on-accent:${p.onAccent};--em:${p.emphasis};--em-text:${p.emphasisText};--ok-bg:${p.success[0]};--ok:${p.success[1]};--warn-bg:${p.warning[0]};--warn:${p.warning[1]};--bad-bg:${p.danger[0]};--bad:${p.danger[1]}`
+/** The palette as custom properties. `--accent-far` is the pole away from the text on the accent, so
+ * hovering a button moves its background away from its label and contrast only ever goes up. */
+const vars = (p: Palette, fonts: PageTheme["fonts"]) =>
+  `--bg:${p.bg};--surface:${p.surface};--fg:${p.fg};--body:${p.body};--muted:${p.muted};--border:${p.border};--accent:${p.accent};--on-accent:${p.onAccent};--em:${p.emphasis};--em-text:${p.emphasisText};--ok-bg:${p.success[0]};--ok:${p.success[1]};--warn-bg:${p.warning[0]};--warn:${p.warning[1]};--bad-bg:${p.danger[0]};--bad:${p.danger[1]};--accent-far:${luminance(p.onAccent) > 0.5 ? "#000000" : "#ffffff"};--font-display:${fonts.display};--font-body:${fonts.body}`
+
+/** The page's whole <style>: the palette, light and dark, then the shared CSS. */
+export const pageStyle = (theme: PageTheme) =>
+  `<style>
+:root{${vars(theme.light, theme.fonts)};color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{${vars(theme.dark, theme.fonts)}}}
+${PUBLIC_CSS}
+</style>`
+
+/** The card header: the brand's logo and name, or the page's name. The Mailyard mark joins here once
+ * brand/mailyard-v2 lands (HAL-3473). */
+export const brandHeader = (theme: PageTheme) =>
+  theme.logoUrl
+    ? `<p class="brand"><img class="logo" src="${esc(theme.logoUrl)}" alt="" height="28"><span>${esc(theme.name)}</span></p>`
+    : `<p class="brand"><span>${esc(theme.name)}</span></p>`
+
+/** The footer under the card: the brand's logo, then the postal address, privacy and the site. */
+export const pageFooter = (theme: PageTheme, postalAddress?: string | null, privacyUrl?: string | null) => {
+  const bits = [
+    postalAddress ? `<span>${esc(postalAddress)}</span>` : "",
+    privacyUrl ? `<a href="${esc(privacyUrl)}">Privacy</a>` : "",
+    theme.siteUrl ? `<a href="${esc(theme.siteUrl)}">${esc(theme.name)}</a>` : "",
+  ].filter(Boolean)
+  const mark = theme.logoUrl
+    ? `<span class="foot-brand"><img src="${esc(theme.logoUrl)}" alt="" height="16"></span>`
+    : ""
+  return mark || bits.length ? `<footer>${mark}${bits.join("")}</footer>` : ""
+}
+
+/** The glyph above a result page's heading, from the status and the notice kind it already has. */
+export const glyph = (status: number, kind?: NoticeKind) => {
+  const k =
+    kind === "success"
+      ? "success i-check"
+      : kind === "info"
+        ? "i-mail"
+        : kind === "warning"
+          ? "warning i-alert"
+          : kind === "danger"
+            ? "danger i-alert"
+            : ((
+                {
+                  200: "warning i-ban",
+                  400: "i-link",
+                  404: "i-gone",
+                  410: "warning i-clock",
+                  429: "warning i-wait",
+                  500: "danger i-alert",
+                  503: "warning i-wrench",
+                } as Record<number, string>
+              )[status] ?? "i-alert")
+  return `<span class="glyph ${k}" aria-hidden="true"></span>`
+}
 
 export type NoticeKind = "success" | "warning" | "danger" | "info"
 export const notice = (kind: NoticeKind, html: string) =>
@@ -170,14 +272,6 @@ export const shellPage = (input: {
   readonly redirect?: { readonly url: string; readonly after: number } | null
 }) => {
   const { theme } = input
-  const brandMark = theme.logoUrl
-    ? `<img class="logo" src="${esc(theme.logoUrl)}" alt="${esc(theme.name)}" height="32">`
-    : `<p class="brand">${esc(theme.name)}</p>`
-  const footerBits = [
-    input.postalAddress ? `<span>${esc(input.postalAddress)}</span>` : "",
-    input.privacyUrl ? `<a href="${esc(input.privacyUrl)}">Privacy</a>` : "",
-    theme.siteUrl ? `<a href="${esc(theme.siteUrl)}">${esc(theme.name)}</a>` : "",
-  ].filter(Boolean)
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -187,47 +281,14 @@ export const shellPage = (input: {
 ${input.redirect ? `<meta http-equiv="refresh" content="${input.redirect.after};url=${esc(input.redirect.url)}">` : ""}
 <title>${esc(input.title)} · ${esc(theme.name)}</title>
 ${theme.fontsHref ? `<link rel="stylesheet" href="${esc(theme.fontsHref)}">` : ""}
-<style>
-:root{${vars(theme.light)};color-scheme:light dark}
-@media (prefers-color-scheme:dark){:root{${vars(theme.dark)}}}
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--body);font:16px/1.55 ${theme.fonts.body};min-height:100vh;padding:clamp(16px,6vw,64px) 16px}
-.wrap{max-width:34rem;margin:0 auto}
-main{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:clamp(20px,5vw,36px);overflow-wrap:anywhere}
-.logo{display:block;height:32px;width:auto;max-width:100%;margin:0 0 24px}
-.brand{margin:0 0 20px;font:600 15px/1.2 ${theme.fonts.display};color:var(--fg)}
-h1{margin:0 0 8px;font:600 clamp(1.4rem,4.5vw,1.75rem)/1.2 ${theme.fonts.display};color:var(--fg)}
-h2{margin:0 0 8px;font:600 1rem/1.3 ${theme.fonts.display};color:var(--fg)}
-p{margin:0 0 16px}.muted{color:var(--muted)}
-a{color:var(--fg)}
-.notice{padding:12px 16px;border-radius:10px;margin:0 0 20px;border:1px solid transparent}
-.notice.success{background:var(--ok-bg);color:var(--ok)}.notice.warning{background:var(--warn-bg);color:var(--warn)}
-.notice.danger{background:var(--bad-bg);color:var(--bad)}.notice.info{background:var(--bg);border-color:var(--border);color:var(--body)}
-.notice form{margin:8px 0 0}.notice button{width:auto}
-fieldset{border:1px solid var(--border);border-radius:12px;padding:4px 16px;margin:0 0 20px}
-legend{padding:0 6px;font-weight:600;color:var(--fg)}
-label.topic{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
-label.topic:last-of-type{border-bottom:0}
-label.topic input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--accent);flex:none}
-label.topic span{display:block;color:var(--fg)}label.topic small{display:block;color:var(--muted)}
-label.topic span.tag{display:inline-block;color:var(--em-text)}
-.tag{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:.75rem;line-height:1.6;color:var(--em-text);border:1px solid currentColor;vertical-align:1px}
-.actions{display:flex;flex-wrap:wrap;gap:12px}
-button,.button{font:500 16px/1 ${theme.fonts.body};min-height:44px;padding:12px 18px;border-radius:10px;border:1px solid var(--accent);cursor:pointer;background:var(--accent);color:var(--on-accent);text-decoration:none;display:inline-flex;align-items:center}
-button.secondary{background:transparent;color:var(--fg);border-color:var(--border)}
-button.link{background:none;border:0;padding:0;min-height:24px;color:inherit;text-decoration:underline;font-weight:600}
-input[type=email]{font:inherit;font-size:16px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);margin:0 0 12px}
-button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--em);outline-offset:2px}
-footer{margin:16px 4px 0;font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 16px}
-footer a{color:inherit;display:inline-flex;align-items:center;min-height:24px}
-@media (pointer:coarse){footer a,button.link{min-height:44px}}
-</style>
+${pageStyle(theme)}
 </head>
 <body><div class="wrap"><main>
-${brandMark}
+<header class="head">${brandHeader(theme)}</header>
+<div class="body">
 ${input.body}
-</main>${footerBits.length ? `<footer>${footerBits.join("")}</footer>` : ""}</div></body>
+</div>
+</main>${pageFooter(theme, input.postalAddress, input.privacyUrl)}</div></body>
 </html>`
   return new Response(html, {
     status: input.status ?? 200,

@@ -6,7 +6,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { type BrandSettings, toBrand } from "../../src/domain/brand.ts"
+import type { BrandSettings } from "../../src/domain/brand.ts"
 import { renderFormPage } from "../../src/forms/page.ts"
 import { invalidLinkPage, type Look, type Prefs, preferencePage, resultPage } from "../../src/public/pages.ts"
 import { pageTheme } from "../../src/public/shell.ts"
@@ -100,51 +100,60 @@ const states: Record<string, (look: Look) => Response> = {
     resultPage(l, 400, "Check your email address", "Enter a valid email address.", { kind: "danger" }),
 }
 
-// The signup form after a failed submit (HAL-3443): its own page, in the brand's theme.
-const formTheme = toBrand(brand).theme
-writeFileSync(
-  join(dir, "f-form-error.html"),
-  renderFormPage({
-    form: {
-      id: "frm_preview",
-      name: "Join the Coursified Learning Platform weekly newsletter",
-      description: "One email every Friday with what's new.",
-      fields: ["email", "name", "company", "plan"],
-      fieldDefs: [
-        { key: "company", label: "Company or organisation", type: "text", required: true },
-        {
-          key: "plan",
-          label: "Plan",
-          type: "select",
-          required: false,
-          options: ["Free", "Team", "Enterprise"],
-        },
-      ],
-      topicChoice: "pick",
-      turnstileSiteKey: null,
+// The signup form, fresh and after a failed submit (HAL-3443), in each look like every other page.
+const form = {
+  id: "frm_preview",
+  name: "Join the Coursified Learning Platform weekly newsletter",
+  description: "One email every Friday with what's new.",
+  fields: ["email", "name", "company", "plan"],
+  fieldDefs: [
+    { key: "company", label: "Company or organisation", type: "text" as const, required: true },
+    {
+      key: "plan",
+      label: "Plan",
+      type: "select" as const,
+      required: false,
+      options: ["Free", "Team", "Enterprise"],
     },
-    topics: [
-      { id: "t1", name: "Weekly product updates", description: "Every Friday." },
-      { id: "t2", name: "Launches", description: null },
-    ],
-    theme: formTheme,
-    brandName: brand.name,
-    siteUrl: brand.siteUrl,
-    action: "/v1/forms/frm_preview/submit",
-    filled: {
-      values: {
-        email: "ada@verylongcompanydomainname.example",
-        name: "Ada Lovelace",
-        plan: "Team",
-        topics: ["t1"],
-      },
-      field: "company",
-      message: 'Fill in "Company or organisation".',
-    },
-  }),
-)
-
-const pages: Array<string> = ["f-form-error.html"]
+  ],
+  topicChoice: "pick" as const,
+  turnstileSiteKey: null,
+}
+const formTopics = [
+  { id: "t1", name: "Weekly product updates", description: "Every Friday." },
+  { id: "t2", name: "Launches", description: null },
+]
+const filled = {
+  values: {
+    email: "ada@verylongcompanydomainname.example",
+    name: "Ada Lovelace",
+    plan: "Team",
+    topics: ["t1"],
+  },
+  field: "company",
+  message: 'Fill in "Company or organisation".',
+}
+const pages: Array<string> = []
+for (const [lookName, look] of Object.entries(looks))
+  for (const [state, withError] of [
+    ["f-form", false],
+    ["f-form-error", true],
+  ] as const) {
+    const name = `${state}-${lookName}.html`
+    writeFileSync(
+      join(dir, name),
+      renderFormPage({
+        form,
+        topics: formTopics,
+        theme: look.theme,
+        postalAddress: look.postalAddress,
+        privacyUrl: look.privacyUrl,
+        action: "/v1/forms/frm_preview/submit",
+        filled: withError ? filled : undefined,
+      }),
+    )
+    pages.push(name)
+  }
 for (const [lookName, look] of Object.entries(looks))
   for (const [state, build] of Object.entries(states)) {
     const name = `${state}-${lookName}`

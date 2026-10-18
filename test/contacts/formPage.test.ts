@@ -75,7 +75,7 @@ describe("GET /f/:formId", () => {
     expect(html).toContain("<span>One email every Friday.</span>")
     expect(html).toContain("Short, useful, &lt;b&gt;never&lt;/b&gt; spam.")
     // 16px inputs (no iOS zoom), 44px targets, a hidden honeypot, and no Turnstile without a site key.
-    expect(html).toContain("font-size:16px")
+    expect(html).toContain("font:400 16px/1.25 var(--font-body);width:100%;height:44px")
     expect(html).toContain("min-height:44px")
     expect(html).toContain('name="_hp"')
     expect(html).not.toContain("challenges.cloudflare.com")

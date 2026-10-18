@@ -1,11 +1,11 @@
-import type { Theme } from "../templates/kit.ts"
+import { brandHeader, type PageTheme, pageFooter, pageStyle } from "../public/shell.ts"
 
 /**
  * The hosted signup page (`GET /f/:formId`) and the embed snippet. Plain HTML that works without
  * JavaScript: the form posts to `/v1/forms/:id/submit`, which answers with a page (or the form's
- * redirect). Styled from the sender's brand (the template kit's theme), light and dark, and sized
- * for phones first: one column, 16px inputs so iOS doesn't zoom, 44px targets, and no horizontal
- * scroll at any width.
+ * redirect). Styled like every other public page (public/shell.ts and style.ts): the sender's brand
+ * or Flareyard's, light and dark, the same Card, header and footer. Sized for phones first: one
+ * column, 16px inputs so iOS doesn't zoom, 44px targets, and no horizontal scroll at any width.
  */
 
 export type PageField = {
@@ -124,16 +124,16 @@ export const pageCsp = (fontsHref: string | undefined) => {
 export const renderFormPage = (input: {
   readonly form: PageForm
   readonly topics: ReadonlyArray<PageTopic>
-  readonly theme: Theme
-  readonly brandName: string
-  readonly siteUrl: string | null
+  /** publicLook's theme: the workspace's brand, or Flareyard's look. */
+  readonly theme: PageTheme
+  readonly postalAddress?: string | null
+  readonly privacyUrl?: string | null
   /** Where the form posts: `/v1/forms/:id/submit` on this origin. */
   readonly action: string
   /** After a failed submit: what was typed and what went wrong, shown on the form itself (HAL-3443). */
   readonly filled?: Filled | undefined
 }) => {
   const { form, topics, theme, filled } = input
-  const c = theme.colors
   const pick = form.topicChoice === "pick" && topics.length > 0
   const field = (
     name: string,
@@ -167,9 +167,6 @@ export const renderFormPage = (input: {
               `<li><strong>${esc(t.name)}</strong>${t.description ? `<span>${esc(t.description)}</span>` : ""}</li>`,
           )
           .join("")}</ul></section>`
-  const logo = theme.logoUrl
-    ? `<img class="logo" src="${esc(theme.logoUrl)}" alt="${esc(input.brandName)}" height="32">`
-    : `<p class="brand">${esc(input.brandName)}</p>`
   const turnstile = form.turnstileSiteKey
     ? `<div class="cf-turnstile" data-sitekey="${esc(form.turnstileSiteKey)}" data-size="flexible"></div>`
     : ""
@@ -179,52 +176,14 @@ export const renderFormPage = (input: {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${esc(form.name)} · ${esc(input.brandName)}</title>
+<title>${esc(form.name)} · ${esc(theme.name)}</title>
 ${theme.fontsHref ? `<link rel="stylesheet" href="${esc(theme.fontsHref)}">` : ""}
 ${form.turnstileSiteKey ? `<script src="${TURNSTILE_SCRIPT}" async defer></script>` : ""}
-<style>
-:root{--bg:${c.bg};--surface:${c.white};--fg:${c.fg};--body:${c.body};--muted:${c.muted};--border:${c.border};--accent:${c.indigo};--on-accent:#ffffff;--danger:${c.red};color-scheme:light dark}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1012;--surface:#17181b;--fg:#f2f3f5;--body:#d5d8dc;--muted:#9aa0a8;--border:#2a2d31}}
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--body);font:16px/1.55 ${theme.fonts.body};min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:clamp(16px,6vw,64px) 16px}
-main{width:100%;max-width:30rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:clamp(20px,5vw,36px)}
-.logo{display:block;height:32px;width:auto;max-width:100%;margin:0 0 24px}
-.brand{margin:0 0 20px;font:600 14px/1 ${theme.fonts.display};color:var(--muted)}
-h1{margin:0 0 8px;font:600 clamp(1.4rem,4.5vw,1.75rem)/1.2 ${theme.fonts.display};color:var(--fg);overflow-wrap:anywhere}
-.lede{margin:0 0 20px;overflow-wrap:anywhere}
-.topics h2{margin:0 0 8px;font:600 .875rem/1.3 ${theme.fonts.body};color:var(--fg)}
-.topics ul{margin:0 0 20px;padding:0;list-style:none;display:grid;gap:8px}
-.topics li{padding:10px 12px;border:1px solid var(--border);border-radius:10px;display:grid;gap:2px;overflow-wrap:anywhere}
-.topics li strong{color:var(--fg);font-weight:600}
-.topics li span{font-size:.9rem;color:var(--muted)}
-form{display:grid;gap:14px}
-.field{display:grid;gap:6px}
-label{font-weight:600;color:var(--fg);font-size:.95rem}
-.opt{font-weight:400;color:var(--muted)}
-input,select{font:inherit;font-size:16px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg)}
-.check{grid-template-columns:auto 1fr;align-items:start;gap:10px}
-.check input{width:24px;min-height:24px;height:24px;margin:2px 0 0;accent-color:var(--accent)}
-.check label{font-weight:400;display:grid;gap:2px;min-height:28px;align-content:center}
-@media (pointer:coarse){.check label{min-height:44px}.check input{width:28px;height:28px;min-height:28px}}
-.check label strong{font-weight:600}
-.check label span{font-size:.9rem;color:var(--muted)}
-fieldset.pick{border:0;margin:0;padding:0;display:grid;gap:10px}
-fieldset.pick legend{font-weight:600;color:var(--fg);margin:0 0 6px;padding:0}
-input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
-button{font:600 16px/1 ${theme.fonts.body};min-height:48px;padding:0 20px;border:0;border-radius:10px;background:var(--accent);color:var(--on-accent);cursor:pointer;width:100%}
-button:hover{filter:brightness(1.08)}
-.error{margin:0;padding:10px 12px;border-radius:10px;border:1px solid var(--danger);color:var(--danger)}
-.field-error{margin:0;font-size:.9rem;color:var(--danger)}
-[aria-invalid="true"]{border-color:var(--danger);outline:1px solid var(--danger)}
-.fine{margin:4px 0 0;font-size:.8rem;color:var(--muted)}
-.fine a{color:inherit}
-</style>
+${pageStyle(theme)}
 </head>
-<body>
-<main>
-${logo}
+<body><div class="wrap"><main>
+<header class="head">${brandHeader(theme)}</header>
+<div class="body">
 <h1>${esc(form.name)}</h1>
 ${form.description ? `<p class="lede">${esc(form.description)}</p>` : ""}
 ${topicList}
@@ -239,9 +198,10 @@ ${topicPicker}
 <div class="hp" aria-hidden="true"><label for="f-hp">Leave this empty</label><input id="f-hp" name="_hp" type="text" tabindex="-1" autocomplete="off"></div>
 ${turnstile}
 <button type="submit">Sign up</button>
-<p class="fine">You can unsubscribe at any time from any email we send.${input.siteUrl ? ` <a href="${esc(input.siteUrl)}">${esc(input.brandName)}</a>` : ""}</p>
+<p class="fine">You can unsubscribe at any time from any email we send.${theme.siteUrl ? ` <a href="${esc(theme.siteUrl)}">${esc(theme.name)}</a>` : ""}</p>
 </form>
-</main>
+</div>
+</main>${pageFooter(theme, input.postalAddress, input.privacyUrl)}</div>
 </body>
 </html>`
 }

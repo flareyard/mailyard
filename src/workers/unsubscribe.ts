@@ -9,7 +9,7 @@ import {
 } from "../domain/unsubscribe.ts"
 import { publicLook } from "../public/look.ts"
 import { invalidLinkPage, page, preferencePage } from "../public/pages.ts"
-import type { NoticeKind } from "../public/shell.ts"
+import { glyph, type NoticeKind } from "../public/shell.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /**
@@ -82,7 +82,7 @@ export const handleRequestLink = async (request: Request, env: Env) => {
       return page(
         look,
         "Too many tries",
-        `<h1>Too many tries</h1><p class="muted">Wait a minute and try again.</p>`,
+        `${glyph(429)}<h1>Too many tries</h1><p class="muted">Wait a minute and try again.</p>`,
         429,
       )
   }
@@ -94,6 +94,6 @@ export const handleRequestLink = async (request: Request, env: Env) => {
   return page(
     look,
     "Check your inbox",
-    `<h1>Check your inbox</h1><p class="muted">If that address is on one of our lists, a new link to your preferences is on its way. It can take a few minutes.</p>`,
+    `${glyph(200, "info")}<h1>Check your inbox</h1><p class="muted">If that address is on one of our lists, a new link to your preferences is on its way. It can take a few minutes.</p>`,
   )
 }
