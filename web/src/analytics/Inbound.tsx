@@ -1,12 +1,13 @@
 /**
  * Analytics → Inbound (design: inbound*.html; HANDOFF-ops §15): received, rejected at the door, held and spam;
- * per day, per mailbox and top senders (≈ when estimated); response times for shared mailboxes. DMARC fail and
- * RBL rejections never reach Mailyard, so they read "Not visible to Mailyard yet (HAL-3393)", never 0.
+ * per day, per mailbox and top senders (≈ when estimated); response times for shared mailboxes. DMARC, auth and
+ * RBL rejections happen in Email Routing before mail reaches Mailyard; they're read from its analytics (HAL-3393)
+ * when CLOUDFLARE_ANALYTICS_TOKEN is set, and otherwise say why they can't be, never 0.
  */
 import { useQuery } from "@tanstack/react-query"
 import { fmtInt, num } from "../lib/format.ts"
 import { Icon } from "../ui/icons.tsx"
-import { countAxis, n0 } from "./logic.ts"
+import { countAxis, n0, upstreamCount } from "./logic.ts"
 import { inboundQuery, responseTimesQuery } from "./queries.ts"
 import { ChartPanel, dayLong, LineChart, SkeletonBlock, shortDay, useRange } from "./shared.tsx"
 
@@ -34,21 +35,25 @@ export function Inbound() {
             <span className="stat-value">{fmtInt(i.rejected.total)}</span>
             <span className="stat-delta">No such address {fmtInt(i.rejected.noSuchAddress)}</span>
           </div>
-          <div className="fig">
-            <span className="stat-label">DMARC fail · RBL</span>
-            {i.rejected.dmarcFail === null && i.rejected.rbl === null ? (
+          <div className="fig" data-endpoint="GET /v1/stats/inbound rejected.upstream (built, HAL-3393)">
+            <span className="stat-label">Rejected by Email Routing</span>
+            {i.rejected.upstream.connected ? (
               <>
-                <span className="stat-value ana-fig-note">
-                  <span className="muted">Not visible to Mailyard yet (HAL-3393)</span>
+                <span className="stat-value">{fmtInt(i.rejected.upstreamRejected)}</span>
+                <span className="stat-delta">
+                  DMARC {upstreamCount(i.rejected.dmarcFail)} · auth {upstreamCount(i.rejected.authFail)} ·
+                  RBL {upstreamCount(i.rejected.rbl)}
+                  {num(i.rejected.upstream.zones) ? ` · ${fmtInt(i.rejected.upstream.zones)} zones` : ""}
                 </span>
-                <span className="stat-delta">Email Routing rejects that mail before Mailyard sees it</span>
               </>
             ) : (
               <>
-                <span className="stat-value">{fmtInt(n0(i.rejected.dmarcFail) + n0(i.rejected.rbl))}</span>
+                <span className="stat-value ana-fig-note">
+                  <span className="muted">Not read yet</span>
+                </span>
                 <span className="stat-delta">
-                  DMARC {i.rejected.dmarcFail === null ? "—" : fmtInt(i.rejected.dmarcFail)} · RBL{" "}
-                  {i.rejected.rbl === null ? "—" : fmtInt(i.rejected.rbl)}
+                  {i.rejected.upstream.reason ??
+                    "Email Routing rejects that mail before Mailyard sees it; its analytics aren't connected."}
                 </span>
               </>
             )}

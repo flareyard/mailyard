@@ -24032,12 +24032,20 @@ export interface operations {
                     "application/json": {
                         range: string;
                         received: number | ("Infinity" | "-Infinity" | "NaN");
-                        /** @description Mailyard's own refusals (no such address). Email Routing rejects DMARC failures and listed senders before mail reaches Mailyard, so those are null until its analytics are read. */
+                        /** @description `total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN. */
                         rejected: {
                             total: number | ("Infinity" | "-Infinity" | "NaN");
                             noSuchAddress: number | ("Infinity" | "-Infinity" | "NaN");
                             dmarcFail: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            authFail: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            upstreamRejected: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             rbl: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            upstream: {
+                                connected: boolean;
+                                reason: string | null;
+                                zones: number | ("Infinity" | "-Infinity" | "NaN");
+                                from: string | null;
+                            };
                         };
                         held: number | ("Infinity" | "-Infinity" | "NaN");
                         spam: number | ("Infinity" | "-Infinity" | "NaN");

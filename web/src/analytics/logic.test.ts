@@ -21,6 +21,7 @@ import {
   rangesFor,
   rateAxis,
   stackBars,
+  upstreamCount,
   viewFromPath,
   xLabelShown,
 } from "./logic.ts"
@@ -214,5 +215,13 @@ describe("usage", () => {
     expect(extraCost(3678, 3000, 0.35, 3400)).toBeCloseTo(1.19, 2)
     expect(extraCost(1000, 3000, 0.35, 1500)).toBe(0)
     expect(extraCost(2500, 3000, 0.35, 1500)).toBeCloseTo(0.35, 2)
+  })
+})
+
+describe("upstreamCount (HAL-3393)", () => {
+  it("formats a reported count and dashes a missing one, never 0", () => {
+    expect(upstreamCount(1234)).toBe("1,234")
+    expect(upstreamCount("0")).toBe("0")
+    expect(upstreamCount(null)).toBe("—")
   })
 })

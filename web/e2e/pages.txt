@@ -147,6 +147,7 @@ analytics/engagement?range=30d
 analytics/inbound
 analytics/inbound?range=90d
 analytics/inbound?fx=unavailable
+analytics/inbound?fx=upstream
 analytics/audience
 analytics/audience?range=30d
 analytics/audience?range=90d

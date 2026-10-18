@@ -12,6 +12,7 @@
  *   viewer           signed in as a viewer (Analytics is read-only for everyone)
  *   quota-unknown    usage.today.source is cloudflare-unreachable; the forecast can't plan days
  *   unavailable      support@'s mailbox store didn't answer the response-times read
+ *   upstream         Email Routing's analytics are read (CLOUDFLARE_ANALYTICS_TOKEN set): DMARC, auth and RBL counts
  */
 import type { Json, Override } from "../fixtures/overrides.ts"
 
@@ -332,7 +333,31 @@ function inbound(url: URL): Inbound {
   return {
     range,
     received,
-    rejected: { total: rejected, noSuchAddress: rejected, dmarcFail: null, rbl: null },
+    rejected:
+      fx() === "upstream"
+        ? {
+            total: rejected,
+            noSuchAddress: rejected,
+            dmarcFail: Math.round(rejected * 1.4),
+            authFail: Math.round(rejected * 0.6),
+            upstreamRejected: Math.round(rejected * 2.6),
+            rbl: Math.round(rejected * 0.6),
+            upstream: { connected: true, reason: null, zones: 2, from: "Email Routing analytics" },
+          }
+        : {
+            total: rejected,
+            noSuchAddress: rejected,
+            dmarcFail: null,
+            authFail: null,
+            upstreamRejected: null,
+            rbl: null,
+            upstream: {
+              connected: false,
+              reason: "CLOUDFLARE_ANALYTICS_TOKEN isn't set, so Email Routing's analytics can't be read.",
+              zones: 0,
+              from: null,
+            },
+          },
     held: Math.max(1, Math.round(received / 120)),
     spam,
     byMailbox: [

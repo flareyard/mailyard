@@ -419,3 +419,9 @@ export function fmtLine(v: Wire): string {
   const p = x * 100
   return p < 1 ? `${p.toFixed(2)}%` : `${p.toFixed(1)}%`
 }
+
+/** An Email Routing rejection count (HAL-3393): a number, or "—" when that one wasn't reported. */
+export const upstreamCount = (v: number | string | null | undefined): string => {
+  const n = num(v)
+  return n === null ? "—" : new Intl.NumberFormat("en").format(n)
+}
