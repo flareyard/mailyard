@@ -38016,6 +38016,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "createdBy": {
+                            "type": "string",
+                          },
                           "error": {
                             "anyOf": [
                               {
@@ -38186,6 +38189,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "processed": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
                           "rows": {
                             "anyOf": [
                               {
@@ -38209,6 +38227,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "string",
                           },
+                          "total": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "url": {
                             "anyOf": [
                               {
@@ -38226,6 +38266,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "kind",
                           "status",
                           "rows",
+                          "processed",
+                          "total",
+                          "createdBy",
                           "fields",
                           "filename",
                           "url",
@@ -38301,7 +38344,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
       },
       "post": {
         "operationId": "exports.create",
-        "parameters": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dryRun",
+            "required": false,
+            "schema": {
+              "enum": [
+                "1",
+                "true",
+                "0",
+                "false",
+              ],
+              "type": "string",
+            },
+          },
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -38396,45 +38454,11 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "createdAt": {
-                      "anyOf": [
-                        {
-                          "type": "number",
-                        },
-                        {
-                          "enum": [
-                            "Infinity",
-                            "-Infinity",
-                            "NaN",
-                          ],
-                          "type": "string",
-                        },
-                      ],
-                    },
-                    "error": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                        },
-                        {
-                          "type": "null",
-                        },
-                      ],
-                    },
-                    "fields": {
-                      "items": {
-                        "type": "string",
-                      },
-                      "type": "array",
-                    },
-                    "filename": {
-                      "type": "string",
-                    },
-                    "finishedAt": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
                           "anyOf": [
                             {
                               "type": "number",
@@ -38449,189 +38473,301 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                           ],
                         },
-                        {
-                          "type": "null",
+                        "createdBy": {
+                          "type": "string",
                         },
-                      ],
-                    },
-                    "id": {
-                      "type": "string",
-                    },
-                    "kind": {
-                      "enum": [
-                        "contacts",
-                        "workspace",
-                      ],
-                      "type": "string",
-                    },
-                    "parts": {
-                      "anyOf": [
-                        {
-                          "items": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "bytes": {
-                                "anyOf": [
-                                  {
-                                    "type": "number",
-                                  },
-                                  {
-                                    "enum": [
-                                      "Infinity",
-                                      "-Infinity",
-                                      "NaN",
-                                    ],
-                                    "type": "string",
-                                  },
-                                ],
-                              },
-                              "error": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                  },
-                                  {
-                                    "type": "null",
-                                  },
-                                ],
-                              },
-                              "filename": {
-                                "type": "string",
-                              },
-                              "format": {
-                                "enum": [
-                                  "mbox",
-                                  "zip",
-                                  "csv",
-                                  "json",
-                                ],
-                                "type": "string",
-                              },
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number",
-                                  },
-                                  {
-                                    "enum": [
-                                      "Infinity",
-                                      "-Infinity",
-                                      "NaN",
-                                    ],
-                                    "type": "string",
-                                  },
-                                ],
-                              },
-                              "kind": {
-                                "enum": [
-                                  "mail",
-                                  "contacts",
-                                  "templates",
-                                  "lists",
-                                  "settings",
-                                  "audit",
-                                  "manifest",
-                                ],
-                                "type": "string",
-                              },
-                              "mailboxId": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                  },
-                                  {
-                                    "type": "null",
-                                  },
-                                ],
-                              },
-                              "status": {
-                                "enum": [
-                                  "pending",
-                                  "complete",
-                                  "failed",
-                                ],
-                                "type": "string",
-                              },
-                              "url": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                  },
-                                  {
-                                    "type": "null",
-                                  },
-                                ],
-                              },
+                        "error": {
+                          "anyOf": [
+                            {
+                              "type": "string",
                             },
-                            "required": [
-                              "kind",
-                              "format",
-                              "filename",
-                              "items",
-                              "bytes",
-                              "status",
-                              "error",
-                              "mailboxId",
-                              "url",
-                            ],
-                            "type": "object",
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "fields": {
+                          "items": {
+                            "type": "string",
                           },
                           "type": "array",
                         },
-                        {
-                          "type": "null",
+                        "filename": {
+                          "type": "string",
                         },
-                      ],
-                    },
-                    "rows": {
-                      "anyOf": [
-                        {
-                          "type": "number",
+                        "finishedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
                         },
-                        {
+                        "id": {
+                          "type": "string",
+                        },
+                        "kind": {
                           "enum": [
-                            "Infinity",
-                            "-Infinity",
-                            "NaN",
+                            "contacts",
+                            "workspace",
                           ],
                           "type": "string",
                         },
-                      ],
-                    },
-                    "status": {
-                      "enum": [
-                        "running",
-                        "completed",
-                        "failed",
-                      ],
-                      "type": "string",
-                    },
-                    "url": {
-                      "anyOf": [
-                        {
+                        "parts": {
+                          "anyOf": [
+                            {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "bytes": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "error": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "filename": {
+                                    "type": "string",
+                                  },
+                                  "format": {
+                                    "enum": [
+                                      "mbox",
+                                      "zip",
+                                      "csv",
+                                      "json",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "kind": {
+                                    "enum": [
+                                      "mail",
+                                      "contacts",
+                                      "templates",
+                                      "lists",
+                                      "settings",
+                                      "audit",
+                                      "manifest",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "mailboxId": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "pending",
+                                      "complete",
+                                      "failed",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "url": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                },
+                                "required": [
+                                  "kind",
+                                  "format",
+                                  "filename",
+                                  "items",
+                                  "bytes",
+                                  "status",
+                                  "error",
+                                  "mailboxId",
+                                  "url",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "processed": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "rows": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "status": {
+                          "enum": [
+                            "running",
+                            "completed",
+                            "failed",
+                          ],
                           "type": "string",
                         },
-                        {
-                          "type": "null",
+                        "total": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
                         },
+                        "url": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                          "description": "A signed link to the CSV, good for a day. Null until it's written, and always null in GET /v1/exports: fetch the export by id for a fresh link.",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "status",
+                        "rows",
+                        "processed",
+                        "total",
+                        "createdBy",
+                        "fields",
+                        "filename",
+                        "url",
+                        "error",
+                        "createdAt",
+                        "finishedAt",
+                        "parts",
                       ],
-                      "description": "A signed link to the CSV, good for a day. Null until it's written, and always null in GET /v1/exports: fetch the export by id for a fresh link.",
+                      "type": "object",
                     },
-                  },
-                  "required": [
-                    "id",
-                    "kind",
-                    "status",
-                    "rows",
-                    "fields",
-                    "filename",
-                    "url",
-                    "error",
-                    "createdAt",
-                    "finishedAt",
-                    "parts",
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "dryRun": {
+                          "enum": [
+                            true,
+                          ],
+                          "type": "boolean",
+                        },
+                        "rows": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "dryRun",
+                        "rows",
+                      ],
+                      "type": "object",
+                    },
                   ],
-                  "type": "object",
                 },
               },
             },
@@ -38733,6 +38869,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "createdBy": {
+                      "type": "string",
+                    },
                     "error": {
                       "anyOf": [
                         {
@@ -38903,6 +39042,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "processed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "rows": {
                       "anyOf": [
                         {
@@ -38926,6 +39080,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "url": {
                       "anyOf": [
                         {
@@ -38943,6 +39119,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "kind",
                     "status",
                     "rows",
+                    "processed",
+                    "total",
+                    "createdBy",
                     "fields",
                     "filename",
                     "url",
@@ -40877,6 +41056,81 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "bytesRead": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "consent": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "attested": {
+                                    "enum": [
+                                      true,
+                                    ],
+                                    "type": "boolean",
+                                  },
+                                  "attestedAt": {
+                                    "anyOf": [
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                          },
+                                          {
+                                            "enum": [
+                                              "Infinity",
+                                              "-Infinity",
+                                              "NaN",
+                                            ],
+                                            "type": "string",
+                                          },
+                                        ],
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "attestedBy": {
+                                    "type": "string",
+                                  },
+                                  "statement": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                },
+                                "required": [
+                                  "attested",
+                                  "statement",
+                                  "attestedBy",
+                                  "attestedAt",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "created": {
                             "anyOf": [
                               {
@@ -40943,6 +41197,32 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "items": {
                               "additionalProperties": false,
                               "properties": {
+                                "code": {
+                                  "anyOf": [
+                                    {
+                                      "enum": [
+                                        "missing_email",
+                                        "invalid_email",
+                                        "invalid_value",
+                                        "parse_error",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
+                                "column": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
                                 "line": {
                                   "anyOf": [
                                     {
@@ -40961,14 +41241,96 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "message": {
                                   "type": "string",
                                 },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                    },
+                                    {
+                                      "type": "null",
+                                    },
+                                  ],
+                                },
                               },
                               "required": [
                                 "line",
                                 "message",
+                                "column",
+                                "value",
+                                "code",
                               ],
                               "type": "object",
                             },
                             "type": "array",
+                          },
+                          "errorsTotal": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "etaAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "fileName": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "fileSize": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
                           },
                           "finishedAt": {
                             "anyOf": [
@@ -41036,6 +41398,43 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                             "type": "string",
                           },
+                          "processed": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "ratePerMinute": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "rows": {
                             "anyOf": [
                               {
@@ -41048,6 +41447,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "NaN",
                                 ],
                                 "type": "string",
+                              },
+                            ],
+                          },
+                          "size": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
                               },
                             ],
                           },
@@ -41066,12 +41487,35 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "startedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "status": {
                             "enum": [
                               "queued",
                               "running",
                               "completed",
                               "failed",
+                              "cancelled",
                             ],
                             "type": "string",
                           },
@@ -41118,6 +41562,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "required": [
                           "id",
                           "uploadId",
+                          "fileName",
+                          "fileSize",
                           "status",
                           "mapping",
                           "topicIds",
@@ -41132,8 +41578,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "duplicates",
                           "suppressed",
                           "errors",
+                          "errorsTotal",
+                          "processed",
+                          "bytesRead",
+                          "size",
+                          "ratePerMinute",
+                          "etaAt",
+                          "consent",
                           "error",
                           "createdAt",
+                          "startedAt",
                           "finishedAt",
                         ],
                         "type": "object",
@@ -41212,6 +41666,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "consent": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "attested": {
+                        "type": "boolean",
+                      },
+                      "statement": {
+                        "maxLength": 1000,
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "attested",
+                    ],
+                    "type": "object",
+                  },
                   "defaultStatus": {
                     "enum": [
                       "subscribed",
@@ -41259,6 +41729,81 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "bytesRead": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "consent": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attested": {
+                              "enum": [
+                                true,
+                              ],
+                              "type": "boolean",
+                            },
+                            "attestedAt": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "attestedBy": {
+                              "type": "string",
+                            },
+                            "statement": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "attested",
+                            "statement",
+                            "attestedBy",
+                            "attestedAt",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "created": {
                       "anyOf": [
                         {
@@ -41325,6 +41870,32 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "code": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "missing_email",
+                                  "invalid_email",
+                                  "invalid_value",
+                                  "parse_error",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "column": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "line": {
                             "anyOf": [
                               {
@@ -41343,14 +41914,96 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "message": {
                             "type": "string",
                           },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                         },
                         "required": [
                           "line",
                           "message",
+                          "column",
+                          "value",
+                          "code",
                         ],
                         "type": "object",
                       },
                       "type": "array",
+                    },
+                    "errorsTotal": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fileName": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fileSize": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "finishedAt": {
                       "anyOf": [
@@ -41418,6 +42071,43 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "processed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "rows": {
                       "anyOf": [
                         {
@@ -41430,6 +42120,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -41448,12 +42160,35 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "status": {
                       "enum": [
                         "queued",
                         "running",
                         "completed",
                         "failed",
+                        "cancelled",
                       ],
                       "type": "string",
                     },
@@ -41500,6 +42235,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "required": [
                     "id",
                     "uploadId",
+                    "fileName",
+                    "fileSize",
                     "status",
                     "mapping",
                     "topicIds",
@@ -41514,8 +42251,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "duplicates",
                     "suppressed",
                     "errors",
+                    "errorsTotal",
+                    "processed",
+                    "bytesRead",
+                    "size",
+                    "ratePerMinute",
+                    "etaAt",
+                    "consent",
                     "error",
                     "createdAt",
+                    "startedAt",
                     "finishedAt",
                   ],
                   "type": "object",
@@ -41605,6 +42350,81 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "bytesRead": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "consent": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attested": {
+                              "enum": [
+                                true,
+                              ],
+                              "type": "boolean",
+                            },
+                            "attestedAt": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "attestedBy": {
+                              "type": "string",
+                            },
+                            "statement": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "attested",
+                            "statement",
+                            "attestedBy",
+                            "attestedAt",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "created": {
                       "anyOf": [
                         {
@@ -41671,6 +42491,32 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "code": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "missing_email",
+                                  "invalid_email",
+                                  "invalid_value",
+                                  "parse_error",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "column": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "line": {
                             "anyOf": [
                               {
@@ -41689,14 +42535,96 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "message": {
                             "type": "string",
                           },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                         },
                         "required": [
                           "line",
                           "message",
+                          "column",
+                          "value",
+                          "code",
                         ],
                         "type": "object",
                       },
                       "type": "array",
+                    },
+                    "errorsTotal": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fileName": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fileSize": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "finishedAt": {
                       "anyOf": [
@@ -41764,6 +42692,43 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "processed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "rows": {
                       "anyOf": [
                         {
@@ -41776,6 +42741,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -41794,12 +42781,35 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "status": {
                       "enum": [
                         "queued",
                         "running",
                         "completed",
                         "failed",
+                        "cancelled",
                       ],
                       "type": "string",
                     },
@@ -41846,6 +42856,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "required": [
                     "id",
                     "uploadId",
+                    "fileName",
+                    "fileSize",
                     "status",
                     "mapping",
                     "topicIds",
@@ -41860,8 +42872,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "duplicates",
                     "suppressed",
                     "errors",
+                    "errorsTotal",
+                    "processed",
+                    "bytesRead",
+                    "size",
+                    "ratePerMinute",
+                    "etaAt",
+                    "consent",
                     "error",
                     "createdAt",
+                    "startedAt",
                     "finishedAt",
                   ],
                   "type": "object",
@@ -41869,6 +42889,627 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "imports",
+        ],
+      },
+    },
+    "/v1/imports/{id}/cancel": {
+      "post": {
+        "operationId": "imports.cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "bytesRead": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "consent": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "attested": {
+                              "enum": [
+                                true,
+                              ],
+                              "type": "boolean",
+                            },
+                            "attestedAt": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "attestedBy": {
+                              "type": "string",
+                            },
+                            "statement": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                          },
+                          "required": [
+                            "attested",
+                            "statement",
+                            "attestedBy",
+                            "attestedAt",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "created": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "createdAt": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "defaultStatus": {
+                      "enum": [
+                        "subscribed",
+                        "unsubscribed",
+                      ],
+                      "type": "string",
+                    },
+                    "duplicates": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "errors": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "missing_email",
+                                  "invalid_email",
+                                  "invalid_value",
+                                  "parse_error",
+                                ],
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "column": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "line": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "message": {
+                            "type": "string",
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "line",
+                          "message",
+                          "column",
+                          "value",
+                          "code",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "errorsTotal": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "etaAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fileName": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "fileSize": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "headers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "id": {
+                      "type": "string",
+                    },
+                    "invalid": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "mapping": {
+                      "additionalProperties": {
+                        "type": "string",
+                      },
+                      "type": "object",
+                    },
+                    "onConflict": {
+                      "enum": [
+                        "update",
+                        "skip",
+                      ],
+                      "type": "string",
+                    },
+                    "processed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "ratePerMinute": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "rows": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "skipped": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "status": {
+                      "enum": [
+                        "queued",
+                        "running",
+                        "completed",
+                        "failed",
+                        "cancelled",
+                      ],
+                      "type": "string",
+                    },
+                    "suppressed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "topicIds": {
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "updated": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "uploadId": {
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "id",
+                    "uploadId",
+                    "fileName",
+                    "fileSize",
+                    "status",
+                    "mapping",
+                    "topicIds",
+                    "onConflict",
+                    "defaultStatus",
+                    "headers",
+                    "rows",
+                    "created",
+                    "updated",
+                    "skipped",
+                    "invalid",
+                    "duplicates",
+                    "suppressed",
+                    "errors",
+                    "errorsTotal",
+                    "processed",
+                    "bytesRead",
+                    "size",
+                    "ratePerMinute",
+                    "etaAt",
+                    "consent",
+                    "error",
+                    "createdAt",
+                    "startedAt",
+                    "finishedAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {

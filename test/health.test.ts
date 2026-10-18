@@ -155,6 +155,7 @@ describe("GET /openapi.json", () => {
       "/v1/imports",
       "/v1/imports/contacts",
       "/v1/imports/{id}",
+      "/v1/imports/{id}/cancel",
       "/v1/inbound",
       "/v1/inbound/{id}",
       "/v1/inbound/{id}/reprocess",

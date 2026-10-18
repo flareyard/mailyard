@@ -162,6 +162,13 @@ export const subscriptionChanges = sqliteTable(
     from: text("from", { enum: ["subscribed", "unconfirmed", "unsubscribed"] }),
     to: text("to", { enum: ["subscribed", "unconfirmed", "unsubscribed"] }).notNull(),
     source: text("source").notNull(),
+    /** The consent behind a change made for the person, such as an import's attestation (HAL-3371). */
+    evidence: text("evidence", { mode: "json" }).$type<{
+      readonly importId?: string
+      readonly attestedBy?: string
+      readonly attestedAt?: number
+      readonly statement?: string
+    }>(),
     at: integer("at").notNull(),
   },
   (t) => [
@@ -1227,6 +1234,15 @@ export const uploads = sqliteTable(
   (t) => [index("uploads_created").on(t.createdAt)],
 )
 
+/** One rejected row of a contact import: where, which cell, and why as a code (HAL-3371). */
+export interface ImportRowError {
+  readonly line: number
+  readonly message: string
+  readonly column?: string | null
+  readonly value?: string | null
+  readonly code?: "missing_email" | "invalid_email" | "invalid_value" | "parse_error"
+}
+
 /** A contact CSV import, run by ContactImportWorkflow in 5,000-row steps from a byte offset. */
 export const contactImports = sqliteTable(
   "contact_imports",
@@ -1240,10 +1256,18 @@ export const contactImports = sqliteTable(
     topicIds: text("topic_ids", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
     onConflict: text("on_conflict", { enum: ["update", "skip"] }).notNull(),
     defaultStatus: text("default_status", { enum: ["subscribed", "unsubscribed"] }).notNull(),
-    status: text("status", { enum: ["queued", "running", "completed", "failed"] })
+    status: text("status", { enum: ["queued", "running", "completed", "failed", "cancelled"] })
       .notNull()
       .default("queued"),
     headers: text("headers", { mode: "json" }).$type<ReadonlyArray<string>>(),
+    /** When the first step started reading, for the rate and the ETA (HAL-3371). */
+    startedAt: integer("started_at"),
+    /** Every rejected row, counted; `errors` keeps the first 100, errors.csv has them all. */
+    errorsTotal: integer("errors_total").notNull().default(0),
+    /** The person's attestation that these contacts agreed to hear from the sender. */
+    consentStatement: text("consent_statement"),
+    attestedBy: text("attested_by"),
+    attestedAt: integer("attested_at"),
     /** Where the next step reads from: a byte offset into the file, and the line it starts on. */
     offset: integer("offset").notNull().default(0),
     line: integer("line").notNull().default(1),
@@ -1256,7 +1280,7 @@ export const contactImports = sqliteTable(
     suppressed: integer("suppressed").notNull().default(0),
     /** The first 100 row errors, with their line numbers. */
     errors: text("errors", { mode: "json" })
-      .$type<ReadonlyArray<{ readonly line: number; readonly message: string }>>()
+      .$type<ReadonlyArray<ImportRowError>>()
       .notNull()
       .default(sql`'[]'`),
     error: text("error"),
@@ -1291,6 +1315,8 @@ export const exports = sqliteTable(
   {
     id: text("id").primaryKey(),
     kind: text("kind", { enum: ["contacts", "workspace"] }).notNull(),
+    /** Rows matching when it started, so a running export shows how far along it is (HAL-3371). */
+    total: integer("total"),
     status: text("status", { enum: ["running", "completed", "failed"] })
       .notNull()
       .default("running"),

@@ -135,6 +135,10 @@ const describeExport = (
   kind: row.kind,
   status: row.status,
   rows: row.rows,
+  /** Rows written so far, and how many matched when it started: progress for a running export. */
+  processed: row.rows,
+  total: row.total,
+  createdBy: row.createdBy,
   fields: row.fields,
   filename: row.filename,
   url,
@@ -216,7 +220,12 @@ export const listExports = Effect.fn("exports.list")(function* (query: {
  * its link; past that it comes back running, and `startWorkflow` is called with its id.
  */
 export const createContactExport = Effect.fn("exports.create")(function* (
-  input: { readonly filter: ExportFilter; readonly fields?: ReadonlyArray<string> | undefined },
+  input: {
+    readonly filter: ExportFilter
+    readonly fields?: ReadonlyArray<string> | undefined
+    /** Count what would be exported and stop: nothing is written. */
+    readonly dryRun?: boolean | undefined
+  },
   actor: string,
   origin: string | null,
   startWorkflow: (exportId: string) => Promise<void>,
@@ -232,6 +241,7 @@ export const createContactExport = Effect.fn("exports.create")(function* (
   const matching = yield* database.query("exports.count", (db) =>
     db.select({ n: count() }).from(contacts).where(condition).get(),
   )
+  if (input.dryRun) return { dryRun: true as const, rows: matching?.n ?? 0 }
   const id = `exp_${yield* (yield* Ids).next}`
   const stamp = new Date().toISOString().slice(0, 10)
   const row = yield* database.query("exports.insert", (db) =>
@@ -244,6 +254,7 @@ export const createContactExport = Effect.fn("exports.create")(function* (
         fields,
         key: `exports/${id}.csv`,
         filename: `contacts-${stamp}.csv`,
+        total: matching?.n ?? 0,
         createdBy: actor,
       })
       .returning()

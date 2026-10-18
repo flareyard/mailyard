@@ -152,8 +152,20 @@ describe("contact CSV import", () => {
     )
     expect(result.headers).toEqual(["Email", "Full name", "Plan", "Ignored", "Status"])
     expect(result.errors).toEqual([
-      { line: 6, message: "Not an email address: not-an-email" },
-      { line: 9, message: 'Status must be subscribed or unsubscribed, not "maybe".' },
+      {
+        line: 6,
+        message: "Not an email address: not-an-email",
+        column: "Email",
+        value: "not-an-email",
+        code: "invalid_email",
+      },
+      {
+        line: 9,
+        message: 'Status must be subscribed or unsubscribed, not "maybe".',
+        column: "Status",
+        value: "maybe",
+        code: "invalid_value",
+      },
     ])
 
     // The file's duplicate merged into one contact; the later row's name wins, fields combine.
@@ -278,4 +290,183 @@ describe("contact CSV import", () => {
       .first<{ n: number }>()
     expect(after?.n).toBe(50_000)
   }, 600_000)
+})
+
+describe("import extras (HAL-3371)", () => {
+  type Extra = Import & {
+    fileName: string | null
+    fileSize: number | null
+    bytesRead: number
+    size: number | null
+    processed: number
+    ratePerMinute: number | null
+    etaAt: number | null
+    errorsTotal: number
+    errors: Array<{
+      line: number
+      message: string
+      column: string | null
+      value: string | null
+      code: string | null
+    }>
+    consent: {
+      attested: true
+      statement: string | null
+      attestedBy: string
+      attestedAt: number | null
+    } | null
+  }
+
+  it("names its file, codes each error, keeps every error, joins names, reads typed fields, and records consent", async () => {
+    const tag = uid()
+    const points = `points_${tag}`
+    const vip = `vip_${tag}`
+    await env.DB.batch([
+      env.DB.prepare("insert into contact_fields (key, type, created_at) values (?, 'number', ?)").bind(
+        points,
+        Date.now(),
+      ),
+      env.DB.prepare("insert into contact_fields (key, type, created_at) values (?, 'boolean', ?)").bind(
+        vip,
+        Date.now(),
+      ),
+    ])
+    const t = await topic()
+    const good = [`ada-${tag}@example.net,Ada,Lovelace,1200,yes`, `alan-${tag}@example.net,Alan,,7,no`]
+    const bad = [
+      `not-an-email,X,Y,1,yes`,
+      `,No,Email,1,yes`,
+      `grace-${tag}@example.net,Grace,Hopper,lots,yes`,
+      ...Array.from({ length: 120 }, (_, i) => `broken${i}-${tag}`),
+    ]
+    const csv = `Email,First,Last,Points,VIP\n${[...good, ...bad].join("\n")}\n`
+    const view = (await runImport({
+      uploadId: await uploadId(csv),
+      mapping: {
+        Email: "email",
+        First: "name.first",
+        Last: "name.last",
+        Points: `fields.${points}`,
+        VIP: `fields.${vip}`,
+      },
+      topicIds: [t],
+      consent: { attested: true, statement: "They signed up at the 2026 meetup." },
+    })) as Extra
+    expect(view).toMatchObject({
+      status: "completed",
+      fileName: "contacts.csv",
+      fileSize: csv.length,
+      size: csv.length,
+      bytesRead: csv.length,
+      processed: 125,
+      created: 2,
+      invalid: 123,
+      errorsTotal: 123,
+      ratePerMinute: null,
+      etaAt: null,
+      consent: { attested: true, statement: "They signed up at the 2026 meetup.", attestedBy: "root" },
+    })
+    // The first 100 are on the import, each with where and why.
+    expect(view.errors).toHaveLength(100)
+    expect(view.errors.slice(0, 3)).toEqual([
+      {
+        line: 4,
+        message: "Not an email address: not-an-email",
+        column: "Email",
+        value: "not-an-email",
+        code: "invalid_email",
+      },
+      { line: 5, message: "No email.", column: "Email", value: null, code: "missing_email" },
+      expect.objectContaining({ line: 6, column: "Points", value: "lots", code: "invalid_value" }),
+    ])
+    // All 123 in the CSV, in file order.
+    const res = await call(`/v1/imports/${view.id}/errors.csv`, { key: ADMIN })
+    expect(res.status).toBe(200)
+    const lines = (await res.text()).replace(/^﻿/, "").trim().split("\r\n")
+    expect(lines[0]).toBe("line,column,value,code,message")
+    expect(lines).toHaveLength(124)
+    expect(lines[1]).toBe("4,Email,not-an-email,invalid_email,Not an email address: not-an-email")
+    expect(lines.at(-1)).toMatch(new RegExp(`^126,Email,broken119-${tag},invalid_email,`))
+
+    // Names joined; typed fields stored as their type; an empty last name leaves just the first.
+    const ada = await contact(`ada-${tag}@example.net`)
+    expect(ada?.name).toBe("Ada Lovelace")
+    expect(JSON.parse(ada?.fields ?? "{}")).toMatchObject({ [points]: 1200, [vip]: true })
+    expect((await contact(`alan-${tag}@example.net`))?.name).toBe("Alan")
+    // Each subscription it made carries the attestation.
+    const change = await env.DB.prepare(
+      "select evidence from subscription_changes where contact_id = ? and topic_id = ?",
+    )
+      .bind(ada?.id, t)
+      .first<{ evidence: string }>()
+    expect(JSON.parse(change?.evidence ?? "{}")).toMatchObject({
+      importId: view.id,
+      attestedBy: "root",
+      statement: "They signed up at the 2026 meetup.",
+    })
+  })
+
+  it("refuses a mixed name mapping and an unattested consent", async () => {
+    const id = await uploadId("email,n,f\na@b.co,x,y\n")
+    const mixed = await startImportOf({
+      uploadId: id,
+      mapping: { email: "email", n: "name", f: "name.first" },
+    })
+    expect(mixed.status).toBe(400)
+    const unattested = await startImportOf({
+      uploadId: id,
+      mapping: { email: "email" },
+      consent: { attested: false },
+    })
+    expect(await json(unattested)).toMatchObject({ field: "consent.attested" })
+  })
+
+  it("cancels: the import stops, what it wrote stays, and a finished one can't be cancelled", async () => {
+    const tag = uid()
+    const rows = Array.from({ length: 12_000 }, (_, i) => `c${i}-${tag}@example.net`)
+    const started = await startImportOf({
+      uploadId: await uploadId(`email\n${rows.join("\n")}\n`),
+      mapping: { email: "email" },
+    })
+    const { id } = await json<{ id: string }>(started)
+    const cancelled = await call(`/v1/imports/${id}/cancel`, { method: "POST", key: ADMIN })
+    expect(cancelled.status).toBe(200)
+    expect(await json(cancelled)).toMatchObject({ status: "cancelled" })
+    // A step that runs after the cancel writes nothing.
+    const before = await json<Import>(await call(`/v1/imports/${id}`, { key: ADMIN }))
+    const chunk = await runtimeFor(env).runPromise(importChunk(id, 0))
+    expect(chunk).toMatchObject({ done: true })
+    await new Promise((r) => setTimeout(r, 500))
+    const after = await json<Import>(await call(`/v1/imports/${id}`, { key: ADMIN }))
+    expect(after.status).toBe("cancelled")
+    expect(after.rows).toBe(before.rows)
+    const again = await call(`/v1/imports/${id}/cancel`, { method: "POST", key: ADMIN })
+    expect(again.status).toBe(400)
+    const reader = (await createKey("secret", ["read"])).key
+    expect((await call(`/v1/imports/${id}/cancel`, { method: "POST", key: reader })).status).toBe(403)
+  })
+})
+
+describe("export extras (HAL-3371)", () => {
+  it("counts without writing on a dry run, and shows progress and who started it", async () => {
+    const tag = uid()
+    for (const i of [1, 2, 3])
+      await call("/v1/contacts", { method: "POST", key: ADMIN, json: { email: `x${i}-${tag}@example.net` } })
+    const before = await env.DB.prepare("select count(*) as n from exports").first<{ n: number }>()
+    const dry = await call("/v1/exports?dryRun=1", {
+      method: "POST",
+      key: ADMIN,
+      json: { kind: "contacts", filter: { q: tag } },
+    })
+    expect(await json(dry)).toEqual({ dryRun: true, rows: 3 })
+    expect(await env.DB.prepare("select count(*) as n from exports").first<{ n: number }>()).toEqual(before)
+    const real = await json<{ processed: number; total: number; createdBy: string; rows: number }>(
+      await call("/v1/exports", {
+        method: "POST",
+        key: ADMIN,
+        json: { kind: "contacts", filter: { q: tag } },
+      }),
+    )
+    expect(real).toMatchObject({ rows: 3, processed: 3, total: 3, createdBy: "root" })
+  })
 })

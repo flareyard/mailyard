@@ -3459,10 +3459,24 @@ const ComplianceSchema = Schema.Struct({
   trackingOriginCheck: Schema.optionalKey(Schema.NullOr(TrackingOriginCheck)),
 })
 
+const ImportRowErrorSchema = Schema.Struct({
+  line: Schema.Number,
+  message: Schema.String,
+  /** The column the problem is in, as the file names it. */
+  column: Schema.NullOr(Schema.String),
+  /** The cell as written (up to 200 characters); null for a missing email. */
+  value: Schema.NullOr(Schema.String),
+  code: Schema.NullOr(Schema.Literals(["missing_email", "invalid_email", "invalid_value", "parse_error"])),
+})
+
 const ContactImportSchema = Schema.Struct({
   id: Schema.String,
   uploadId: Schema.String,
-  status: Schema.Literals(["queued", "running", "completed", "failed"]),
+  /** The uploaded file's name and size (HAL-3371). */
+  fileName: Schema.NullOr(Schema.String),
+  fileSize: Schema.NullOr(Schema.Number),
+  /** `cancelled`: stopped by `POST /v1/imports/{id}/cancel`; rows already written stay. */
+  status: Schema.Literals(["queued", "running", "completed", "failed", "cancelled"]),
   mapping: Schema.Record(Schema.String, Schema.String),
   topicIds: Schema.Array(Schema.String),
   onConflict: Schema.Literals(["update", "skip"]),
@@ -3485,9 +3499,30 @@ const ContactImportSchema = Schema.Struct({
     description:
       "New contacts that joined as suppressed because their address is on the suppression list. Part of created.",
   }),
-  errors: Schema.Array(Schema.Struct({ line: Schema.Number, message: Schema.String })),
+  /** The first 100 rejected rows; `errorsTotal` counts them all, and `GET /v1/imports/{id}/errors.csv` lists them all. */
+  errors: Schema.Array(ImportRowErrorSchema),
+  errorsTotal: Schema.Number,
+  /** Rows read so far (the same as `rows`). */
+  processed: Schema.Number,
+  /** Bytes of the file read so far, of `size`: an exact progress bar from the start. */
+  bytesRead: Schema.Number,
+  size: Schema.NullOr(Schema.Number),
+  /** Rows a minute since it started; null unless running. */
+  ratePerMinute: Schema.NullOr(Schema.Number),
+  /** When it should finish at the current pace (ms); null unless running. */
+  etaAt: Schema.NullOr(Schema.Number),
+  /** The attestation given with the import, also stored on each subscription it made. */
+  consent: Schema.NullOr(
+    Schema.Struct({
+      attested: Schema.Literal(true),
+      statement: Schema.NullOr(Schema.String),
+      attestedBy: Schema.String,
+      attestedAt: Schema.NullOr(Schema.Number),
+    }),
+  ),
   error: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,
+  startedAt: Schema.NullOr(Schema.Number),
   finishedAt: Schema.NullOr(Schema.Number),
 })
 
@@ -3497,13 +3532,29 @@ export class ImportsApi extends HttpApiGroup.make("imports")
     HttpApiEndpoint.post("contacts", "/v1/imports/contacts", {
       payload: Schema.Struct({
         uploadId: Schema.String,
-        /** Column header → `email`, `name`, `status`, `fields.<name>` or `ignore`. */
+        /**
+         * Column header → a target: `email` (exactly one), `name`, or `name.first` and `name.last`
+         * (joined with a space), `status` (cells of subscribed or unsubscribed), `fields.<name>` or
+         * `ignore`. A field in the registry (`GET /v1/contact-fields`) is read as its type (number,
+         * boolean, date as ISO); a cell that isn't one rejects the row. A new name is stored as text and
+         * registers the field. Unmapped columns are left out.
+         */
         mapping: Schema.Record(Schema.String, Schema.String),
         topicIds: Schema.optionalKey(Schema.Array(Schema.String)),
         /** An address that's already a contact: merge the row into it, or leave it alone. */
         onConflict: Schema.optionalKey(Schema.Literals(["update", "skip"])),
         /** New contacts' status when the file has no status column (or the cell is empty). */
         defaultStatus: Schema.optionalKey(Schema.Literals(["subscribed", "unsubscribed"])),
+        /**
+         * The importer's word that these people agreed to hear from you. Stored on the import (with who
+         * and when) and as evidence on every subscription the import makes.
+         */
+        consent: Schema.optionalKey(
+          Schema.Struct({
+            attested: Schema.Boolean,
+            statement: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(1000))),
+          }),
+        ),
       }),
       success: ContactImportSchema,
       error: [Forbidden, NotFound, InvalidRequest],
@@ -3520,6 +3571,16 @@ export class ImportsApi extends HttpApiGroup.make("imports")
       params: { id: Schema.String },
       success: ContactImportSchema,
       error: [Forbidden, NotFound],
+    }),
+    /**
+     * Stops a queued or running import. Rows already written stay; it answers the import as
+     * `cancelled`. `GET /v1/imports/{id}/errors.csv` lists every rejected row (line, column, value,
+     * code, message) at any point.
+     */
+    HttpApiEndpoint.post("cancel", "/v1/imports/:id/cancel", {
+      params: { id: Schema.String },
+      success: ContactImportSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
     }),
   )
   .middleware(ApiKeyAuth) {}
@@ -3545,6 +3606,12 @@ const ContactExportSchema = Schema.Struct({
   kind: Schema.Literals(["contacts", "workspace"]),
   status: Schema.Literals(["running", "completed", "failed"]),
   rows: Schema.Number,
+  /** Rows written so far; with `total`, how far a running export has got (HAL-3371). */
+  processed: Schema.Number,
+  /** Contacts matching when it started; null for a workspace export, whose parts carry their own. */
+  total: Schema.NullOr(Schema.Number),
+  /** The key that started it. */
+  createdBy: Schema.String,
   fields: Schema.Array(Schema.String),
   filename: Schema.String,
   url: Schema.NullOr(Schema.String).annotate({
@@ -3583,7 +3650,12 @@ export class ExportsApi extends HttpApiGroup.make("exports")
         /** Custom fields to add as columns, in this order. */
         fields: Schema.optionalKey(Schema.Array(Schema.String)),
       }),
-      success: ContactExportSchema,
+      /** `?dryRun=1` (contacts only): how many rows the export would hold, and nothing is written. */
+      query: { dryRun: Schema.optionalKey(Schema.Literals(["1", "true", "0", "false"])) },
+      success: Schema.Union([
+        ContactExportSchema,
+        Schema.Struct({ dryRun: Schema.Literal(true), rows: Schema.Number }),
+      ]),
       error: [Forbidden, NotFound, InvalidRequest],
     }),
     HttpApiEndpoint.get("list", "/v1/exports", {
