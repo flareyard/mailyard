@@ -44,7 +44,8 @@ Until the Flareyard platform deploys it with your OAuth token, Mailyard deploys 
    - `ADMIN_KEY`, `WEBHOOK_SIGNING_KEY` and `UNSUBSCRIBE_KEY`: random, 32 bytes or more.
    - `DEFAULT_FROM` (optional).
    - The SMTP fallback and the read-only Cloudflare token are optional too (`cloudflare-app.json`).
-   - `CLOUDFLARE_DNS_TOKEN` (optional) lets the domain screens show zone status, nameservers, registrar, DNSSEC and complaints, list the account's other zones, and fix records: Zone, DNS and Email Sending: Read, plus Email Routing and Email Sending: Edit for fixing.
+   - `CLOUDFLARE_DNS_TOKEN` (optional) lets the domain screens show zone status, nameservers, registrar, DNSSEC and complaints, list the account's other zones, and fix records: Zone, DNS and Email Sending: Read, plus Email Routing and Email Sending: Edit for fixing. With Email Routing Rules: Edit too, creating a mailbox catches a routing rule that already sends that address elsewhere, and can repoint it at Mailyard.
+   - The read-only token with Email Routing Addresses: Read also lists the account's verified addresses, which a test send can mail for free.
 
    For example: `printf %s "$VALUE" | wrangler secret put ADMIN_KEY`.
 5. **Delivery events.** Subscribe the events queue to each sending domain, and to each sending subdomain on its own: a subscription for the exact domain the mail is sent from is what made in.flareyard.dev's events flow (measured 2026-10-17). A domain without one never leaves `sent`, so bounces and complaints don't reach suppression or the send governor. The hourly watchdog raises a critical alert for any sending domain whose mail is still silent after 6 hours. With the read-only token connected (it also needs Queues: Read), `/v1/health` and `GET /v1/sending/events` name a missing subscription before anything is sent.

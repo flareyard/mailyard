@@ -8,6 +8,7 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
 import { inboundDeliveries, inboundMessages, mailboxes, mailboxRules } from "../db/schema.ts"
+import { PROBE_LOCAL, recordProbeArrival } from "../domain/testSend.ts"
 import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
@@ -261,8 +262,40 @@ const mailtoUnsubscribe = (row: InboundRow) =>
     return { outcome: "consumed", id: row.id } as const
   })
 
+/**
+ * A first-run test send arriving at Mailyard's probe address (HAL-3378): its verdicts are recorded
+ * on the test and the mail is consumed, never filed. Checked before the recipient is resolved, so
+ * a catch-all mailbox doesn't swallow it. Anything else at that address carries on as usual.
+ */
+const probeArrival = (row: InboundRow) =>
+  Effect.gen(function* () {
+    if (row.envelopeTo.trim().toLowerCase().split("@")[0] !== PROBE_LOCAL) return null
+    const raw = yield* (yield* BlobStore).get(row.rawKey)
+    if (Option.isNone(raw)) return null
+    const parsed = yield* parseMessage(raw.value.body).pipe(Effect.option)
+    if (Option.isNone(parsed)) return null
+    const ours = yield* recordProbeArrival({
+      envelopeTo: row.envelopeTo,
+      headers: parsed.value.headers,
+      auth: parsed.value.auth,
+      receivedAt: row.receivedAt,
+    })
+    if (!ours) return null
+    yield* update(row.id, {
+      status: "consumed",
+      error: null,
+      subject: parsed.value.subject.slice(0, 998),
+      fromAddress: parsed.value.from?.address ?? null,
+    })
+    return { outcome: "consumed", id: row.id } as const
+  })
+
 const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boolean) {
   yield* update(row.id, { attempts: sql`${inboundMessages.attempts} + 1` })
+  if (!row.resolution) {
+    const probe = yield* probeArrival(row)
+    if (probe) return probe
+  }
 
   let resolution = row.resolution
   if (!resolution) {

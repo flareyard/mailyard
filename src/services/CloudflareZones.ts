@@ -30,6 +30,29 @@ export const SendingSubdomain = Schema.Struct({
 })
 export type SendingSubdomain = typeof SendingSubdomain.Type
 
+/**
+ * An Email Routing rule (HAL-3378), as `GET /zones/{id}/email/routing/rules` returns it: measured
+ * against Cloudflare's published API schema 2026-10-18. `matchers` are `literal` on `to` (one
+ * address) or `all`; `actions` hold one `forward`, `worker` or `drop` with at most one value.
+ */
+export const RoutingRule = Schema.Struct({
+  id: Schema.String,
+  name: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  enabled: Schema.optionalKey(Schema.Boolean),
+  priority: Schema.optionalKey(Schema.Number),
+  matchers: Schema.Array(
+    Schema.Struct({
+      type: Schema.String,
+      field: Schema.optionalKey(Schema.String),
+      value: Schema.optionalKey(Schema.String),
+    }),
+  ),
+  actions: Schema.Array(
+    Schema.Struct({ type: Schema.String, value: Schema.optionalKey(Schema.Array(Schema.String)) }),
+  ),
+})
+export type RoutingRule = typeof RoutingRule.Type
+
 const Envelope = <A extends Schema.Top>(result: A) =>
   Schema.Struct({
     success: Schema.Boolean,
@@ -116,6 +139,14 @@ export class CloudflareZones extends Context.Service<
       name: string,
       content: string,
     ) => Effect.Effect<WriteOutcome<unknown>>
+    /** The zone's Email Routing rules (catch-all excluded), up to 1,000. */
+    readonly routingRules: (zoneId: string) => Effect.Effect<Option.Option<ReadonlyArray<RoutingRule>>>
+    /** Points a rule at a Worker, keeping its matcher. */
+    readonly routeToWorker: (
+      zoneId: string,
+      rule: RoutingRule,
+      worker: string,
+    ) => Effect.Effect<WriteOutcome<unknown>>
   }
 >()("mailyard/CloudflareZones") {
   static readonly layer = Layer.effect(
@@ -138,6 +169,8 @@ export class CloudflareZones extends Context.Service<
           enableRouting: () => refused,
           fixSending: () => refused,
           createTxt: () => refused,
+          routingRules: () => Effect.succeedNone,
+          routeToWorker: () => refused,
         })
       }
       const zoneFor = (name: string) =>
@@ -210,6 +243,36 @@ export class CloudflareZones extends Context.Service<
           }),
         createTxt: (zoneId, name, content) =>
           write(token, "POST", `/zones/${zoneId}/dns_records`, { type: "TXT", name, content, ttl: 1 }),
+        routingRules: (zoneId) =>
+          Effect.gen(function* () {
+            const all: Array<RoutingRule> = []
+            for (let page = 1; page <= 20; page++) {
+              const { body } = yield* call(
+                token,
+                "GET",
+                `/zones/${zoneId}/email/routing/rules?per_page=50&page=${page}`,
+              )
+              const decoded = Schema.decodeUnknownOption(Loose)(body)
+              const rules = Option.flatMap(decoded, (e) =>
+                e.success
+                  ? Schema.decodeUnknownOption(Schema.Array(RoutingRule))(e.result ?? [])
+                  : Option.none(),
+              )
+              if (Option.isNone(decoded) || Option.isNone(rules))
+                return Option.none<ReadonlyArray<RoutingRule>>()
+              all.push(...rules.value)
+              if (page >= (decoded.value.result_info?.total_pages ?? 1)) break
+            }
+            return Option.some<ReadonlyArray<RoutingRule>>(all)
+          }),
+        routeToWorker: (zoneId, rule, worker) =>
+          write(token, "PUT", `/zones/${zoneId}/email/routing/rules/${rule.id}`, {
+            name: rule.name ?? `Mailyard: ${rule.matchers[0]?.value ?? ""}`,
+            enabled: true,
+            ...(rule.priority !== undefined ? { priority: rule.priority } : {}),
+            matchers: rule.matchers,
+            actions: [{ type: "worker", value: [worker] }],
+          }),
       })
     }),
   )

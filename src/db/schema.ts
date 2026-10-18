@@ -1399,3 +1399,30 @@ export const linkChecks = sqliteTable("link_checks", {
   redirectsTo: text("redirects_to"),
   checkedAt: integer("checked_at").notNull(),
 })
+
+/**
+ * First-run test sends (HAL-3378): one message from a sending address, either to Mailyard's own probe
+ * address on a receiving domain, which reads the authentication verdicts when it arrives, or to an
+ * address the person gave, which only reports delivery.
+ */
+export const testSends = sqliteTable("test_sends", {
+  id: text("id").primaryKey(),
+  fromAddress: text("from_address").notNull(),
+  toAddress: text("to_address").notNull(),
+  /** Sent to Mailyard's probe address, so the arrival and its verdicts are measured here. */
+  probe: integer("probe", { mode: "boolean" }).notNull(),
+  /** The messages_out row, for its delivery status and events. */
+  messageId: text("message_id"),
+  sentAt: integer("sent_at").notNull(),
+  receivedAt: integer("received_at"),
+  /** What the receiving side wrote in Authentication-Results, and the sender's DMARC policy. */
+  auth: text("auth", { mode: "json" }).$type<{
+    readonly spf: string | null
+    readonly spfDomain: string | null
+    readonly dkim: string | null
+    readonly dkimDomain: string | null
+    readonly dmarc: string | null
+    readonly dmarcPolicy: string | null
+  }>(),
+  createdBy: text("created_by"),
+})

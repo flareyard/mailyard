@@ -91,7 +91,7 @@
     },
     {
       "name": "CLOUDFLARE_EMAIL_READ_TOKEN",
-      "ask": "A read-only API token with Email Sending: Read and Queues: Read, for the quota, reputation and delivery-events check",
+      "ask": "A read-only API token with Email Sending: Read, Queues: Read and Email Routing Addresses: Read, for the quota, reputation, delivery-events check and the verified addresses a test can go to for free",
       "optional": true
     },
     {
@@ -101,7 +101,7 @@
     },
     {
       "name": "CLOUDFLARE_DNS_TOKEN",
-      "ask": "A token for your zones (Zone, DNS and Email Sending: Read; Email Routing and Email Sending: Edit to fix records), for zone status, DNSSEC and complaints",
+      "ask": "A zone token (Zone, DNS, Email Sending: Read; Email Routing, Email Routing Rules, Email Sending: Edit) for zone status, record fixes and routing-rule conflicts",
       "optional": true
     }
   ],
