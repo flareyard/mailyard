@@ -19,6 +19,14 @@
 /* Key-value tables stack on narrow phones: a label column 79 px wide crushed "Cloudflare routing" onto four
    lines at 360 px (responsive audit). */
 @media (max-width: 480px) {
-  .kv-table tr { display: grid; gap: 2px; padding: 8px 0; }
-  .kv-table td { display: block; padding: 0; border: 0; }
+  .kv-table tr {
+    display: grid;
+    gap: 2px;
+    padding: 8px 0;
+  }
+  .kv-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
 }
