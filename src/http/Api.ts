@@ -3589,6 +3589,80 @@ const ContactImportSchema = Schema.Struct({
 })
 
 /** Contact CSV imports. The file goes up first, as the body of `POST /v1/uploads?filename=` (50 MiB). */
+const BinaryBody = Schema.Uint8Array.pipe(
+  HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }),
+)
+const UploadQuery = {
+  /** The file's name (no slashes); or send it as an `x-filename` header. */
+  filename: Schema.optionalKey(Schema.String),
+}
+
+/**
+ * Files in and out (documented by HAL-3475): the request body is the file itself, in its own
+ * content type, at most 50 MiB (25 MiB for a mailbox attachment). The Worker serves these directly;
+ * the handlers here run the same code.
+ */
+export class FilesApi extends HttpApiGroup.make("files")
+  .add(
+    /** A file for a contact import (`POST /v1/imports/contacts { uploadId }`) or a brand logo (`logoUploadId`). Admin. */
+    HttpApiEndpoint.post("upload", "/v1/uploads", {
+      query: UploadQuery,
+      payload: BinaryBody,
+      success: Schema.Struct({
+        id: Schema.String,
+        filename: Schema.String,
+        mimeType: Schema.String,
+        size: Schema.Number,
+        sha256: Schema.String,
+        createdAt: Schema.Number,
+      }).pipe(HttpApiSchema.status(201)),
+      error: [Forbidden, InvalidRequest],
+    }),
+    /** An attachment for a draft in this mailbox; its `key` goes in the draft's attachments. Mailbox write access. */
+    HttpApiEndpoint.post("mailboxUpload", "/v1/mailboxes/:id/uploads", {
+      params: { id: Schema.String },
+      query: UploadQuery,
+      payload: BinaryBody,
+      success: Schema.Struct({
+        key: Schema.String,
+        filename: Schema.String,
+        mimeType: Schema.String,
+        size: Schema.Number,
+        sha256: Schema.String,
+      }).pipe(HttpApiSchema.status(201)),
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /** An outbound message exactly as it was sent, as an .eml file. Read scope. */
+    HttpApiEndpoint.get("messageRaw", "/v1/messages/:id/raw", {
+      params: { id: Schema.String },
+      success: Schema.String.pipe(HttpApiSchema.asText({ contentType: "message/rfc822" })),
+      error: [Forbidden, NotFound],
+    }),
+    /**
+     * A chart as CSV: volume, delivery, providers, deferrals, engagement, engagement-hours,
+     * unsubscribes, inbound, audience. `range` as on the JSON stats. Rates stay fractions. Read scope.
+     */
+    HttpApiEndpoint.get("statsCsv", "/v1/stats/:chart.csv", {
+      params: {
+        chart: Schema.Literals([
+          "volume",
+          "delivery",
+          "providers",
+          "deferrals",
+          "engagement",
+          "engagement-hours",
+          "unsubscribes",
+          "inbound",
+          "audience",
+        ]),
+      },
+      query: { range: Schema.optionalKey(Schema.String) },
+      success: Schema.String.pipe(HttpApiSchema.asText({ contentType: "text/csv" })),
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 const FormSubmitFields = Schema.Record(
   Schema.String,
   Schema.Union([Schema.String, Schema.Array(Schema.String)]),
@@ -4820,6 +4894,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(CampaignsApi)
   .add(ImportsApi)
   .add(PublicFormsApi)
+  .add(FilesApi)
   .add(SuppressionsApi)
   .add(OverviewApi)
   .add(SearchApi)

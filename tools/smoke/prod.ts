@@ -56,6 +56,9 @@ const QUERY: Readonly<Record<string, Record<string, string>>> = {
   "/v1/mailboxes/:id/search": { q: "mailyard" },
   "/v1/campaigns/:id/resend-non-openers": { countMachineOpensAsOpened: "false" },
 }
+/** Served outside the API on purpose: the live socket is a WebSocket upgrade OpenAPI can't describe. */
+const RAW_ROUTES = new Set(["GET /v1/mailboxes/:p/live"])
+
 /** Endpoints that don't answer JSON, or that a smoke test shouldn't hold open. */
 const SKIP = new Set(["/v1/live"])
 
@@ -242,7 +245,9 @@ if (designedPath) {
   })
   for (const e of list) {
     const norm = `${(e.method ?? "GET").toUpperCase()} ${(e.path ?? "").replace(/\{[^}]+\}|:[A-Za-z]+/g, ":p")}`
-    if (!known.has(norm)) missing.push(norm)
+    if (known.has(norm)) continue
+    if (RAW_ROUTES.has(norm)) console.log(`raw route, outside the spec on purpose: ${norm}`)
+    else missing.push(norm)
   }
 }
 
