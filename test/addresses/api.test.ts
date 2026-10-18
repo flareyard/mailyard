@@ -273,12 +273,29 @@ describe("/v1/mailboxes", () => {
 
     const referenced = await admin(`/v1/mailboxes/${sam.id}`, { method: "DELETE" })
     expect(referenced.status).toBe(409)
-    expect(await referenced.text()).toContain(`hi@${domain.name}`)
+    // The danger sheet can say which aliases break (HAL-3376).
+    expect(await json(referenced)).toMatchObject({
+      reason: "alias-targets",
+      aliasIds: [alias.id],
+      message: expect.stringContaining(`hi@${domain.name}`),
+    })
     expect((await admin(`/v1/mailboxes/${alias.id}`, { method: "DELETE" })).status).toBe(200)
 
     const unexported = await admin(`/v1/mailboxes/${sam.id}`, { method: "DELETE" })
     expect(unexported.status).toBe(409)
-    expect(await unexported.text()).toContain("holds 1 message")
+    expect(await json(unexported)).toMatchObject({
+      reason: "no-recent-export",
+      message: expect.stringContaining("holds 1 message"),
+    })
+    // An export taken before that mail arrived doesn't cover it.
+    await env.DB.prepare(
+      "insert into mailbox_exports (id, mailbox_id, status, format, r2_key, message_count, size, completed_at) values (?, ?, 'complete', 'mbox', 'exports/old.mbox', 0, 0, ?)",
+    )
+      .bind(`exp_${crypto.randomUUID()}`, sam.id, Date.now() - 86_400_000)
+      .run()
+    expect(await json(await admin(`/v1/mailboxes/${sam.id}`, { method: "DELETE" }))).toMatchObject({
+      reason: "no-recent-export",
+    })
     await env.DB.prepare(
       "insert into mailbox_exports (id, mailbox_id, status, format, r2_key, message_count, size, completed_at) values (?, ?, 'complete', 'mbox', 'exports/x.mbox', 1, 10, ?)",
     )
@@ -293,7 +310,9 @@ describe("/v1/mailboxes", () => {
     const domain = await addDomain()
     const catchAll = await addMailbox({ address: `catchall@${domain.name}`, kind: "catch_all" })
     await admin(`/v1/domains/${domain.id}`, { method: "PATCH", json: { catchAll: "keep" } })
-    expect((await admin(`/v1/mailboxes/${catchAll.id}`, { method: "DELETE" })).status).toBe(409)
+    const kept = await admin(`/v1/mailboxes/${catchAll.id}`, { method: "DELETE" })
+    expect(kept.status).toBe(409)
+    expect(await json(kept)).toMatchObject({ reason: "catch-all-keeps" })
     await admin(`/v1/domains/${domain.id}`, { method: "PATCH", json: { catchAll: "bounce" } })
     expect((await admin(`/v1/mailboxes/${catchAll.id}`, { method: "DELETE" })).status).toBe(200)
   })

@@ -5,6 +5,7 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Layer from "effect/Layer"
 import type { Env } from "../Bindings.ts"
 import { VIEW_PATH } from "../campaigns/content.ts"
+import { BRAND_LOGO_PATH } from "../domain/brand.ts"
 import { UNSUBSCRIBE_PATH } from "../domain/unsubscribe.ts"
 import { MailApi } from "../http/Api.ts"
 import { DomainsHandlers, IdentitiesHandlers, MailboxesHandlers } from "../http/addressHandlers.ts"
@@ -62,6 +63,7 @@ import {
 } from "./public.ts"
 import { handleQueue } from "./queue.ts"
 import { handleScheduled } from "./scheduled.ts"
+import { handleAuditCsv, handleBrandLogo } from "./settingsFiles.ts"
 import { handleStatsCsv, STATS_CSV_PATH } from "./statsCsv.ts"
 import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleRequestLink, handleUnsubscribe, REQUEST_LINK_PATH } from "./unsubscribe.ts"
@@ -134,6 +136,14 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   const attachment = ATTACHMENT_PATH.exec(path)
   if (attachment && request.method === "GET")
     return handleAttachment(request, env, d(attachment[1]), d(attachment[2]), d(attachment[3]))
+  if (
+    path === "/v1/audit" &&
+    request.method === "GET" &&
+    new URL(request.url).searchParams.get("format") === "csv"
+  )
+    return handleAuditCsv(request, env)
+  const logo = BRAND_LOGO_PATH.exec(path)
+  if (logo) return handleBrandLogo(request, env, logo[1] ?? "")
   const statsCsv = STATS_CSV_PATH.exec(path)
   if (statsCsv) return handleStatsCsv(request, env, statsCsv[1] ?? "")
   const messageRaw = MESSAGE_RAW_PATH.exec(path)

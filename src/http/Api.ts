@@ -9,8 +9,10 @@ import {
   Settings as AutomationSettings,
   TriggerConfig,
 } from "../automations/graph.ts"
+import { TrackingOriginCheck } from "../campaigns/compliance.ts"
 import { RECIPIENT_FILTERS } from "../campaigns/report.ts"
 import { ALERT_KINDS } from "../domain/alerts.ts"
+import { BrandSettings } from "../domain/brand.ts"
 import { WEBHOOK_EVENTS } from "../domain/webhooks.ts"
 import { SendBlocked } from "../mail/send.ts"
 import { LABEL_COLORS } from "../mailbox/types.ts"
@@ -142,6 +144,8 @@ export class Conflict extends Schema.TaggedError<Conflict>()(
     ruleDestination: Schema.optionalKey(Schema.String),
     ruleAction: Schema.optionalKey(Schema.String),
     ruleId: Schema.optionalKey(Schema.String),
+    /** With `reason: "alias-targets"` on a mailbox removal: the aliases and groups that still deliver there. */
+    aliasIds: Schema.optionalKey(Schema.Array(Schema.String)),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -550,23 +554,76 @@ export class TemplatesApi extends HttpApiGroup.make("templates")
   )
   .middleware(ApiKeyAuth) {}
 
-export const BrandSettingsSchema = Schema.Struct({
-  name: Schema.NonEmptyString,
-  siteUrl: Schema.String,
-  tagline: Schema.String,
-  logoUrl: Schema.optionalKey(Schema.String),
-  fontsHref: Schema.optionalKey(Schema.String),
-  colors: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
-  fonts: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+/** The sender's brand: what templates, signup forms and the public pages are drawn with. */
+export const BrandSettingsSchema = BrandSettings
+
+const AuditEntrySchema = Schema.Struct({
+  id: Schema.String,
+  at: Schema.Number,
+  actor: Schema.Struct({
+    /** `key` an API key, `root` the deploy's admin key, `system` Mailyard itself (sweeps, workflows). */
+    type: Schema.Literals(["key", "root", "system"]),
+    id: Schema.String,
+    name: Schema.String,
+  }),
+  /** How a key acted: `mcp` for a key made for the MCP server; null for root and system. */
+  via: Schema.NullOr(Schema.Literals(["api", "mcp"])),
+  /** Not recorded: always null. */
+  ip: Schema.Null,
+  location: Schema.Null,
+  action: Schema.String,
+  target: Schema.NullOr(
+    Schema.Struct({
+      type: Schema.NullOr(Schema.String),
+      id: Schema.String,
+      /** The thing's current name or address; null once it's gone, or for kinds without one. */
+      label: Schema.NullOr(Schema.String),
+    }),
+  ),
+  before: Schema.Unknown,
+  after: Schema.Unknown,
 })
 
 export class SettingsApi extends HttpApiGroup.make("settings")
   .add(
     HttpApiEndpoint.get("getBrand", "/v1/settings/brand", { success: BrandSettingsSchema, error: Forbidden }),
+    /**
+     * Replaces the brand. Colours are checked against WCAG AA (4.5:1) as they'll be used: a pair that
+     * fails answers `400 { field: "colors.indigo", message }`. `logoUploadId` (a PNG, JPEG, WebP or GIF
+     * from `POST /v1/uploads`, at most 1 MiB) stores the logo here and sets `logoUrl` to it, so it
+     * isn't hotlinked.
+     */
     HttpApiEndpoint.put("putBrand", "/v1/settings/brand", {
-      payload: Schema.Unknown,
+      payload: Schema.Struct({
+        ...BrandSettings.fields,
+        logoUploadId: Schema.optionalKey(Schema.String),
+      }),
       success: BrandSettingsSchema,
       error: [Forbidden, InvalidRequest],
+    }),
+    /**
+     * The audit log, newest first. `action` is exact, or a family ending in `.` or `.*`. `from`/`to`
+     * are ms. `GET /v1/audit?format=csv` answers the same entries as CSV (up to 10,000), with
+     * `x-truncated: true` when there were more.
+     */
+    HttpApiEndpoint.get("audit", "/v1/audit", {
+      query: {
+        actor: Schema.optionalKey(Schema.String),
+        action: Schema.optionalKey(Schema.String),
+        target: Schema.optionalKey(Schema.String),
+        from: Schema.optionalKey(Schema.NumberFromString),
+        to: Schema.optionalKey(Schema.NumberFromString),
+        cursor: Schema.optionalKey(Schema.String),
+        limit: Schema.optionalKey(
+          Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+        ),
+        format: Schema.optionalKey(Schema.Literals(["json", "csv"])),
+      },
+      success: Schema.Struct({
+        entries: Schema.Array(AuditEntrySchema),
+        nextCursor: Schema.NullOr(Schema.String),
+      }),
+      error: Forbidden,
     }),
   )
   .middleware(ApiKeyAuth) {}
@@ -3377,6 +3434,19 @@ const LinkStatusSchema = Schema.Struct({
   checkedAt: Schema.NullOr(Schema.Number),
 })
 
+/** What new campaigns and topics start with, and how the preference page looks (HAL-3376). */
+const ComplianceDefaults = {
+  /** Null: the deploy's MAILYARD_TRACK_OPENS (on unless "false"). */
+  trackOpensDefault: Schema.optionalKey(Schema.NullOr(Schema.Boolean)),
+  /** Null: the deploy's MAILYARD_TRACK_CLICKS (on unless "false"). */
+  trackClicksDefault: Schema.optionalKey(Schema.NullOr(Schema.Boolean)),
+  /** Null: on. */
+  doubleOptInDefault: Schema.optionalKey(Schema.NullOr(Schema.Boolean)),
+  preferencePage: Schema.optionalKey(
+    Schema.Struct({ useBrand: Schema.Boolean, showTopicDescriptions: Schema.Boolean }),
+  ),
+}
+
 const ComplianceSchema = Schema.Struct({
   postalAddress: Schema.NullOr(Schema.String),
   linkAllowlist: Schema.Array(Schema.String),
@@ -3384,6 +3454,9 @@ const ComplianceSchema = Schema.Struct({
   trackingOrigin: Schema.optionalKey(Schema.NullOr(Schema.String)),
   /** An https link to the sender's privacy policy, shown in the footer of the public pages. */
   privacyUrl: Schema.optionalKey(Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/\S+$/)))),
+  ...ComplianceDefaults,
+  /** The last live check of `trackingOrigin`; recheck with `POST /v1/settings/compliance/tracking-check`. */
+  trackingOriginCheck: Schema.optionalKey(Schema.NullOr(TrackingOriginCheck)),
 })
 
 const ContactImportSchema = Schema.Struct({
@@ -3987,6 +4060,11 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
       success: ComplianceSchema,
       error: Forbidden,
     }),
+    /** Checks the tracking hostname live again (CNAME, HTTPS, reaches this Worker) and keeps the answer. */
+    HttpApiEndpoint.post("recheckTracking", "/v1/settings/compliance/tracking-check", {
+      success: ComplianceSchema,
+      error: Forbidden,
+    }),
     HttpApiEndpoint.put("putCompliance", "/v1/settings/compliance", {
       payload: Schema.Struct({
         postalAddress: Schema.NullOr(Schema.String.check(Schema.isMaxLength(300))),
@@ -4001,6 +4079,7 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         privacyUrl: Schema.optionalKey(
           Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/\S+$/))),
         ),
+        ...ComplianceDefaults,
       }),
       success: ComplianceSchema,
       error: [Forbidden, InvalidRequest],

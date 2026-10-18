@@ -816,7 +816,13 @@ export const audit = sqliteTable(
     after: text("after", { mode: "json" }).$type<unknown>(),
     at: integer("at").notNull(),
   },
-  (t) => [index("audit_at").on(t.at), index("audit_target").on(t.target)],
+  (t) => [
+    index("audit_at").on(t.at),
+    index("audit_target").on(t.target),
+    // The audit log's filters (HAL-3376): one actor's or one action family's entries, newest first.
+    index("audit_actor").on(t.actor, t.at),
+    index("audit_action").on(t.action, t.at),
+  ],
 )
 
 /** Daily rollups written by the events consumer; the source for Overview and Analytics charts. */

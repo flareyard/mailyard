@@ -1,7 +1,16 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Schema from "effect/Schema"
-import { BrandSettings, getBrand, getBrandSettings, putBrandSettings } from "../domain/brand.ts"
+import { recordAudit } from "../domain/audit.ts"
+import { listAudit } from "../domain/auditLog.ts"
+import {
+  BrandSettings,
+  brandContrastProblem,
+  getBrand,
+  getBrandSettings,
+  putBrandSettings,
+  storeLogo,
+} from "../domain/brand.ts"
 import {
   archiveTemplate,
   createTemplate,
@@ -29,6 +38,7 @@ import {
 import { InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller } from "./Auth.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
+import { originOf } from "./mailHandlers.ts"
 
 const summary = (t: {
   id: string
@@ -194,14 +204,49 @@ export const SettingsHandlers = HttpApiBuilder.group(
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
       getBrand: p(() => requireScope("read").pipe(Effect.andThen(getBrandSettings()), dbDies)),
-      putBrand: p(({ payload }) =>
+      putBrand: p(({ payload, request }) =>
         Effect.gen(function* () {
-          yield* requireScope("admin")
-          const value = yield* Schema.decodeUnknownEffect(BrandSettings)(payload).pipe(
+          const caller = yield* requireScope("admin")
+          const { logoUploadId, ...fields } = payload
+          const value = yield* Schema.decodeUnknownEffect(BrandSettings)(fields).pipe(
             Effect.mapError((e) => new InvalidRequest({ field: "brand", message: e.message })),
           )
-          return yield* putBrandSettings(value)
-        }).pipe(dbDies),
+          const problem = brandContrastProblem(value)
+          if (problem) return yield* new InvalidRequest(problem)
+          const logoUrl = logoUploadId
+            ? yield* storeLogo(logoUploadId, originOf(request) ?? "").pipe(
+                Effect.catchTag("LogoInvalid", (e) =>
+                  Effect.fail(new InvalidRequest({ field: "logoUploadId", message: e.message })),
+                ),
+              )
+            : undefined
+          const before = yield* getBrandSettings()
+          const saved = yield* putBrandSettings(logoUrl ? { ...value, logoUrl } : value)
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "settings.brand",
+            target: "brand",
+            before,
+            after: saved,
+          })
+          return saved
+        }).pipe(Effect.catchTag("BlobStoreError", Effect.die), dbDies),
+      ),
+      audit: p(({ query }) =>
+        requireScope("admin").pipe(
+          Effect.andThen(
+            listAudit({
+              actor: query.actor,
+              action: query.action,
+              target: query.target,
+              from: query.from,
+              to: query.to,
+              cursor: query.cursor,
+              limit: query.limit,
+            }),
+          ),
+          dbDies,
+        ),
       ),
     })
   }),

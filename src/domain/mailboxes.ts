@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -22,6 +22,13 @@ export class MailboxInvalid extends Schema.TaggedError<MailboxInvalid>()("Mailbo
 }) {}
 export class MailboxConflict extends Schema.TaggedError<MailboxConflict>()("MailboxConflict", {
   message: Schema.String,
+  /**
+   * Why a removal is refused, for the danger sheet (HAL-3376): `alias-targets` (aliases or groups
+   * still deliver here; `aliasIds` names them), `no-recent-export` (no complete export holds all of
+   * its mail), `catch-all-keeps` (its domain keeps unknown mail here).
+   */
+  reason: Schema.optionalKey(Schema.Literals(["alias-targets", "no-recent-export", "catch-all-keeps"])),
+  aliasIds: Schema.optionalKey(Schema.Array(Schema.String)),
 }) {}
 
 /**
@@ -523,7 +530,7 @@ export const deleteMailbox = Effect.fn("mailboxes.delete")(function* (id: string
   const database = yield* Database
   const referrers = yield* database.query("mailboxes.referrers", (db) =>
     db
-      .select({ address: mailboxes.address })
+      .select({ id: mailboxes.id, address: mailboxes.address })
       .from(mailboxes)
       .where(sql`exists (select 1 from json_each(${mailboxes.targets}) where json_each.value = ${id})`)
       .all(),
@@ -531,6 +538,8 @@ export const deleteMailbox = Effect.fn("mailboxes.delete")(function* (id: string
   if (referrers.length > 0) {
     return yield* new MailboxConflict({
       message: `${referrers.map((r) => r.address).join(", ")} still deliver${referrers.length === 1 ? "s" : ""} to ${m.address}; change ${referrers.length === 1 ? "it" : "them"} first.`,
+      reason: "alias-targets",
+      aliasIds: referrers.map((r) => r.id),
     })
   }
   if (m.kind === "catch_all") {
@@ -544,6 +553,7 @@ export const deleteMailbox = Effect.fn("mailboxes.delete")(function* (id: string
     if (domain?.catchAll === "keep") {
       return yield* new MailboxConflict({
         message: `${domain.name} keeps unknown mail in ${m.address}; set its catch-all policy to bounce first.`,
+        reason: "catch-all-keeps",
       })
     }
   }
@@ -551,16 +561,24 @@ export const deleteMailbox = Effect.fn("mailboxes.delete")(function* (id: string
     const store = yield* Mailboxes
     const held = yield* store.count(id)
     if (held > 0) {
+      // An export only protects the mail it holds: one taken before newer mail arrived doesn't count.
       const exported = yield* database.query("mailboxes.completeExport", (db) =>
         db
           .select({ id: mailboxExports.id })
           .from(mailboxExports)
-          .where(and(eq(mailboxExports.mailboxId, id), eq(mailboxExports.status, "complete")))
+          .where(
+            and(
+              eq(mailboxExports.mailboxId, id),
+              eq(mailboxExports.status, "complete"),
+              gte(mailboxExports.messageCount, held),
+            ),
+          )
           .get(),
       )
       if (!exported) {
         return yield* new MailboxConflict({
-          message: `${m.address} holds ${held} message${held === 1 ? "" : "s"}. Export it first (POST /v1/mailboxes/${id}/exports), then remove it.`,
+          message: `${m.address} holds ${held} message${held === 1 ? "" : "s"} that no export covers yet. Export it (POST /v1/mailboxes/${id}/exports), then remove it.`,
+          reason: "no-recent-export",
         })
       }
     }
