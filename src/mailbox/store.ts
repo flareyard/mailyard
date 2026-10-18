@@ -86,6 +86,7 @@ export class MailboxStore {
         if (migration.after === "rebuildFolderCounts") this.rebuildFolderCounts()
         if (migration.after === "rebuildCorrespondents") this.rebuildCorrespondents()
         if (migration.after === "paletteLabels") this.paletteLabels()
+        if (migration.after === "threadColumns") this.threadColumns()
       }
       this.sql.exec("DELETE FROM _schema")
       this.sql.exec("INSERT INTO _schema (version) VALUES (?)", MAILBOX_MIGRATIONS.length)
@@ -96,8 +97,24 @@ export class MailboxStore {
     return this.sql.exec<{ version: number }>("SELECT version FROM _schema").toArray()[0]?.version ?? 0
   }
 
+  /**
+   * Threads' columns added after v1 that `refresh` writes (HAL-3392: `resolved_at`). Run before the v2
+   * back-fill, which rebuilds threads, and as its own migration, so it's added once whichever comes first.
+   */
+  private threadColumns() {
+    const columns = new Set(
+      this.sql
+        .exec<{ name: string }>("SELECT name FROM pragma_table_info('threads')")
+        .toArray()
+        .map((c) => c.name),
+    )
+    if (columns.size > 0 && !columns.has("resolved_at"))
+      this.sql.exec("ALTER TABLE threads ADD COLUMN resolved_at INTEGER")
+  }
+
   /** v2: fill in the threading facts and search rows for messages v1 stored, then thread them in send order. */
   private threadAndIndexExisting() {
+    this.threadColumns()
     const rows = this.sql.exec("SELECT * FROM messages ORDER BY received_at, id").toArray()
     for (const row of rows) {
       const facts = subjectKey(String(row.subject))
