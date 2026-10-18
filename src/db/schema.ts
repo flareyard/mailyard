@@ -1724,3 +1724,80 @@ export const testSends = sqliteTable("test_sends", {
   }>(),
   createdBy: text("created_by"),
 })
+
+/**
+ * DMARC aggregate reports received at `dmarc@<domain>` (HAL-3375): one row per report, so a report
+ * sent twice counts once. The report itself stays in R2 with its inbound message.
+ */
+export const dmarcReports = sqliteTable(
+  "dmarc_reports",
+  {
+    id: text("id").primaryKey(),
+    domainId: text("domain_id")
+      .notNull()
+      .references(() => domains.id, { onDelete: "cascade" }),
+    orgName: text("org_name").notNull(),
+    email: text("email"),
+    reportId: text("report_id").notNull(),
+    /** The period it covers, in milliseconds. */
+    begin: integer("begin").notNull(),
+    end: integer("end").notNull(),
+    /** The policy the receiver saw published. */
+    policy: text("policy", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    records: integer("records").notNull(),
+    messages: integer("messages").notNull(),
+    inboundId: text("inbound_id"),
+    receivedAt: integer("received_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("dmarc_reports_unique").on(t.domainId, t.orgName, t.reportId),
+    index("dmarc_reports_domain").on(t.domainId, t.end),
+  ],
+)
+
+/**
+ * Reported mail per domain, day (UTC) and sending IP, added to as reports arrive: what the DMARC
+ * screen reads, days times sources whatever the reports' size.
+ */
+export const dmarcDaily = sqliteTable(
+  "dmarc_daily",
+  {
+    domainId: text("domain_id")
+      .notNull()
+      .references(() => domains.id, { onDelete: "cascade" }),
+    day: text("day").notNull(),
+    sourceIp: text("source_ip").notNull(),
+    messages: integer("messages").notNull(),
+    dkimAligned: integer("dkim_aligned").notNull(),
+    spfAligned: integer("spf_aligned").notNull(),
+    dmarcPass: integer("dmarc_pass").notNull(),
+    quarantined: integer("quarantined").notNull(),
+    rejected: integer("rejected").notNull(),
+    /** The domains that signed (DKIM) and were checked (SPF) for this IP's mail, with their results. */
+    dkimDomains: text("dkim_domains", { mode: "json" }).$type<Record<string, string>>().notNull(),
+    spfDomains: text("spf_domains", { mode: "json" }).$type<Record<string, string>>().notNull(),
+    /** Receivers' overrides seen (forwarded, mailing_list …). */
+    overrides: text("overrides", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.domainId, t.day, t.sourceIp] })],
+)
+
+/** Every IP that has sent as a domain, its reverse name, and whether someone vouched for it. */
+export const dmarcSources = sqliteTable(
+  "dmarc_sources",
+  {
+    domainId: text("domain_id")
+      .notNull()
+      .references(() => domains.id, { onDelete: "cascade" }),
+    ip: text("ip").notNull(),
+    ptr: text("ptr"),
+    provider: text("provider"),
+    known: integer("known", { mode: "boolean" }).notNull().default(false),
+    label: text("label"),
+    markedBy: text("marked_by"),
+    markedAt: integer("marked_at"),
+    firstSeen: integer("first_seen").notNull(),
+    lastSeen: integer("last_seen").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.domainId, t.ip] })],
+)

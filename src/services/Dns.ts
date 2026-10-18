@@ -3,14 +3,17 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-export type RecordType = "MX" | "TXT" | "CNAME" | "NS"
+export type RecordType = "MX" | "TXT" | "CNAME" | "NS" | "PTR"
 
-const TYPE_CODES: Record<RecordType, number> = { MX: 15, TXT: 16, CNAME: 5, NS: 2 }
+const TYPE_CODES: Record<RecordType, number> = { MX: 15, TXT: 16, CNAME: 5, NS: 2, PTR: 12 }
 
 export interface DnsAnswer {
   readonly name: string
   readonly type: RecordType
-  /** MX: "10 route1.mx.cloudflare.net." · TXT: the strings joined, quotes removed · CNAME: the target. */
+  /**
+   * MX: "10 route1.mx.cloudflare.net." · TXT: the strings joined, quotes removed · CNAME: the target ·
+   * PTR: the host an address reverses to.
+   */
   readonly data: string
 }
 

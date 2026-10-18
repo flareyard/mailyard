@@ -9,6 +9,8 @@ import * as Schema from "effect/Schema"
 import { fireMailReceived } from "../automations/mailTrigger.ts"
 import { Bindings } from "../Bindings.ts"
 import { inboundDeliveries, inboundMessages, mailboxes, mailboxRules } from "../db/schema.ts"
+import { looksLikeReport, parseReport, unpack } from "../dmarc/parse.ts"
+import { domainForReportAddress, storeReport } from "../dmarc/reports.ts"
 import { publishMailEvent } from "../domain/mailEvents.ts"
 import { PROBE_LOCAL, recordProbeArrival } from "../domain/testSend.ts"
 import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
@@ -292,11 +294,46 @@ const probeArrival = (row: InboundRow) =>
     return { outcome: "consumed", id: row.id } as const
   })
 
+/**
+ * A DMARC aggregate report arriving at `dmarc@<domain>` (HAL-3375): read, stored for the domain's
+ * DMARC screen, and consumed, never filed. Checked before the recipient is resolved, so a catch-all
+ * mailbox doesn't fill with XML. Mail there that isn't a report carries on as usual.
+ */
+const dmarcArrival = (row: InboundRow) =>
+  Effect.gen(function* () {
+    const domain = yield* domainForReportAddress(row.envelopeTo)
+    if (!domain) return null
+    const raw = yield* (yield* BlobStore).get(row.rawKey)
+    if (Option.isNone(raw)) return null
+    const parsed = yield* parseMessage(raw.value.body).pipe(Effect.option)
+    if (Option.isNone(parsed)) return null
+    const candidates = parsed.value.attachments.filter(looksLikeReport)
+    let stored = 0
+    for (const attachment of candidates.slice(0, 5)) {
+      const report = yield* Effect.tryPromise(async () => parseReport(await unpack(attachment.content))).pipe(
+        Effect.option,
+      )
+      if (Option.isNone(report)) continue
+      yield* storeReport({ domainId: domain.id, report: report.value, inboundId: row.id })
+      stored += 1
+    }
+    if (stored === 0) return null
+    yield* update(row.id, {
+      status: "consumed",
+      error: null,
+      subject: parsed.value.subject.slice(0, 998),
+      fromAddress: parsed.value.from?.address ?? null,
+    })
+    return { outcome: "consumed", id: row.id } as const
+  })
+
 const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boolean) {
   yield* update(row.id, { attempts: sql`${inboundMessages.attempts} + 1` })
   if (!row.resolution) {
     const probe = yield* probeArrival(row)
     if (probe) return probe
+    const report = yield* dmarcArrival(row)
+    if (report) return report
   }
 
   let resolution = row.resolution
