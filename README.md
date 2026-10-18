@@ -25,7 +25,7 @@ bun run build    # wrangler dry-run build
 `bun run release` builds `flareyard-release.json` with the platform's CLI. That's `packages/manifest/src/release-cli.ts` in a checkout of flareyard/flareyard, at `../flareyard` unless `FLAREYARD_DIR` says otherwise. The release holds the manifest, the bindings mapped to named resources, and the module `wrangler deploy --dry-run` emits. The platform contract is `docs/apps-contract.md` in that repo.
 
 - `health` is `/healthz`. It answers without a key, reads the database and calls nothing outside, and the platform waits for its 200 after every deploy. `/v1/health` is the fuller status (sending, domains, quota). It needs the admin key, so the manifest offers it as `status` for the platform's dashboard.
-- `settings`, `status` and `cost.units` are contract v1.2 (flareyard/flareyard#15). Each setting is a Worker var the platform sets at install and changes with an update: `MAILYARD_UNDO_SECONDS`, `MAILYARD_TRACK_OPENS`, `MAILYARD_TRACK_CLICKS`, `MAILYARD_CLASSIFIER` with `CLASSIFIER_URL` and `CLASSIFIER_MODEL`, and the SMTP fallback's host, port and username. The platform reads `status` with the generated `ADMIN_KEY`.
+- `settings`, `status` and `cost.units` are contract v1.2 (flareyard/flareyard#15). Each setting is a Worker var the platform sets at install and changes with an update: `MAILYARD_UNDO_SECONDS`, `MAILYARD_TRACK_OPENS`, `MAILYARD_TRACK_CLICKS`, `MAILYARD_PUBLIC_ORIGIN`, `MAILYARD_CLASSIFIER` with `CLASSIFIER_URL` and `CLASSIFIER_MODEL`, and the SMTP fallback's host, port and username. The platform reads `status` with the generated `ADMIN_KEY`.
 - `bun run manifest`, part of `bun run check`, checks that every binding's scope is required, that every queue consumer has a dead-letter queue, and that `wrangler.jsonc` names resources without ids.
 
 ## Deploying by hand
@@ -64,3 +64,8 @@ Until the Flareyard platform deploys it with your OAuth token, Mailyard deploys 
      ```
    - **To send from the same domain,** onboard it for Email Sending (`POST /zones/<zone id>/email/sending/subdomains` with `{"name": "in.example.com"}`). That adds `cf-bounce.<domain>` records and `_dmarc.<domain>`.
    - **A throw in `email()` is a temporary failure.** Measured 2026-10-17 with a build that threw for one address: Gmail neither bounced nor delivered, then delivered 7.5 minutes after sending, once the real build was back. Until the raw message is in R2, the handler throws rather than accepting.
+7. **Hostnames.** A deployment can answer on several hostnames: Workers Custom Domains you add in the dashboard or with `wrangler`. Don't add them to `wrangler.jsonc`, because other installs don't own them. Set `MAILYARD_PUBLIC_ORIGIN` to the one people should use (for example `https://mail.example.com`), as a Worker var or the install's "Public address" setting.
+   - Unsubscribe, confirm, view, tracking, file and automation-run links are built on it, whichever hostname a send or request came through.
+   - On the other hostnames, a browser GET for an app page gets a 308 to it. API, MCP, webhook and public-page paths are never redirected, so keys and SDKs can use any hostname. For the redirect to reach app pages, `assets.run_worker_first` must be `true`.
+   - Cookie-signed writes from it pass the session CSRF check on any hostname.
+   - The founder's install uses `https://mail.flareyard.dev` for the app and `https://api.mail.flareyard.dev` for keys, SDKs and MCP. The workers.dev address keeps working.

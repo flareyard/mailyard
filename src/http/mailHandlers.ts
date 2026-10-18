@@ -11,6 +11,7 @@ import { ATTACHMENT_LINK_TTL_SECONDS, fileUrl, signFileToken } from "../mail/fil
 import { callMailbox, type MailboxRefused } from "../mail/rpc.ts"
 import { cancelSend, type SendInvalid, sendDraft } from "../mail/send.ts"
 import type { MessagePatch, Party, StoredMessage } from "../mailbox/types.ts"
+import { linkOrigin } from "../public/origin.ts"
 import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.ts"
 import { Database } from "../services/Database.ts"
 import { Conflict, type CreateDraftPayload, InvalidRequest, MailApi, NotFound } from "./Api.ts"
@@ -102,13 +103,8 @@ const ownAddresses = (mailboxId: string, address: string) =>
     return [address, ...aliases.filter((a) => a.targets?.includes(mailboxId)).map((a) => a.address)]
   })
 
-export const originOf = (request: { readonly originalUrl: string }) => {
-  try {
-    return new URL(request.originalUrl).origin
-  } catch {
-    return null
-  }
-}
+/** The origin links in a response or a send are built on: the public origin when set (HAL-3483). */
+export const originOf = (request: { readonly originalUrl: string }) => linkOrigin(request.originalUrl)
 
 const toMessage = (m: StoredMessage) => ({
   id: m.id,

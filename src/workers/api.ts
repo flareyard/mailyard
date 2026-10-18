@@ -42,6 +42,7 @@ import { TransfersHandlers } from "../http/transferHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { appLayer } from "../layers.ts"
 import { handleMcp, MCP_PATH } from "../mcp/handler.ts"
+import { canonicalRedirect, configurePublicOrigin, isWorkerPath } from "../public/origin.ts"
 import {
   ATTACHMENT_PATH,
   FILE_PATH,
@@ -131,7 +132,12 @@ const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 /** The Worker's routes: bytes and sockets beside the schema-first API. */
 const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> => {
   // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
+  configurePublicOrigin(env.MAILYARD_PUBLIC_ORIGIN)
+  const redirect = canonicalRedirect(request)
+  if (redirect) return redirect
   const path = new URL(request.url).pathname
+  // The web app's pages and files, when this deployment serves them (wrangler.jsonc `assets`).
+  if (env.ASSETS && !isWorkerPath(path)) return env.ASSETS.fetch(request)
   if (path === MCP_PATH) return handleMcp(request, env)
   const d = (s: string | undefined) => decodeURIComponent(s ?? "")
   const live = LIVE_PATH.exec(path)

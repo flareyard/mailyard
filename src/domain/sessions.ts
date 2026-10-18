@@ -248,7 +248,7 @@ const WorkspaceSetting = Schema.Struct({ id: Schema.String })
  * kept in settings so it stays the same across deploys. The name is the brand's, until claiming the
  * workspace (HAL-3361) gives it its own.
  */
-export const currentWorkspace = Effect.fn("workspace.current")(function* () {
+export const currentWorkspace = Effect.fn("workspace.current")(function* (origin: string) {
   const database = yield* Database
   const read = database.query("settings.workspace", (db) =>
     db.select().from(settings).where(eq(settings.key, "workspace")).get(),
@@ -270,6 +270,8 @@ export const currentWorkspace = Effect.fn("workspace.current")(function* () {
     id: setting._tag === "Some" ? setting.value.id : "ws_default",
     name: brand?.name ?? "Mailyard",
     logoUrl: brand?.logoUrl ?? null,
+    url: origin,
+    host: new URL(origin).host,
   }
 })
 
@@ -308,9 +310,13 @@ export const permissionsOf = (scopes: ReadonlyArray<Scope>) =>
   [...new Set(scopes.flatMap((s) => PERMISSIONS[s] ?? []))].sort()
 
 /** `GET /v1/me`: who the app is signed in as. `user` and `role` stay null until people exist (HAL-3361). */
-export const describeCaller = Effect.fn("sessions.me")(function* (caller: Caller, now = Date.now()) {
+export const describeCaller = Effect.fn("sessions.me")(function* (
+  caller: Caller,
+  origin: string,
+  now = Date.now(),
+) {
   const database = yield* Database
-  const workspace = yield* currentWorkspace()
+  const workspace = yield* currentWorkspace(origin)
   const admin = caller.keyId === ROOT.keyId
   const key = admin
     ? null

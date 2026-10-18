@@ -139,6 +139,12 @@
       "help": "Links go through a redirect on your domain. Each campaign can switch it off."
     },
     {
+      "name": "MAILYARD_PUBLIC_ORIGIN",
+      "label": "Public address",
+      "type": "url",
+      "help": "Where people open the app, e.g. https://mail.example.com. Unsubscribe, view and tracking links use it; other hostnames redirect app pages here. Empty: each request's own address."
+    },
+    {
       "name": "MAILYARD_CLASSIFIER",
       "label": "Spam classifier for inbound mail",
       "type": "enum",

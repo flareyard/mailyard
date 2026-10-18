@@ -5,6 +5,7 @@ import { confirmSubscription } from "../domain/subscriptions.ts"
 import { type Filled, pageCsp, renderFormPage } from "../forms/page.ts"
 import { verifyTurnstile } from "../forms/turnstile.ts"
 import { publicLook } from "../public/look.ts"
+import { linkOrigin } from "../public/origin.ts"
 import { type ResultExtra, resultPage } from "../public/pages.ts"
 import { runtimeFor } from "./inbound.ts"
 
@@ -215,7 +216,7 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
         })
       : Response.json({ error: "invalid", field: "email" }, { status: 400, headers: cors })
   }
-  const origin = new URL(request.url).origin
+  const origin = linkOrigin(request.url) ?? new URL(request.url).origin
   const result = await runtimeFor(env).runPromise(
     Effect.result(
       submitForm(

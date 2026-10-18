@@ -26,6 +26,8 @@ export interface Env {
    * hostnames. A cookie-signed write from it passes the CSRF check (HAL-3358, HAL-3483).
    */
   readonly MAILYARD_PUBLIC_ORIGIN?: string
+  /** The web app's built files (Workers Static Assets, `web/dist`), when this deployment serves the UI. */
+  readonly ASSETS?: Fetcher
   /** Seconds a send waits so it can be undone. 10 unless set; tests shorten it. */
   readonly MAILYARD_UNDO_SECONDS?: string
   /** New campaigns track opens and clicks unless these are "false" (manifest settings). */
