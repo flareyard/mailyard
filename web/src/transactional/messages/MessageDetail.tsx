@@ -210,7 +210,7 @@ function Loaded({ m, rawOpen, setRaw }: { m: Detail; rawOpen: boolean; setRaw: (
 
       {callout ? (
         <div style={{ marginBottom: 16 }}>
-          <div className={`callout callout-${callout.tone}`} role="status">
+          <div className={`callout callout-${callout.tone} tx-callout`} role="status">
             <Icon name={callout.tone === "warn" ? "warn" : callout.tone === "info" ? "info" : "x-circle"} />
             <span>
               <b>{callout.title}</b> {callout.body}

@@ -94,3 +94,15 @@
   padding: 0;
   margin: 0;
 }
+
+/* A failure callout with its action: the action keeps its width and drops under the text on a phone. */
+.tx-callout {
+  flex-wrap: wrap;
+}
+.tx-callout > span {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.tx-callout > .btn {
+  flex: none;
+}
