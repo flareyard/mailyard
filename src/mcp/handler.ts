@@ -4,6 +4,7 @@ import * as Exit from "effect/Exit"
 import * as Schema from "effect/Schema"
 import type { Env } from "../Bindings.ts"
 import type { Caller } from "../domain/apiKeys.ts"
+import { linkOrigin } from "../public/origin.ts"
 import { authorize, problem } from "../workers/auth.ts"
 import { runtimeFor } from "../workers/inbound.ts"
 import { TOOLS, type Tool } from "./tools.ts"
@@ -59,7 +60,12 @@ const canUse = (caller: Caller, tool: Tool) =>
 const text = (value: unknown) => JSON.stringify(value, null, 2)
 
 /** A tool's outcome as MCP content: its result, or a refusal the model can read (isError). */
-const callTool = async (env: Env, caller: Caller, params: Record<string, unknown> | undefined) => {
+const callTool = async (
+  env: Env,
+  caller: Caller,
+  params: Record<string, unknown> | undefined,
+  origin: string,
+) => {
   const name = String(params?.name ?? "")
   const tool = TOOLS.find((t) => t.name === name)
   if (!tool) return { error: { code: ERR.invalidParams, message: `No tool ${name}.` } }
@@ -79,7 +85,7 @@ const callTool = async (env: Env, caller: Caller, params: Record<string, unknown
       },
     }
   const exit = await runtimeFor(env).runPromiseExit(
-    tool.run(decoded.value, caller) as Effect.Effect<unknown, unknown, never>,
+    tool.run(decoded.value, caller, { origin }) as Effect.Effect<unknown, unknown, never>,
   )
   if (Exit.isSuccess(exit)) {
     const value = exit.value
@@ -128,7 +134,12 @@ const callTool = async (env: Env, caller: Caller, params: Record<string, unknown
   return { error: { code: ERR.internal, message: `${name} failed; try again.` } }
 }
 
-const answer = async (env: Env, caller: Caller, message: RpcRequest): Promise<RpcResponse | null> => {
+const answer = async (
+  env: Env,
+  caller: Caller,
+  message: RpcRequest,
+  origin: string,
+): Promise<RpcResponse | null> => {
   const id = message.id ?? null
   const isNotification = message.id === undefined
   const reply = (r: { result?: unknown; error?: { code: number; message: string } }): RpcResponse | null =>
@@ -147,7 +158,7 @@ const answer = async (env: Env, caller: Caller, message: RpcRequest): Promise<Rp
           capabilities: { tools: { listChanged: false } },
           serverInfo: { name: "mailyard", title: "Mailyard", version: "0.1.0" },
           instructions:
-            "Mailyard is this workspace's email: mailboxes, transactional sending, contacts and campaigns. Start with list_mailboxes or search_mail. Drafting never sends; send_draft and send_email need confirm: true, so show the user what will go out first.",
+            "Mailyard is this workspace's email: mailboxes, transactional sending, contacts and campaigns. Start with list_mailboxes or search_mail; read_thread lists attachments and read_attachment reads them. Write with compose_message or draft_reply, and tidy with mark_read, archive, label, snooze and move. Drafting never sends; send_draft and send_email need confirm: true, so show the user what will go out first. A key may have send limits or need a person's approval: a held send says so.",
         },
       })
     }
@@ -156,7 +167,7 @@ const answer = async (env: Env, caller: Caller, message: RpcRequest): Promise<Rp
     case "tools/list":
       return reply({ result: { tools: listTools(caller) } })
     case "tools/call":
-      return reply(await callTool(env, caller, message.params))
+      return reply(await callTool(env, caller, message.params, origin))
     default:
       if (message.method.startsWith("notifications/")) return null
       return reply({ error: { code: ERR.methodNotFound, message: `No method ${message.method}.` } })
@@ -216,9 +227,13 @@ export const handleMcp = async (request: Request, env: Env): Promise<Response> =
       400,
     )
   }
-  const answers = (await Promise.all(messages.map((m) => answer(env, auth.caller, m as RpcRequest)))).filter(
-    (a): a is RpcResponse => a !== null,
-  )
+  const answers = (
+    await Promise.all(
+      messages.map((m) =>
+        answer(env, auth.caller, m as RpcRequest, linkOrigin(request.url) ?? new URL(request.url).origin),
+      ),
+    )
+  ).filter((a): a is RpcResponse => a !== null)
   // Only notifications: accepted, nothing to say.
   if (answers.length === 0) return new Response(null, { status: 202 })
   return json(Array.isArray(body) ? answers : answers[0])

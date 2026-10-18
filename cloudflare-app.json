@@ -31,6 +31,10 @@
       {
         "scope": "email-routing-rule.write",
         "why": "Route your domain's inbound mail to your Mailyard inboxes"
+      },
+      {
+        "scope": "ai.write",
+        "why": "Read PDF and Office attachments as text for agents (Workers AI document conversion, free for documents; images are never sent)"
       }
     ],
     "optional": [

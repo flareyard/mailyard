@@ -28,6 +28,9 @@
   },
   // No resource ids: `wrangler deploy` provisions D1, R2 and the queues in whichever account deploys, and
   // keeps them linked by name. Don't commit the ids wrangler writes back after a deploy.
+  // Workers AI: document-to-Markdown conversion for agents reading attachments (HAL-3459). PDFs and
+  // Office files convert free; images, which would run models, are never sent.
+  "ai": { "binding": "AI" },
   "d1_databases": [{ "binding": "DB", "database_name": "mailyard", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "STORE", "bucket_name": "mailyard-store" }],
   "send_email": [{ "name": "EMAIL" }],
