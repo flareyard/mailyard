@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers"
+import { env, exports } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 import { ADMIN, call, createKey, json } from "./helpers.ts"
 
@@ -123,14 +123,16 @@ describe("browser sessions (HAL-3358)", () => {
     )
     expect(fetchSite.status).toBeLessThan(300)
     expect((await withCookie(cookie as string, "/v1/contacts", write())).status).toBeLessThan(300)
-    // The workspace's public origin (MAILYARD_PUBLIC_ORIGIN) counts as this site too.
-    const publicOrigin = await withCookie(
-      cookie as string,
-      "/v1/contacts",
-      write(),
-      "https://app.mailyard.test",
+    // A write sent to another of the deployment's hostnames from the public origin
+    // (MAILYARD_PUBLIC_ORIGIN) counts as this site too.
+    const viaApiHost = await exports.default.fetch(
+      new Request("https://api.mailyard.test/v1/contacts", {
+        method: "POST",
+        headers: { cookie: cookie as string, origin: ORIGIN, "content-type": "application/json" },
+        body: JSON.stringify({ email: `csrf-${n++}@example.com` }),
+      }),
     )
-    expect(publicOrigin.status).toBeLessThan(300)
+    expect(viaApiHost.status).toBeLessThan(300)
     // Reads need no Origin.
     expect((await withCookie(cookie as string, "/v1/contacts", {}, "")).status).toBe(200)
     // Bearer requests never need one: they can't be forged by a browser.

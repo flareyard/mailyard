@@ -18,6 +18,7 @@ import {
 import { MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden, Unauthorized } from "./Auth.ts"
 import { appContext, clearSessionCookie, provideTo, sameOrigin, throttle } from "./handlers.ts"
+import { originOf } from "./mailHandlers.ts"
 
 const crossSite = () =>
   new Forbidden({
@@ -79,7 +80,10 @@ export const SessionHandlers = HttpApiBuilder.group(
               }),
             ),
           )
-          return yield* describeCaller({ ...caller, sessionId: session.id })
+          return yield* describeCaller(
+            { ...caller, sessionId: session.id },
+            originOf(request) ?? "https://localhost",
+          )
         }).pipe(Effect.catchTag("DatabaseError", Effect.die)),
       ),
       signOut: p(({ request }) =>
@@ -103,10 +107,10 @@ export const MeHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
-      me: p(() =>
-        Effect.flatMap(CurrentCaller, (caller) => describeCaller(caller)).pipe(
-          Effect.catchTag("DatabaseError", Effect.die),
-        ),
+      me: p(({ request }) =>
+        Effect.flatMap(CurrentCaller, (caller) =>
+          describeCaller(caller, originOf(request) ?? "https://localhost"),
+        ).pipe(Effect.catchTag("DatabaseError", Effect.die)),
       ),
       listSessions: p(() =>
         Effect.flatMap(CurrentCaller, (caller) =>

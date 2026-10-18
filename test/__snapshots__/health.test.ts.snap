@@ -67912,6 +67912,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "workspace": {
                       "additionalProperties": false,
                       "properties": {
+                        "host": {
+                          "type": "string",
+                        },
                         "id": {
                           "type": "string",
                         },
@@ -67928,11 +67931,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "name": {
                           "type": "string",
                         },
+                        "url": {
+                          "type": "string",
+                        },
                       },
                       "required": [
                         "id",
                         "name",
                         "logoUrl",
+                        "url",
+                        "host",
                       ],
                       "type": "object",
                     },
@@ -67940,6 +67948,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "host": {
+                            "type": "string",
+                          },
                           "id": {
                             "type": "string",
                           },
@@ -67956,11 +67967,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "name": {
                             "type": "string",
                           },
+                          "url": {
+                            "type": "string",
+                          },
                         },
                         "required": [
                           "id",
                           "name",
                           "logoUrl",
+                          "url",
+                          "host",
                         ],
                         "type": "object",
                       },
@@ -74486,6 +74502,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "workspace": {
                       "additionalProperties": false,
                       "properties": {
+                        "host": {
+                          "type": "string",
+                        },
                         "id": {
                           "type": "string",
                         },
@@ -74502,11 +74521,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "name": {
                           "type": "string",
                         },
+                        "url": {
+                          "type": "string",
+                        },
                       },
                       "required": [
                         "id",
                         "name",
                         "logoUrl",
+                        "url",
+                        "host",
                       ],
                       "type": "object",
                     },
@@ -74514,6 +74538,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "host": {
+                            "type": "string",
+                          },
                           "id": {
                             "type": "string",
                           },
@@ -74530,11 +74557,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "name": {
                             "type": "string",
                           },
+                          "url": {
+                            "type": "string",
+                          },
                         },
                         "required": [
                           "id",
                           "name",
                           "logoUrl",
+                          "url",
+                          "host",
                         ],
                         "type": "object",
                       },

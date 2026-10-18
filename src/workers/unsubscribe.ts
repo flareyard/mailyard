@@ -8,6 +8,7 @@ import {
   savePreferences,
 } from "../domain/unsubscribe.ts"
 import { publicLook } from "../public/look.ts"
+import { linkOrigin } from "../public/origin.ts"
 import { invalidLinkPage, page, preferencePage } from "../public/pages.ts"
 import { glyph, type NoticeKind } from "../public/shell.ts"
 import { runtimeFor } from "./inbound.ts"
@@ -89,7 +90,9 @@ export const handleRequestLink = async (request: Request, env: Env) => {
   const form = await request.formData().catch(() => null)
   const email = typeof form?.get("email") === "string" ? String(form?.get("email")) : ""
   await run.runPromise(
-    requestPreferencesLink(email, new URL(request.url).origin).pipe(Effect.orElseSucceed(() => null)),
+    requestPreferencesLink(email, linkOrigin(request.url) ?? new URL(request.url).origin).pipe(
+      Effect.orElseSucceed(() => null),
+    ),
   )
   return page(
     look,

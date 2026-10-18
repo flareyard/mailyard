@@ -4878,6 +4878,11 @@ const Workspace = Schema.Struct({
   /** The brand's name until the workspace is claimed and named (HAL-3361). */
   name: Schema.String,
   logoUrl: Schema.NullOr(Schema.String),
+  /** Where the workspace's app and public links live: `MAILYARD_PUBLIC_ORIGIN`, else the origin the
+   * request came in on (HAL-3483). */
+  url: Schema.String,
+  /** `url`'s hostname, e.g. `mail.flareyard.dev`. */
+  host: Schema.String,
 })
 
 export const Me = Schema.Struct({

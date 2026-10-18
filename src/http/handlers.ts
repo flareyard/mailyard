@@ -30,6 +30,7 @@ import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
 import type { ImapConnector } from "../imports/importer.ts"
 import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
+import { linkOrigin } from "../public/origin.ts"
 import type { Classifier } from "../services/Classifier.ts"
 import type { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import type { CloudflareZones } from "../services/CloudflareZones.ts"
@@ -280,7 +281,7 @@ export const ActionsHandlers = HttpApiBuilder.group(
               ? {
                   opens: payload.track.opens ?? false,
                   clicks: payload.track.clicks ?? false,
-                  origin: originOfUrl(request.originalUrl),
+                  origin: linkOrigin(request.originalUrl) ?? "",
                 }
               : undefined,
             apiKeyId: caller.keyId,
