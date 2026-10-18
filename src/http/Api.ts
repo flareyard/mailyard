@@ -1968,8 +1968,52 @@ export const MessageSchema = Schema.Struct({
   rulesMatched: Schema.Array(Schema.String),
 })
 
+const PartStatSchema = Schema.Literals(["NEEDS-ACTION", "ACCEPTED", "DECLINED", "TENTATIVE", "DELEGATED"])
+
+/** A calendar invitation read from the message's text/calendar part (HAL-3369). */
+const ImageSenderSchema = Schema.Struct({
+  value: Schema.String,
+  createdBy: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+})
+
+export const CalendarInviteSchema = Schema.Struct({
+  /** REQUEST (an invitation), CANCEL, REPLY, PUBLISH … */
+  method: Schema.String,
+  uid: Schema.String,
+  sequence: Schema.Number,
+  summary: Schema.NullOr(Schema.String),
+  description: Schema.NullOr(Schema.String),
+  location: Schema.NullOr(Schema.String),
+  /** ISO 8601: a date for all-day events; a time without `Z` is in `timeZone`. */
+  start: Schema.NullOr(Schema.String),
+  end: Schema.NullOr(Schema.String),
+  allDay: Schema.Boolean,
+  timeZone: Schema.NullOr(Schema.String),
+  organizer: Schema.NullOr(Schema.Struct({ address: Schema.String, name: Schema.NullOr(Schema.String) })),
+  attendees: Schema.Array(
+    Schema.Struct({
+      address: Schema.String,
+      name: Schema.NullOr(Schema.String),
+      partstat: PartStatSchema,
+      role: Schema.NullOr(Schema.String),
+    }),
+  ),
+  /** This mailbox's own answer as the invitation lists it, when it's an attendee. */
+  myStatus: Schema.NullOr(PartStatSchema),
+  /** Whether an RSVP can be sent: an invitation (REQUEST) that lists this mailbox. */
+  canRespond: Schema.Boolean,
+})
+
 export const MessageDetailSchema = Schema.Struct({
   ...MessageSchema.fields,
+  /** The calendar invitation in the message, if it has one (HAL-3369). */
+  invite: Schema.optionalKey(Schema.NullOr(CalendarInviteSchema)),
+  /**
+   * `show` when the sender is on the mailbox's always-show-images list; `ask` otherwise, and the reader
+   * keeps remote images blocked until the person chooses (HAL-3369).
+   */
+  remoteImages: Schema.optionalKey(Schema.Literals(["show", "ask"])),
   headers: Schema.optionalKey(
     Schema.Array(Schema.Struct({ name: Schema.String, value: Schema.String })).annotate({
       description: "With ?include=headers: every header in the order it arrived, newest hop first.",
@@ -2335,6 +2379,45 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
         ),
       },
       success: MessageDetailSchema,
+      error: MailErrors,
+    }),
+    /**
+     * Answers a calendar invitation (HAL-3369): sends the iTIP REPLY from the mailbox to the organizer,
+     * as a normal send (the undo window, the key's limits and approvals apply). One message, only when
+     * the person chooses.
+     */
+    HttpApiEndpoint.post("rsvp", "/v1/mailboxes/:id/messages/:messageId/rsvp", {
+      params: { id: Schema.String, messageId: Schema.String },
+      payload: Schema.Struct({
+        response: Schema.Literals(["accepted", "tentative", "declined"]),
+        /** A line for the organizer, added to the reply's text. */
+        comment: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(1_000))),
+      }),
+      success: Schema.Struct({
+        response: Schema.Literals(["accepted", "tentative", "declined"]),
+        draft: DraftSchema,
+        sendAt: Schema.NullOr(Schema.Number),
+        undoUntil: Schema.NullOr(Schema.Number),
+        approval: Schema.optionalKey(Schema.NullOr(Schema.Unknown)),
+      }),
+      error: [...MailErrors, SendBlocked],
+    }),
+    /** Senders whose remote images this mailbox always shows (HAL-3369). */
+    HttpApiEndpoint.get("imageSenders", "/v1/mailboxes/:id/image-senders", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ senders: Schema.Array(ImageSenderSchema) }),
+      error: MailErrors,
+    }),
+    /** "Always show images from …": an address or `@domain`. */
+    HttpApiEndpoint.post("addImageSender", "/v1/mailboxes/:id/image-senders", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ value: Schema.String.check(Schema.isMaxLength(320)) }),
+      success: ImageSenderSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("removeImageSender", "/v1/mailboxes/:id/image-senders/:value", {
+      params: { id: Schema.String, value: Schema.String },
+      success: Schema.Struct({ removed: Schema.String }),
       error: MailErrors,
     }),
     HttpApiEndpoint.patch("updateMessage", "/v1/mailboxes/:id/messages/:messageId", {
@@ -5915,6 +5998,70 @@ export class IntegrationsApi extends HttpApiGroup.make("integrations")
   )
   .middleware(ApiKeyAuth) {}
 
+const PushSubscriptionSchema = Schema.Struct({
+  id: Schema.String,
+  device: Schema.NullOr(Schema.String),
+  /** The push service's host; the endpoint itself is a capability and isn't returned. */
+  service: Schema.String,
+  createdAt: Schema.Number,
+  lastSentAt: Schema.NullOr(Schema.Number),
+})
+const PushPreferencesSchema = Schema.Struct({
+  mailboxes: Schema.Array(
+    Schema.Struct({ mailboxId: Schema.String, notify: Schema.Literals(["all", "assigned", "off"]) }),
+  ).check(Schema.isMaxLength(500)),
+  alerts: Schema.Boolean,
+  hideContent: Schema.Boolean,
+})
+
+/**
+ * Web Push (HAL-3369): a browser subscribes with its push service's endpoint and keys, and its person
+ * (or key) gets new mail in the mailboxes they read, conversations handed to them, and, for managers,
+ * alerts. Per mailbox `all` (default), `assigned` or `off`; `hideContent` sends only "New mail".
+ */
+export class PushApi extends HttpApiGroup.make("push")
+  .add(
+    /** The VAPID public key a browser subscribes with (`applicationServerKey`), base64url. */
+    HttpApiEndpoint.get("vapidKey", "/v1/push/vapid-key", {
+      success: Schema.Struct({ publicKey: Schema.String }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("subscriptions", "/v1/push/subscriptions", {
+      success: Schema.Struct({ subscriptions: Schema.Array(PushSubscriptionSchema) }),
+      error: Forbidden,
+    }),
+    /** A PushSubscription's JSON (`subscription.toJSON()`), with a name for the device. */
+    HttpApiEndpoint.post("subscribe", "/v1/push/subscriptions", {
+      payload: Schema.Struct({
+        endpoint: Schema.String,
+        keys: Schema.Struct({ p256dh: Schema.String, auth: Schema.String }),
+        device: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: PushSubscriptionSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("unsubscribe", "/v1/push/subscriptions/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("preferences", "/v1/push/preferences", {
+      success: PushPreferencesSchema,
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.put("putPreferences", "/v1/push/preferences", {
+      payload: PushPreferencesSchema,
+      success: PushPreferencesSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    /** Sends "Notifications work." to each of the caller's subscriptions, and says how it went. */
+    HttpApiEndpoint.post("test", "/v1/push/test", {
+      success: Schema.Struct({ sent: Schema.Number, failed: Schema.Number, gone: Schema.Number }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /**
  * Agents: an AI agent's own mailbox and the MCP key that uses it, made together, with limits on
  * what the key may send. Managing them needs `agents.manage` (owners and admins; the admin scope).
@@ -6078,4 +6225,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(AgentsApi)
   .add(ApprovalsApi)
   .add(IntegrationsApi)
+  .add(PushApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}

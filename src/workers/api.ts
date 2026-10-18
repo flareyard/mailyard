@@ -36,6 +36,7 @@ import { MailHandlers } from "../http/mailHandlers.ts"
 import { OverviewHandlers } from "../http/overviewHandlers.ts"
 import { InviteLinkHandlers, PeopleHandlers, SignInLinkHandlers } from "../http/peopleHandlers.ts"
 import { PublicFormsHandlers } from "../http/publicFormsHandlers.ts"
+import { PushHandlers } from "../http/pushHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
 import { SearchHandlers } from "../http/searchHandlers.ts"
 import { AlertsHandlers, SendingHandlers } from "../http/sendingHandlers.ts"
@@ -136,6 +137,7 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
     AgentsHandlers,
     ApprovalsHandlers,
     IntegrationsHandlers,
+    PushHandlers,
   ]),
   Layer.provide(ApiKeyAuthLive),
   Layer.provide(appLayer(env)),
