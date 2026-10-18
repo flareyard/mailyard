@@ -422,12 +422,12 @@ Status words used in this file:
 
 | # | Status | Missing | Screens | Proposed field or endpoint |
 |---|---|---|---|---|
-| A4.1 | Field | Whether verification is actually on | Editor → Bot protection (marked “Secret status not exposed”) | A site key without `TURNSTILE_SECRET` shows the widget but checks nothing, and the admin can’t tell. Add `turnstile: { siteKey, verifying: boolean }` to the form, or `turnstileSecretSet` to `GET /v1/health`’s checks. Optional: create the widget through Cloudflare’s Turnstile API so nobody has to paste a key. |
+| A4.1 | **Built** (HAL-3424) | Whether verification is actually on | Editor → Bot protection (marked “Secret status not exposed”) | A site key without `TURNSTILE_SECRET` shows the widget but checks nothing, and the admin can’t tell. Add `turnstile: { siteKey, verifying: boolean }` to the form, or `turnstileSecretSet` to `GET /v1/health`’s checks. Optional: create the widget through Cloudflare’s Turnstile API so nobody has to paste a key. |
 | A4.2 | Field | Widget mode | Editor → Bot protection | The page always renders `data-size="flexible"`, and the mode (managed, non-interactive, invisible) lives on the Cloudflare widget. No change needed unless keys are created by Mailyard (A4.1); the design says where the mode is set. |
-| A4.3 | Field | Submission stats | `forms.html`, editor header (marked “Count ahead”) | `stats: { submissions30d, confirmed30d }` on each form, or `GET /v1/forms/{id}/stats?range=`. |
-| A4.4 | Field | Field labels, required and order | Editor → Fields | Labels come from the key (`labelOf`: `first_name` → “First name”) and every custom field is optional. Proposed: `fields: [{ key, label?, required? }]`, keeping plain strings valid. |
-| A4.5 | Field | Topic choice for visitors | Editor → Subscribes them to | Visitors get every topic on the form. If a form should let people pick, add `topicChoice: "all"\|"pick"`; the page would then render checkboxes. |
-| A4.6 | Field | Embed variants | Editor → Share and embed | Only the fetch snippet is generated. An `?variant=iframe` on `/embed` (or a `snippets` array) would save people from writing the iframe themselves. |
+| A4.3 | **Built** (HAL-3424) | Submission stats | `forms.html`, editor header (marked “Count ahead”) | `stats: { submissions30d, confirmed30d }` on each form, or `GET /v1/forms/{id}/stats?range=`. |
+| A4.4 | **Built** (HAL-3424) | Field labels, required and order | Editor → Fields | Labels come from the key (`labelOf`: `first_name` → “First name”) and every custom field is optional. Proposed: `fields: [{ key, label?, required? }]`, keeping plain strings valid. |
+| A4.5 | **Built** (HAL-3424) | Topic choice for visitors | Editor → Subscribes them to | Visitors get every topic on the form. If a form should let people pick, add `topicChoice: "all"\|"pick"`; the page would then render checkboxes. |
+| A4.6 | **Built** (HAL-3424) | Embed variants | Editor → Share and embed | Only the fetch snippet is generated. An `?variant=iframe` on `/embed` (or a `snippets` array) would save people from writing the iframe themselves. |
 
 ## A5. Contact import (HAL-3291)
 

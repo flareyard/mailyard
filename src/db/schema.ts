@@ -181,9 +181,43 @@ export const forms = sqliteTable("forms", {
   description: text("description"),
   /** Cloudflare Turnstile site key; with TURNSTILE_SECRET set, submissions must pass the challenge. */
   turnstileSiteKey: text("turnstile_site_key"),
+  /**
+   * How each custom field is asked (HAL-3424): label, input type, required, options, in page order.
+   * Null on forms made before: their `fields` are asked as optional text.
+   */
+  fieldDefs: text("field_defs", { mode: "json" }).$type<ReadonlyArray<FormFieldDef>>(),
+  /** `all`: a signup joins every topic. `pick`: the visitor chooses among them, at least one. */
+  topicChoice: text("topic_choice", { enum: ["all", "pick"] })
+    .notNull()
+    .default("all"),
   archived: integer("archived", { mode: "boolean" }).notNull().default(false),
   createdAt: createdAt(),
 })
+
+export interface FormFieldDef {
+  readonly key: string
+  readonly label: string
+  readonly type: "text" | "number" | "date" | "checkbox" | "select" | "tel" | "url"
+  readonly required: boolean
+  /** For `select`. */
+  readonly options?: ReadonlyArray<string>
+}
+
+/** Signups per form per UTC day, by outcome (HAL-3424). */
+export const formDaily = sqliteTable(
+  "form_daily",
+  {
+    formId: text("form_id").notNull(),
+    day: text("day").notNull(),
+    submissions: integer("submissions").notNull().default(0),
+    subscribed: integer("subscribed").notNull().default(0),
+    /** Sent a double opt-in link; the confirmation shows on the topic. */
+    confirm: integer("confirm").notNull().default(0),
+    /** Turned away: a failed challenge, a bad address, a missing field, or too many tries. */
+    refused: integer("refused").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.formId, t.day] })],
+)
 
 /**
  * Things that need a person: a campaign paused for its bounce rate, a domain failing its checks.

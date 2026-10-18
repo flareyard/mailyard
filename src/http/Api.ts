@@ -2419,14 +2419,44 @@ export const TopicSchema = Schema.Struct({
   createdAt: Schema.Number,
 })
 
+const FormFieldType = Schema.Literals(["text", "number", "date", "checkbox", "select", "tel", "url"])
+const FormFieldDefSchema = Schema.Struct({
+  key: Schema.String,
+  label: Schema.String,
+  type: FormFieldType,
+  required: Schema.Boolean,
+  /** For `select`. */
+  options: Schema.optionalKey(Schema.Array(Schema.String)),
+})
+/** A field definition in a request: everything but the key has a default (label from it, text, optional). */
+const FormFieldDefInput = Schema.Struct({
+  key: Schema.String,
+  label: Schema.optionalKey(Schema.String),
+  type: Schema.optionalKey(FormFieldType),
+  required: Schema.optionalKey(Schema.Boolean),
+  options: Schema.optionalKey(Schema.Array(Schema.String)),
+})
+const TopicChoice = Schema.Literals(["all", "pick"])
+
 export const FormSchema = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
   topicIds: Schema.Array(Schema.String),
+  /** `all`: a signup joins every topic. `pick`: the visitor ticks at least one of them. */
+  topicChoice: TopicChoice,
+  /** The custom fields' keys, in page order. */
   fields: Schema.Array(Schema.String),
+  /** How each is asked: label, type, required, options. Older forms get optional text for each. */
+  fieldDefs: Schema.Array(FormFieldDefSchema),
   redirectUrl: Schema.NullOr(Schema.String),
   description: Schema.NullOr(Schema.String),
   turnstileSiteKey: Schema.NullOr(Schema.String),
+  /** On when the form has a site key; `configured` says whether this deploy can check it (TURNSTILE_SECRET). */
+  turnstile: Schema.Struct({
+    enabled: Schema.Boolean,
+    siteKey: Schema.NullOr(Schema.String),
+    configured: Schema.Boolean,
+  }),
   archived: Schema.Boolean,
   createdAt: Schema.Number,
 })
@@ -2687,6 +2717,9 @@ export class FormsApi extends HttpApiGroup.make("forms")
         name: Schema.String,
         topicIds: Schema.Array(Schema.String),
         fields: Schema.optionalKey(Schema.Array(Schema.String)),
+        /** Replaces `fields` when given: keys, labels, types, required, in page order. */
+        fieldDefs: Schema.optionalKey(Schema.Array(FormFieldDefInput)),
+        topicChoice: Schema.optionalKey(TopicChoice),
         redirectUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
         description: Schema.optionalKey(Schema.NullOr(Schema.String)),
         turnstileSiteKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
@@ -2705,6 +2738,8 @@ export class FormsApi extends HttpApiGroup.make("forms")
         name: Schema.optionalKey(Schema.String),
         topicIds: Schema.optionalKey(Schema.Array(Schema.String)),
         fields: Schema.optionalKey(Schema.Array(Schema.String)),
+        fieldDefs: Schema.optionalKey(Schema.Array(FormFieldDefInput)),
+        topicChoice: Schema.optionalKey(TopicChoice),
         redirectUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
         description: Schema.optionalKey(Schema.NullOr(Schema.String)),
         turnstileSiteKey: Schema.optionalKey(Schema.NullOr(Schema.String)),
@@ -2716,7 +2751,36 @@ export class FormsApi extends HttpApiGroup.make("forms")
     /** The hosted page's address and a snippet to paste into another site, which posts to submit. */
     HttpApiEndpoint.get("embed", "/v1/forms/:id/embed", {
       params: { id: Schema.String },
-      success: Schema.Struct({ pageUrl: Schema.String, html: Schema.String }),
+      success: Schema.Struct({
+        pageUrl: Schema.String,
+        /** The form itself, posted with fetch: the visitor stays on the page. */
+        html: Schema.String,
+        /** The hosted page in a frame: no script on the host page. */
+        iframe: Schema.String,
+      }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("stats", "/v1/forms/:id/stats", {
+      params: { id: Schema.String },
+      query: { range: Schema.optionalKey(Schema.Literals(["7d", "30d", "90d"])) },
+      success: Schema.Struct({
+        range: Schema.Literals(["7d", "30d", "90d"]),
+        submissions: Schema.Number,
+        subscribed: Schema.Number,
+        /** Sent a double opt-in link. */
+        confirm: Schema.Number,
+        /** Turned away: a failed challenge, a bad address, a missing field, too many tries. */
+        refused: Schema.Number,
+        days: Schema.Array(
+          Schema.Struct({
+            day: Schema.String,
+            submissions: Schema.Number,
+            subscribed: Schema.Number,
+            confirm: Schema.Number,
+            refused: Schema.Number,
+          }),
+        ),
+      }),
       error: [Forbidden, NotFound],
     }),
   )

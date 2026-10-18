@@ -1,7 +1,9 @@
-import { asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-import { forms, topics } from "../db/schema.ts"
+import { Bindings } from "../Bindings.ts"
+import { type FormFieldDef, formDaily, forms, topics } from "../db/schema.ts"
+import { labelOf } from "../forms/page.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
 import { recordAudit } from "./audit.ts"
@@ -17,17 +19,77 @@ export class FormInvalid extends Schema.TaggedError<FormInvalid>()("FormInvalid"
 
 type FormRow = typeof forms.$inferSelect
 
-const describe = (f: FormRow) => ({
+/** The form's fields as asked: its definitions, or for older forms, each key as optional text. */
+export const defsOf = (f: Pick<FormRow, "fields" | "fieldDefs">): ReadonlyArray<FormFieldDef> =>
+  f.fieldDefs ?? f.fields.map((key) => ({ key, label: labelOf(key), type: "text" as const, required: false }))
+
+const describe = (f: FormRow, turnstileConfigured = false) => ({
   id: f.id,
   name: f.name,
   topicIds: f.topicIds,
+  topicChoice: f.topicChoice,
   fields: f.fields,
+  fieldDefs: defsOf(f),
   redirectUrl: f.redirectUrl,
   description: f.description,
   turnstileSiteKey: f.turnstileSiteKey,
+  /** Turnstile: on when the form has a site key; enforced only where the deploy has TURNSTILE_SECRET. */
+  turnstile: {
+    enabled: f.turnstileSiteKey !== null,
+    siteKey: f.turnstileSiteKey,
+    configured: turnstileConfigured,
+  },
   archived: f.archived,
   createdAt: f.createdAt,
 })
+
+const configured = Effect.map(Bindings, (env) => Boolean(env.TURNSTILE_SECRET))
+
+const FIELD_TYPES = ["text", "number", "date", "checkbox", "select", "tel", "url"] as const
+type FieldDefInput = {
+  readonly key: string
+  readonly label?: string | undefined
+  readonly type?: (typeof FIELD_TYPES)[number] | undefined
+  readonly required?: boolean | undefined
+  readonly options?: ReadonlyArray<string> | undefined
+}
+
+/** Field definitions, checked and given defaults: a label from the key, text, optional. */
+const normalizeDefs = (defs: ReadonlyArray<FieldDefInput>) =>
+  Effect.gen(function* () {
+    if (defs.length > 30) return yield* new FormInvalid({ field: "fieldDefs", message: "At most 30 fields." })
+    const seen = new Set<string>()
+    const out: Array<FormFieldDef> = []
+    for (const [i, d] of defs.entries()) {
+      if (!FIELD.test(d.key) || d.key === "email" || d.key === "name" || seen.has(d.key))
+        return yield* new FormInvalid({
+          field: `fieldDefs[${i}].key`,
+          message: `"${d.key}" can't be a custom form field, or it's listed twice.`,
+        })
+      seen.add(d.key)
+      const type = d.type ?? "text"
+      const options = d.options?.map((o) => o.trim()).filter(Boolean) ?? []
+      if (type === "select" && (options.length === 0 || options.length > 50))
+        return yield* new FormInvalid({
+          field: `fieldDefs[${i}].options`,
+          message: "A select has 1 to 50 options.",
+        })
+      const label = (d.label ?? "").trim() || labelOf(d.key)
+      if (label.length > 100)
+        return yield* new FormInvalid({
+          field: `fieldDefs[${i}].label`,
+          message: "A label is at most 100 characters.",
+        })
+      out.push({
+        key: d.key,
+        label,
+        type,
+        required: d.required ?? false,
+        ...(type === "select" ? { options } : {}),
+      })
+    }
+    return out
+  })
 export type FormView = ReturnType<typeof describe>
 
 const FIELD = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/
@@ -110,11 +172,12 @@ export const listForms = Effect.fn("forms.list")(function* () {
   const rows = yield* database.query("forms.list", (db) =>
     db.select().from(forms).orderBy(asc(forms.archived), asc(forms.name)).all(),
   )
-  return rows.map(describe)
+  const on = yield* configured
+  return rows.map((r) => describe(r, on))
 })
 
 export const getForm = Effect.fn("forms.getView")(function* (id: string) {
-  return describe(yield* findForm(id))
+  return describe(yield* findForm(id), yield* configured)
 })
 
 export const createForm = Effect.fn("forms.create")(function* (
@@ -122,6 +185,8 @@ export const createForm = Effect.fn("forms.create")(function* (
     readonly name: string
     readonly topicIds: ReadonlyArray<string>
     readonly fields?: ReadonlyArray<string> | undefined
+    readonly fieldDefs?: ReadonlyArray<FieldDefInput> | undefined
+    readonly topicChoice?: "all" | "pick" | undefined
     readonly redirectUrl?: string | null | undefined
     readonly description?: string | null | undefined
     readonly turnstileSiteKey?: string | null | undefined
@@ -129,6 +194,7 @@ export const createForm = Effect.fn("forms.create")(function* (
   actor: string,
 ) {
   yield* checkInput(input)
+  const defs = input.fieldDefs ? yield* normalizeDefs(input.fieldDefs) : null
   const database = yield* Database
   const id = `frm_${yield* (yield* Ids).next}`
   const row = yield* database.query("forms.insert", (db) =>
@@ -138,7 +204,9 @@ export const createForm = Effect.fn("forms.create")(function* (
         id,
         name: input.name.trim(),
         topicIds: [...input.topicIds],
-        fields: [...(input.fields ?? [])],
+        fields: defs ? defs.map((d) => d.key) : [...(input.fields ?? [])],
+        fieldDefs: defs,
+        topicChoice: input.topicChoice ?? "all",
         redirectUrl: input.redirectUrl ?? null,
         description: input.description?.trim() || null,
         turnstileSiteKey: input.turnstileSiteKey || null,
@@ -147,7 +215,7 @@ export const createForm = Effect.fn("forms.create")(function* (
       .get(),
   )
   yield* recordAudit({ actor, action: "form.create", target: id, after: row })
-  return describe(row)
+  return describe(row, yield* configured)
 })
 
 export const updateForm = Effect.fn("forms.update")(function* (
@@ -156,6 +224,8 @@ export const updateForm = Effect.fn("forms.update")(function* (
     readonly name?: string | undefined
     readonly topicIds?: ReadonlyArray<string> | undefined
     readonly fields?: ReadonlyArray<string> | undefined
+    readonly fieldDefs?: ReadonlyArray<FieldDefInput> | undefined
+    readonly topicChoice?: "all" | "pick" | undefined
     readonly redirectUrl?: string | null | undefined
     readonly description?: string | null | undefined
     readonly turnstileSiteKey?: string | null | undefined
@@ -165,6 +235,7 @@ export const updateForm = Effect.fn("forms.update")(function* (
 ) {
   const before = yield* findForm(id)
   yield* checkInput(input)
+  const defs = input.fieldDefs ? yield* normalizeDefs(input.fieldDefs) : undefined
   const database = yield* Database
   const row = yield* database.query("forms.update", (db) =>
     db
@@ -172,7 +243,13 @@ export const updateForm = Effect.fn("forms.update")(function* (
       .set({
         ...(input.name !== undefined ? { name: input.name.trim() } : {}),
         ...(input.topicIds !== undefined ? { topicIds: [...input.topicIds] } : {}),
-        ...(input.fields !== undefined ? { fields: [...input.fields] } : {}),
+        // Field definitions replace the plain list; a plain list on its own clears old definitions.
+        ...(defs !== undefined
+          ? { fields: defs.map((d) => d.key), fieldDefs: defs }
+          : input.fields !== undefined
+            ? { fields: [...input.fields], fieldDefs: null }
+            : {}),
+        ...(input.topicChoice !== undefined ? { topicChoice: input.topicChoice } : {}),
         ...(input.redirectUrl !== undefined ? { redirectUrl: input.redirectUrl } : {}),
         ...(input.description !== undefined ? { description: input.description?.trim() || null } : {}),
         ...(input.turnstileSiteKey !== undefined ? { turnstileSiteKey: input.turnstileSiteKey || null } : {}),
@@ -183,7 +260,7 @@ export const updateForm = Effect.fn("forms.update")(function* (
       .get(),
   )
   yield* recordAudit({ actor, action: "form.update", target: id, before, after: row })
-  return describe(row ?? before)
+  return describe(row ?? before, yield* configured)
 })
 
 /** What the hosted page shows: the form, its live topics in its order, and the sender's brand. */
@@ -206,8 +283,8 @@ export const formPage = Effect.fn("forms.page")(function* (id: string) {
   const live = form.topicIds.flatMap((t) => rows.filter((r) => r.id === t && !r.archived))
   const brand = yield* getBrand()
   return {
-    form: describe(form),
-    topics: live.map((t) => ({ name: t.name, description: t.description })),
+    form: describe(form, yield* configured),
+    topics: live.map((t) => ({ id: t.id, name: t.name, description: t.description })),
     brand,
   }
 })
@@ -222,6 +299,8 @@ export const submitForm = Effect.fn("forms.submit")(function* (
     readonly email: string
     readonly name?: string | undefined
     readonly fields: Readonly<Record<string, unknown>>
+    /** With `topicChoice: "pick"`: the topics the visitor ticked. */
+    readonly topics?: ReadonlyArray<string> | undefined
   },
   origin: string,
 ) {
@@ -231,8 +310,51 @@ export const submitForm = Effect.fn("forms.submit")(function* (
   if (!/^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@]{2,}$/.test(email)) {
     return yield* new ContactInvalid({ field: "email", message: "Enter a valid email address." })
   }
+  // Each field as its definition asks: required ones present, numbers numbers, a select one of its options.
   const allowed: Record<string, unknown> = {}
-  for (const f of form.fields) if (f in input.fields) allowed[f] = String(input.fields[f]).slice(0, 500)
+  for (const def of defsOf(form)) {
+    const raw = input.fields[def.key]
+    const text = raw === undefined || raw === null ? "" : String(raw).trim()
+    if (def.type === "checkbox") {
+      const on = raw === true || ["on", "true", "1", "yes"].includes(text.toLowerCase())
+      if (def.required && !on)
+        return yield* new ContactInvalid({ field: def.key, message: `Tick "${def.label}" to sign up.` })
+      if (raw !== undefined) allowed[def.key] = on
+      continue
+    }
+    if (text === "") {
+      if (def.required)
+        return yield* new ContactInvalid({ field: def.key, message: `Fill in "${def.label}".` })
+      continue
+    }
+    if (def.type === "number") {
+      const n = Number(text)
+      if (!Number.isFinite(n))
+        return yield* new ContactInvalid({ field: def.key, message: `"${def.label}" is a number.` })
+      allowed[def.key] = n
+    } else if (def.type === "date") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || Number.isNaN(Date.parse(text)))
+        return yield* new ContactInvalid({
+          field: def.key,
+          message: `"${def.label}" is a date (YYYY-MM-DD).`,
+        })
+      allowed[def.key] = text
+    } else if (def.type === "select") {
+      if (!(def.options ?? []).includes(text))
+        return yield* new ContactInvalid({
+          field: def.key,
+          message: `Choose one of the options for "${def.label}".`,
+        })
+      allowed[def.key] = text
+    } else allowed[def.key] = text.slice(0, 500)
+  }
+  // Which topics: all of the form's, or the ones the visitor ticked from them.
+  const chosen =
+    form.topicChoice === "pick"
+      ? form.topicIds.filter((t) => (input.topics ?? []).includes(t))
+      : form.topicIds
+  if (chosen.length === 0)
+    return yield* new ContactInvalid({ field: "topics", message: "Choose at least one list to join." })
   const { contact } = yield* upsertContact({
     email,
     name: input.name?.trim().slice(0, 200) || undefined,
@@ -240,7 +362,7 @@ export const submitForm = Effect.fn("forms.submit")(function* (
     whenNew: "unconfirmed",
   })
   const states: Array<"subscribed" | "unconfirmed"> = []
-  for (const topicId of form.topicIds) {
+  for (const topicId of chosen) {
     const result = yield* Effect.result(subscribe(contact.id, topicId, { source: `form:${form.id}`, origin }))
     // A blocked or archived target is skipped quietly: the person sees the same answer either way.
     if (result._tag === "Success") states.push(result.success.state)
@@ -250,5 +372,69 @@ export const submitForm = Effect.fn("forms.submit")(function* (
   return {
     status: states.includes("unconfirmed") ? ("confirm" as const) : ("subscribed" as const),
     redirectUrl: form.redirectUrl,
+  }
+})
+
+// ---------------------------------------------------------------------------------------------
+// Submission stats (HAL-3424)
+// ---------------------------------------------------------------------------------------------
+
+export type FormOutcome = "subscribed" | "confirm" | "refused"
+
+/** One signup's outcome, counted for its form and day. Never fails the visitor's request. */
+export const recordFormOutcome = (formId: string, outcome: FormOutcome) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const day = new Date().toISOString().slice(0, 10)
+    yield* database.query("forms.outcome", (db) =>
+      db
+        .insert(formDaily)
+        .values({ formId, day, submissions: 1, [outcome]: 1 })
+        .onConflictDoUpdate({
+          target: [formDaily.formId, formDaily.day],
+          set: {
+            submissions: sql`${formDaily.submissions} + 1`,
+            [outcome]: sql`${formDaily[outcome]} + 1`,
+          },
+        })
+        .run(),
+    )
+  }).pipe(Effect.catchCause((cause) => Effect.logWarning("forms: could not count a submission", cause)))
+
+const STATS_DAYS = { "7d": 7, "30d": 30, "90d": 90 } as const
+
+/** `GET /v1/forms/{id}/stats`: submissions by outcome, in total and per day, zeros included. */
+export const formStats = Effect.fn("forms.stats")(function* (id: string, range: keyof typeof STATS_DAYS) {
+  yield* findForm(id)
+  const database = yield* Database
+  const days = Array.from({ length: STATS_DAYS[range] }, (_, i) =>
+    new Date(Date.now() - (STATS_DAYS[range] - 1 - i) * 86_400_000).toISOString().slice(0, 10),
+  )
+  const rows = yield* database.query("forms.stats", (db) =>
+    db
+      .select()
+      .from(formDaily)
+      .where(and(eq(formDaily.formId, id), gte(formDaily.day, days[0] as string)))
+      .all(),
+  )
+  const byDay = days.map((day) => {
+    const r = rows.find((x) => x.day === day)
+    return {
+      day,
+      submissions: r?.submissions ?? 0,
+      subscribed: r?.subscribed ?? 0,
+      confirm: r?.confirm ?? 0,
+      refused: r?.refused ?? 0,
+    }
+  })
+  const total = (k: "submissions" | "subscribed" | "confirm" | "refused") =>
+    byDay.reduce((a, d) => a + d[k], 0)
+  return {
+    range,
+    submissions: total("submissions"),
+    subscribed: total("subscribed"),
+    confirm: total("confirm"),
+    refused: total("refused"),
+    days: byDay,
   }
 })

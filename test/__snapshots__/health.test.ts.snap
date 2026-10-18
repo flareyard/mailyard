@@ -29219,6 +29219,48 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "fieldDefs": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "key": {
+                                  "type": "string",
+                                },
+                                "label": {
+                                  "type": "string",
+                                },
+                                "options": {
+                                  "items": {
+                                    "type": "string",
+                                  },
+                                  "type": "array",
+                                },
+                                "required": {
+                                  "type": "boolean",
+                                },
+                                "type": {
+                                  "enum": [
+                                    "text",
+                                    "number",
+                                    "date",
+                                    "checkbox",
+                                    "select",
+                                    "tel",
+                                    "url",
+                                  ],
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "key",
+                                "label",
+                                "type",
+                                "required",
+                              ],
+                              "type": "object",
+                            },
+                            "type": "array",
+                          },
                           "fields": {
                             "items": {
                               "type": "string",
@@ -29241,11 +29283,45 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "topicChoice": {
+                            "enum": [
+                              "all",
+                              "pick",
+                            ],
+                            "type": "string",
+                          },
                           "topicIds": {
                             "items": {
                               "type": "string",
                             },
                             "type": "array",
+                          },
+                          "turnstile": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "configured": {
+                                "type": "boolean",
+                              },
+                              "enabled": {
+                                "type": "boolean",
+                              },
+                              "siteKey": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "enabled",
+                              "siteKey",
+                              "configured",
+                            ],
+                            "type": "object",
                           },
                           "turnstileSiteKey": {
                             "anyOf": [
@@ -29262,10 +29338,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "id",
                           "name",
                           "topicIds",
+                          "topicChoice",
                           "fields",
+                          "fieldDefs",
                           "redirectUrl",
                           "description",
                           "turnstileSiteKey",
+                          "turnstile",
                           "archived",
                           "createdAt",
                         ],
@@ -29342,6 +29421,45 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                   },
+                  "fieldDefs": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                        },
+                        "label": {
+                          "type": "string",
+                        },
+                        "options": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "required": {
+                          "type": "boolean",
+                        },
+                        "type": {
+                          "enum": [
+                            "text",
+                            "number",
+                            "date",
+                            "checkbox",
+                            "select",
+                            "tel",
+                            "url",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "key",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
                   "fields": {
                     "items": {
                       "type": "string",
@@ -29360,6 +29478,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "type": "null",
                       },
                     ],
+                  },
+                  "topicChoice": {
+                    "enum": [
+                      "all",
+                      "pick",
+                    ],
+                    "type": "string",
                   },
                   "topicIds": {
                     "items": {
@@ -29423,6 +29548,48 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "fieldDefs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                          },
+                          "label": {
+                            "type": "string",
+                          },
+                          "options": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "required": {
+                            "type": "boolean",
+                          },
+                          "type": {
+                            "enum": [
+                              "text",
+                              "number",
+                              "date",
+                              "checkbox",
+                              "select",
+                              "tel",
+                              "url",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type",
+                          "required",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "fields": {
                       "items": {
                         "type": "string",
@@ -29445,11 +29612,45 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "topicChoice": {
+                      "enum": [
+                        "all",
+                        "pick",
+                      ],
+                      "type": "string",
+                    },
                     "topicIds": {
                       "items": {
                         "type": "string",
                       },
                       "type": "array",
+                    },
+                    "turnstile": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "configured": {
+                          "type": "boolean",
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                        },
+                        "siteKey": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "enabled",
+                        "siteKey",
+                        "configured",
+                      ],
+                      "type": "object",
                     },
                     "turnstileSiteKey": {
                       "anyOf": [
@@ -29466,10 +29667,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "id",
                     "name",
                     "topicIds",
+                    "topicChoice",
                     "fields",
+                    "fieldDefs",
                     "redirectUrl",
                     "description",
                     "turnstileSiteKey",
+                    "turnstile",
                     "archived",
                     "createdAt",
                   ],
@@ -29578,6 +29782,48 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "fieldDefs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                          },
+                          "label": {
+                            "type": "string",
+                          },
+                          "options": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "required": {
+                            "type": "boolean",
+                          },
+                          "type": {
+                            "enum": [
+                              "text",
+                              "number",
+                              "date",
+                              "checkbox",
+                              "select",
+                              "tel",
+                              "url",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type",
+                          "required",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "fields": {
                       "items": {
                         "type": "string",
@@ -29600,11 +29846,45 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "topicChoice": {
+                      "enum": [
+                        "all",
+                        "pick",
+                      ],
+                      "type": "string",
+                    },
                     "topicIds": {
                       "items": {
                         "type": "string",
                       },
                       "type": "array",
+                    },
+                    "turnstile": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "configured": {
+                          "type": "boolean",
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                        },
+                        "siteKey": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "enabled",
+                        "siteKey",
+                        "configured",
+                      ],
+                      "type": "object",
                     },
                     "turnstileSiteKey": {
                       "anyOf": [
@@ -29621,10 +29901,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "id",
                     "name",
                     "topicIds",
+                    "topicChoice",
                     "fields",
+                    "fieldDefs",
                     "redirectUrl",
                     "description",
                     "turnstileSiteKey",
+                    "turnstile",
                     "archived",
                     "createdAt",
                   ],
@@ -29715,6 +29998,45 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                   },
+                  "fieldDefs": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                        },
+                        "label": {
+                          "type": "string",
+                        },
+                        "options": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "required": {
+                          "type": "boolean",
+                        },
+                        "type": {
+                          "enum": [
+                            "text",
+                            "number",
+                            "date",
+                            "checkbox",
+                            "select",
+                            "tel",
+                            "url",
+                          ],
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "key",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
                   "fields": {
                     "items": {
                       "type": "string",
@@ -29733,6 +30055,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "type": "null",
                       },
                     ],
+                  },
+                  "topicChoice": {
+                    "enum": [
+                      "all",
+                      "pick",
+                    ],
+                    "type": "string",
                   },
                   "topicIds": {
                     "items": {
@@ -29792,6 +30121,48 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "fieldDefs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                          },
+                          "label": {
+                            "type": "string",
+                          },
+                          "options": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "required": {
+                            "type": "boolean",
+                          },
+                          "type": {
+                            "enum": [
+                              "text",
+                              "number",
+                              "date",
+                              "checkbox",
+                              "select",
+                              "tel",
+                              "url",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "type",
+                          "required",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
                     "fields": {
                       "items": {
                         "type": "string",
@@ -29814,11 +30185,45 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "topicChoice": {
+                      "enum": [
+                        "all",
+                        "pick",
+                      ],
+                      "type": "string",
+                    },
                     "topicIds": {
                       "items": {
                         "type": "string",
                       },
                       "type": "array",
+                    },
+                    "turnstile": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "configured": {
+                          "type": "boolean",
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                        },
+                        "siteKey": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "enabled",
+                        "siteKey",
+                        "configured",
+                      ],
+                      "type": "object",
                     },
                     "turnstileSiteKey": {
                       "anyOf": [
@@ -29835,10 +30240,13 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "id",
                     "name",
                     "topicIds",
+                    "topicChoice",
                     "fields",
+                    "fieldDefs",
                     "redirectUrl",
                     "description",
                     "turnstileSiteKey",
+                    "turnstile",
                     "archived",
                     "createdAt",
                   ],
@@ -29932,6 +30340,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "html": {
                       "type": "string",
                     },
+                    "iframe": {
+                      "type": "string",
+                    },
                     "pageUrl": {
                       "type": "string",
                     },
@@ -29939,6 +30350,253 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "required": [
                     "pageUrl",
                     "html",
+                    "iframe",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "forms",
+        ],
+      },
+    },
+    "/v1/forms/{id}/stats": {
+      "get": {
+        "operationId": "forms.stats",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "enum": [
+                "7d",
+                "30d",
+                "90d",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "confirm": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "days": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "confirm": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "day": {
+                            "type": "string",
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "submissions": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                          "subscribed": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "day",
+                          "submissions",
+                          "subscribed",
+                          "confirm",
+                          "refused",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "range": {
+                      "enum": [
+                        "7d",
+                        "30d",
+                        "90d",
+                      ],
+                      "type": "string",
+                    },
+                    "refused": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "submissions": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "subscribed": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "range",
+                    "submissions",
+                    "subscribed",
+                    "confirm",
+                    "refused",
+                    "days",
                   ],
                   "type": "object",
                 },
