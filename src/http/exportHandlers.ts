@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { Bindings } from "../Bindings.ts"
 import { createContactExport, getExport, listExports } from "../exports/contactExport.ts"
+import { createWorkspaceExport } from "../exports/workspaceExport.ts"
 import { InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
@@ -14,6 +15,24 @@ export const ExportsHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       create: p(({ payload, request }) =>
         Effect.gen(function* () {
+          if (payload.kind === "workspace") {
+            // Everything, including settings and the audit log: the admin's to take.
+            const caller = yield* requireScope("admin")
+            if (payload.filter || payload.fields)
+              return yield* new InvalidRequest({
+                field: payload.filter ? "filter" : "fields",
+                message: "A workspace export takes everything; filters and fields are for contacts exports.",
+              })
+            const { WORKSPACE_EXPORT_WORKFLOW } = yield* Bindings
+            const id = yield* createWorkspaceExport(caller.keyId, async (exportId) => {
+              const instance = await WORKSPACE_EXPORT_WORKFLOW.create({
+                id: `workspace-export-${exportId}`,
+                params: { exportId },
+              })
+              ;(instance as { [Symbol.dispose]?: () => void })[Symbol.dispose]?.()
+            })
+            return yield* getExport(id, originOf(request))
+          }
           const caller = yield* requireScope("read")
           const { CONTACT_EXPORT_WORKFLOW } = yield* Bindings
           return yield* createContactExport(

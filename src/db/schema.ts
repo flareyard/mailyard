@@ -1271,11 +1271,26 @@ export const contactImports = sqliteTable(
  * A CSV export of contacts (`POST /v1/exports`). Small ones are written at once; past 10,000 rows
  * ContactExportWorkflow pages through by contact id and uploads to R2 in multipart parts.
  */
+/** One file in a workspace export. */
+export interface ExportPart {
+  readonly kind: "mail" | "contacts" | "templates" | "lists" | "settings" | "audit" | "manifest"
+  readonly format: "mbox" | "zip" | "csv" | "json"
+  readonly filename: string
+  /** The R2 key, once written; a mail part points at its mailbox export's file. */
+  readonly key: string | null
+  readonly items: number
+  readonly bytes: number
+  readonly status: "pending" | "complete" | "failed"
+  readonly mailboxId?: string
+  readonly mailboxExportId?: string
+  readonly error?: string
+}
+
 export const exports = sqliteTable(
   "exports",
   {
     id: text("id").primaryKey(),
-    kind: text("kind", { enum: ["contacts"] }).notNull(),
+    kind: text("kind", { enum: ["contacts", "workspace"] }).notNull(),
     status: text("status", { enum: ["running", "completed", "failed"] })
       .notNull()
       .default("running"),
@@ -1293,6 +1308,13 @@ export const exports = sqliteTable(
       .notNull()
       .default(sql`'[]'`),
     after: text("after"),
+    /**
+     * A workspace export's parts (HAL-3451), each written to R2 on its own: mail per mailbox, the
+     * contacts CSV, templates, lists, settings and the audit log. Null for a contacts export.
+     */
+    bundle: text("bundle", { mode: "json" }).$type<ReadonlyArray<ExportPart>>(),
+    /** The workspace export a contacts export was made for; such a child isn't listed on its own. */
+    parentId: text("parent_id"),
     error: text("error"),
     createdBy: text("created_by").notNull(),
     createdAt: createdAt(),

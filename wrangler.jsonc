@@ -69,6 +69,12 @@
       "name": "mailyard-automation-run",
       "binding": "AUTOMATION_WORKFLOW",
       "class_name": "AutomationRunWorkflow"
+    },
+    {
+      // The whole workspace in one export (HAL-3451).
+      "name": "mailyard-workspace-export",
+      "binding": "WORKSPACE_EXPORT_WORKFLOW",
+      "class_name": "WorkspaceExportWorkflow"
     }
   ],
   "queues": {
