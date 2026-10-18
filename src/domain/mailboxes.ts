@@ -7,6 +7,7 @@ import { SPAM_THRESHOLD } from "../rules/spam.ts"
 import { Database } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import type { Caller } from "./apiKeys.ts"
+import { activeKey, isRevoked } from "./apiKeys.ts"
 import { recordAudit } from "./audit.ts"
 
 export class MailboxNotFound extends Schema.TaggedError<MailboxNotFound>()("MailboxNotFound", {
@@ -130,7 +131,7 @@ export const getMailbox = Effect.fn("mailboxes.get")(function* (id: string) {
       apiKeyId: r.apiKeyId,
       name: r.name,
       role: r.role,
-      revoked: r.revokedAt !== null,
+      revoked: isRevoked(r.revokedAt),
     })),
     messageCount,
     lastExport: lastExport
@@ -415,7 +416,7 @@ export const setMembers = Effect.fn("mailboxes.setMembers")(function* (
         db
           .select({ id: apiKeys.id, kind: apiKeys.kind })
           .from(apiKeys)
-          .where(and(inArray(apiKeys.id, ids), isNull(apiKeys.revokedAt)))
+          .where(and(inArray(apiKeys.id, ids), activeKey()))
           .all(),
       )
     : []

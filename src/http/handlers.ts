@@ -9,7 +9,16 @@ import * as Redacted from "effect/Redacted"
 import pkg from "../../package.json" with { type: "json" }
 import { Bindings } from "../Bindings.ts"
 import { messageEvents, messagesOut } from "../db/schema.ts"
-import { authenticate, type Caller, createKey, listKeys, revokeKey, type Scope } from "../domain/apiKeys.ts"
+import {
+  authenticate,
+  type Caller,
+  createKey,
+  listKeys,
+  requests24h,
+  revokeKey,
+  rotateKey,
+  type Scope,
+} from "../domain/apiKeys.ts"
 import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
 import { sentHeaders } from "../domain/messageRaw.ts"
@@ -276,7 +285,15 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
       list: p(({ query }) =>
         requireScope("admin").pipe(
           Effect.andThen(listKeys(query.purpose)),
-          Effect.map((rows) => ({ keys: rows.map(summarizeKey) })),
+          Effect.flatMap((rows) =>
+            query.include === "usage"
+              ? requests24h(rows.map((r) => r.id)).pipe(
+                  Effect.map((usage) => ({
+                    keys: rows.map((r) => ({ ...summarizeKey(r), requests24h: usage.get(r.id) ?? 0 })),
+                  })),
+                )
+              : Effect.succeed({ keys: rows.map(summarizeKey) }),
+          ),
           Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
@@ -303,6 +320,16 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
           ),
           Effect.map(({ key, record }) => ({ key, apiKey: summarizeKey(record) })),
           Effect.catchTag("DatabaseError", Effect.die),
+        ),
+      ),
+      rotate: p(({ params, payload }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => rotateKey(params.id, payload.graceSeconds ?? 0, caller.keyId)),
+          Effect.map(({ key, record, previous }) => ({ key, apiKey: summarizeKey(record), previous })),
+          Effect.catchTags({
+            KeyNotFound: (e) => Effect.fail(new NotFound({ message: `No active API key ${e.id}.` })),
+            DatabaseError: Effect.die,
+          }),
         ),
       ),
       revoke: p(({ params }) =>

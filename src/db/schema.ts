@@ -648,11 +648,28 @@ export const apiKeys = sqliteTable(
     hash: text("hash").notNull(),
     scopes: text("scopes", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
     createdBy: text("created_by"),
+    /** Touched at most once a minute; `api_key_usage` counts every request. */
     lastUsedAt: integer("last_used_at"),
+    /** When it stopped (or, after a rotation with a grace period, will stop) working. */
     revokedAt: integer("revoked_at"),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("api_keys_hash").on(t.hash)],
+)
+
+/**
+ * Requests per key per UTC hour (HAL-3414), counted as each request authenticates: one upsert, so
+ * `requests24h` is a read of at most 24 rows per key. Rows older than 30 days are pruned hourly.
+ */
+export const apiKeyUsage = sqliteTable(
+  "api_key_usage",
+  {
+    keyId: text("key_id").notNull(),
+    /** Epoch hour: milliseconds / 3,600,000, floored. */
+    hour: integer("hour").notNull(),
+    requests: integer("requests").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.keyId, t.hour] }), index("api_key_usage_hour").on(t.hour)],
 )
 
 export const audit = sqliteTable(

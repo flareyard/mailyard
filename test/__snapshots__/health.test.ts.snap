@@ -1732,6 +1732,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "type": "string",
             },
           },
+          {
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "enum": [
+                "usage",
+              ],
+              "type": "string",
+            },
+          },
         ],
         "responses": {
           "200": {
@@ -1813,6 +1824,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "mcp",
                             ],
                             "type": "string",
+                          },
+                          "requests24h": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "revokedAt": {
                             "anyOf": [
@@ -2040,6 +2066,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           ],
                           "type": "string",
                         },
+                        "requests24h": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
                         "revokedAt": {
                           "anyOf": [
                             {
@@ -2238,6 +2279,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "string",
                     },
+                    "requests24h": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "revokedAt": {
                       "anyOf": [
                         {
@@ -2278,6 +2334,279 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "lastUsedAt",
                     "revokedAt",
                     "createdAt",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "apiKeys",
+        ],
+      },
+    },
+    "/v1/api-keys/{id}/rotate": {
+      "post": {
+        "operationId": "apiKeys.rotate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "graceSeconds": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                      },
+                      {
+                        "enum": [
+                          "Infinity",
+                          "-Infinity",
+                          "NaN",
+                        ],
+                        "type": "string",
+                      },
+                    ],
+                  },
+                },
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "apiKey": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "createdBy": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "kind": {
+                          "enum": [
+                            "secret",
+                            "public",
+                          ],
+                          "type": "string",
+                        },
+                        "lastUsedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                        "prefix": {
+                          "type": "string",
+                        },
+                        "purpose": {
+                          "enum": [
+                            "api",
+                            "mcp",
+                          ],
+                          "type": "string",
+                        },
+                        "requests24h": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "revokedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "scopes": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "kind",
+                        "purpose",
+                        "prefix",
+                        "scopes",
+                        "createdBy",
+                        "lastUsedAt",
+                        "revokedAt",
+                        "createdAt",
+                      ],
+                      "type": "object",
+                    },
+                    "key": {
+                      "type": "string",
+                    },
+                    "previous": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                        },
+                        "revokedAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "revokedAt",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "key",
+                    "apiKey",
+                    "previous",
                   ],
                   "type": "object",
                 },

@@ -189,14 +189,20 @@ export const ApiKeySummary = Schema.Struct({
   scopes: Schema.Array(Schema.String),
   createdBy: Schema.NullOr(Schema.String),
   lastUsedAt: Schema.NullOr(Schema.Number),
+  /** When it stopped working; in the future, a rotated key's last moment. */
   revokedAt: Schema.NullOr(Schema.Number),
   createdAt: Schema.Number,
+  /** With `?include=usage`: requests in the last 24 hours, by the hour they arrived in. */
+  requests24h: Schema.optionalKey(Schema.Number),
 })
 
 export class ApiKeysApi extends HttpApiGroup.make("apiKeys")
   .add(
     HttpApiEndpoint.get("list", "/v1/api-keys", {
-      query: { purpose: Schema.optionalKey(KeyPurpose) },
+      query: {
+        purpose: Schema.optionalKey(KeyPurpose),
+        include: Schema.optionalKey(Schema.Literal("usage")),
+      },
       success: Schema.Struct({ keys: Schema.Array(ApiKeySummary) }),
       error: Forbidden,
     }),
@@ -211,6 +217,22 @@ export class ApiKeysApi extends HttpApiGroup.make("apiKeys")
       /** `key` is returned once, here, and never again. */
       success: Schema.Struct({ key: Schema.String, apiKey: ApiKeySummary }),
       error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("rotate", "/v1/api-keys/:id/rotate", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        /** How long the old key keeps working, 0 (default) to 604800 (a week). */
+        graceSeconds: Schema.optionalKey(
+          Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 604_800 })),
+        ),
+      }),
+      /** `key` is returned once, here. The new key has the old one's scopes, purpose and mailboxes. */
+      success: Schema.Struct({
+        key: Schema.String,
+        apiKey: ApiKeySummary,
+        previous: Schema.Struct({ id: Schema.String, revokedAt: Schema.Number }),
+      }),
+      error: [Forbidden, NotFound],
     }),
     HttpApiEndpoint.delete("revoke", "/v1/api-keys/:id", {
       params: { id: Schema.String },

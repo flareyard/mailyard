@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, max } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { apiKeys, mailboxes, mailboxRules, mailboxSenders, webhookEndpoints } from "../db/schema.ts"
+import { isRevoked } from "../domain/apiKeys.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { Ids } from "../kit/index.ts"
 import { callMailbox } from "../mail/rpc.ts"
@@ -83,7 +84,7 @@ const checkActions = Effect.fn("rules.checkActions")(function* (
         .where(eq(apiKeys.id, assignee))
         .get(),
     )
-    if (!key || key.revokedAt !== null)
+    if (!key || isRevoked(key.revokedAt))
       return yield* new RuleInvalid({
         field: "actions",
         message: `No active API key ${assignee} to assign to.`,
