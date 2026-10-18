@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { type WebhookFilter, webhookDeliveries, webhookEndpoints } from "../db/schema.ts"
+import { mailboxes, type WebhookFilter, webhookDeliveries, webhookEndpoints } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { currentRequestId } from "../kit/requestContext.ts"
 import { Database } from "../services/Database.ts"
@@ -124,7 +124,7 @@ export class SecretBox extends Context.Service<
   )
 }
 
-const checkUrl = (url: string) => {
+export const checkUrl = (url: string) => {
   try {
     const u = new URL(url)
     if (u.protocol !== "https:") return "Webhook URLs must use https."
@@ -256,11 +256,30 @@ const drainHeld = Effect.fn("webhooks.drainHeld")(function* (endpointId: string)
 export const createEndpoint = Effect.fn("webhooks.create")(function* (input: {
   readonly url: string
   readonly description?: string | undefined
-  readonly events: ReadonlyArray<string>
+  readonly events?: ReadonlyArray<string> | undefined
   readonly filter?: WebhookFilter | null | undefined
   readonly paused?: boolean | undefined
+  readonly preset?: { readonly kind: "agent-wake"; readonly mailboxId: string } | undefined
 }) {
-  const problem = checkUrl(input.url) ?? checkEvents(input.events)
+  // The agent-wake preset (HAL-3461): mail.received for one mailbox, whatever else was asked.
+  let wakeAddress: string | null = null
+  if (input.preset) {
+    const database = yield* Database
+    const mailbox = yield* database.query("webhooks.presetMailbox", (db) =>
+      db
+        .select({ address: mailboxes.address })
+        .from(mailboxes)
+        .where(eq(mailboxes.id, input.preset?.mailboxId ?? ""))
+        .get(),
+    )
+    if (!mailbox)
+      return yield* new WebhookInvalid({ message: `No mailbox ${input.preset.mailboxId} to wake on.` })
+    wakeAddress = mailbox.address
+  }
+  const events = input.preset ? ["mail.received"] : (input.events ?? [])
+  if (events.length === 0)
+    return yield* new WebhookInvalid({ message: "Choose the events to send, or a preset." })
+  const problem = checkUrl(input.url) ?? checkEvents(events)
   if (problem) return yield* new WebhookInvalid({ message: problem })
   const database = yield* Database
   const box = yield* SecretBox
@@ -273,9 +292,10 @@ export const createEndpoint = Effect.fn("webhooks.create")(function* (input: {
       .values({
         id,
         url: input.url,
-        description: input.description ?? null,
-        events: [...input.events],
-        filter: normalizeFilter(input.filter),
+        description:
+          input.description ?? (wakeAddress ? `Wakes an agent when mail reaches ${wakeAddress}` : null),
+        events: [...events],
+        filter: input.preset ? { mailboxIds: [input.preset.mailboxId] } : normalizeFilter(input.filter),
         paused: input.paused ?? false,
         secretCiphertext,
         updatedAt: Date.now(),

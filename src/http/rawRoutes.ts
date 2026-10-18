@@ -293,6 +293,71 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
       },
     },
   },
+  "/v1/mailboxes/{id}/wait": {
+    get: {
+      tags: ["mail"],
+      operationId: "mail.wait",
+      summary: "Wait for new mail (long-poll, HAL-3461)",
+      description:
+        "Blocks until mail newer than `since` is in the mailbox, at once if it already is, else answers 204 at the timeout. Sent copies don't count. Wait again from the `cursor` (also in `x-mailyard-cursor`). `reset: true` means the cursor was older than the kept log: refetch, then wait from `cursor`. Without `since` it waits for mail from now on. For an agent that can't run a webhook receiver.",
+      security: bearer,
+      parameters: [
+        idParam("id", "The mailbox."),
+        {
+          name: "since",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 0 },
+          description: "The cursor from the last answer.",
+        },
+        {
+          name: "timeout",
+          in: "query",
+          required: false,
+          schema: { type: "number", minimum: 0, maximum: 50, default: 25 },
+          description: "Seconds to wait.",
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Mail arrived.",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["cursor", "messages", "reset"],
+                properties: {
+                  cursor: { type: "integer" },
+                  reset: { type: "boolean" },
+                  messages: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string" },
+                        threadId: { type: "string" },
+                        subject: { type: "string" },
+                        from: { type: "object", nullable: true },
+                        snippet: { type: "string" },
+                        receivedAt: { type: "number" },
+                        folder: { type: "string" },
+                        seen: { type: "boolean" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        "204": { description: "Nothing arrived before the timeout; the cursor is in x-mailyard-cursor." },
+        "400": problem("since or timeout isn't valid."),
+        "401": problem("No key or session, or one that no longer works."),
+        "403": problem("The key can't read this mailbox."),
+        "404": problem("No such mailbox."),
+      },
+    },
+  },
 }
 
 /** Adds the raw routes to the generated document. */

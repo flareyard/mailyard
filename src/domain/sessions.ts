@@ -168,6 +168,7 @@ export const resolveSession = Effect.fn("sessions.resolve")(function* (token: st
     caller = {
       keyId: key.id,
       kind: key.kind,
+      purpose: key.purpose,
       scopes: key.scopes as ReadonlyArray<Scope>,
       sessionId: session.id,
     }

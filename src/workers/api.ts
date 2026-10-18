@@ -79,6 +79,7 @@ import { CLICK_PATH, handleClick, handleOpen, OPEN_PATH } from "./track.ts"
 import { handleRequestLink, handleUnsubscribe, REQUEST_LINK_PATH } from "./unsubscribe.ts"
 import { handleUploads, UPLOADS_PATH } from "./uploads.ts"
 import { handleView } from "./view.ts"
+import { handleWait, WAIT_PATH } from "./wait.ts"
 
 export { MailboxDO } from "../objects/MailboxDO.ts"
 export { SendGovernorDO } from "../objects/SendGovernorDO.ts"
@@ -153,6 +154,8 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   if (env.ASSETS && !isWorkerPath(path)) return env.ASSETS.fetch(request)
   if (path === MCP_PATH) return handleMcp(request, env)
   const d = (s: string | undefined) => decodeURIComponent(s ?? "")
+  const wait = WAIT_PATH.exec(path)
+  if (wait) return handleWait(request, env, d(wait[1]))
   const live = LIVE_PATH.exec(path)
   if (live) return handleLive(request, env, d(live[1]))
   if (UPLOADS_PATH.test(path)) return handleUploads(request, env)
