@@ -4,7 +4,14 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { cloudflareApi, relayRefusal } from "./cloudflareApi.ts"
+import {
+  cloudflareApi,
+  type Lookup,
+  type RelayRefusal,
+  relayMessage,
+  relayRefusalOf,
+  withRelay,
+} from "./cloudflareApi.ts"
 
 /**
  * Read-only views of the account's Email Sending limits and reputation, from the Cloudflare API.
@@ -114,7 +121,13 @@ const Errors = Schema.Struct({
 /** What a write to Cloudflare's list came to: done, or refused with Cloudflare's status and words. */
 export type WriteOutcome<A> =
   | { readonly ok: true; readonly value: A }
-  | { readonly ok: false; readonly status: number; readonly message: string }
+  | {
+      readonly ok: false
+      readonly status: number
+      readonly message: string
+      /** Set when Flareyard's relay refused it rather than Cloudflare (HAL-3558). */
+      readonly relay?: RelayRefusal
+    }
 
 /** The queue Email Sending's events land on, unless MAILYARD_EVENTS_QUEUE renames it. */
 export const EVENTS_QUEUE = "mailyard-email-events"
@@ -138,18 +151,20 @@ const request = (url: string, token: string, init: { method: string; body?: unkn
     }
   })
 
-const refusal = (status: number, body: unknown) => {
+const refusal = (status: number, body: unknown, base: string) => {
   const errors = Option.getOrUndefined(Schema.decodeUnknownOption(Errors)(body))?.errors ?? []
   const message = errors
     .map((e) => e.message)
     .filter(Boolean)
     .join("; ")
+  const relay = relayRefusalOf(body, base)
   return {
     ok: false as const,
     status,
-    message:
-      relayRefusal(body) ??
-      (message || (status === 0 ? "Cloudflare didn't answer." : `Cloudflare answered ${status}.`)),
+    message: relay
+      ? relayMessage(relay)
+      : message || (status === 0 ? "Cloudflare didn't answer." : `Cloudflare answered ${status}.`),
+    ...withRelay(relay),
   }
 }
 
@@ -192,7 +207,7 @@ export type VerifiedAddresses =
       readonly available: true
       readonly addresses: ReadonlyArray<{ readonly email: string; readonly verifiedAt: number }>
     }
-  | { readonly available: false; readonly reason: string }
+  | { readonly available: false; readonly reason: string; readonly relay?: RelayRefusal }
 
 export class CloudflareEmail extends Context.Service<
   CloudflareEmail,
@@ -219,10 +234,10 @@ export class CloudflareEmail extends Context.Service<
       readonly page: (
         cursor: string | null,
       ) => Effect.Effect<
-        Option.Option<{ readonly items: ReadonlyArray<CloudflareSuppression>; readonly next: string | null }>
+        Lookup<{ readonly items: ReadonlyArray<CloudflareSuppression>; readonly next: string | null }>
       >
       /** Every entry for one address, across scopes. */
-      readonly find: (email: string) => Effect.Effect<Option.Option<ReadonlyArray<CloudflareSuppression>>>
+      readonly find: (email: string) => Effect.Effect<Lookup<ReadonlyArray<CloudflareSuppression>>>
       /** Adds an account-wide suppression. */
       readonly create: (email: string, note: string) => Effect.Effect<WriteOutcome<{ readonly id: string }>>
       /** Adds up to 1,000 account-wide suppressions in one call; each item's id, or why not. */
@@ -254,7 +269,8 @@ export class CloudflareEmail extends Context.Service<
         if (!account || !readToken)
           return {
             available: false,
-            reason: "Set CLOUDFLARE_ACCOUNT_ID and a read token to list the account's verified addresses.",
+            reason:
+              "Mailyard can't list the account's verified addresses: install it through Flareyard, or set CLOUDFLARE_ACCOUNT_ID and a read token.",
           } as const
         const addresses: Array<{ email: string; verifiedAt: number }> = []
         for (let page = 1; page <= 20; page++) {
@@ -264,11 +280,12 @@ export class CloudflareEmail extends Context.Service<
             { method: "GET" },
           )
           const decoded = Schema.decodeUnknownOption(DestinationPage)(body)
+          const relay = relayRefusalOf(body, api)
+          if (relay) return { available: false, reason: relayMessage(relay), relay } as const
           if (status === 403 || status === 401)
             return {
               available: false,
               reason:
-                relayRefusal(body) ??
                 "The read token can't see Email Routing's addresses: add Email Routing Addresses: Read.",
             } as const
           if (Option.isNone(decoded) || !decoded.value.success)
@@ -355,7 +372,7 @@ const NOT_CONNECTED = {
   ok: false as const,
   status: 0,
   message:
-    "Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_EMAIL_WRITE_TOKEN (Email Sending: Edit) to change Cloudflare's list.",
+    "Mailyard can't change Cloudflare's list: install it through Flareyard, or set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_EMAIL_WRITE_TOKEN (Email Sending: Edit).",
 }
 
 const suppressionsApi = (
@@ -370,21 +387,24 @@ const suppressionsApi = (
   const list = (query: string) =>
     canRead
       ? request(`${base}?${query}`, readToken as string, { method: "GET" }).pipe(
-          Effect.map(({ body }) =>
-            Option.flatMap(Schema.decodeUnknownOption(SuppressionPage)(body), (d) =>
+          Effect.map(({ body }) => ({
+            value: Option.flatMap(Schema.decodeUnknownOption(SuppressionPage)(body), (d) =>
               d.success && d.result
                 ? Option.some({ items: d.result, next: d.result_info?.next_cursor ?? null })
                 : Option.none(),
             ),
-          ),
+            relay: relayRefusalOf(body, api),
+          })),
         )
-      : Effect.succeedNone
+      : Effect.succeed({ value: Option.none(), relay: null })
   return {
     canRead,
     canWrite,
     page: (cursor) => list(`per_page=1000${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`),
     find: (email) =>
-      list(`per_page=100&email=${encodeURIComponent(email)}`).pipe(Effect.map(Option.map((p) => p.items))),
+      list(`per_page=100&email=${encodeURIComponent(email)}`).pipe(
+        Effect.map((l) => ({ value: Option.map(l.value, (p) => p.items), relay: l.relay })),
+      ),
     create: (email, note) =>
       canWrite
         ? request(base, writeToken as string, {
@@ -395,7 +415,7 @@ const suppressionsApi = (
               const created = Option.getOrUndefined(Schema.decodeUnknownOption(Created)(body))
               return created?.success && created.result
                 ? { ok: true as const, value: { id: created.result.id } }
-                : refusal(status, body)
+                : refusal(status, body, api)
             }),
           )
         : Effect.succeed(NOT_CONNECTED),
@@ -407,7 +427,7 @@ const suppressionsApi = (
           }).pipe(
             Effect.map(({ status, body }) => {
               const done = Option.getOrUndefined(Schema.decodeUnknownOption(BulkResult)(body))
-              if (!done?.success || !done.result) return refusal(status, body)
+              if (!done?.success || !done.result) return refusal(status, body, api)
               return {
                 ok: true as const,
                 value: done.result.items.map((i) => ({
@@ -423,7 +443,7 @@ const suppressionsApi = (
       canWrite
         ? request(`${base}/${encodeURIComponent(id)}`, writeToken as string, { method: "DELETE" }).pipe(
             Effect.map(({ status, body }) =>
-              status >= 200 && status < 300 ? { ok: true as const, value: null } : refusal(status, body),
+              status >= 200 && status < 300 ? { ok: true as const, value: null } : refusal(status, body, api),
             ),
           )
         : Effect.succeed(NOT_CONNECTED),

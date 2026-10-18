@@ -47,6 +47,11 @@
         "scope": "dns.write",
         "why": "Write SPF, DKIM, DMARC and MX records, and turn on Email Routing for a receiving subdomain",
         "enables": "domain"
+      },
+      {
+        "scope": "account-analytics.read",
+        "why": "Count the mail Email Routing rejects before it reaches Mailyard (SPF, DKIM, DMARC failures)",
+        "enables": "routing rejections"
       }
     ]
   },
@@ -91,11 +96,6 @@
     {
       "name": "ASSISTANT_API_KEY",
       "ask": "API key for the OpenAI-compatible model behind the mailbox and audience helpers, if you use one",
-      "optional": true
-    },
-    {
-      "name": "CLOUDFLARE_ANALYTICS_TOKEN",
-      "ask": "A zone token with Analytics: Read (and Zone: Read, to find the zones) for the mail Email Routing rejects before Mailyard sees it",
       "optional": true
     }
   ],
@@ -389,6 +389,15 @@
         "path": "/zones/{zone}/email/sending/subdomains/{id}/reputation/complaints",
         "scope": "email-sending.write",
         "why": "Count complaints for a sending domain on its screen"
+      }
+    ],
+    "graphql": [
+      {
+        "name": "MailyardRoutingRejections",
+        "query": "query MailyardRoutingRejections($zone: string!, $from: Date!, $to: Date!) {\n  viewer {\n    zones(filter: { zoneTag: $zone }) {\n      emailRoutingAdaptiveGroups(filter: { date_geq: $from, date_leq: $to }, limit: 5000) {\n        count\n        dimensions { status dmarc spf }\n      }\n    }\n  }\n}",
+        "zoneVariable": "zone",
+        "scope": "account-analytics.read",
+        "why": "Count, per day, the mail Email Routing refused on your receiving zones, and why (DMARC, SPF, DKIM), for the overview"
       }
     ]
   },

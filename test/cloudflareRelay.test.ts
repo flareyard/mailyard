@@ -3,26 +3,42 @@ import * as Effect from "effect/Effect"
 import { afterEach, describe, expect, it } from "vitest"
 import manifest from "../cloudflare-app.json"
 import type { Env } from "../src/Bindings.ts"
-import { clearUpstreamCache, upstreamRejections } from "../src/domain/routingAnalytics.ts"
+import { changePolicy } from "../src/dmarc/reports.ts"
+import { domainCandidates } from "../src/domain/domains.ts"
+import { clearUpstreamCache, QUERY, upstreamRejections } from "../src/domain/routingAnalytics.ts"
+import { pushSuppression } from "../src/domain/suppressions.ts"
 import { CloudflareEmail } from "../src/services/CloudflareEmail.ts"
 import { CloudflareZones } from "../src/services/CloudflareZones.ts"
-import { cloudflareApi, DIRECT_API, relayRefusal } from "../src/services/cloudflareApi.ts"
+import { cloudflareApi, DIRECT_API, relayRefusal, relayRefusalOf } from "../src/services/cloudflareApi.ts"
 import { runtimeFor } from "../src/workers/inbound.ts"
+import { installDohFixture, setDns } from "./dns.ts"
 
 /**
  * HAL-3558: installed through Flareyard, every Cloudflare call goes to the relay with the install's
  * key, and every one of them is a route the manifest declares (contract v1.3). Checked both ways:
  * no call the relay would refuse as undeclared, and no declared route the code never makes.
  */
+installDohFixture()
+
 const RELAY = "https://relay.test/api/v1/installs/ins_1/cloudflare"
 const ACCOUNT = "a".repeat(32)
 const ZONE = "b".repeat(32)
 
-type Call = { method: string; path: string; query: string; auth: string | null; host: string }
+type Call = {
+  method: string
+  path: string
+  query: string
+  auth: string | null
+  host: string
+  body: string | null
+}
 const calls: Array<Call> = []
 let answer: (call: Call) => Response = (call) => ok(call)
 
+const GRAPHQL_DATA = { data: { viewer: { zones: [{ emailRoutingAdaptiveGroups: [] }] } }, errors: null }
+
 const ok = (call: Call) => {
+  if (call.path === "/graphql") return Response.json(GRAPHQL_DATA)
   if (call.path === "/zones")
     return Response.json({ success: true, result: [{ id: ZONE, name: "acme.test", status: "active" }] })
   if (call.path.endsWith("/queues"))
@@ -60,11 +76,10 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     query: url.search,
     auth: request.headers.get("authorization"),
     host: relayed ? "relay" : "direct",
+    body: request.method === "GET" ? null : await request.text(),
   }
   calls.push(call)
-  if (!relayed)
-    return Response.json({ data: { viewer: { zones: [{ emailRoutingAdaptiveGroups: [] }] } }, errors: null })
-  return answer(call)
+  return relayed ? answer(call) : ok(call)
 }) as typeof fetch
 afterEach(() => {
   calls.length = 0
@@ -81,8 +96,49 @@ const platform = {
   CLOUDFLARE_EMAIL_READ_TOKEN: undefined,
   CLOUDFLARE_EMAIL_WRITE_TOKEN: undefined,
   CLOUDFLARE_DNS_TOKEN: undefined,
+  CLOUDFLARE_ANALYTICS_TOKEN: undefined,
+} as unknown as Env
+
+/** Self-hosted: no relay, the pasted analytics token. */
+const selfHosted = {
+  ...env,
+  FLAREYARD_CF_API: undefined,
+  FLAREYARD_CF_TOKEN: undefined,
+  CLOUDFLARE_DNS_TOKEN: "dns-token",
   CLOUDFLARE_ANALYTICS_TOKEN: "analytics-token",
 } as unknown as Env
+
+const uid = () => crypto.randomUUID().slice(0, 8)
+
+/** A receiving domain with no stored zone, so every path has to look its zone up. */
+const receivingDomain = async () => {
+  const id = `dom_relay_${uid()}`
+  const name = `relay-${uid()}.test`
+  await env.DB.prepare(
+    "insert into domains (id, name, zone_id, routing_enabled, sending_enabled, created_at, updated_at) values (?, ?, null, 1, 0, ?, ?)",
+  )
+    .bind(id, name, Date.now(), Date.now())
+    .run()
+  return { id, name }
+}
+
+/** Every relayed call refused for a missing scope, the way the relay words it. */
+const refuseScope = () =>
+  Response.json(
+    {
+      success: false,
+      errors: [
+        {
+          code: 10404,
+          message: "This needs DNS: Edit (dns.write). Grant it from the app's page in Flareyard.",
+        },
+      ],
+      messages: [],
+      result: null,
+    },
+    { status: 403 },
+  )
+const SCOPE_REFUSAL = { reason: "scope_not_granted", code: 10404, scope: "dns.write" }
 
 /** The manifest route a call matches, by the relay's own rules. */
 const routeOf = (call: Call) =>
@@ -165,35 +221,53 @@ describe("Cloudflare calls through Flareyard's relay (HAL-3558)", () => {
     expect(calls.filter((c) => c.host === "direct")).toEqual([])
   })
 
-  it("looks zones up through the relay, and keeps GraphQL on Cloudflare with the analytics token", async () => {
-    await env.DB.prepare(
-      "insert into domains (id, name, zone_id, routing_enabled, sending_enabled, created_at, updated_at) values (?, ?, null, 1, 0, ?, ?)",
+  it("looks zones up and sends the declared GraphQL query through the relay, word for word", async () => {
+    await receivingDomain()
+    const counted = await runtimeFor(platform).runPromise(
+      upstreamRejections(["2026-10-18"], Date.UTC(2026, 9, 18, 12)),
     )
-      .bind(
-        `dom_relay_${crypto.randomUUID().slice(0, 8)}`,
-        `relay-${crypto.randomUUID().slice(0, 8)}.test`,
-        Date.now(),
-        Date.now(),
-      )
-      .run()
-    await runtimeFor(platform).runPromise(upstreamRejections(["2026-10-18"], Date.UTC(2026, 9, 18, 12)))
+    expect(counted.connected).toBe(true)
     const lookups = calls.filter((c) => c.path === "/zones")
     expect(lookups.length).toBeGreaterThan(0)
     expect(lookups.every((c) => c.host === "relay" && c.auth === "Bearer relay-key")).toBe(true)
     const graphql = calls.filter((c) => c.path === "/graphql")
     expect(graphql.length).toBeGreaterThan(0)
+    expect(graphql.every((c) => c.host === "relay" && c.auth === "Bearer relay-key")).toBe(true)
+    // The relay sends only a declared query: the text sent is the manifest's, whitespace aside.
+    const declared = manifest.cloudflareApi.graphql.find((q) => q.name === "MailyardRoutingRejections")
+    const squash = (q: string) => q.replace(/\s+/g, " ").trim()
+    for (const c of graphql) {
+      const sent = JSON.parse(c.body ?? "{}") as { query: string; variables: Record<string, string> }
+      expect(squash(sent.query)).toBe(squash(declared?.query ?? ""))
+      expect(sent.variables[declared?.zoneVariable ?? ""]).toMatch(/^[0-9a-f]{32}$/)
+    }
+    expect(squash(declared?.query ?? "")).toBe(squash(QUERY))
+    expect(manifest.scopes.optional.map((s) => s.scope)).toContain(declared?.scope)
+    expect(manifest.secrets.map((s) => s.name)).not.toContain("CLOUDFLARE_ANALYTICS_TOKEN")
+  })
+
+  it("self-hosted, keeps GraphQL and the lookup on Cloudflare with the pasted token", async () => {
+    await receivingDomain()
+    await runtimeFor(selfHosted).runPromise(upstreamRejections(["2026-10-18"], Date.UTC(2026, 9, 18, 12)))
+    const graphql = calls.filter((c) => c.path === "/graphql")
+    expect(graphql.length).toBeGreaterThan(0)
     expect(graphql.every((c) => c.host === "direct" && c.auth === "Bearer analytics-token")).toBe(true)
+    expect(calls.filter((c) => c.host === "relay")).toEqual([])
   })
 
   it("words the relay's refusals for a person", async () => {
-    expect(relayRefusal({ errors: [{ code: 10404, message: "scope not granted" }] })).toContain("Grant it")
-    expect(relayRefusal({ errors: [{ code: 10402 }] })).toContain("Reconnect Cloudflare")
-    expect(relayRefusal({ errors: [{ code: 1000 }] })).toBeNull()
-    answer = () =>
-      Response.json(
-        { success: false, errors: [{ code: 10404, message: "scope dns.write not granted" }] },
-        { status: 403 },
-      )
+    expect(relayRefusal({ errors: [{ code: 10404, message: "scope not granted" }] }, RELAY)).toContain(
+      "Grant it",
+    )
+    expect(relayRefusal({ errors: [{ code: 10402 }] }, RELAY)).toContain("Reconnect Cloudflare")
+    expect(relayRefusal({ errors: [{ code: 1000 }] }, RELAY)).toBeNull()
+    // Cloudflare's own answers are never read as the relay's, whatever their code.
+    expect(relayRefusal({ errors: [{ code: 10404 }] }, DIRECT_API)).toBeNull()
+    expect(relayRefusalOf({ errors: [{ code: 10402, message: "x" }] }, RELAY)).toEqual({
+      reason: "relay_disconnected",
+      code: 10402,
+    })
+    answer = refuseScope
     const outcome = await runtimeFor(platform).runPromise(
       Effect.gen(function* () {
         return yield* (yield* CloudflareZones).updateTxt(
@@ -204,7 +278,46 @@ describe("Cloudflare calls through Flareyard's relay (HAL-3558)", () => {
         )
       }),
     )
-    expect(outcome).toMatchObject({ ok: false, status: 403 })
-    expect(outcome.ok ? "" : outcome.message).toContain("permission you haven't granted")
+    expect(outcome).toMatchObject({ ok: false, status: 403, relay: SCOPE_REFUSAL })
+    expect(outcome.ok ? "" : outcome.message).toContain("dns.write, which you haven't granted")
+  })
+
+  it("puts the relay's reason and scope beside the message wherever a refusal surfaces", async () => {
+    answer = refuseScope
+    const run = runtimeFor(platform)
+    // Verified addresses.
+    expect(await run.runPromise(CloudflareEmail.use((c) => c.verifiedAddresses))).toMatchObject({
+      available: false,
+      relay: SCOPE_REFUSAL,
+    })
+    // First run: the zone list.
+    expect(await run.runPromise(domainCandidates())).toMatchObject({
+      connected: false,
+      candidates: [],
+      relay: SCOPE_REFUSAL,
+    })
+    // DMARC: the zone lookup is refused.
+    const domain = await receivingDomain()
+    setDns({ [`TXT _dmarc.${domain.name}`]: ["v=DMARC1; p=none"] })
+    const dmarc = await run.runPromise(
+      Effect.flip(changePolicy({ domainId: domain.id, p: "reject", dryRun: false, actor: "test" })),
+    )
+    expect(dmarc).toMatchObject({
+      _tag: "DmarcChangeRefused",
+      reason: "zone_not_found",
+      relay: SCOPE_REFUSAL,
+    })
+    // Suppression push: the list read is refused.
+    const email = `relay-${uid()}@example.test`
+    await env.DB.prepare(
+      "insert into suppressions (email, reason, source, at, updated_at) values (?, 'manual', 'manual', ?, ?)",
+    )
+      .bind(email, Date.now(), Date.now())
+      .run()
+    const pushed = await run.runPromise(Effect.flip(pushSuppression(email, "test")))
+    expect(pushed).toMatchObject({ _tag: "CloudflareUnavailable", reason: "refused", relay: SCOPE_REFUSAL })
+    // Routing rejections on the overview.
+    const upstream = await run.runPromise(upstreamRejections(["2026-10-18"], Date.UTC(2026, 9, 18, 12)))
+    expect(upstream).toMatchObject({ connected: false, relay: SCOPE_REFUSAL })
   })
 })

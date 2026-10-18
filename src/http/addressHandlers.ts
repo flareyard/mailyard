@@ -94,6 +94,7 @@ export const mailboxErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
         return new InvalidRequest({
           field: (e as MailboxInvalid).field,
           message: (e as MailboxInvalid).message,
+          ...((e as MailboxInvalid).relay ? { relay: (e as MailboxInvalid).relay } : {}),
         })
       case "MailboxConflict": {
         const c = e as MailboxConflict
@@ -192,7 +193,13 @@ export const DomainsHandlers = HttpApiBuilder.group(
         requireScope("admin", "domains.manage").pipe(
           Effect.flatMap((caller) => fixDomain(params.id, caller.keyId)),
           Effect.catchTag("DomainFixRefused", (e) =>
-            Effect.fail(new FixRefused({ reason: e.reason, message: e.message })),
+            Effect.fail(
+              new FixRefused({
+                reason: e.reason,
+                message: e.message,
+                ...(e.relay ? { relay: e.relay } : {}),
+              }),
+            ),
           ),
           domainErrors,
           infraDies,
@@ -256,7 +263,13 @@ export const DomainsHandlers = HttpApiBuilder.group(
             DmarcChangeRefused: (e) =>
               e.reason === "invalid"
                 ? Effect.fail(new InvalidRequest({ field: "pct", message: e.message }))
-                : Effect.fail(new DmarcRefused({ reason: e.reason, message: e.message })),
+                : Effect.fail(
+                    new DmarcRefused({
+                      reason: e.reason,
+                      message: e.message,
+                      ...(e.relay ? { relay: e.relay } : {}),
+                    }),
+                  ),
           }),
           infraDies,
         ),

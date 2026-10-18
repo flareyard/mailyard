@@ -103,6 +103,20 @@ export const ApiRoute = Schema.Struct({
 })
 export type ApiRoute = typeof ApiRoute.Type
 
+/**
+ * A GraphQL analytics query the relay may send to `POST /graphql`, word for word (HAL-3570). Only the
+ * variables change between calls, and `zoneVariable` must name a zone in the install's account. The
+ * query may read `viewer.zones` filtered by that variable alone; `crossFieldProblems` checks the text.
+ */
+export const GraphqlQuery = Schema.Struct({
+  name: Schema.String.check(Schema.isPattern(/^[A-Za-z][A-Za-z0-9_]{0,63}$/)),
+  query: Schema.NonEmptyString.check(Schema.isMaxLength(8000)),
+  zoneVariable: Schema.String.check(Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]{0,63}$/)),
+  scope: Schema.String,
+  why: Reason,
+})
+export type GraphqlQuery = typeof GraphqlQuery.Type
+
 export const CloudflareApi = Schema.Struct({
   /** A var the platform sets to the install's Cloudflare account id. */
   accountId: Schema.optionalKey(SecretName),
@@ -111,6 +125,8 @@ export const CloudflareApi = Schema.Struct({
   /** A secret the platform sets to this install's key for the relay. */
   token: SecretName,
   routes: Schema.NonEmptyArray(ApiRoute),
+  /** Analytics queries for `POST /graphql`, each bound to one of the install's zones. */
+  graphql: Schema.optionalKey(Schema.Array(GraphqlQuery)),
 })
 export type CloudflareApi = typeof CloudflareApi.Type
 
