@@ -1,7 +1,9 @@
 import { and, desc, eq, gte, lt, or } from "drizzle-orm"
 import type * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
+import * as HttpEffect from "effect/http/HttpEffect"
 import * as HttpServerRequest from "effect/http/HttpServerRequest"
+import * as HttpServerResponse from "effect/http/HttpServerResponse"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
@@ -23,6 +25,7 @@ import { track } from "../domain/events.ts"
 import { claim, complete, release } from "../domain/idempotency.ts"
 import { sentHeaders } from "../domain/messageRaw.ts"
 import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
+import { resolveSession, SESSION_COOKIE } from "../domain/sessions.ts"
 import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
 import type { ImapConnector } from "../imports/importer.ts"
 import type { InboundQueue } from "../inbound/pipeline.ts"
@@ -47,39 +50,105 @@ import {
 } from "./Api.ts"
 import { ApiKeyAuth, CurrentCaller, Forbidden, RateLimited, Unauthorized } from "./Auth.ts"
 
+/** Methods that change nothing, so a cross-site request can't do harm with them. */
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"])
+
+/**
+ * Whether a request came from this origin: its `Origin` header matches, or (when a browser sends no
+ * Origin) `Sec-Fetch-Site` says same-origin. A cookie-signed write that is neither is refused, which
+ * with SameSite=Lax closes cross-site request forgery (HAL-3358).
+ */
+export const sameOrigin = (request: HttpServerRequest.HttpServerRequest) => {
+  const origin = request.headers.origin
+  if (origin) {
+    try {
+      return origin === new URL(request.originalUrl).origin
+    } catch {
+      return false
+    }
+  }
+  return request.headers["sec-fetch-site"] === "same-origin"
+}
+
+/** Expires the session cookie on the response (sign-out, or a session that no longer works). */
+export const clearSessionCookie = HttpEffect.appendPreResponseHandler((_req, response) =>
+  Effect.orDie(
+    HttpServerResponse.setCookie(response, SESSION_COOKIE, "", {
+      secure: true,
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    }),
+  ),
+)
+
+/** Failed sign-in attempts count against the caller's address; past the limit, they wait. */
+export const throttle = Effect.gen(function* () {
+  const request = yield* HttpServerRequest.HttpServerRequest
+  const ip = request.headers["cf-connecting-ip"] ?? "unknown"
+  const limiter = (yield* Bindings).AUTH_LIMITER
+  if (!limiter) return
+  const { success } = yield* Effect.promise(() => limiter.limit({ key: `auth:${ip}` }))
+  if (!success)
+    return yield* new RateLimited({
+      message: "Too many failed attempts from your address. Wait a minute and try again.",
+      retryAfter: 60,
+    })
+})
+
 export const ApiKeyAuthLive = Layer.effect(
   ApiKeyAuth,
   Effect.gen(function* () {
     const database = yield* Database
     const bindings = yield* Bindings
-    return ApiKeyAuth.of({
-      bearer: (httpEffect, { credential }) =>
-        authenticate(Redacted.value(credential)).pipe(
-          Effect.provideService(Database, database),
-          Effect.provideService(Bindings, bindings),
-          Effect.catchTag("InvalidKey", (e) =>
-            Effect.gen(function* () {
-              // Failed attempts count against the caller's address; past the limit, they wait.
-              const request = yield* HttpServerRequest.HttpServerRequest
-              const ip = request.headers["cf-connecting-ip"] ?? "unknown"
-              const limiter = bindings.AUTH_LIMITER
-              if (limiter) {
-                const { success } = yield* Effect.promise(() => limiter.limit({ key: `auth:${ip}` }))
-                if (!success)
-                  return yield* new RateLimited({
-                    message: "Too many failed attempts from your address. Wait a minute and try again.",
-                    retryAfter: 60,
-                  })
-              }
-              return yield* new Unauthorized({
+    const byKey = (token: string) =>
+      authenticate(token).pipe(
+        Effect.catchTag("InvalidKey", (e) =>
+          throttle.pipe(
+            Effect.andThen(
+              new Unauthorized({
                 message: e.reason,
                 reason: e.code,
                 ...(e.revokedAt !== undefined ? { revokedAt: e.revokedAt } : {}),
-              })
-            }),
+              }),
+            ),
           ),
-          Effect.flatMap((caller) => Effect.provideService(httpEffect, CurrentCaller, caller)),
         ),
+      )
+    const bySession = Effect.gen(function* () {
+      const request = yield* HttpServerRequest.HttpServerRequest
+      const token = request.cookies[SESSION_COOKIE]
+      if (!token)
+        return yield* new Unauthorized({
+          message: "Send your API key as Authorization: Bearer <key>, or sign in at POST /v1/session.",
+          reason: "missing",
+        })
+      const caller = yield* resolveSession(token).pipe(
+        Effect.catchTag("SessionExpired", (e) =>
+          clearSessionCookie.pipe(
+            Effect.andThen(throttle),
+            Effect.andThen(new Unauthorized({ message: e.message, reason: "session-expired" })),
+          ),
+        ),
+      )
+      if (!SAFE_METHODS.has(request.method) && !sameOrigin(request))
+        return yield* new Forbidden({
+          message:
+            "This request was signed in by the session cookie but didn't come from this site, so it was refused. Reload the page and try again.",
+          reason: "csrf",
+        })
+      return caller
+    })
+    return ApiKeyAuth.of({
+      bearer: (httpEffect, { credential }) => {
+        const token = Redacted.value(credential)
+        return (token ? byKey(token) : bySession).pipe(
+          Effect.provideService(Database, database),
+          Effect.provideService(Bindings, bindings),
+          Effect.flatMap((caller) => Effect.provideService(httpEffect, CurrentCaller, caller)),
+        )
+      },
     })
   }),
 )

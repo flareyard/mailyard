@@ -20,7 +20,7 @@ import { LABEL_COLORS } from "../mailbox/types.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { Rule as SegmentRule } from "../segments/rules.ts"
 import { BlocksDocument } from "../templates/document.ts"
-import { ApiKeyAuth, Forbidden } from "./Auth.ts"
+import { ApiKeyAuth, Forbidden, RateLimited, Unauthorized } from "./Auth.ts"
 import { withRawRoutes } from "./rawRoutes.ts"
 
 export const Health = Schema.Struct({
@@ -4869,6 +4869,104 @@ export class SearchApi extends HttpApiGroup.make("search")
   )
   .middleware(ApiKeyAuth) {}
 
+// ---------------------------------------------------------------------------------------------
+// Browser sessions and /v1/me (HAL-3358)
+// ---------------------------------------------------------------------------------------------
+
+const Workspace = Schema.Struct({
+  id: Schema.String,
+  /** The brand's name until the workspace is claimed and named (HAL-3361). */
+  name: Schema.String,
+  logoUrl: Schema.NullOr(Schema.String),
+})
+
+export const Me = Schema.Struct({
+  /** The signed-in person. Null until people and roles exist (HAL-3361): every caller is a key. */
+  user: Schema.Null,
+  workspace: Workspace,
+  role: Schema.Null,
+  /** `session-key`: a browser session opened with an API key. `admin-key`: the ADMIN_KEY, by session
+   * or Bearer. `api-key`: a Bearer API key. */
+  via: Schema.Literals(["session-key", "admin-key", "api-key"]),
+  /** The key behind the request; null for the admin key. */
+  key: Schema.NullOr(Schema.Struct({ id: Schema.String, name: Schema.String, prefix: Schema.String })),
+  scopes: Schema.Array(Scope),
+  /** What the scopes let the app show (`mail.read`, `campaigns.write`, …), so screens hide what the
+   * caller can't do. The scopes stay the source of truth. */
+  permissions: Schema.Array(Schema.String),
+  workspaces: Schema.Array(Workspace),
+  /** The browser session, when the request came with one. */
+  session: Schema.NullOr(
+    Schema.Struct({
+      id: Schema.String,
+      /** 14 days from now, or the absolute cap if that comes first. */
+      expiresAt: Schema.Number,
+      /** 30 days after sign-in: the session ends then whatever its use. */
+      absoluteExpiresAt: Schema.Number,
+    }),
+  ),
+})
+
+export const SessionSummary = Schema.Struct({
+  id: Schema.String,
+  /** The session this request came with. */
+  current: Schema.Boolean,
+  via: Schema.Literals(["session-key", "admin-key"]),
+  key: Schema.NullOr(
+    Schema.Struct({
+      id: Schema.String,
+      name: Schema.String,
+      prefix: Schema.String,
+      scopes: Schema.Array(Scope),
+    }),
+  ),
+  userAgent: Schema.NullOr(Schema.String),
+  ip: Schema.NullOr(Schema.String),
+  /** City and country from Cloudflare, when it knew them. */
+  location: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  lastSeenAt: Schema.Number,
+  expiresAt: Schema.Number,
+  absoluteExpiresAt: Schema.Number,
+})
+
+/**
+ * Signing in and out of the web app. `POST /v1/session` exchanges a key (it needs the `read` scope)
+ * for the HTTP-only cookie `__Host-mailyard_session` (Secure, SameSite=Lax) and answers like
+ * `GET /v1/me`; the key is never stored or put in the cookie. Sessions last 14 days from their last
+ * use and 30 days at most. `DELETE /v1/session` signs out (204, idempotent) and clears the cookie.
+ */
+export class SessionApi extends HttpApiGroup.make("session").add(
+  HttpApiEndpoint.post("signIn", "/v1/session", {
+    payload: Schema.Struct({ key: Schema.NonEmptyString.check(Schema.isMaxLength(512)) }),
+    success: Me,
+    error: [Unauthorized, Forbidden, RateLimited],
+  }),
+  HttpApiEndpoint.delete("signOut", "/v1/session", {
+    success: HttpApiSchema.NoContent,
+    error: Forbidden,
+  }),
+) {}
+
+/** Who's signed in, and their sessions ("Your sessions" in Settings). */
+export class MeApi extends HttpApiGroup.make("me")
+  .add(
+    HttpApiEndpoint.get("me", "/v1/me", { success: Me }),
+    HttpApiEndpoint.get("listSessions", "/v1/sessions", {
+      success: Schema.Struct({ sessions: Schema.Array(SessionSummary) }),
+    }),
+    /** Sign out everywhere else: ends every session of this key except the current one. */
+    HttpApiEndpoint.delete("endOtherSessions", "/v1/sessions", {
+      success: Schema.Struct({ ended: Schema.Number }),
+    }),
+    HttpApiEndpoint.delete("endSession", "/v1/sessions/:id", {
+      params: { id: Schema.String },
+      success: HttpApiSchema.NoContent,
+      error: NotFound,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 export class MailApi extends HttpApi.make("mailyard")
   .add(SystemApi)
   .add(ActionsApi)
@@ -4901,4 +4999,6 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(ExportsApi)
   .add(AutomationsApi)
   .add(RunsApi)
+  .add(SessionApi)
+  .add(MeApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}
