@@ -5,6 +5,7 @@ import { ImapConnector } from "./imports/importer.ts"
 import { InboundQueue } from "./inbound/pipeline.ts"
 import { BlobStore, Ids, Sender, SenderCloudflareWithSmtpFallback } from "./kit/index.ts"
 import { workerSmtpTransport } from "./kit/smtp-worker.ts"
+import { Assistant } from "./services/Assistant.ts"
 import { Classifier } from "./services/Classifier.ts"
 import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { CloudflareZones } from "./services/CloudflareZones.ts"
@@ -46,6 +47,7 @@ export const appLayer = (env: Env) => {
     Mailboxes.layer,
     Dns.layerDoh(),
     Classifier.fromEnv(env),
+    Assistant.fromEnv(env),
     DocumentText.fromEnv(env),
     ImapConnector.layer,
     SecretBox.layer,

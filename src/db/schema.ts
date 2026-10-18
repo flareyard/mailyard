@@ -1801,3 +1801,37 @@ export const dmarcSources = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.domainId, t.ip] })],
 )
+
+/**
+ * Language-model calls per UTC day, mailbox (`""` for the workspace: segments) and helper (HAL-3305):
+ * the per-mailbox daily cap is taken from here, and the tokens are what it cost.
+ */
+export const assistantUsage = sqliteTable(
+  "assistant_usage",
+  {
+    day: text("day").notNull(),
+    mailboxId: text("mailbox_id").notNull(),
+    feature: text("feature", { enum: ["summary", "draft", "category", "segment"] }).notNull(),
+    calls: integer("calls").notNull().default(0),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    /** Workers AI neurons, in thousandths, when it reports them. */
+    milliNeurons: integer("milli_neurons").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.mailboxId, t.feature] })],
+)
+
+/** A thread's summary, kept until the thread changes (its version is its latest message and count). */
+export const assistantSummaries = sqliteTable(
+  "assistant_summaries",
+  {
+    mailboxId: text("mailbox_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    version: text("version").notNull(),
+    summary: text("summary").notNull(),
+    bullets: text("bullets", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    model: text("model"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.threadId] })],
+)

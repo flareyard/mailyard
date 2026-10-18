@@ -34,6 +34,7 @@ import type { ImapConnector } from "../imports/importer.ts"
 import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
 import { linkOrigin } from "../public/origin.ts"
+import type { Assistant } from "../services/Assistant.ts"
 import type { Classifier } from "../services/Classifier.ts"
 import type { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import type { CloudflareZones } from "../services/CloudflareZones.ts"
@@ -186,6 +187,7 @@ export const appContext = Effect.context<
   | InboundQueue
   | Dns
   | Classifier
+  | Assistant
   | ImapConnector
 >()
 

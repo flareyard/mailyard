@@ -40,6 +40,19 @@ export interface Env {
   readonly CLASSIFIER_URL?: string
   readonly CLASSIFIER_MODEL?: string
   readonly CLASSIFIER_API_KEY?: string
+  /**
+   * The mailbox and audience helpers (HAL-3305): `off` (default), `workers-ai` (needs AI; through
+   * AI_GATEWAY_ID when set), `openai` (ASSISTANT_URL and ASSISTANT_MODEL), or `fixed` (answers from
+   * ASSISTANT_FIXED, for tests). Each helper is also off until turned on in Settings.
+   */
+  readonly MAILYARD_ASSISTANT?: "off" | "workers-ai" | "openai" | "fixed"
+  readonly ASSISTANT_MODEL?: string
+  readonly ASSISTANT_URL?: string
+  readonly ASSISTANT_API_KEY?: string
+  /** A JSON object of answers by helper (summary, draft, category, segment), for MAILYARD_ASSISTANT=fixed. */
+  readonly ASSISTANT_FIXED?: string
+  /** An AI Gateway to route Workers AI calls through, for caching, logs and spend limits. */
+  readonly AI_GATEWAY_ID?: string
   /** Imports a mailbox from IMAP or an mbox (src/workflows/mailbox.ts). */
   readonly IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Sends a campaign: snapshot, then governor-paced chunks (src/workflows/campaign.ts). */

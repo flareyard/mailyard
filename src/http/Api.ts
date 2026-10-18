@@ -248,6 +248,21 @@ export class NoSystemSender extends Schema.TaggedError<NoSystemSender>()(
 ) {}
 
 /** An automation can't publish yet: what's wrong, per node. */
+/**
+ * A helper that can't run (HAL-3305): `off` (no model configured), `disabled` (turned off in
+ * Settings), `cap` (today's calls used), `no_answer` (the model said nothing), `invalid` (what it said
+ * didn't pass the checks).
+ */
+export class AssistantRefused extends Schema.TaggedError<AssistantRefused>()(
+  "AssistantRefused",
+  {
+    requestId: Schema.optionalKey(Schema.String),
+    reason: Schema.Literals(["off", "disabled", "cap", "no_answer", "invalid"]),
+    message: Schema.String,
+  },
+  { httpApiStatus: 409 },
+) {}
+
 export class NotReady extends Schema.TaggedError<NotReady>()(
   "NotReady",
   {
@@ -735,6 +750,30 @@ const MailEventsLaneView = Schema.Struct({
   available: Schema.Boolean,
 })
 
+const AssistantSettingsView = Schema.Struct({
+  summaries: Schema.Boolean,
+  drafts: Schema.Boolean,
+  categories: Schema.Boolean,
+  segments: Schema.Boolean,
+  dailyCallsPerMailbox: Schema.Number,
+  provider: Schema.Literals(["off", "workers-ai", "openai", "fixed"]),
+  model: Schema.NullOr(Schema.String),
+  /** A model is configured; without one every helper answers 409 `off`. */
+  available: Schema.Boolean,
+  today: Schema.Struct({
+    day: Schema.String,
+    byFeature: Schema.Array(
+      Schema.Struct({
+        feature: Schema.Literals(["summary", "draft", "category", "segment"]),
+        calls: Schema.Number,
+        inputTokens: Schema.Number,
+        outputTokens: Schema.Number,
+        neurons: Schema.Number,
+      }),
+    ),
+  }),
+})
+
 export class SettingsApi extends HttpApiGroup.make("settings")
   .add(
     HttpApiEndpoint.get("getBrand", "/v1/settings/brand", { success: BrandSettingsSchema, error: Forbidden }),
@@ -787,6 +826,29 @@ export class SettingsApi extends HttpApiGroup.make("settings")
         types: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Literals(MAIL_EVENT_TYPES)))),
       }),
       success: MailEventsLaneView,
+      error: [Forbidden, InvalidRequest],
+    }),
+    /**
+     * The mailbox and audience helpers (HAL-3305): which provider answers, which helpers are on
+     * (all off by default), the daily calls each mailbox may make per helper, and today's calls and
+     * tokens.
+     */
+    HttpApiEndpoint.get("getAssistant", "/v1/settings/assistant", {
+      success: AssistantSettingsView,
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.put("putAssistant", "/v1/settings/assistant", {
+      payload: Schema.Struct({
+        summaries: Schema.Boolean,
+        drafts: Schema.Boolean,
+        categories: Schema.Boolean,
+        segments: Schema.Boolean,
+        dailyCallsPerMailbox: Schema.Number.check(
+          Schema.isInt(),
+          Schema.isBetween({ minimum: 0, maximum: 100_000 }),
+        ),
+      }),
+      success: AssistantSettingsView,
       error: [Forbidden, InvalidRequest],
     }),
     /**
@@ -2133,6 +2195,37 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
       }),
       error: MailErrors,
     }),
+    /**
+     * A summary of the conversation (HAL-3305), cached until a message arrives or leaves; `refresh`
+     * asks again. Needs the summaries helper on in Settings and read access to the mailbox.
+     */
+    HttpApiEndpoint.post("summarizeThread", "/v1/mailboxes/:id/threads/:threadId/summary", {
+      params: { id: Schema.String, threadId: Schema.String },
+      payload: Schema.Struct({ refresh: Schema.optionalKey(Schema.Boolean) }),
+      success: Schema.Struct({
+        summary: Schema.String,
+        bullets: Schema.Array(Schema.String),
+        /** The thread's version it summarises: its latest message and count. */
+        version: Schema.String,
+        cached: Schema.Boolean,
+        model: Schema.NullOr(Schema.String),
+        generatedAt: Schema.Number,
+      }),
+      error: [...MailErrors, AssistantRefused],
+    }),
+    /**
+     * A reply to the conversation's last incoming message, written by the model and saved as a normal
+     * draft for a person to edit and send (HAL-3305). Nothing is sent. Needs the drafts helper on.
+     */
+    HttpApiEndpoint.post("draftReply", "/v1/mailboxes/:id/threads/:threadId/draft", {
+      params: { id: Schema.String, threadId: Schema.String },
+      payload: Schema.Struct({
+        /** What the reply should say, in a few words (optional). */
+        instructions: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(1_000))),
+      }),
+      success: Schema.Struct({ draft: DraftSchema, model: Schema.NullOr(Schema.String) }),
+      error: [...MailErrors, AssistantRefused],
+    }),
     HttpApiEndpoint.post("addNote", "/v1/mailboxes/:id/threads/:threadId/notes", {
       params: { id: Schema.String, threadId: Schema.String },
       payload: Schema.Struct({
@@ -3318,6 +3411,21 @@ export class SegmentsApi extends HttpApiGroup.make("segments")
     HttpApiEndpoint.get("list", "/v1/segments", {
       success: Schema.Struct({ segments: Schema.Array(SegmentSchema) }),
       error: Forbidden,
+    }),
+    /**
+     * A segment rule tree from a sentence ("subscribers on the pro plan who opened something this
+     * month"), checked by the segment code like any saved filter, with its live count (HAL-3305).
+     * Nothing is saved: show it in the builder, then create the segment. Needs the segments helper on.
+     */
+    HttpApiEndpoint.post("fromText", "/v1/segments/from-text", {
+      payload: Schema.Struct({ text: Schema.String.check(Schema.isMinLength(3), Schema.isMaxLength(1_000)) }),
+      success: Schema.Struct({
+        rule: SegmentRule,
+        explanation: Schema.NullOr(Schema.String),
+        count: Schema.Number,
+        model: Schema.NullOr(Schema.String),
+      }),
+      error: [Forbidden, AssistantRefused],
     }),
     HttpApiEndpoint.post("preview", "/v1/segments/preview", {
       payload: Schema.Struct({ filter: SegmentRuleInput }),
