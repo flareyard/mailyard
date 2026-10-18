@@ -44,6 +44,7 @@ import { SettingsHandlers, TemplatesHandlers } from "../http/templateHandlers.ts
 import { TransfersHandlers } from "../http/transferHandlers.ts"
 import { WebhooksHandlers } from "../http/webhookHandlers.ts"
 import { WorkspaceHandlers } from "../http/workspaceHandlers.ts"
+import { currentRequestId, withRequestContext } from "../kit/requestContext.ts"
 import { appLayer } from "../layers.ts"
 import { handleMcp, MCP_PATH } from "../mcp/handler.ts"
 import { canonicalRedirect, configurePublicOrigin, isWorkerPath } from "../public/origin.ts"
@@ -203,7 +204,7 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
  * person can quote it and the logs can find it.
  */
 const withRequestId = async (request: Request, env: Env, respond: () => Response | Promise<Response>) => {
-  const requestId = request.headers.get("cf-ray") ?? crypto.randomUUID()
+  const requestId = currentRequestId() ?? request.headers.get("cf-ray") ?? crypto.randomUUID()
   const response = await respond()
   // A WebSocket upgrade's response can't be rebuilt.
   if (response.status === 101 || response.webSocket) return response
@@ -234,7 +235,11 @@ const withRequestId = async (request: Request, env: Env, respond: () => Response
 }
 
 export default {
-  fetch: (request, env, ctx) => withRequestId(request, env, () => route(request, env, ctx)),
+  fetch: (request, env, ctx) =>
+    // The request's id is known to everything it causes, through every await (src/kit/requestContext.ts).
+    withRequestContext(request.headers.get("cf-ray") ?? crypto.randomUUID(), () =>
+      withRequestId(request, env, () => route(request, env, ctx)),
+    ),
   queue: (batch, env) => handleQueue(batch, env),
   scheduled: (_controller, env, ctx) => {
     ctx.waitUntil(handleScheduled(env))

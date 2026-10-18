@@ -5,6 +5,8 @@
   "minify": true,
   "upload_source_maps": true,
   "compatibility_date": "2026-10-16",
+  // AsyncLocalStorage, so an event knows the API request that caused it (HAL-3464).
+  "compatibility_flags": ["nodejs_als"],
   // The web app (web/, HAL-3307) is served from the same origin as the API, so its session cookie is
   // first-party. Everything the Worker answers itself runs first; any other path is the app, and unknown
   // app paths fall back to index.html for client-side routing. A new top-level Worker prefix goes here too.

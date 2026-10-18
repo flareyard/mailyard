@@ -5,6 +5,15 @@ import type { ZoneInfo } from "../domain/zoneInfo.ts"
 import type { Action, Condition } from "../rules/engine.ts"
 import type { BlocksDocument } from "../templates/document.ts"
 
+export interface WebhookFilter {
+  readonly mailboxIds?: ReadonlyArray<string>
+  readonly streams?: ReadonlyArray<
+    "transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system"
+  >
+  readonly campaignIds?: ReadonlyArray<string>
+  readonly topicIds?: ReadonlyArray<string>
+}
+
 /**
  * The account-wide D1 database. Per-mailbox data (threads, messages, search) lives in each
  * MailboxDO's own SQLite, not here. Data model: docs/plans/email-platform.html#data.
@@ -1147,6 +1156,13 @@ export const webhookEndpoints = sqliteTable("webhook_endpoints", {
   events: text("events", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
   secretCiphertext: text("secret_ciphertext").notNull(),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  /**
+   * Only events about these mailboxes, streams, campaigns or topics (HAL-3464); null for every
+   * event of the subscribed types. An event without the field a filter names doesn't match.
+   */
+  filter: text("filter", { mode: "json" }).$type<WebhookFilter>(),
+  /** Deliveries are kept but held while paused, then sent in order when it's unpaused (HAL-3464). */
+  paused: integer("paused", { mode: "boolean" }).notNull().default(false),
   lastSuccessAt: integer("last_success_at"),
   lastFailureAt: integer("last_failure_at"),
   createdAt: createdAt(),
@@ -1164,7 +1180,9 @@ export const webhookDeliveries = sqliteTable(
     eventId: text("event_id").notNull(),
     eventType: text("event_type").notNull(),
     payload: text("payload").notNull(),
-    status: text("status", { enum: ["pending", "succeeded", "retrying", "dead"] }).notNull(),
+    status: text("status", { enum: ["pending", "succeeded", "retrying", "dead", "paused"] }).notNull(),
+    /** The API request that caused the event, sent as `x-mailyard-request-id` (HAL-3464). */
+    requestId: text("request_id"),
     attempts: integer("attempts").notNull().default(0),
     lastStatusCode: integer("last_status_code"),
     lastError: text("last_error"),

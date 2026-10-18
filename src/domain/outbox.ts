@@ -254,6 +254,9 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
         recipient: contact.email,
         reason: "SendSuppressed: recipient is on the suppression list",
         attempts: 0,
+        stream: "transactional",
+        campaignId: null,
+        mailboxId: null,
       })
       results.push({ contact, email: id, status: "rejected" })
       continue
@@ -386,6 +389,30 @@ export const sendBulkMessage = Effect.fn("outbox.sendBulk")(function* (input: {
 })
 
 /** One delivery attempt; records the outcome on the row and returns the new status. */
+/** Which stream, campaign and mailbox a message came from, for its events' webhook filters (HAL-3464). */
+const sourceOf = (id: string) =>
+  Effect.gen(function* () {
+    const database = yield* Database
+    const row = yield* database
+      .query("messagesOut.source", (db) =>
+        db
+          .select({
+            stream: messagesOut.stream,
+            campaignId: messagesOut.campaignId,
+            mailboxId: messagesOut.mailboxId,
+          })
+          .from(messagesOut)
+          .where(eq(messagesOut.id, id))
+          .get(),
+      )
+      .pipe(Effect.orElseSucceed(() => undefined))
+    return {
+      stream: row?.stream ?? null,
+      campaignId: row?.campaignId ?? null,
+      mailboxId: row?.mailboxId ?? null,
+    }
+  })
+
 export const attempt = Effect.fn("outbox.attempt")(function* (
   id: string,
   message: Outgoing,
@@ -425,6 +452,7 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
       db
         .select({
           stream: messagesOut.stream,
+          campaignId: messagesOut.campaignId,
           mailboxId: messagesOut.mailboxId,
           mailboxMessageId: messagesOut.mailboxMessageId,
         })
@@ -455,6 +483,8 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
       recipient: message.to[0]?.email ?? null,
       subject: message.subject,
       stream: stream?.stream ?? "transactional",
+      campaignId: stream?.campaignId ?? null,
+      mailboxId: stream?.mailboxId ?? null,
     })
     return "sent"
   }
@@ -488,6 +518,7 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
       reason: describe(error),
       attempts,
       retryInSeconds: delay,
+      ...(yield* sourceOf(id)),
     })
     return "deferred"
   }
@@ -535,6 +566,7 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
     recipient: message.to[0]?.email ?? null,
     reason: describe(error),
     attempts,
+    ...(yield* sourceOf(id)),
   })
   return status
 })

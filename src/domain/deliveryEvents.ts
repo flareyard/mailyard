@@ -431,6 +431,9 @@ export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: Em
     smtpResponse: payload.delivery.smtpResponse ?? null,
     ...(payload.bounce ? { bounce: payload.bounce.type } : {}),
     at: new Date(at).toISOString(),
+    stream: row?.stream ?? null,
+    campaignId: row?.campaignId ?? null,
+    mailboxId: row?.mailboxId ?? null,
   })
   if (hardBounce || kind === "complained") {
     yield* emitSafely("contact.suppressed", {

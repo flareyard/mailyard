@@ -105,8 +105,12 @@ export const WebhooksHandlers = HttpApiBuilder.group(
           dbDies,
         ),
       ),
-      test: p(({ params }) =>
-        requireScope("admin", "webhooks.manage").pipe(Effect.andThen(sendTest(params.id)), notFound, dbDies),
+      test: p(({ params, payload }) =>
+        requireScope("admin", "webhooks.manage").pipe(
+          Effect.andThen(sendTest(params.id, payload?.event)),
+          notFound,
+          dbDies,
+        ),
       ),
     })
   }),

@@ -96543,6 +96543,73 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                             "type": "array",
                           },
+                          "filter": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "campaignIds": {
+                                    "items": {
+                                      "maxLength": 200,
+                                      "type": "string",
+                                    },
+                                    "maxItems": 100,
+                                    "type": "array",
+                                  },
+                                  "mailboxIds": {
+                                    "items": {
+                                      "maxLength": 200,
+                                      "type": "string",
+                                    },
+                                    "maxItems": 100,
+                                    "type": "array",
+                                  },
+                                  "streams": {
+                                    "items": {
+                                      "enum": [
+                                        "transactional",
+                                        "campaign",
+                                        "automation",
+                                        "reply",
+                                        "mailbox",
+                                        "test",
+                                        "system",
+                                      ],
+                                      "type": "string",
+                                    },
+                                    "type": "array",
+                                  },
+                                  "topicIds": {
+                                    "items": {
+                                      "maxLength": 200,
+                                      "type": "string",
+                                    },
+                                    "maxItems": 100,
+                                    "type": "array",
+                                  },
+                                },
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "held": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
+                          },
                           "id": {
                             "type": "string",
                           },
@@ -96590,6 +96657,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "paused": {
+                            "type": "boolean",
+                          },
                           "updatedAt": {
                             "anyOf": [
                               {
@@ -96615,6 +96685,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "description",
                           "events",
                           "enabled",
+                          "filter",
+                          "paused",
+                          "held",
                           "lastSuccessAt",
                           "lastFailureAt",
                           "deadLetters",
@@ -96699,6 +96772,61 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                     ],
                     "type": "array",
+                  },
+                  "filter": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "campaignIds": {
+                            "items": {
+                              "maxLength": 200,
+                              "type": "string",
+                            },
+                            "maxItems": 100,
+                            "type": "array",
+                          },
+                          "mailboxIds": {
+                            "items": {
+                              "maxLength": 200,
+                              "type": "string",
+                            },
+                            "maxItems": 100,
+                            "type": "array",
+                          },
+                          "streams": {
+                            "items": {
+                              "enum": [
+                                "transactional",
+                                "campaign",
+                                "automation",
+                                "reply",
+                                "mailbox",
+                                "test",
+                                "system",
+                              ],
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "topicIds": {
+                            "items": {
+                              "maxLength": 200,
+                              "type": "string",
+                            },
+                            "maxItems": 100,
+                            "type": "array",
+                          },
+                        },
+                        "type": "object",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "paused": {
+                    "type": "boolean",
                   },
                   "url": {
                     "type": "string",
@@ -96810,6 +96938,73 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "type": "array",
                         },
+                        "filter": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "campaignIds": {
+                                  "items": {
+                                    "maxLength": 200,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 100,
+                                  "type": "array",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "maxLength": 200,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 100,
+                                  "type": "array",
+                                },
+                                "streams": {
+                                  "items": {
+                                    "enum": [
+                                      "transactional",
+                                      "campaign",
+                                      "automation",
+                                      "reply",
+                                      "mailbox",
+                                      "test",
+                                      "system",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "type": "array",
+                                },
+                                "topicIds": {
+                                  "items": {
+                                    "maxLength": 200,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 100,
+                                  "type": "array",
+                                },
+                              },
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "held": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
                         "id": {
                           "type": "string",
                         },
@@ -96857,6 +97052,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                           ],
                         },
+                        "paused": {
+                          "type": "boolean",
+                        },
                         "updatedAt": {
                           "anyOf": [
                             {
@@ -96882,6 +97080,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "description",
                         "events",
                         "enabled",
+                        "filter",
+                        "paused",
+                        "held",
                         "lastSuccessAt",
                         "lastFailureAt",
                         "deadLetters",
@@ -97061,6 +97262,73 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "filter": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "campaignIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                            "mailboxIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                            "streams": {
+                              "items": {
+                                "enum": [
+                                  "transactional",
+                                  "campaign",
+                                  "automation",
+                                  "reply",
+                                  "mailbox",
+                                  "test",
+                                  "system",
+                                ],
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                            "topicIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                          },
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "held": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -97108,6 +97376,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "paused": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -97133,6 +97404,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "description",
                     "events",
                     "enabled",
+                    "filter",
+                    "paused",
+                    "held",
                     "lastSuccessAt",
                     "lastFailureAt",
                     "deadLetters",
@@ -97300,6 +97574,73 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "filter": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "campaignIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                            "mailboxIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                            "streams": {
+                              "items": {
+                                "enum": [
+                                  "transactional",
+                                  "campaign",
+                                  "automation",
+                                  "reply",
+                                  "mailbox",
+                                  "test",
+                                  "system",
+                                ],
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                            "topicIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                          },
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "held": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -97347,6 +97688,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "paused": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -97372,6 +97716,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "description",
                     "events",
                     "enabled",
+                    "filter",
+                    "paused",
+                    "held",
                     "lastSuccessAt",
                     "lastFailureAt",
                     "deadLetters",
@@ -97477,6 +97824,61 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     ],
                     "type": "array",
                   },
+                  "filter": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "campaignIds": {
+                            "items": {
+                              "maxLength": 200,
+                              "type": "string",
+                            },
+                            "maxItems": 100,
+                            "type": "array",
+                          },
+                          "mailboxIds": {
+                            "items": {
+                              "maxLength": 200,
+                              "type": "string",
+                            },
+                            "maxItems": 100,
+                            "type": "array",
+                          },
+                          "streams": {
+                            "items": {
+                              "enum": [
+                                "transactional",
+                                "campaign",
+                                "automation",
+                                "reply",
+                                "mailbox",
+                                "test",
+                                "system",
+                              ],
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "topicIds": {
+                            "items": {
+                              "maxLength": 200,
+                              "type": "string",
+                            },
+                            "maxItems": 100,
+                            "type": "array",
+                          },
+                        },
+                        "type": "object",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "paused": {
+                    "type": "boolean",
+                  },
                   "url": {
                     "type": "string",
                   },
@@ -97580,6 +97982,73 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "filter": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "campaignIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                            "mailboxIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                            "streams": {
+                              "items": {
+                                "enum": [
+                                  "transactional",
+                                  "campaign",
+                                  "automation",
+                                  "reply",
+                                  "mailbox",
+                                  "test",
+                                  "system",
+                                ],
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                            "topicIds": {
+                              "items": {
+                                "maxLength": 200,
+                                "type": "string",
+                              },
+                              "maxItems": 100,
+                              "type": "array",
+                            },
+                          },
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "held": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
                     "id": {
                       "type": "string",
                     },
@@ -97627,6 +98096,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "paused": {
+                      "type": "boolean",
+                    },
                     "updatedAt": {
                       "anyOf": [
                         {
@@ -97652,6 +98124,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "description",
                     "events",
                     "enabled",
+                    "filter",
+                    "paused",
+                    "held",
                     "lastSuccessAt",
                     "lastFailureAt",
                     "deadLetters",
@@ -97747,6 +98222,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "succeeded",
                 "retrying",
                 "dead",
+                "paused",
               ],
               "type": "string",
             },
@@ -97917,12 +98393,23 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             ],
                           },
                           "payload": {},
+                          "requestId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "status": {
                             "enum": [
                               "pending",
                               "succeeded",
                               "retrying",
                               "dead",
+                              "paused",
                             ],
                             "type": "string",
                           },
@@ -97940,6 +98427,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "nextAttemptAt",
                           "createdAt",
                           "payload",
+                          "requestId",
                         ],
                         "type": "object",
                       },
@@ -98188,6 +98676,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "succeeded",
                         "retrying",
                         "dead",
+                        "paused",
                       ],
                       "type": "string",
                     },
@@ -98362,6 +98851,73 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           },
                           "type": "array",
                         },
+                        "filter": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "campaignIds": {
+                                  "items": {
+                                    "maxLength": 200,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 100,
+                                  "type": "array",
+                                },
+                                "mailboxIds": {
+                                  "items": {
+                                    "maxLength": 200,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 100,
+                                  "type": "array",
+                                },
+                                "streams": {
+                                  "items": {
+                                    "enum": [
+                                      "transactional",
+                                      "campaign",
+                                      "automation",
+                                      "reply",
+                                      "mailbox",
+                                      "test",
+                                      "system",
+                                    ],
+                                    "type": "string",
+                                  },
+                                  "type": "array",
+                                },
+                                "topicIds": {
+                                  "items": {
+                                    "maxLength": 200,
+                                    "type": "string",
+                                  },
+                                  "maxItems": 100,
+                                  "type": "array",
+                                },
+                              },
+                              "type": "object",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "held": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
                         "id": {
                           "type": "string",
                         },
@@ -98409,6 +98965,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                           ],
                         },
+                        "paused": {
+                          "type": "boolean",
+                        },
                         "updatedAt": {
                           "anyOf": [
                             {
@@ -98434,6 +98993,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "description",
                         "events",
                         "enabled",
+                        "filter",
+                        "paused",
+                        "held",
                         "lastSuccessAt",
                         "lastFailureAt",
                         "deadLetters",
@@ -98520,6 +99082,56 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
           },
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "event": {
+                        "description": "A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).",
+                        "enum": [
+                          "message.sent",
+                          "message.delivered",
+                          "message.deferred",
+                          "message.bounced",
+                          "message.failed",
+                          "message.rejected",
+                          "message.complained",
+                          "email.opened",
+                          "email.clicked",
+                          "contact.created",
+                          "contact.updated",
+                          "contact.subscribed",
+                          "contact.unsubscribed",
+                          "contact.deleted",
+                          "contact.suppressed",
+                          "contact.unsuppressed",
+                          "event.tracked",
+                          "campaign.paused",
+                          "campaign.sent",
+                          "mail.received",
+                          "mail.rule_matched",
+                          "approval.pending",
+                          "approval.approved",
+                          "approval.rejected",
+                        ],
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+            },
+          },
+          "required": true,
+        },
         "responses": {
           "200": {
             "content": {
@@ -98533,10 +99145,14 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "eventId": {
                       "type": "string",
                     },
+                    "eventType": {
+                      "type": "string",
+                    },
                   },
                   "required": [
                     "deliveryId",
                     "eventId",
+                    "eventType",
                   ],
                   "type": "object",
                 },
