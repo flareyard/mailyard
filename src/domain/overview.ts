@@ -21,6 +21,7 @@ import type { MailboxDO } from "../objects/MailboxDO.ts"
 import { Database, queryIn } from "../services/Database.ts"
 import type { Caller } from "./apiKeys.ts"
 import { HOLDS_MAIL } from "./mailboxes.ts"
+import { upstreamRejections } from "./routingAnalytics.ts"
 
 /**
  * The Overview's read models (HAL-3362). Each read is bounded by its answer, not by the tables
@@ -365,16 +366,25 @@ export const inboundStats = Effect.fn("overview.inbound")(function* (range: Stat
     )
     for (const r of rows) addresses.set(r.id, r.address)
   }
+  const upstream = yield* upstreamRejections(days)
   return {
     range,
     received,
     rejected: {
       total: rejected,
       noSuchAddress: rejected,
-      // Email Routing rejects DMARC failures and listed senders before mail reaches Mailyard, so they
-      // aren't in its ledger (HAL-3393 reads them from Email Routing's analytics).
-      dmarcFail: null,
+      // Email Routing rejects DMARC, SPF and DKIM failures before mail reaches Mailyard; its analytics
+      // count them (HAL-3393). No dimension names a blocklist, so `rbl` stays null.
+      dmarcFail: upstream.dmarcFail,
+      authFail: upstream.authFail,
+      upstreamRejected: upstream.rejected,
       rbl: null,
+      upstream: {
+        connected: upstream.connected,
+        reason: upstream.reason,
+        zones: upstream.zones,
+        from: upstream.from,
+      },
     },
     held,
     spam: [...byMailbox.values()].reduce((n, m) => n + m.spam, 0),

@@ -107,6 +107,11 @@
       "name": "CLOUDFLARE_DNS_TOKEN",
       "ask": "A zone token (Zone, DNS, Email Sending: Read; Email Routing, Email Routing Rules, Email Sending: Edit) for zone status, record fixes and routing-rule conflicts",
       "optional": true
+    },
+    {
+      "name": "CLOUDFLARE_ANALYTICS_TOKEN",
+      "ask": "A zone token with Analytics: Read (and Zone: Read, to find the zones) for the mail Email Routing rejects before Mailyard sees it",
+      "optional": true
     }
   ],
   "settings": [
