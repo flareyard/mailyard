@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
-import { findForm, formPage, submitForm } from "../domain/forms.ts"
+import { type FormOutcome, findForm, formPage, recordFormOutcome, submitForm } from "../domain/forms.ts"
 import { confirmSubscription } from "../domain/subscriptions.ts"
 import { pageCsp, renderFormPage } from "../forms/page.ts"
 import { verifyTurnstile } from "../forms/turnstile.ts"
@@ -94,6 +94,9 @@ const readBody = async (request: Request): Promise<Record<string, unknown> | nul
       const form = await request.formData()
       const out: Record<string, unknown> = {}
       for (const [k, v] of form.entries()) if (typeof v === "string") out[k] = v
+      // Ticked topics arrive as a repeated field.
+      const topics = form.getAll("topics").filter((v): v is string => typeof v === "string")
+      if (topics.length) out.topics = topics
       return out
     }
   } catch {
@@ -121,9 +124,12 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: cors })
   const html = wantsHtml(request)
   const ip = request.headers.get("cf-connecting-ip") ?? "unknown"
+  // Every submission is counted by outcome, for the form's stats (HAL-3424).
+  const count = (outcome: FormOutcome) => runtimeFor(env).runPromise(recordFormOutcome(formId, outcome))
   if (env.FORM_LIMITER) {
     const { success } = await env.FORM_LIMITER.limit({ key: `${formId}:${ip}` })
     if (!success) {
+      await count("refused")
       return html
         ? page(429, "Too many tries", "Wait a minute and try again.")
         : Response.json({ error: "rate_limited" }, { status: 429, headers: { ...cors, "retry-after": "60" } })
@@ -152,6 +158,7 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
         ip: request.headers.get("cf-connecting-ip"),
       })
       if (!verdict.ok) {
+        await count("refused")
         return html
           ? page(
               400,
@@ -162,8 +169,9 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
       }
     }
   }
-  const { email, name, "cf-turnstile-response": _token, ...fields } = body
+  const { email, name, "cf-turnstile-response": _token, topics: picked, ...fields } = body
   if (typeof email !== "string") {
+    await count("refused")
     return html
       ? page(400, "Email needed", "Enter your email address to sign up.")
       : Response.json({ error: "invalid", field: "email" }, { status: 400, headers: cors })
@@ -171,10 +179,26 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
   const origin = new URL(request.url).origin
   const result = await runtimeFor(env).runPromise(
     Effect.result(
-      submitForm(formId, { email, ...(typeof name === "string" ? { name } : {}), fields }, origin),
+      submitForm(
+        formId,
+        {
+          email,
+          ...(typeof name === "string" ? { name } : {}),
+          fields,
+          topics: Array.isArray(picked)
+            ? picked.filter((t): t is string => typeof t === "string")
+            : typeof picked === "string"
+              ? [picked]
+              : [],
+        },
+        origin,
+      ),
     ),
   )
-  if (result._tag === "Success") return done(result.success.status, result.success.redirectUrl)
+  if (result._tag === "Success") {
+    await count(result.success.status === "confirm" ? "confirm" : "subscribed")
+    return done(result.success.status, result.success.redirectUrl)
+  }
   const failure = result.failure as { _tag?: string; field?: string; message?: string }
   if (failure._tag === "FormNotFound") {
     return html
@@ -182,8 +206,13 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
       : Response.json({ error: "not_found" }, { status: 404, headers: cors })
   }
   if (failure._tag === "ContactInvalid") {
+    await count("refused")
     return html
-      ? page(400, "Check your email address", failure.message ?? "Enter a valid email address.")
+      ? page(
+          400,
+          failure.field === "email" ? "Check your email address" : "Check the form",
+          failure.message ?? "Enter a valid email address.",
+        )
       : Response.json({ error: "invalid", field: failure.field ?? "email" }, { status: 400, headers: cors })
   }
   console.error("form submit failed", failure._tag)

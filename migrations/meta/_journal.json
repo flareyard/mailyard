@@ -253,6 +253,13 @@
       "when": 1792293774124,
       "tag": "0035_segment_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1792294575904,
+      "tag": "0036_form_details",
+      "breakpoints": true
     }
   ]
 }

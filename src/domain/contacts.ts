@@ -507,7 +507,7 @@ export const contactTimeline = Effect.fn("contacts.timeline")(function* (
     sql`(${at} < ${before} or (${at} = ${before} and ${rowId} < ${tie}))`
   const none = Effect.succeed([] as Array<never>)
   // Delivery and open events are recorded as `email.*` events; the rest are the contact's own.
-  const emailEvents = want("event") && want("delivery") ? undefined : want("delivery") ? true : false
+  const emailEvents = want("event") && want("delivery") ? undefined : want("delivery")
   const [eventRows, messageRows, changeRows, replyRows, runRows] = yield* Effect.all(
     [
       want("event", "delivery")

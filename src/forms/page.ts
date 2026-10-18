@@ -8,14 +8,45 @@ import type { Theme } from "../templates/kit.ts"
  * scroll at any width.
  */
 
+export type PageField = {
+  readonly key: string
+  readonly label: string
+  readonly type: "text" | "number" | "date" | "checkbox" | "select" | "tel" | "url"
+  readonly required: boolean
+  readonly options?: ReadonlyArray<string> | undefined
+}
 export type PageForm = {
   readonly id: string
   readonly name: string
   readonly description: string | null
   readonly fields: ReadonlyArray<string>
+  /** How each custom field is asked (HAL-3424); without them, `fields` are asked as optional text. */
+  readonly fieldDefs?: ReadonlyArray<PageField> | undefined
+  /** `pick`: the visitor ticks which topics to join. */
+  readonly topicChoice?: "all" | "pick" | undefined
   readonly turnstileSiteKey: string | null
 }
-export type PageTopic = { readonly name: string; readonly description: string | null }
+export type PageTopic = { readonly id?: string; readonly name: string; readonly description: string | null }
+
+const defsOfPage = (form: PageForm): ReadonlyArray<PageField> =>
+  form.fieldDefs ??
+  form.fields
+    .filter((f) => f !== "email" && f !== "name")
+    .map((key) => ({ key, label: labelOf(key), type: "text" as const, required: false }))
+
+/** One custom field's control, as its definition asks; types and autofill from the definition or the name. */
+const controlFor = (d: PageField, idPrefix: string) => {
+  const id = `${idPrefix}${esc(d.key)}`
+  const opt = d.required ? "" : ' <span class="opt">(optional)</span>'
+  const req = d.required ? " required" : ""
+  if (d.type === "checkbox")
+    return `<div class="field check"><input id="${id}" name="${esc(d.key)}" type="checkbox" value="true"${req}><label for="${id}">${esc(d.label)}${opt}</label></div>`
+  if (d.type === "select")
+    return `<div class="field"><label for="${id}">${esc(d.label)}${opt}</label><select id="${id}" name="${esc(d.key)}"${req}><option value="">Choose…</option>${(d.options ?? []).map((o) => `<option>${esc(o)}</option>`).join("")}</select></div>`
+  const hints = hintsFor(d.key)
+  const type = d.type === "text" ? hints.type : d.type
+  return `<div class="field"><label for="${id}">${esc(d.label)}${opt}</label><input id="${id}" name="${esc(d.key)}" type="${type}" autocomplete="${hints.autocomplete}"${req}${type === "number" ? ' inputmode="decimal"' : ""} maxlength="200"></div>`
+}
 
 export const TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js"
 
@@ -79,7 +110,7 @@ export const renderFormPage = (input: {
 }) => {
   const { form, topics, theme } = input
   const c = theme.colors
-  const custom = form.fields.filter((f) => f !== "email" && f !== "name")
+  const pick = form.topicChoice === "pick" && topics.length > 0
   const field = (
     name: string,
     label: string,
@@ -87,8 +118,16 @@ export const renderFormPage = (input: {
   ) =>
     `<div class="field"><label for="f-${esc(name)}">${esc(label)}${opts.required ? "" : ' <span class="opt">(optional)</span>'}</label>
 <input id="f-${esc(name)}" name="${esc(name)}" type="${opts.type}" autocomplete="${opts.autocomplete}"${opts.required ? " required" : ""}${opts.type === "email" ? ' inputmode="email" spellcheck="false" autocapitalize="off"' : ""} maxlength="${opts.type === "email" ? 254 : 200}"></div>`
+  const topicPicker = pick
+    ? `<fieldset class="topics pick"><legend>Choose what you'd like</legend>${topics
+        .map(
+          (t, i) =>
+            `<div class="field check"><input id="t-${i}" name="topics" type="checkbox" value="${esc(t.id ?? "")}"${topics.length === 1 ? " checked" : ""}><label for="t-${i}"><strong>${esc(t.name)}</strong>${t.description ? `<span>${esc(t.description)}</span>` : ""}</label></div>`,
+        )
+        .join("")}</fieldset>`
+    : ""
   const topicList =
-    topics.length === 0
+    topics.length === 0 || pick
       ? ""
       : `<section class="topics" aria-labelledby="topics-h"><h2 id="topics-h">${topics.length === 1 ? "You'll get" : "You'll get all of these"}</h2><ul>${topics
           .map(
@@ -131,7 +170,14 @@ form{display:grid;gap:14px}
 .field{display:grid;gap:6px}
 label{font-weight:600;color:var(--fg);font-size:.95rem}
 .opt{font-weight:400;color:var(--muted)}
-input{font:inherit;font-size:16px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg)}
+input,select{font:inherit;font-size:16px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg)}
+.check{grid-template-columns:auto 1fr;align-items:start;gap:10px}
+.check input{width:22px;min-height:22px;height:22px;margin:2px 0 0;accent-color:var(--accent)}
+.check label{font-weight:400;display:grid;gap:2px}
+.check label strong{font-weight:600}
+.check label span{font-size:.9rem;color:var(--muted)}
+fieldset.pick{border:0;margin:0;padding:0;display:grid;gap:10px}
+fieldset.pick legend{font-weight:600;color:var(--fg);margin:0 0 6px;padding:0}
 input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
 button{font:600 16px/1 ${theme.fonts.body};min-height:48px;padding:0 20px;border:0;border-radius:10px;background:var(--accent);color:var(--on-accent);cursor:pointer;width:100%}
@@ -151,7 +197,10 @@ ${topicList}
 ${input.error ? `<p class="error" role="alert">${esc(input.error)}</p>` : ""}
 ${field("email", "Email", { type: "email", autocomplete: "email", required: true })}
 ${field("name", "Name", { type: "text", autocomplete: "name" })}
-${custom.map((f) => field(f, labelOf(f), hintsFor(f))).join("\n")}
+${defsOfPage(form)
+  .map((d) => controlFor(d, "f-"))
+  .join("\n")}
+${topicPicker}
 <div class="hp" aria-hidden="true"><label for="f-hp">Leave this empty</label><input id="f-hp" name="_hp" type="text" tabindex="-1" autocomplete="off"></div>
 ${turnstile}
 <button type="submit">Sign up</button>
@@ -167,17 +216,36 @@ ${turnstile}
  * the page. The submit endpoint allows any origin (CORS), and without JavaScript the form still
  * posts normally and lands on the hosted result page.
  */
-export const embedSnippet = (input: { readonly form: PageForm; readonly origin: string }) => {
+export const embedSnippet = (input: {
+  readonly form: PageForm
+  readonly origin: string
+  readonly topics?: ReadonlyArray<PageTopic> | undefined
+}) => {
   const { form, origin } = input
   const action = `${origin}/v1/forms/${encodeURIComponent(form.id)}/submit`
   const id = `mailyard-${form.id.replace(/[^A-Za-z0-9_-]/g, "")}`
-  const custom = form.fields.filter((f) => f !== "email" && f !== "name")
+  const pick = form.topicChoice === "pick" ? (input.topics ?? []) : []
   const input_ = (name: string, label: string, type: string, autocomplete: string, required: boolean) =>
     `  <label>${esc(label)}<input name="${esc(name)}" type="${type}" autocomplete="${autocomplete}"${required ? " required" : ""}></label>`
   return `<form id="${id}" class="mailyard-form" method="post" action="${esc(action)}">
 ${input_("email", "Email", "email", "email", true)}
 ${input_("name", "Name", "text", "name", false)}
-${custom.map((f) => input_(f, labelOf(f), hintsFor(f).type, hintsFor(f).autocomplete, false)).join("\n")}
+${defsOfPage(form)
+  .map((d) =>
+    d.type === "select"
+      ? `  <label>${esc(d.label)}<select name="${esc(d.key)}"${d.required ? " required" : ""}><option value="">Choose…</option>${(d.options ?? []).map((o) => `<option>${esc(o)}</option>`).join("")}</select></label>`
+      : d.type === "checkbox"
+        ? `  <label><input name="${esc(d.key)}" type="checkbox" value="true"${d.required ? " required" : ""}> ${esc(d.label)}</label>`
+        : input_(
+            d.key,
+            d.label,
+            d.type === "text" ? hintsFor(d.key).type : d.type,
+            hintsFor(d.key).autocomplete,
+            d.required,
+          ),
+  )
+  .join("\n")}
+${pick.map((t) => `  <label><input name="topics" type="checkbox" value="${esc(t.id ?? "")}"> ${esc(t.name)}</label>`).join("\n")}
   <input name="_hp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px">
 ${form.turnstileSiteKey ? `  <div class="cf-turnstile" data-sitekey="${esc(form.turnstileSiteKey)}"></div>\n` : ""}  <button type="submit">Sign up</button>
   <p class="mailyard-message" role="status" aria-live="polite"></p>
@@ -192,7 +260,10 @@ ${form.turnstileSiteKey ? `<script src="${TURNSTILE_SCRIPT}" async defer></scrip
     var button = form.querySelector("button");
     button.disabled = true;
     var body = {};
-    new FormData(form).forEach(function (value, key) { body[key] = value; });
+    new FormData(form).forEach(function (value, key) {
+      if (key === "topics") (body.topics = body.topics || []).push(value);
+      else body[key] = value;
+    });
     fetch(form.action, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (r) {
@@ -209,3 +280,14 @@ ${form.turnstileSiteKey ? `<script src="${TURNSTILE_SCRIPT}" async defer></scrip
 })();
 </script>`
 }
+
+/**
+ * The hosted page in an iframe (HAL-3424): no script on the host page, the visitor stays on it, and
+ * the challenge, validation and result all happen inside the frame. The page allows any ancestor.
+ */
+export const iframeSnippet = (input: {
+  readonly form: PageForm
+  readonly origin: string
+  readonly height?: number
+}) =>
+  `<iframe src="${esc(`${input.origin}/f/${encodeURIComponent(input.form.id)}`)}" title="${esc(input.form.name)}" loading="lazy" style="width:100%;max-width:32rem;height:${input.height ?? 640}px;border:0;color-scheme:normal" referrerpolicy="strict-origin-when-cross-origin"></iframe>`

@@ -21,6 +21,8 @@ import {
   createForm,
   type FormInvalid,
   type FormNotFound,
+  formPage,
+  formStats,
   getForm,
   listForms,
   updateForm,
@@ -48,7 +50,7 @@ import {
   updateTopic,
 } from "../domain/topics.ts"
 import { unsubscribeToken, unsubscribeUrl } from "../domain/unsubscribe.ts"
-import { embedSnippet } from "../forms/page.ts"
+import { embedSnippet, iframeSnippet } from "../forms/page.ts"
 import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
@@ -290,17 +292,23 @@ export const FormsHandlers = HttpApiBuilder.group(
       ),
       get: p(({ params }) => requireScope("read").pipe(Effect.andThen(getForm(params.id)), audienceErrors)),
       embed: p(({ params, request }) =>
-        requireScope("read").pipe(
-          Effect.andThen(getForm(params.id)),
-          Effect.map((form) => {
-            const origin = originOf(request) ?? ""
-            return {
-              pageUrl: `${origin}/f/${encodeURIComponent(form.id)}`,
-              html: embedSnippet({ form, origin }),
-            }
-          }),
-          audienceErrors,
-        ),
+        Effect.gen(function* () {
+          yield* requireScope("read")
+          const form = yield* getForm(params.id)
+          // The live topics, for a form whose visitors pick them; an archived form has none.
+          const page = yield* formPage(params.id).pipe(
+            Effect.catchTag("FormNotFound", () => Effect.succeed(null)),
+          )
+          const origin = originOf(request) ?? ""
+          return {
+            pageUrl: `${origin}/f/${encodeURIComponent(form.id)}`,
+            html: embedSnippet({ form, origin, topics: page?.topics ?? [] }),
+            iframe: iframeSnippet({ form, origin }),
+          }
+        }).pipe(audienceErrors),
+      ),
+      stats: p(({ params, query }) =>
+        requireScope("read").pipe(Effect.andThen(formStats(params.id, query.range ?? "30d")), audienceErrors),
       ),
       update: p(({ params, payload }) =>
         requireScope("admin").pipe(
