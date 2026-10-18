@@ -1,6 +1,11 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
-import { getContactImport, listContactImports, startContactImport } from "../imports/contactImport.ts"
+import {
+  cancelContactImport,
+  getContactImport,
+  listContactImports,
+  startContactImport,
+} from "../imports/contactImport.ts"
 import { InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 
@@ -34,6 +39,16 @@ export const ImportsHandlers = HttpApiBuilder.group(
         requireScope("read").pipe(
           Effect.andThen(getContactImport(params.id)),
           Effect.catchTags({ ImportNotFound: notFound("Import"), DatabaseError: Effect.die }),
+        ),
+      ),
+      cancel: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => cancelContactImport(params.id, caller.keyId)),
+          Effect.catchTags({
+            ImportNotFound: notFound("Import"),
+            ImportInvalid: (e) => Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            DatabaseError: Effect.die,
+          }),
         ),
       ),
     })

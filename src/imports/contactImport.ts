@@ -3,7 +3,16 @@ import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { contactImports, contacts, subscriptions, suppressions, topics, uploads } from "../db/schema.ts"
+import {
+  contactFields,
+  contactImports,
+  contacts,
+  type ImportRowError,
+  subscriptions,
+  suppressions,
+  topics,
+  uploads,
+} from "../db/schema.ts"
 import { raiseAlert } from "../domain/alerts.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { normalizeEmail } from "../domain/contacts.ts"
@@ -32,6 +41,18 @@ const READ_BYTES = 4 * 1024 * 1024
 /** Rows per JSON parameter, to keep each well under D1's 2 MB value limit. */
 const SLICE = 1_000
 const MAX_ERRORS = 100
+
+/** Where one step's rejected rows are kept; the offset is padded so the keys sort in file order. */
+export const errorsKeyOf = (id: string, from: number) =>
+  `imports/${id}/errors/${String(from).padStart(12, "0")}.csv`
+export const ERRORS_HEADER = "line,column,value,code,message\r\n"
+const errorCell = (v: unknown) => {
+  let s = v === null || v === undefined ? "" : String(v)
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+const errorLine = (e: ImportRowError) =>
+  `${[e.line, e.column, e.value, e.code, e.message].map(errorCell).join(",")}\r\n`
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@]{2,}$/
 const FIELD_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/
 
@@ -48,27 +69,71 @@ export class ImportInvalid extends Schema.TaggedError<ImportInvalid>()("ImportIn
 
 type ImportRow = typeof contactImports.$inferSelect
 
-export const describeImport = (r: ImportRow) => ({
-  id: r.id,
-  uploadId: r.uploadId,
-  status: r.status,
-  mapping: r.mapping,
-  topicIds: r.topicIds,
-  onConflict: r.onConflict,
-  defaultStatus: r.defaultStatus,
-  headers: r.headers ?? null,
-  rows: r.rows,
-  created: r.created,
-  updated: r.updated,
-  skipped: r.skipped,
-  invalid: r.invalid,
-  duplicates: r.duplicates,
-  suppressed: r.suppressed,
-  errors: r.errors,
-  error: r.error,
-  createdAt: r.createdAt,
-  finishedAt: r.finishedAt,
-})
+type UploadRow = typeof uploads.$inferSelect
+
+/**
+ * An import as the API shows it. Progress (HAL-3371): `bytesRead` of `size` is exact from the start,
+ * since rows aren't known until the end; `processed` is rows read so far (`rows` is the same number);
+ * `ratePerMinute` and `etaAt` come from the bytes read since it started. `skipped` includes neither
+ * `duplicates` (repeats within the file, merged into one row) nor `suppressed` (created, but blocked);
+ * rows written before a failure or a cancel are kept.
+ */
+export const describeImport = (
+  r: ImportRow,
+  upload: Pick<UploadRow, "filename" | "size"> | null,
+  now = Date.now(),
+) => {
+  const size = upload?.size ?? null
+  const bytesRead = size === null ? r.offset : Math.min(r.offset, size)
+  const running = r.status === "running" && r.startedAt !== null
+  const minutes = running ? Math.max((now - (r.startedAt ?? now)) / 60_000, 1 / 60) : null
+  const bytesPerMs = running && now > (r.startedAt ?? now) ? bytesRead / (now - (r.startedAt ?? now)) : 0
+  return {
+    id: r.id,
+    uploadId: r.uploadId,
+    fileName: upload?.filename ?? null,
+    fileSize: size,
+    status: r.status,
+    mapping: r.mapping,
+    topicIds: r.topicIds,
+    onConflict: r.onConflict,
+    defaultStatus: r.defaultStatus,
+    headers: r.headers ?? null,
+    rows: r.rows,
+    processed: r.rows,
+    bytesRead,
+    size,
+    ratePerMinute: minutes === null ? null : Math.round(r.rows / minutes),
+    etaAt:
+      running && size !== null && bytesPerMs > 0 ? Math.round(now + (size - bytesRead) / bytesPerMs) : null,
+    created: r.created,
+    updated: r.updated,
+    skipped: r.skipped,
+    invalid: r.invalid,
+    duplicates: r.duplicates,
+    suppressed: r.suppressed,
+    errors: r.errors.map((e) => ({
+      line: e.line,
+      message: e.message,
+      column: e.column ?? null,
+      value: e.value ?? null,
+      code: e.code ?? null,
+    })),
+    errorsTotal: r.errorsTotal,
+    consent: r.attestedBy
+      ? {
+          attested: true as const,
+          statement: r.consentStatement,
+          attestedBy: r.attestedBy,
+          attestedAt: r.attestedAt,
+        }
+      : null,
+    error: r.error,
+    createdAt: r.createdAt,
+    startedAt: r.startedAt,
+    finishedAt: r.finishedAt,
+  }
+}
 export type ImportView = ReturnType<typeof describeImport>
 
 // ---------------------------------------------------------------------------------------------
@@ -129,25 +194,38 @@ export type ImportInput = {
   readonly topicIds?: ReadonlyArray<string> | undefined
   readonly onConflict?: "update" | "skip" | undefined
   readonly defaultStatus?: "subscribed" | "unsubscribed" | undefined
+  /** The person's word that these contacts agreed to hear from the sender (HAL-3371). */
+  readonly consent?: { readonly attested: boolean; readonly statement?: string | undefined } | undefined
 }
 
-/** What a mapping target must look like: `email`, `name`, `status`, `fields.<name>` or `ignore`. */
+/**
+ * What a mapping target must look like: `email`, `name`, `name.first` and `name.last` (joined with a
+ * space into the one name), `status` (a column of subscribed or unsubscribed), `fields.<name>` (an
+ * existing typed field is read as its type; a new name is stored as text) or `ignore`.
+ */
+export const MAPPING_TARGETS = ["email", "name", "name.first", "name.last", "status", "ignore"] as const
+
 const checkMapping = (mapping: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     const targets = Object.values(mapping)
     if (targets.filter((t) => t === "email").length !== 1)
       return yield* new ImportInvalid({ field: "mapping", message: "Map exactly one column to email." })
-    for (const t of ["name", "status"])
+    for (const t of ["name", "name.first", "name.last", "status"])
       if (targets.filter((x) => x === t).length > 1)
         return yield* new ImportInvalid({ field: "mapping", message: `Map at most one column to ${t}.` })
+    if (targets.includes("name") && (targets.includes("name.first") || targets.includes("name.last")))
+      return yield* new ImportInvalid({
+        field: "mapping",
+        message: "Map a column to name, or columns to name.first and name.last, not both.",
+      })
     const fieldNames = new Set<string>()
     for (const [column, target] of Object.entries(mapping)) {
-      if (["email", "name", "status", "ignore"].includes(target)) continue
+      if ((MAPPING_TARGETS as ReadonlyArray<string>).includes(target)) continue
       const name = target.startsWith("fields.") ? target.slice(7) : null
       if (!name || !FIELD_NAME.test(name))
         return yield* new ImportInvalid({
           field: `mapping.${column}`,
-          message: `"${target}" isn't email, name, status, ignore or fields.<name> (letters, digits, underscores).`,
+          message: `"${target}" isn't email, name, name.first, name.last, status, ignore or fields.<name> (letters, digits, underscores).`,
         })
       if (fieldNames.has(name))
         return yield* new ImportInvalid({
@@ -174,6 +252,13 @@ export const createContactImport = Effect.fn("imports.create")(function* (input:
     if (missing.length > 0)
       return yield* new ImportInvalid({ field: "topicIds", message: `No such topic: ${missing.join(", ")}.` })
   }
+  if (input.consent && !input.consent.attested)
+    return yield* new ImportInvalid({
+      field: "consent.attested",
+      message: "Leave consent out, or attest it with attested: true.",
+    })
+  const statement = input.consent?.statement?.trim().slice(0, 1000) || null
+  const now = Date.now()
   const id = `imp_${yield* (yield* Ids).next}`
   const row = yield* database.query("imports.insert", (db) =>
     db
@@ -186,6 +271,9 @@ export const createContactImport = Effect.fn("imports.create")(function* (input:
         onConflict: input.onConflict ?? "update",
         defaultStatus: input.defaultStatus ?? "subscribed",
         createdBy: actor,
+        ...(input.consent?.attested
+          ? { attestedBy: actor, attestedAt: now, consentStatement: statement }
+          : {}),
       })
       .returning()
       .get(),
@@ -194,9 +282,13 @@ export const createContactImport = Effect.fn("imports.create")(function* (input:
     actor,
     action: "contacts.import",
     target: id,
-    after: { uploadId: input.uploadId, topicIds },
+    after: {
+      uploadId: input.uploadId,
+      topicIds,
+      consent: input.consent?.attested ? { attested: true, statement } : null,
+    },
   })
-  return describeImport(row)
+  return describeImport(row, yield* findUpload(input.uploadId))
 })
 
 export const workflowIdOf = (importId: string) => `contact-import-${importId}`
@@ -225,7 +317,7 @@ export const startContactImport = Effect.fn("imports.startWorkflow")(function* (
   )
   if (!started) {
     yield* fail(view.id, "The import couldn't start; try again.")
-    return describeImport(yield* findImport(view.id))
+    return yield* getContactImport(view.id)
   }
   return view
 })
@@ -241,7 +333,9 @@ const findImport = (id: string) =>
   })
 
 export const getContactImport = Effect.fn("imports.get")(function* (id: string) {
-  return describeImport(yield* findImport(id))
+  const row = yield* findImport(id)
+  const upload = yield* findUpload(row.uploadId).pipe(Effect.orElseSucceed(() => null))
+  return describeImport(row, upload)
 })
 
 export const listContactImports = Effect.fn("imports.list")(function* (query: {
@@ -260,8 +354,19 @@ export const listContactImports = Effect.fn("imports.list")(function* (query: {
       .all(),
   )
   const page = rows.slice(0, limit)
+  const files = yield* queryIn(
+    "imports.listUploads",
+    [...new Set(page.map((r) => r.uploadId))],
+    (db, chunk) =>
+      db
+        .select({ id: uploads.id, filename: uploads.filename, size: uploads.size })
+        .from(uploads)
+        .where(inArray(uploads.id, chunk))
+        .all(),
+  )
+  const byId = new Map(files.map((f) => [f.id, f]))
   return {
-    imports: page.map(describeImport),
+    imports: page.map((r) => describeImport(r, byId.get(r.uploadId) ?? null)),
     nextCursor: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
   }
 })
@@ -325,7 +430,7 @@ export const startImport = Effect.fn("imports.start")(function* (id: string) {
   yield* database.query("imports.started", (db) =>
     db
       .update(contactImports)
-      .set({ status: "running", headers, offset, line: parsed.nextLine })
+      .set({ status: "running", headers, offset, line: parsed.nextLine, startedAt: Date.now() })
       .where(eq(contactImports.id, id))
       .run(),
   )
@@ -336,7 +441,26 @@ type Parsed = {
   email: string
   name: string | null
   status: "subscribed" | "unsubscribed" | null
-  fields: Record<string, string>
+  fields: Record<string, unknown>
+}
+
+/** A cell as its registered field type: a number, a boolean, an ISO date; undefined when it isn't one. */
+export const typedValue = (type: string | undefined, value: string): unknown => {
+  if (!type || type === "string") return value.slice(0, 2000)
+  if (type === "number") {
+    const n = Number(value.replace(/,/g, ""))
+    return Number.isFinite(n) ? n : undefined
+  }
+  if (type === "boolean") {
+    const v = value.toLowerCase()
+    return ["true", "yes", "y", "1"].includes(v)
+      ? true
+      : ["false", "no", "n", "0"].includes(v)
+        ? false
+        : undefined
+  }
+  const ms = Date.parse(value)
+  return Number.isNaN(ms) ? undefined : new Date(ms).toISOString()
 }
 
 const BLOCKED_OR_LEFT = ["bounced", "complained", "suppressed", "unsubscribed"]
@@ -383,24 +507,54 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
   const column = (target: string) => headers.findIndex((h) => row.mapping[h] === target)
   const emailAt = column("email")
   const nameAt = column("name")
+  const firstAt = column("name.first")
+  const lastAt = column("name.last")
   const statusAt = column("status")
   const fieldColumns = headers.flatMap((h, i) => {
     const target = row.mapping[h]
-    return target?.startsWith("fields.") ? [{ i, key: target.slice(7) }] : []
+    return target?.startsWith("fields.") ? [{ i, key: target.slice(7), column: h }] : []
   })
-  const errors: Array<{ line: number; message: string }> = []
+  // Typed fields (the registry, HAL-3422) are read as their type; a cell that isn't one is rejected.
+  const registry = fieldColumns.length
+    ? yield* queryIn(
+        "imports.fieldTypes",
+        fieldColumns.map((f) => f.key),
+        (db, chunk) =>
+          db
+            .select({ key: contactFields.key, type: contactFields.type })
+            .from(contactFields)
+            .where(inArray(contactFields.key, chunk))
+            .all(),
+      )
+    : []
+  const typeOf = new Map(registry.map((r) => [r.key, r.type]))
+  const errors: Array<ImportRowError> = []
   const byEmail = new Map<string, Parsed>()
   let invalid = 0
   let duplicates = 0
+  const emailColumn = headers[emailAt] ?? null
   for (const record of parsed.records) {
     const raw = (record.fields[emailAt] ?? "").trim()
     const email = normalizeEmail(raw)
     if (!EMAIL.test(email)) {
       invalid++
-      errors.push({
-        line: record.line,
-        message: raw ? `Not an email address: ${raw.slice(0, 100)}` : "No email.",
-      })
+      errors.push(
+        raw
+          ? {
+              line: record.line,
+              message: `Not an email address: ${raw.slice(0, 100)}`,
+              column: emailColumn,
+              value: raw.slice(0, 200),
+              code: "invalid_email",
+            }
+          : {
+              line: record.line,
+              message: "No email.",
+              column: emailColumn,
+              value: null,
+              code: "missing_email",
+            },
+      )
       continue
     }
     const statusRaw = statusAt >= 0 ? (record.fields[statusAt] ?? "").trim().toLowerCase() : ""
@@ -409,16 +563,39 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
       errors.push({
         line: record.line,
         message: `Status must be subscribed or unsubscribed, not "${statusRaw.slice(0, 40)}".`,
+        column: headers[statusAt] ?? null,
+        value: statusRaw.slice(0, 200),
+        code: "invalid_value",
       })
       continue
     }
-    const fields: Record<string, string> = {}
+    const fields: Record<string, unknown> = {}
+    let bad: ImportRowError | null = null
     for (const f of fieldColumns) {
       const value = (record.fields[f.i] ?? "").trim()
       // An empty cell leaves the field as it was.
-      if (value) fields[f.key] = value.slice(0, 2000)
+      if (!value) continue
+      const typed = typedValue(typeOf.get(f.key), value)
+      if (typed === undefined) {
+        bad = {
+          line: record.line,
+          message: `"${f.column}" is a ${typeOf.get(f.key)} field; "${value.slice(0, 40)}" isn't one.`,
+          column: f.column,
+          value: value.slice(0, 200),
+          code: "invalid_value",
+        }
+        break
+      }
+      fields[f.key] = typed
     }
-    const name = nameAt >= 0 ? (record.fields[nameAt] ?? "").trim().slice(0, 200) || null : null
+    if (bad) {
+      invalid++
+      errors.push(bad)
+      continue
+    }
+    const cell = (at: number) => (at >= 0 ? (record.fields[at] ?? "").trim() : "")
+    const joined = [cell(firstAt), cell(lastAt)].filter(Boolean).join(" ")
+    const name = (nameAt >= 0 ? cell(nameAt) : joined).slice(0, 200) || null
     const status = (statusRaw || null) as Parsed["status"]
     const seen = byEmail.get(email)
     if (seen) {
@@ -514,6 +691,22 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
         if (!memberships.has(`${current.id}:${topicId}`)) joins.push({ email: p.email, topicId })
   }
 
+  // Each change carries what consent the import was given: the attestation, or just which import.
+  const evidence = JSON.stringify({
+    importId: id,
+    ...(row.attestedBy
+      ? { attestedBy: row.attestedBy, attestedAt: row.attestedAt, statement: row.consentStatement }
+      : {}),
+  })
+  // Every rejected row of this step, as CSV under a key named by where the step started: a retry
+  // overwrites its own file, and errors.csv reads them in order.
+  if (errors.length > 0)
+    yield* (yield* BlobStore).put(
+      errorsKeyOf(id, from),
+      new TextEncoder().encode(errors.map(errorLine).join("")),
+      "text/csv; charset=utf-8",
+    )
+
   // One batch: every write is guarded by the offset this step started from, and the import row's
   // counts and offset move last. If an earlier attempt already committed, nothing here applies.
   const guard = `exists (select 1 from contact_imports where id = ? and "offset" = ?)`
@@ -543,12 +736,12 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
       const json = JSON.stringify(part)
       return [
         {
-          sql: `insert into subscription_changes (id, contact_id, topic_id, "from", "to", source, at)
-            select 'chg_' || lower(hex(randomblob(12))), c.id, json_extract(j.value, '$.topicId'), null, 'subscribed', 'import', ?
+          sql: `insert into subscription_changes (id, contact_id, topic_id, "from", "to", source, evidence, at)
+            select 'chg_' || lower(hex(randomblob(12))), c.id, json_extract(j.value, '$.topicId'), null, 'subscribed', 'import', ?, ?
             from json_each(?) as j join contacts c on c.email = json_extract(j.value, '$.email')
             where ${guard} and not exists (select 1 from subscriptions s
               where s.contact_id = c.id and s.topic_id = json_extract(j.value, '$.topicId'))`,
-          params: [now, json, ...g],
+          params: [evidence, now, json, ...g],
         },
         {
           sql: `insert into subscriptions (contact_id, topic_id, state, source, changed_at)
@@ -565,6 +758,7 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
           "offset" = ?, line = ?,
           rows = rows + ?, created = created + ?, updated = updated + ?, skipped = skipped + ?,
           invalid = invalid + ?, duplicates = duplicates + ?, suppressed = suppressed + ?,
+          errors_total = errors_total + ?,
           errors = (select json_group_array(json(value)) from (
             select value from json_each(errors)
             union all select value from json_each(?)
@@ -580,6 +774,7 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
         invalid,
         duplicates,
         suppressedCount,
+        errors.length,
         JSON.stringify(errors),
         ...g,
       ],
@@ -596,7 +791,7 @@ export const importChunk = Effect.fn("imports.chunk")(function* (id: string, fro
 export const finishImport = Effect.fn("imports.finish")(function* (id: string) {
   const database = yield* Database
   const row = yield* findImport(id)
-  if (row.status !== "running") return describeImport(row)
+  if (row.status !== "running") return { status: row.status, rows: row.rows, created: row.created }
   const done = yield* database.query("imports.finish", (db) =>
     db
       .update(contactImports)
@@ -605,12 +800,66 @@ export const finishImport = Effect.fn("imports.finish")(function* (id: string) {
       .returning()
       .get(),
   )
-  if (!done) return describeImport(row)
+  if (!done) return { status: row.status, rows: row.rows, created: row.created }
   yield* recordAudit({
     actor: row.createdBy,
     action: "contacts.imported",
     target: id,
     after: { rows: done.rows, created: done.created, updated: done.updated, invalid: done.invalid },
   })
-  return describeImport(done)
+  return { status: done.status, rows: done.rows, created: done.created }
+})
+
+// ---------------------------------------------------------------------------------------------
+// Cancelling, and the full error list
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Stops an import (HAL-3371): the Workflow is terminated and the import marked cancelled. Rows the
+ * steps already wrote stay written; nothing is undone.
+ */
+export const cancelContactImport = Effect.fn("imports.cancel")(function* (id: string, actor: string) {
+  const row = yield* findImport(id)
+  if (row.status !== "queued" && row.status !== "running")
+    return yield* new ImportInvalid({
+      field: "status",
+      message: `A ${row.status} import can't be cancelled.`,
+    })
+  const database = yield* Database
+  yield* database.query("imports.cancel", (db) =>
+    db
+      .update(contactImports)
+      .set({ status: "cancelled", finishedAt: Date.now() })
+      .where(eq(contactImports.id, id))
+      .run(),
+  )
+  const { CONTACT_IMPORT_WORKFLOW } = yield* Bindings
+  yield* Effect.tryPromise(async () => {
+    const instance = await CONTACT_IMPORT_WORKFLOW.get(workflowIdOf(id))
+    await instance.terminate()
+  }).pipe(
+    // Already finished, or never started: the status above is what the steps check anyway.
+    Effect.catchCause((cause) => Effect.logWarning("imports: could not terminate the workflow", cause)),
+  )
+  yield* recordAudit({ actor, action: "contacts.import.cancel", target: id, after: { rows: row.rows } })
+  return yield* getContactImport(id)
+})
+
+/** Every rejected row of an import as CSV, in file order: the step files written as it ran. */
+export const importErrorsCsv = Effect.fn("imports.errorsCsv")(function* (id: string) {
+  yield* findImport(id)
+  const { STORE } = yield* Bindings
+  const chunks: Array<string> = [ERRORS_HEADER]
+  let cursor: string | undefined
+  do {
+    const page = yield* Effect.promise(() =>
+      STORE.list({ prefix: `imports/${id}/errors/`, ...(cursor ? { cursor } : {}) }),
+    )
+    for (const object of page.objects) {
+      const body = yield* Effect.promise(() => STORE.get(object.key))
+      if (body) chunks.push(yield* Effect.promise(() => body.text()))
+    }
+    cursor = page.truncated ? page.cursor : undefined
+  } while (cursor)
+  return `\uFEFF${chunks.join("")}`
 })

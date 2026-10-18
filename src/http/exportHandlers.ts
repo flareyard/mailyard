@@ -13,7 +13,7 @@ export const ExportsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
-      create: p(({ payload, request }) =>
+      create: p(({ payload, query, request }) =>
         Effect.gen(function* () {
           if (payload.kind === "workspace") {
             // Everything, including settings and the audit log: the admin's to take.
@@ -36,7 +36,11 @@ export const ExportsHandlers = HttpApiBuilder.group(
           const caller = yield* requireScope("read")
           const { CONTACT_EXPORT_WORKFLOW } = yield* Bindings
           return yield* createContactExport(
-            { filter: payload.filter ?? {}, fields: payload.fields },
+            {
+              filter: payload.filter ?? {},
+              fields: payload.fields,
+              dryRun: query.dryRun === "1" || query.dryRun === "true",
+            },
             caller.keyId,
             originOf(request),
             async (exportId) => {
