@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
 import type { AgentLimited } from "../domain/agents.ts"
+import type { Caller } from "../domain/apiKeys.ts"
 import { recipientsOf } from "../domain/deliveryEvents.ts"
 import { isManager } from "../domain/permissions.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
@@ -16,7 +17,14 @@ import type { MessagePatch, Party, StoredMessage } from "../mailbox/types.ts"
 import { linkOrigin } from "../public/origin.ts"
 import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.ts"
 import { Database } from "../services/Database.ts"
-import { Conflict, type CreateDraftPayload, InvalidRequest, MailApi, NotFound } from "./Api.ts"
+import {
+  type BULK_ACTIONS,
+  Conflict,
+  type CreateDraftPayload,
+  InvalidRequest,
+  MailApi,
+  NotFound,
+} from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"
 import { agentConflict, appContext, idempotent, notWhileDeleting, provideTo } from "./handlers.ts"
 
@@ -181,6 +189,80 @@ const BULK: Record<
   move: (b) => (b.folder ? { folder: b.folder as MessagePatch["folder"] } : null),
 }
 
+/** What a bulk thread action takes: the REST body of `POST …/threads/bulk`, and the MCP inbox tools. */
+export type ThreadAction = {
+  readonly threadIds: ReadonlyArray<string>
+  readonly action: (typeof BULK_ACTIONS)[number]
+  readonly labelId?: string | undefined
+  readonly folder?: string | undefined
+  readonly until?: number | undefined
+  readonly assignee?: string | null | undefined
+}
+
+/**
+ * Applies a bulk action to threads in a mailbox the caller may write: one path for the API and the
+ * MCP inbox tools (HAL-3459), so rules, sender lists, audit and the live socket behave the same.
+ */
+export const applyThreadAction = (mailboxId: string, caller: Caller, payload: ThreadAction) =>
+  Effect.gen(function* () {
+    const params = { id: mailboxId }
+    const ids = payload.threadIds
+    if (payload.action === "delete") {
+      // Delete forever: only what is already in trash or spam, as a mail client's "Delete forever".
+      let purged = 0
+      for (const threadId of ids) {
+        const thread = yield* callMailbox(params.id, (s) => s.thread(threadId))
+        const doomed = (thread?.messages ?? [])
+          .filter((m) => m.folder === "trash" || m.folder === "spam")
+          .map((m) => m.id)
+        if (doomed.length > 0) purged += (yield* callMailbox(params.id, (s) => s.purge(doomed))).purged
+      }
+      return { updated: purged }
+    }
+    if (payload.action === "snooze") {
+      if (payload.until === undefined)
+        return yield* new InvalidRequest({ field: "until", message: "Snoozing needs `until`." })
+      for (const threadId of ids)
+        yield* callMailbox(params.id, (s) => s.snooze(threadId, payload.until as number))
+      return { updated: ids.length }
+    }
+    if (payload.action === "unsnooze") {
+      for (const threadId of ids) yield* callMailbox(params.id, (s) => s.unsnooze(threadId))
+      return { updated: ids.length }
+    }
+    if (payload.action === "assign") {
+      const assignee = payload.assignee ?? null
+      if (assignee !== null && assignee !== caller.keyId && caller.keyId !== "root" && !isManager(caller)) {
+        // Anyone with write access may take a conversation or let it go; assigning others is for admins.
+        return yield* new Forbidden({
+          message: "Only admin keys may assign a conversation to someone else.",
+        })
+      }
+      return yield* callMailbox(params.id, (s) => s.assign(ids, assignee))
+    }
+    const patch = BULK[payload.action]?.(payload)
+    if (!patch) {
+      return yield* new InvalidRequest({
+        field: "action",
+        message: `${payload.action} needs ${payload.action === "move" ? "folder" : "labelId"}.`,
+      })
+    }
+    if (payload.action === "notSpam" || payload.action === "spam") {
+      // "Not spam" trusts the senders from now on; "spam" blocks them. Your own sent copies don't count.
+      const list = payload.action === "notSpam" ? "allow" : "block"
+      for (const threadId of ids) {
+        const thread = yield* callMailbox(params.id, (s) => s.thread(threadId))
+        const senders = new Set(
+          (thread?.messages ?? []).flatMap((m) => (m.folder !== "sent" && m.from ? [m.from.address] : [])),
+        )
+        for (const sender of senders) {
+          yield* putSender(params.id, sender, list, payload.action === "notSpam" ? "not_spam" : "spam")
+        }
+      }
+    }
+    return yield* callMailbox(params.id, (s) => s.updateThreads(ids, patch))
+  })
+
 /** Builds and saves a new draft: blank, or a reply or forward of a message in the mailbox. */
 export const createDraftNow = (
   mailboxId: string,
@@ -336,68 +418,7 @@ export const MailHandlers = HttpApiBuilder.group(
       bulk: p(({ params, payload }) =>
         Effect.gen(function* () {
           const { caller } = yield* access(params.id, "write")
-          const ids = payload.threadIds
-          if (payload.action === "delete") {
-            // Delete forever: only what is already in trash or spam, as a mail client's "Delete forever".
-            let purged = 0
-            for (const threadId of ids) {
-              const thread = yield* callMailbox(params.id, (s) => s.thread(threadId))
-              const doomed = (thread?.messages ?? [])
-                .filter((m) => m.folder === "trash" || m.folder === "spam")
-                .map((m) => m.id)
-              if (doomed.length > 0) purged += (yield* callMailbox(params.id, (s) => s.purge(doomed))).purged
-            }
-            return { updated: purged }
-          }
-          if (payload.action === "snooze") {
-            if (payload.until === undefined)
-              return yield* new InvalidRequest({ field: "until", message: "Snoozing needs `until`." })
-            for (const threadId of ids)
-              yield* callMailbox(params.id, (s) => s.snooze(threadId, payload.until as number))
-            return { updated: ids.length }
-          }
-          if (payload.action === "unsnooze") {
-            for (const threadId of ids) yield* callMailbox(params.id, (s) => s.unsnooze(threadId))
-            return { updated: ids.length }
-          }
-          if (payload.action === "assign") {
-            const assignee = payload.assignee ?? null
-            if (
-              assignee !== null &&
-              assignee !== caller.keyId &&
-              caller.keyId !== "root" &&
-              !isManager(caller)
-            ) {
-              // Anyone with write access may take a conversation or let it go; assigning others is for admins.
-              return yield* new Forbidden({
-                message: "Only admin keys may assign a conversation to someone else.",
-              })
-            }
-            return yield* callMailbox(params.id, (s) => s.assign(ids, assignee))
-          }
-          const patch = BULK[payload.action]?.(payload)
-          if (!patch) {
-            return yield* new InvalidRequest({
-              field: "action",
-              message: `${payload.action} needs ${payload.action === "move" ? "folder" : "labelId"}.`,
-            })
-          }
-          if (payload.action === "notSpam" || payload.action === "spam") {
-            // "Not spam" trusts the senders from now on; "spam" blocks them. Your own sent copies don't count.
-            const list = payload.action === "notSpam" ? "allow" : "block"
-            for (const threadId of ids) {
-              const thread = yield* callMailbox(params.id, (s) => s.thread(threadId))
-              const senders = new Set(
-                (thread?.messages ?? []).flatMap((m) =>
-                  m.folder !== "sent" && m.from ? [m.from.address] : [],
-                ),
-              )
-              for (const sender of senders) {
-                yield* putSender(params.id, sender, list, payload.action === "notSpam" ? "not_spam" : "spam")
-              }
-            }
-          }
-          return yield* callMailbox(params.id, (s) => s.updateThreads(ids, patch))
+          return yield* applyThreadAction(params.id, caller, payload)
         }).pipe(mailErrors),
       ),
       search: p(({ params, query }) =>

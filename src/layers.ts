@@ -10,6 +10,7 @@ import { CloudflareEmail } from "./services/CloudflareEmail.ts"
 import { CloudflareZones } from "./services/CloudflareZones.ts"
 import { Database } from "./services/Database.ts"
 import { Dns } from "./services/Dns.ts"
+import { DocumentText } from "./services/DocumentText.ts"
 import { Governor } from "./services/Governor.ts"
 import { Mailboxes } from "./services/Mailboxes.ts"
 import { SendQueue } from "./services/SendQueue.ts"
@@ -45,6 +46,7 @@ export const appLayer = (env: Env) => {
     Mailboxes.layer,
     Dns.layerDoh(),
     Classifier.fromEnv(env),
+    DocumentText.fromEnv(env),
     ImapConnector.layer,
     SecretBox.layer,
     CloudflareEmail.layer,

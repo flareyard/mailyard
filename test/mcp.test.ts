@@ -103,10 +103,17 @@ describe("the MCP server (HAL-3303)", () => {
     const names = all.result.tools.map((t) => t.name)
     expect(names.sort()).toEqual(
       [
+        "archive",
         "campaign_stats",
+        "compose_message",
         "contact_lookup",
         "draft_reply",
+        "label",
         "list_mailboxes",
+        "mark_read",
+        "move",
+        "read_attachment",
+        "snooze",
         "preview_segment",
         "read_thread",
         "search_mail",
