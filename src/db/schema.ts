@@ -1801,3 +1801,17 @@ export const dmarcSources = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.domainId, t.ip] })],
 )
+
+/** Senders (an address or `@domain`) whose remote images a mailbox always shows (HAL-3369). */
+export const mailboxImageSenders = sqliteTable(
+  "mailbox_image_senders",
+  {
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    value: text("value").notNull(),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.value] })],
+)

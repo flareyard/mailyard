@@ -1891,8 +1891,52 @@ export const MessageSchema = Schema.Struct({
   rulesMatched: Schema.Array(Schema.String),
 })
 
+const PartStatSchema = Schema.Literals(["NEEDS-ACTION", "ACCEPTED", "DECLINED", "TENTATIVE", "DELEGATED"])
+
+/** A calendar invitation read from the message's text/calendar part (HAL-3369). */
+const ImageSenderSchema = Schema.Struct({
+  value: Schema.String,
+  createdBy: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+})
+
+export const CalendarInviteSchema = Schema.Struct({
+  /** REQUEST (an invitation), CANCEL, REPLY, PUBLISH … */
+  method: Schema.String,
+  uid: Schema.String,
+  sequence: Schema.Number,
+  summary: Schema.NullOr(Schema.String),
+  description: Schema.NullOr(Schema.String),
+  location: Schema.NullOr(Schema.String),
+  /** ISO 8601: a date for all-day events; a time without `Z` is in `timeZone`. */
+  start: Schema.NullOr(Schema.String),
+  end: Schema.NullOr(Schema.String),
+  allDay: Schema.Boolean,
+  timeZone: Schema.NullOr(Schema.String),
+  organizer: Schema.NullOr(Schema.Struct({ address: Schema.String, name: Schema.NullOr(Schema.String) })),
+  attendees: Schema.Array(
+    Schema.Struct({
+      address: Schema.String,
+      name: Schema.NullOr(Schema.String),
+      partstat: PartStatSchema,
+      role: Schema.NullOr(Schema.String),
+    }),
+  ),
+  /** This mailbox's own answer as the invitation lists it, when it's an attendee. */
+  myStatus: Schema.NullOr(PartStatSchema),
+  /** Whether an RSVP can be sent: an invitation (REQUEST) that lists this mailbox. */
+  canRespond: Schema.Boolean,
+})
+
 export const MessageDetailSchema = Schema.Struct({
   ...MessageSchema.fields,
+  /** The calendar invitation in the message, if it has one (HAL-3369). */
+  invite: Schema.optionalKey(Schema.NullOr(CalendarInviteSchema)),
+  /**
+   * `show` when the sender is on the mailbox's always-show-images list; `ask` otherwise, and the reader
+   * keeps remote images blocked until the person chooses (HAL-3369).
+   */
+  remoteImages: Schema.optionalKey(Schema.Literals(["show", "ask"])),
   headers: Schema.optionalKey(
     Schema.Array(Schema.Struct({ name: Schema.String, value: Schema.String })).annotate({
       description: "With ?include=headers: every header in the order it arrived, newest hop first.",
@@ -2227,6 +2271,45 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
         ),
       },
       success: MessageDetailSchema,
+      error: MailErrors,
+    }),
+    /**
+     * Answers a calendar invitation (HAL-3369): sends the iTIP REPLY from the mailbox to the organizer,
+     * as a normal send (the undo window, the key's limits and approvals apply). One message, only when
+     * the person chooses.
+     */
+    HttpApiEndpoint.post("rsvp", "/v1/mailboxes/:id/messages/:messageId/rsvp", {
+      params: { id: Schema.String, messageId: Schema.String },
+      payload: Schema.Struct({
+        response: Schema.Literals(["accepted", "tentative", "declined"]),
+        /** A line for the organizer, added to the reply's text. */
+        comment: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(1_000))),
+      }),
+      success: Schema.Struct({
+        response: Schema.Literals(["accepted", "tentative", "declined"]),
+        draft: DraftSchema,
+        sendAt: Schema.NullOr(Schema.Number),
+        undoUntil: Schema.NullOr(Schema.Number),
+        approval: Schema.optionalKey(Schema.NullOr(Schema.Unknown)),
+      }),
+      error: [...MailErrors, SendBlocked],
+    }),
+    /** Senders whose remote images this mailbox always shows (HAL-3369). */
+    HttpApiEndpoint.get("imageSenders", "/v1/mailboxes/:id/image-senders", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ senders: Schema.Array(ImageSenderSchema) }),
+      error: MailErrors,
+    }),
+    /** "Always show images from …": an address or `@domain`. */
+    HttpApiEndpoint.post("addImageSender", "/v1/mailboxes/:id/image-senders", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ value: Schema.String.check(Schema.isMaxLength(320)) }),
+      success: ImageSenderSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("removeImageSender", "/v1/mailboxes/:id/image-senders/:value", {
+      params: { id: Schema.String, value: Schema.String },
+      success: Schema.Struct({ removed: Schema.String }),
       error: MailErrors,
     }),
     HttpApiEndpoint.patch("updateMessage", "/v1/mailboxes/:id/messages/:messageId", {
