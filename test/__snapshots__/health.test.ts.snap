@@ -602,6 +602,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "did": {
                 "type": "boolean",
               },
+              "includeMachine": {
+                "type": "boolean",
+              },
               "type": {
                 "enum": [
                   "campaign",
@@ -898,6 +901,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "type": "string",
               },
               "did": {
+                "type": "boolean",
+              },
+              "includeMachine": {
                 "type": "boolean",
               },
               "type": {
@@ -14754,6 +14760,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "exclude": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "recentlySentDays": {
+                                    "anyOf": [
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                          },
+                                          {
+                                            "enum": [
+                                              "Infinity",
+                                              "-Infinity",
+                                              "NaN",
+                                            ],
+                                            "type": "string",
+                                          },
+                                        ],
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "segmentIds": {
+                                    "items": {
+                                      "type": "string",
+                                    },
+                                    "type": "array",
+                                  },
+                                },
+                                "required": [
+                                  "segmentIds",
+                                  "recentlySentDays",
+                                ],
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                           "finishedAt": {
                             "anyOf": [
                               {
@@ -15190,6 +15241,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "pausedBy",
                           "timezone",
                           "lastTest",
+                          "exclude",
                           "updatedBy",
                           "abWinner",
                           "startedAt",
@@ -15341,6 +15393,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "anyOf": [
                       {
                         "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "exclude": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "recentlySentDays": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "segmentIds": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                        },
+                        "required": [
+                          "segmentIds",
+                          "recentlySentDays",
+                        ],
+                        "type": "object",
                       },
                       {
                         "type": "null",
@@ -15575,6 +15672,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -15903,6 +16045,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -16398,6 +16541,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "finishedAt": {
                       "anyOf": [
                         {
@@ -16723,6 +16911,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -16873,6 +17062,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "anyOf": [
                       {
                         "type": "string",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "exclude": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "recentlySentDays": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "segmentIds": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                        },
+                        "required": [
+                          "segmentIds",
+                          "recentlySentDays",
+                        ],
+                        "type": "object",
                       },
                       {
                         "type": "null",
@@ -17127,6 +17361,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "finishedAt": {
                       "anyOf": [
                         {
@@ -17452,6 +17731,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -17574,7 +17854,57 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                           ],
                         },
+                        "bySegment": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "count": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "segmentId": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "segmentId",
+                              "name",
+                              "count",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
                         "notOnTopic": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "recentlySent": {
                           "anyOf": [
                             {
                               "type": "number",
@@ -17625,6 +17955,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "unsubscribed",
                         "unconfirmed",
                         "notOnTopic",
+                        "bySegment",
+                        "recentlySent",
                       ],
                       "type": "object",
                     },
@@ -17867,6 +18199,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "finishedAt": {
                       "anyOf": [
                         {
@@ -18192,6 +18569,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -18792,6 +19170,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "finishedAt": {
                       "anyOf": [
                         {
@@ -19117,6 +19540,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -20218,6 +20642,144 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
       },
     },
     "/v1/campaigns/{id}/resend-non-openers": {
+      "get": {
+        "operationId": "campaigns.resendNonOpenersDryRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "countMachineOpensAsOpened",
+            "required": false,
+            "schema": {
+              "enum": [
+                "true",
+                "false",
+                "1",
+                "0",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "countMachineOpensAsOpened": {
+                      "type": "boolean",
+                    },
+                    "recipients": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                    "sendable": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "recipients",
+                    "sendable",
+                    "countMachineOpensAsOpened",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "campaigns",
+        ],
+      },
       "post": {
         "operationId": "campaigns.resendNonOpeners",
         "parameters": [
@@ -20230,6 +20792,32 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
           },
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "countMachineOpensAsOpened": {
+                        "type": "boolean",
+                      },
+                      "subject": {
+                        "type": "string",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  {
+                    "type": "null",
+                  },
+                ],
+              },
+            },
+          },
+          "required": true,
+        },
         "responses": {
           "200": {
             "content": {
@@ -20360,6 +20948,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -20688,6 +21321,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -20908,6 +21542,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "finishedAt": {
                       "anyOf": [
                         {
@@ -21233,6 +21912,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -21481,6 +22161,51 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "exclude": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "recentlySentDays": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                    },
+                                    {
+                                      "enum": [
+                                        "Infinity",
+                                        "-Infinity",
+                                        "NaN",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  ],
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
+                            "segmentIds": {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                          },
+                          "required": [
+                            "segmentIds",
+                            "recentlySentDays",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "finishedAt": {
                       "anyOf": [
                         {
@@ -21806,6 +22531,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "pausedBy",
                     "timezone",
                     "lastTest",
+                    "exclude",
                     "updatedBy",
                     "abWinner",
                     "startedAt",
@@ -75551,6 +76277,22 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "type": "string",
             },
           },
+          {
+            "in": "query",
+            "name": "startAt",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "campaignId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
         ],
         "responses": {
           "200": {
@@ -75585,9 +76327,25 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                           ],
                         },
+                        "startAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
                       },
                       "required": [
                         "recipients",
+                        "startAt",
                         "possible",
                         "reason",
                       ],
@@ -75651,6 +76409,69 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           ],
                           "type": "object",
                         },
+                        "days": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "available": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "day": {
+                                "type": "string",
+                              },
+                              "queued": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "thisCampaign": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "day",
+                              "available",
+                              "queued",
+                              "thisCampaign",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
                         "finishesBy": {
                           "anyOf": [
                             {
@@ -75712,14 +76533,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             },
                           ],
                         },
+                        "startAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
                       },
                       "required": [
                         "recipients",
+                        "startAt",
                         "possible",
                         "quota",
                         "sendableToday",
                         "additionalDays",
                         "finishesBy",
+                        "days",
                         "cost",
                       ],
                       "type": "object",

@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import { Bindings } from "../Bindings.ts"
-import { createSegment } from "../domain/segments.ts"
+import { createSegment, prepare } from "../domain/segments.ts"
+import { audiencePreview } from "./audience.ts"
 import { CampaignInvalid, createCampaign, findCampaign } from "./campaigns.ts"
 
 /**
@@ -237,11 +238,33 @@ export const campaignRecipients = Effect.fn("campaigns.recipients")(function* (
   }
 })
 
-/**
- * A new draft for the people who got this campaign and didn't open it: same content and topic,
- * audience a segment of "received it and didn't open". Needs open tracking to mean anything.
- */
-export const resendToNonOpeners = Effect.fn("campaigns.resend")(function* (id: string, actor: string) {
+export interface ResendOptions {
+  /**
+   * Treat a machine-only open (a privacy proxy fetching the pixel) as opened, so those people
+   * aren't mailed again. Left false, only human opens count, which reaches more people but some
+   * of them did see it.
+   */
+  readonly countMachineOpensAsOpened?: boolean | undefined
+  /** A new subject for the resend; left out, the original's. */
+  readonly subject?: string | undefined
+}
+
+/** "Received this campaign and didn't open it", as a segment filter. */
+const nonOpenerFilter = (id: string, options: ResendOptions) => ({
+  type: "all" as const,
+  rules: [
+    { type: "campaign" as const, campaignId: id, activity: "received" as const },
+    {
+      type: "campaign" as const,
+      campaignId: id,
+      activity: "opened" as const,
+      did: false,
+      ...(options.countMachineOpensAsOpened ? { includeMachine: true } : {}),
+    },
+  ],
+})
+
+const resendable = Effect.fn("campaigns.resendable")(function* (id: string) {
   const campaign = yield* findCampaign(id)
   if (campaign.status !== "sent")
     return yield* new CampaignInvalid({
@@ -253,16 +276,49 @@ export const resendToNonOpeners = Effect.fn("campaigns.resend")(function* (id: s
       field: "trackOpens",
       message: "Without open tracking there's no telling who didn't open.",
     })
+  return campaign
+})
+
+/**
+ * How many a resend would reach, without creating anything: who received it and didn't open, and
+ * of those, who can still be mailed (subscribed, on the topic, not suppressed).
+ */
+export const resendDryRun = Effect.fn("campaigns.resendDryRun")(function* (
+  id: string,
+  options: ResendOptions,
+) {
+  const campaign = yield* resendable(id)
+  const { query } = yield* prepare(nonOpenerFilter(id, options)).pipe(
+    Effect.catchTag("SegmentInvalid", Effect.die),
+  )
+  const preview = yield* audiencePreview(
+    { id: "", segmentId: null, topicId: campaign.topicId, exclude: null },
+    { sql: query.sql, params: query.params },
+  )
+  return {
+    recipients: preview.matching,
+    sendable: preview.sendable,
+    countMachineOpensAsOpened: options.countMachineOpensAsOpened ?? false,
+  }
+})
+
+/**
+ * A new draft for the people who got this campaign and didn't open it: same content and topic,
+ * audience a segment of "received it and didn't open". Needs open tracking to mean anything.
+ */
+export const resendToNonOpeners = Effect.fn("campaigns.resend")(function* (
+  id: string,
+  actor: string,
+  options: ResendOptions = {},
+) {
+  const campaign = yield* resendable(id)
+  const subject = options.subject?.trim()
+  if (options.subject !== undefined && (!subject || subject.length > 998))
+    return yield* new CampaignInvalid({ field: "subject", message: "A subject is 1 to 998 characters." })
   const segment = yield* createSegment(
     {
       name: `Didn't open: ${campaign.name}`.slice(0, 100),
-      filter: {
-        type: "all",
-        rules: [
-          { type: "campaign", campaignId: id, activity: "received" },
-          { type: "campaign", campaignId: id, activity: "opened", did: false },
-        ],
-      },
+      filter: nonOpenerFilter(id, options),
     },
     actor,
   ).pipe(
@@ -273,7 +329,7 @@ export const resendToNonOpeners = Effect.fn("campaigns.resend")(function* (id: s
     {
       name: `${campaign.name} (resend)`.slice(0, 200),
       fromAddress: campaign.fromAddress,
-      subject: campaign.subject,
+      subject: subject ?? campaign.subject,
       segmentId: segment.id,
       topicId: campaign.topicId,
       templateId: campaign.templateId,

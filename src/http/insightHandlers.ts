@@ -25,7 +25,14 @@ export const InsightsHandlers = HttpApiBuilder.group(
     return handlers.handleAll({
       health: p(() => read(health())),
       usage: p(() => read(usage())),
-      forecast: p(({ query }) => read(forecast(query.recipients))),
+      forecast: p(({ query }) =>
+        read(
+          forecast(query.recipients, { startAt: query.startAt, campaignId: query.campaignId }).pipe(
+            // The governor is a Durable Object in this Worker; not reaching it is a fault, not input.
+            Effect.catchTag("GovernorUnavailable", Effect.die),
+          ),
+        ),
+      ),
       delivery: p(({ query }) => read(deliveryStats(query.range ?? "7d", query.by))),
       deferrals: p(({ query }) => read(deferralStats(query.range ?? "7d"))),
       engagement: p(({ query }) => read(engagementStats(query.range ?? "30d"))),

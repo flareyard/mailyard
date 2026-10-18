@@ -1,9 +1,11 @@
-import { and, eq, gte, lt, sql } from "drizzle-orm"
+import { and, eq, gte, inArray, lt, sql } from "drizzle-orm"
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { Bindings } from "../Bindings.ts"
 import {
+  campaignEngagement,
+  campaigns,
   dailyStats,
   deferralDaily,
   deliveryTimes,
@@ -13,6 +15,7 @@ import {
 } from "../db/schema.ts"
 import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
+import { Governor } from "../services/Governor.ts"
 import { eventCoverage } from "./eventCoverage.ts"
 
 /**
@@ -37,6 +40,7 @@ export const FALLBACK_POLICY = {
 export type Range = "24h" | "7d" | "30d"
 const DAYS: Record<Range, number> = { "24h": 1, "7d": 7, "30d": 30 }
 
+const DAY_MS = 86_400_000
 const dayKey = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 /** First UTC day included in a range ending today. */
 export const since = (range: Range, now = Date.now()) => dayKey(now - (DAYS[range] - 1) * 86_400_000)
@@ -403,29 +407,128 @@ export const usage = Effect.fn("insights.usage")(function* () {
   }
 })
 
-/** How long `recipients` sends take at today's quota. Without a known quota there's no honest answer. */
-export const forecast = Effect.fn("insights.forecast")(function* (recipients: number) {
+/** A bulk send waiting for quota: another campaign already in line, or the one being planned. */
+export interface QueuedSend {
+  readonly startAt: number
+  readonly remaining: number
+  readonly mine: boolean
+}
+
+const FORECAST_HORIZON_DAYS = 400
+
+/**
+ * Lays bulk sends over the days ahead (HAL-3429): each UTC day gives `todayAvailable` (the rest of
+ * today's bulk share) and then `dailyAvailable`, handed out in start order, so a campaign scheduled
+ * earlier is served first. Null when the planned send won't finish inside the horizon.
+ */
+export const planDays = (input: {
+  readonly now: number
+  readonly todayAvailable: number
+  readonly dailyAvailable: number
+  readonly sends: ReadonlyArray<QueuedSend>
+}) => {
+  const today = Math.floor(input.now / DAY_MS)
+  const jobs = [...input.sends]
+    .map((s) => ({
+      ...s,
+      day: Math.max(today, Math.floor(s.startAt / DAY_MS)),
+      left: Math.max(0, s.remaining),
+    }))
+    // Earlier first; on a tie, what's already in line goes before the send being planned.
+    .sort((a, b) => a.startAt - b.startAt || Number(a.mine) - Number(b.mine))
+  const mine = jobs.find((j) => j.mine)
+  const days: Array<{ day: string; available: number; queued: number; thisCampaign: number }> = []
+  for (let d = 0; d < FORECAST_HORIZON_DAYS; d++) {
+    const available = d === 0 ? Math.max(0, input.todayAvailable) : Math.max(0, input.dailyAvailable)
+    let room = available
+    let queued = 0
+    let thisCampaign = 0
+    for (const job of jobs) {
+      if (job.day > today + d || job.left === 0 || room === 0) continue
+      const take = Math.min(job.left, room)
+      job.left -= take
+      room -= take
+      if (job.mine) thisCampaign += take
+      else queued += take
+    }
+    days.push({ day: dayKey((today + d) * DAY_MS), available, queued, thisCampaign })
+    if (!mine || mine.left === 0) return { days, startDay: mine?.day ?? today, finishDay: today + d }
+  }
+  return null
+}
+
+/**
+ * How long `recipients` bulk sends take, starting at `startAt` (now when left out): the bulk share
+ * of each day's quota (what the governor keeps for transactional mail is left out), after the
+ * campaigns already scheduled or sending. Automations draw on the same share and aren't
+ * forecast, so a busy automation can push the finish later. Without a known quota there's no
+ * honest answer.
+ */
+export const forecast = Effect.fn("insights.forecast")(function* (
+  recipients: number,
+  options: { readonly startAt?: number | undefined; readonly campaignId?: string | undefined } = {},
+) {
+  const now = Date.now()
+  const startAt = Math.max(now, options.startAt ?? now)
   const u = yield* usage()
-  if (u.today.quota === null || u.today.remaining === null) {
+  const g = yield* Governor.use((x) => x.overview)
+  if (g.quotaSource === "fallback") {
     return {
       recipients,
+      startAt,
       possible: false as const,
-      reason: "The daily quota is unknown: connect a read-only Cloudflare token.",
+      reason:
+        "The daily quota is unknown: connect a read-only Cloudflare token, or set the quota in Sending.",
     }
   }
-  const quota = u.today.quota
-  const today = Math.min(recipients, u.today.remaining)
-  const rest = recipients - today
-  const extraDays = Math.ceil(rest / quota)
-  const now = new Date()
-  const finishDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + extraDays))
+  const database = yield* Database
+  const inLine = yield* database.query("insights.forecastQueue", (db) =>
+    db
+      .select({
+        id: campaigns.id,
+        status: campaigns.status,
+        sendAt: campaigns.sendAt,
+        audienceSize: campaigns.audienceSize,
+        sent: campaignEngagement.sent,
+      })
+      .from(campaigns)
+      .leftJoin(campaignEngagement, eq(campaignEngagement.campaignId, campaigns.id))
+      .where(inArray(campaigns.status, ["scheduled", "sending"]))
+      .all(),
+  )
+  const sends: Array<QueuedSend> = [
+    ...inLine
+      .filter((c) => c.id !== options.campaignId)
+      .map((c) => ({
+        startAt: c.status === "sending" ? now : (c.sendAt ?? now),
+        remaining: Math.max(0, (c.audienceSize ?? 0) - (c.sent ?? 0)),
+        mine: false,
+      })),
+    { startAt, remaining: recipients, mine: true },
+  ]
+  const dailyAvailable = Math.floor(g.quota * (1 - g.config.transactionalReserve))
+  const plan = planDays({ now, todayAvailable: g.bulkRemaining, dailyAvailable, sends })
+  if (!plan) {
+    return {
+      recipients,
+      startAt,
+      possible: false as const,
+      reason:
+        dailyAvailable === 0
+          ? "The quota leaves nothing for bulk mail after the transactional reserve."
+          : `At ${dailyAvailable} bulk sends a day, this won't finish within ${FORECAST_HORIZON_DAYS} days.`,
+    }
+  }
+  const extraDays = plan.finishDay - plan.startDay
   return {
     recipients,
+    startAt,
     possible: true as const,
-    quota,
-    sendableToday: today,
+    quota: g.quota,
+    sendableToday: plan.days[0]?.thisCampaign ?? 0,
     additionalDays: extraDays,
-    finishesBy: extraDays === 0 ? null : finishDay.toISOString().slice(0, 10),
+    finishesBy: extraDays === 0 ? null : dayKey(plan.finishDay * DAY_MS),
+    days: plan.days,
     cost: {
       billedAfter: u.month.billed + recipients,
       extraUsd: Number(

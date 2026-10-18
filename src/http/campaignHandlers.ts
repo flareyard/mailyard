@@ -18,7 +18,7 @@ import {
 } from "../campaigns/campaigns.ts"
 import { getCompliance, putCompliance } from "../campaigns/compliance.ts"
 import type { CampaignContentInvalid } from "../campaigns/content.ts"
-import { campaignRecipients, campaignReport, resendToNonOpeners } from "../campaigns/report.ts"
+import { campaignRecipients, campaignReport, resendDryRun, resendToNonOpeners } from "../campaigns/report.ts"
 import {
   campaignSentCount,
   cancelCampaign,
@@ -239,18 +239,34 @@ export const CampaignsHandlers = HttpApiBuilder.group(
       recipients: p(({ params, query }) =>
         requireScope("read").pipe(Effect.andThen(campaignRecipients(params.id, query)), campaignErrors),
       ),
-      resendNonOpeners: p(({ params }) =>
+      resendNonOpeners: p(({ params, payload }) =>
         Effect.gen(function* () {
           const caller = yield* requireScope("admin")
-          const draft = yield* resendToNonOpeners(params.id, caller.keyId)
+          const options = payload ?? {}
+          const draft = yield* resendToNonOpeners(params.id, caller.keyId, options)
           yield* recordAudit({
             actor: caller.keyId,
             action: "campaign.resend",
             target: draft.id,
-            after: { from: params.id, segmentId: draft.segmentId },
+            after: {
+              from: params.id,
+              segmentId: draft.segmentId,
+              countMachineOpensAsOpened: options.countMachineOpensAsOpened ?? false,
+            },
           })
           return draft
         }).pipe(campaignErrors),
+      ),
+      resendNonOpenersDryRun: p(({ params, query }) =>
+        requireScope("read").pipe(
+          Effect.andThen(
+            resendDryRun(params.id, {
+              countMachineOpensAsOpened:
+                query.countMachineOpensAsOpened === "true" || query.countMachineOpensAsOpened === "1",
+            }),
+          ),
+          campaignErrors,
+        ),
       ),
       getCompliance: p(() => requireScope("read").pipe(Effect.andThen(getCompliance()), campaignErrors)),
       putCompliance: p(({ payload }) =>

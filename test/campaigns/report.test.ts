@@ -208,6 +208,62 @@ describe("campaign report", () => {
     ).toBe(400)
   }, 90_000)
 
+  it("counts a resend before making it, and can treat machine opens as opened (HAL-3429)", async () => {
+    const { campaignId, messages } = await sendTracked(4)
+    for (const m of messages)
+      await env.DB.prepare("update messages_out set status = 'delivered' where id = ?").bind(m.id).run()
+    const [human, machine] = messages
+    if (!human || !machine) throw new Error("no message")
+    await call(human.pixel, { headers: { "user-agent": CHROME } })
+    await new Promise((r) => setTimeout(r, 300))
+    // A privacy proxy's fetch: a machine open and no human one.
+    await env.DB.prepare("update messages_out set machine_opens = 1 where id = ?").bind(machine.id).run()
+
+    type Dry = { recipients: number; sendable: number; countMachineOpensAsOpened: boolean }
+    const dry = async (q = "") =>
+      json<Dry>(await call(`/v1/campaigns/${campaignId}/resend-non-openers${q}`, { key: ADMIN }))
+    // By default only people's opens count, so the machine-only open gets the resend.
+    expect(await dry()).toEqual({ recipients: 3, sendable: 3, countMachineOpensAsOpened: false })
+    expect(await dry("?countMachineOpensAsOpened=true")).toEqual({
+      recipients: 2,
+      sendable: 2,
+      countMachineOpensAsOpened: true,
+    })
+    // The dry run counts who can still be mailed apart from who didn't open.
+    await env.DB.prepare(
+      "update contacts set status = 'unsubscribed' where id = (select contact_id from messages_out where id = ?)",
+    )
+      .bind(messages[2]?.id)
+      .run()
+    expect(await dry("?countMachineOpensAsOpened=1")).toMatchObject({ recipients: 2, sendable: 1 })
+    // Creating nothing: no draft, no segment.
+    const before = await env.DB.prepare("select count(*) as n from segments").first<{ n: number }>()
+    await dry()
+    expect(await env.DB.prepare("select count(*) as n from segments").first<{ n: number }>()).toEqual(before)
+
+    const res = await call(`/v1/campaigns/${campaignId}/resend-non-openers`, {
+      method: "POST",
+      key: ADMIN,
+      json: { countMachineOpensAsOpened: true, subject: "  In case you missed it  " },
+    })
+    expect(res.status).toBe(200)
+    const draft = await json<{ id: string; subject: string }>(res)
+    expect(draft.subject).toBe("In case you missed it")
+    const preview = await json<{ matching: number; sendable: number }>(
+      await call(`/v1/campaigns/${draft.id}/audience/preview`, { method: "POST", key: ADMIN }),
+    )
+    expect(preview).toMatchObject({ matching: 2, sendable: 1 })
+    expect(
+      (
+        await call(`/v1/campaigns/${campaignId}/resend-non-openers`, {
+          method: "POST",
+          key: ADMIN,
+          json: { subject: "   " },
+        })
+      ).status,
+    ).toBe(400)
+  }, 90_000)
+
   it("reports A/B variants and 404s an unknown campaign", async () => {
     const { campaignId } = await sendTracked(4, {
       subjectB: "B",

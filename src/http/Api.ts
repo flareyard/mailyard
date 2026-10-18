@@ -772,19 +772,38 @@ export class InsightsApi extends HttpApiGroup.make("insights")
       }),
       error: Forbidden,
     }),
+    /**
+     * How long a bulk send takes from `startAt`, behind the campaigns already scheduled or sending,
+     * on each day's bulk share (the transactional reserve is left out). Automations share it too
+     * and aren't forecast.
+     */
     HttpApiEndpoint.get("forecast", "/v1/usage/forecast", {
       query: {
         recipients: Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 10_000_000 })),
+        /** When the send starts (ms); left out or past, now. */
+        startAt: Schema.optionalKey(Schema.NumberFromString.check(Schema.isGreaterThanOrEqualTo(0))),
+        /** The campaign being planned, so its own place in the queue isn't counted twice. */
+        campaignId: Schema.optionalKey(Schema.String),
       },
       success: Schema.Union([
-        Schema.Struct({ recipients: Num, possible: Schema.Literal(false), reason: Schema.String }),
         Schema.Struct({
           recipients: Num,
+          startAt: Num,
+          possible: Schema.Literal(false),
+          reason: Schema.String,
+        }),
+        Schema.Struct({
+          recipients: Num,
+          startAt: Num,
           possible: Schema.Literal(true),
           quota: Num,
           sendableToday: Num,
           additionalDays: Num,
           finishesBy: Schema.NullOr(Schema.String),
+          /** Today to the finish, a UTC day each: bulk sends the day allows, and who gets them. */
+          days: Schema.Array(
+            Schema.Struct({ day: Schema.String, available: Num, queued: Num, thisCampaign: Num }),
+          ),
           cost: Schema.Struct({ billedAfter: Num, extraUsd: Num }),
         }),
       ]),
@@ -3065,6 +3084,13 @@ const AbSchema = Schema.Struct({
   metric: Schema.Literals(["clicks", "opens"]),
 })
 
+const ExcludeSchema = Schema.Struct({
+  /** Contacts in any of these segments are left out (at most 10). */
+  segmentIds: Schema.Array(Schema.String),
+  /** Anyone another campaign mailed in the last this-many days (1 to 90) is left out; null, nobody. */
+  recentlySentDays: Schema.NullOr(Schema.Number),
+})
+
 export const CampaignSchema = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -3099,6 +3125,8 @@ export const CampaignSchema = Schema.Struct({
       ),
     }),
   ),
+  /** Who it leaves out beyond the blocked and unsubscribed; null when nobody. */
+  exclude: Schema.NullOr(ExcludeSchema),
   /** Who saved it last; with `updatedAt`, what PATCH's `ifMatch` checks. */
   updatedBy: Schema.NullOr(Schema.String),
   abWinner: Schema.NullOr(Schema.Literals(["a", "b"])),
@@ -3221,6 +3249,7 @@ const CampaignFields = {
   trackOpens: Schema.optionalKey(Schema.Boolean),
   trackClicks: Schema.optionalKey(Schema.Boolean),
   timezone: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  exclude: Schema.optionalKey(Schema.NullOr(ExcludeSchema)),
 }
 
 const CheckSchema = Schema.Struct({
@@ -3727,11 +3756,18 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
       success: Schema.Struct({
         matching: Schema.Number,
         sendable: Schema.Number,
+        /** Each contact the segment matches is counted once, so these and `sendable` add up to `matching`. */
         excluded: Schema.Struct({
           blocked: Schema.Number,
           unsubscribed: Schema.Number,
           unconfirmed: Schema.Number,
           notOnTopic: Schema.Number,
+          /** Left out by `exclude.segmentIds`; someone in two counts under the first. */
+          bySegment: Schema.Array(
+            Schema.Struct({ segmentId: Schema.String, name: Schema.String, count: Schema.Number }),
+          ),
+          /** Left out by `exclude.recentlySentDays`. */
+          recentlySent: Schema.Number,
         }),
       }),
       error: [Forbidden, NotFound],
@@ -3792,10 +3828,35 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
       }),
       error: [Forbidden, NotFound],
     }),
-    /** A draft for the people who received this campaign and didn't open it. */
+    /**
+     * A draft for the people who received this campaign and didn't open it. Opens are people's
+     * unless `countMachineOpensAsOpened`: by default someone whose only open was a privacy proxy
+     * fetching the pixel counts as not opened, and gets the resend.
+     */
     HttpApiEndpoint.post("resendNonOpeners", "/v1/campaigns/:id/resend-non-openers", {
       params: { id: Schema.String },
+      /** Optional: an empty body resends with the original subject, counting people's opens only. */
+      payload: [
+        Schema.Struct({
+          countMachineOpensAsOpened: Schema.optionalKey(Schema.Boolean),
+          /** The resend's subject; left out, the original's. */
+          subject: Schema.optionalKey(Schema.String),
+        }),
+        // A member of its own, so the builder reads an empty body as null rather than refusing it.
+        Schema.Null,
+      ],
       success: CampaignSchema,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /** What a resend would reach, creating nothing: who didn't open, and who of them can still be mailed. */
+    HttpApiEndpoint.get("resendNonOpenersDryRun", "/v1/campaigns/:id/resend-non-openers", {
+      params: { id: Schema.String },
+      query: { countMachineOpensAsOpened: Schema.optionalKey(Schema.Literals(["true", "false", "1", "0"])) },
+      success: Schema.Struct({
+        recipients: Schema.Number,
+        sendable: Schema.Number,
+        countMachineOpensAsOpened: Schema.Boolean,
+      }),
       error: [Forbidden, NotFound, InvalidRequest],
     }),
     HttpApiEndpoint.get("getCompliance", "/v1/settings/compliance", {
