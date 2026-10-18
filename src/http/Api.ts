@@ -723,6 +723,9 @@ export const Rates = Schema.Struct({
   deliveryRate: NullableNum,
 })
 
+/** Messages per stream: the governor's four, always all present. Replies count as mailbox; tests aren't counted. */
+const StreamCounts = Schema.Struct({ transactional: Num, campaign: Num, automation: Num, mailbox: Num })
+
 const ThresholdSchema = Schema.Struct({ warning_at: Num, at_risk_at: Num, minimum_denominator: Num })
 const Level = Schema.Literals(["ok", "warning", "at-risk", "insufficient-data"])
 
@@ -789,12 +792,18 @@ export class InsightsApi extends HttpApiGroup.make("insights")
       error: Forbidden,
     }),
     HttpApiEndpoint.get("volume", "/v1/stats/volume", {
-      query: { range: Schema.optionalKey(Range) },
+      query: {
+        range: Schema.optionalKey(Range),
+        /** `hour`: the last 24 hours in hourly buckets (range is then 24h). */
+        by: Schema.optionalKey(Schema.Literals(["day", "hour"])),
+      },
       success: Schema.Struct({
         range: Range,
-        days: Schema.Array(
-          Schema.Struct({ day: Schema.String, byStream: Schema.Record(Schema.String, Num) }),
-        ),
+        by: Schema.Literals(["day", "hour"]),
+        /** With by=day. */
+        days: Schema.Array(Schema.Struct({ day: Schema.String, byStream: StreamCounts })),
+        /** With by=hour: 24 buckets, oldest first, each the hour's start as ISO 8601. */
+        hours: Schema.Array(Schema.Struct({ hour: Schema.String, byStream: StreamCounts })),
         streams: Schema.Array(Schema.String),
       }),
       error: Forbidden,
@@ -3336,6 +3345,8 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         bounced: Schema.Number,
         complained: Schema.Number,
         remaining: Schema.Number,
+        /** Sends in the trailing hour; null while paused. */
+        ratePerHour: Schema.NullOr(Schema.Number),
         eta: Schema.Struct({ days: Schema.NullOr(Schema.Number), at: Schema.NullOr(Schema.Number) }),
       }),
       error: [Forbidden, NotFound, GovernorUnreachable],

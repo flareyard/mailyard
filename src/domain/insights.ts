@@ -1,9 +1,9 @@
-import { and, eq, gte, sql } from "drizzle-orm"
+import { and, eq, gte, lt, sql } from "drizzle-orm"
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import { Bindings } from "../Bindings.ts"
-import { dailyStats, domains, webhookDeliveries } from "../db/schema.ts"
+import { dailyStats, domains, hourlyStats, webhookDeliveries } from "../db/schema.ts"
 import { CloudflareEmail } from "../services/CloudflareEmail.ts"
 import { Database } from "../services/Database.ts"
 import { eventCoverage } from "./eventCoverage.ts"
@@ -92,8 +92,46 @@ export const deliveryStats = Effect.fn("insights.delivery")(function* (range: Ra
   return { range, from: since(range), totals, rates: ratesOf(totals) }
 })
 
-export const volumeStats = Effect.fn("insights.volume")(function* (range: Range) {
+/** The governor's four streams, the keys every byStream carries (HAL-3419). */
+export const STREAMS = ["transactional", "campaign", "automation", "mailbox"] as const
+export type Stream = (typeof STREAMS)[number]
+
+/** Rollup stream names onto the four: a reply is mailbox mail; tests and other apps' mail aren't charted. */
+const streamOf = (raw: string): Stream | null =>
+  raw === "reply" ? "mailbox" : (STREAMS as ReadonlyArray<string>).includes(raw) ? (raw as Stream) : null
+
+const emptyStreams = (): Record<Stream, number> => ({
+  transactional: 0,
+  campaign: 0,
+  automation: 0,
+  mailbox: 0,
+})
+
+const HOUR = 3_600_000
+
+export const volumeStats = Effect.fn("insights.volume")(function* (range: Range, by: "day" | "hour" = "day") {
   const database = yield* Database
+  if (by === "hour") {
+    // The last 24 hours, the current one included, from hourly_stats.
+    const now = Math.floor(Date.now() / HOUR)
+    const rows = yield* database.query("stats.volumeHourly", (db) =>
+      db
+        .select({ hour: hourlyStats.hour, stream: hourlyStats.stream, sent: sum(hourlyStats.sent) })
+        .from(hourlyStats)
+        .where(gte(hourlyStats.hour, now - 23))
+        .groupBy(hourlyStats.hour, hourlyStats.stream)
+        .all(),
+    )
+    const hours = Array.from({ length: 24 }, (_, i) => now - 23 + i).map((h) => {
+      const byStream = emptyStreams()
+      for (const r of rows) {
+        const stream = r.hour === h ? streamOf(r.stream) : null
+        if (stream) byStream[stream] += Number(r.sent ?? 0)
+      }
+      return { hour: new Date(h * HOUR).toISOString(), byStream }
+    })
+    return { range: "24h" as const, by, days: [], hours, streams: [...STREAMS] }
+  }
   const rows = yield* database.query("stats.volume", (db) =>
     db
       .select({ day: dailyStats.day, stream: dailyStats.stream, sent: sum(dailyStats.sent) })
@@ -106,17 +144,53 @@ export const volumeStats = Effect.fn("insights.volume")(function* (range: Range)
   // Every day in the range appears, zeros included, so a chart has no gaps.
   const days: Array<string> = []
   for (let i = DAYS[range] - 1; i >= 0; i--) days.push(dayKey(Date.now() - i * 86_400_000))
-  const streams = [...new Set(rows.map((r) => r.stream))].sort()
   return {
     range,
-    days: days.map((day) => ({
-      day,
-      byStream: Object.fromEntries(
-        streams.map((s) => [s, rows.find((r) => r.day === day && r.stream === s)?.sent ?? 0]),
-      ),
-    })),
-    streams,
+    by,
+    days: days.map((day) => {
+      const byStream = emptyStreams()
+      for (const r of rows) {
+        const stream = r.day === day ? streamOf(r.stream) : null
+        if (stream) byStream[stream] += Number(r.sent ?? 0)
+      }
+      return { day, byStream }
+    }),
+    hours: [],
+    streams: [...STREAMS],
   }
+})
+
+/**
+ * Sends of one campaign in the trailing hour: this hour's count plus the part of the last hour still
+ * inside the window. A rate, not a promise: the governor sets the pace.
+ */
+export const campaignRatePerHour = Effect.fn("insights.campaignRate")(function* (campaignId: string) {
+  const database = yield* Database
+  const nowMs = Date.now()
+  const now = Math.floor(nowMs / HOUR)
+  const rows = yield* database.query("stats.campaignRate", (db) =>
+    db
+      .select({ hour: hourlyStats.hour, sent: sum(hourlyStats.sent) })
+      .from(hourlyStats)
+      .where(and(eq(hourlyStats.campaignId, campaignId), gte(hourlyStats.hour, now - 1)))
+      .groupBy(hourlyStats.hour)
+      .all(),
+  )
+  const current = Number(rows.find((r) => r.hour === now)?.sent ?? 0)
+  const previous = Number(rows.find((r) => r.hour === now - 1)?.sent ?? 0)
+  const intoHour = (nowMs - now * HOUR) / HOUR
+  return Math.round(current + previous * (1 - intoHour))
+})
+
+/** Hourly: hourly_stats older than 8 days goes. */
+export const pruneHourlyStats = Effect.fn("insights.pruneHourly")(function* () {
+  const database = yield* Database
+  yield* database.query("stats.pruneHourly", (db) =>
+    db
+      .delete(hourlyStats)
+      .where(lt(hourlyStats.hour, Math.floor(Date.now() / HOUR) - 8 * 24))
+      .run(),
+  )
 })
 
 export const providerStats = Effect.fn("insights.providers")(function* (range: Range) {

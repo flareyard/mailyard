@@ -4,6 +4,7 @@ import type { Env } from "../Bindings.ts"
 import { sweepAlerts } from "../domain/alertSweep.ts"
 import { pruneKeyUsage } from "../domain/apiKeys.ts"
 import { watchEventCoverage } from "../domain/eventCoverage.ts"
+import { pruneHourlyStats } from "../domain/insights.ts"
 import { snapshotAudience } from "../domain/overview.ts"
 import { syncWithCloudflare } from "../domain/suppressions.ts"
 import { runtimeFor } from "./inbound.ts"
@@ -41,6 +42,7 @@ export const handleScheduled = (env: Env) =>
       Effect.andThen(snapshotAudience()),
       Effect.catchCause((cause) => Effect.logError("cron: audience snapshot failed", cause)),
       Effect.andThen(pruneKeyUsage()),
+      Effect.andThen(pruneHourlyStats()),
       Effect.catchCause((cause) => Effect.logError("cron: key usage prune failed", cause)),
       Effect.asVoid,
     ),

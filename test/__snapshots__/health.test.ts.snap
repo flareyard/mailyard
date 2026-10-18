@@ -22866,6 +22866,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "paused": {
                       "type": "boolean",
                     },
+                    "ratePerHour": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "reason": {
                       "anyOf": [
                         {
@@ -22915,6 +22937,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "bounced",
                     "complained",
                     "remaining",
+                    "ratePerHour",
                     "eta",
                   ],
                   "type": "object",
@@ -67141,6 +67164,18 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "type": "string",
             },
           },
+          {
+            "in": "query",
+            "name": "by",
+            "required": false,
+            "schema": {
+              "enum": [
+                "day",
+                "hour",
+              ],
+              "type": "string",
+            },
+          },
         ],
         "responses": {
           "200": {
@@ -67149,26 +67184,87 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "by": {
+                      "enum": [
+                        "day",
+                        "hour",
+                      ],
+                      "type": "string",
+                    },
                     "days": {
                       "items": {
                         "additionalProperties": false,
                         "properties": {
                           "byStream": {
-                            "additionalProperties": {
-                              "anyOf": [
-                                {
-                                  "type": "number",
-                                },
-                                {
-                                  "enum": [
-                                    "Infinity",
-                                    "-Infinity",
-                                    "NaN",
-                                  ],
-                                  "type": "string",
-                                },
-                              ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "automation": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "campaign": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "mailbox": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "transactional": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
                             },
+                            "required": [
+                              "transactional",
+                              "campaign",
+                              "automation",
+                              "mailbox",
+                            ],
                             "type": "object",
                           },
                           "day": {
@@ -67177,6 +67273,94 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                         "required": [
                           "day",
+                          "byStream",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "hours": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "byStream": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "automation": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "campaign": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "mailbox": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "transactional": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                            },
+                            "required": [
+                              "transactional",
+                              "campaign",
+                              "automation",
+                              "mailbox",
+                            ],
+                            "type": "object",
+                          },
+                          "hour": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "hour",
                           "byStream",
                         ],
                         "type": "object",
@@ -67200,7 +67384,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   },
                   "required": [
                     "range",
+                    "by",
                     "days",
+                    "hours",
                     "streams",
                   ],
                   "type": "object",

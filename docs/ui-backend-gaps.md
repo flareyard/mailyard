@@ -149,9 +149,9 @@ The contract (§1) says no human sign-in is built. Every caller today is a Beare
 | 3.4 | `changedAt` on each domain check | **Built**, HAL-3365: `checks[].changedAt`. | Drift banner, health strip | `checks[].changedAt: number`. |
 | 3.5 | `zoneStatus` and `nameservers` on a domain | **Built**, HAL-3365: `zoneStatus` (summary and detail), `nameservers`, `currentNameservers` (public DNS, no token needed). | Health strip DNS chip, first-run step 1 | `zoneStatus: "active"\|"pending"\|"moved"\|null`. |
 | 3.6 | `GET /v1/automations/summary` | **Planned**, M5 (HAL-3299–3301) | Going out now → Automations running | `{ range, live, automations: [{ id, name, status, activeRuns, enteredToday, failuresToday }] }`. |
-| 3.7 | `ratePerHour` on `/v1/campaigns/{id}/pace` | **Proposal** | Going out now (“Pace 160/h”) | `ratePerHour: number\|null`, null while paused. |
-| 3.8 | Typed `byStream` keys | **Proposal** | Volume by stream | `{ transactional, campaign, automation, mailbox }`, the governor’s four names. |
-| 3.9 | Hourly buckets for 24 h | **Proposal** | Volume at 24 h | `by=hour` → `hours: [{ hour, byStream }]`. The 24 h screen shows one split bar and says so. |
+| 3.7 | `ratePerHour` on `/v1/campaigns/{id}/pace` | **Built**, HAL-3419: sends in the trailing hour, from `hourly_stats`; null while paused. | Going out now (“Pace 160/h”) | `ratePerHour: number\|null`, null while paused. |
+| 3.8 | Typed `byStream` keys | **Built**, HAL-3419: always the four keys; replies count as mailbox, tests aren't charted. | Volume by stream | `{ transactional, campaign, automation, mailbox }`, the governor’s four names. |
+| 3.9 | Hourly buckets for 24 h | **Built**, HAL-3419: `by=hour` → `hours: [{ hour, byStream }]`, 24 buckets. | Volume at 24 h | `by=hour` → `hours: [{ hour, byStream }]`. The 24 h screen shows one split bar and says so. |
 
 ## 4. First run
 
