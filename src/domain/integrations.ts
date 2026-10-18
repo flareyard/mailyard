@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import { agents, apiKeys, mailboxes } from "../db/schema.ts"
+import { listGrants } from "../oauth/grants.ts"
 import { Database } from "../services/Database.ts"
 import { describeLane } from "./mailEvents.ts"
 import { listEndpoints } from "./webhooks.ts"
@@ -31,6 +32,8 @@ export const describeIntegrations = Effect.fn("integrations.describe")(function*
   readonly origin: string | null
   /** Whether the caller may see the keys themselves (`keys.manage`); counts are shown either way. */
   readonly showKeys: boolean
+  /** Who's asking, so someone without `keys.manage` still sees the connections they approved. */
+  readonly principal?: string | null
 }) {
   const database = yield* Database
   const now = Date.now()
@@ -55,6 +58,9 @@ export const describeIntegrations = Effect.fn("integrations.describe")(function*
       .orderBy(desc(apiKeys.createdAt))
       .limit(500)
       .all(),
+  )
+  const grants = (yield* listGrants()).filter(
+    (g) => input.showKeys || (input.principal != null && g.grantedBy.id === input.principal),
   )
   const endpoints = yield* listEndpoints()
   const lane = yield* describeLane()
@@ -88,6 +94,11 @@ export const describeIntegrations = Effect.fn("integrations.describe")(function*
                 : null,
           }))
         : null,
+    },
+    /** MCP clients people connected with OAuth (HAL-3462). */
+    oauth: {
+      authorizationServer: input.origin ? `${input.origin}/.well-known/oauth-authorization-server` : null,
+      grants: grants.map((g) => ({ ...g, scopes: [...g.scopes], mailboxIds: [...g.mailboxIds] })),
     },
     webhooks: {
       count: endpoints.length,

@@ -208,12 +208,90 @@ const answer = async (
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
 
+/** The origins `/mcp` answers on: the public one, and whichever host this request came to. */
+const originsOf = (request: Request) => [
+  ...new Set([linkOrigin(request.url) ?? new URL(request.url).origin, new URL(request.url).origin]),
+]
+
+/** The resource identifiers (RFC 8707) an access token may name to be used here. */
+export const mcpResources = (request: Request) => originsOf(request).map((o) => `${o}${MCP_PATH}`)
+
+/**
+ * Whether `resource` names this deployment's `/mcp` (RFC 8707): on the public origin, the host the
+ * request came to, or a subdomain of the public host. The founder's install serves the app on
+ * mail.flareyard.dev and MCP on api.mail.flareyard.dev, and a client names the URL it connected to.
+ */
+export const isMcpResource = (resource: string, request: Request) => {
+  let url: URL
+  try {
+    url = new URL(resource)
+  } catch {
+    return false
+  }
+  if (url.pathname !== MCP_PATH || url.search || url.hash || url.username || url.password) return false
+  if (
+    url.protocol !== "https:" &&
+    !(url.protocol === "http:" && /^(localhost|127\.0\.0\.1)$/.test(url.hostname))
+  )
+    return false
+  if (originsOf(request).includes(url.origin)) return true
+  const home = linkOrigin(request.url)
+  return home !== null && url.protocol === "https:" && url.hostname.endsWith(`.${new URL(home).hostname}`)
+}
+
+/**
+ * Where an MCP client reads how to sign in (RFC 9728 §5.1): on the host it called, since the
+ * metadata names that host's `/mcp` as the resource and clients check it matches.
+ */
+export const resourceMetadataUrl = (request: Request) =>
+  `${new URL(request.url).origin}/.well-known/oauth-protected-resource${MCP_PATH}`
+
+/** The scopes a client asks for by default: everything an agent normally needs. */
+const DEFAULT_CHALLENGE_SCOPE = "read send"
+
+/** Adds the Bearer challenge (RFC 6750 §3, MCP authorization) to a 401 or 403. */
+const challenge = (
+  response: Response,
+  request: Request,
+  extra: { readonly error?: string; readonly scope?: string; readonly description?: string } = {},
+) => {
+  const parts = [
+    `resource_metadata="${resourceMetadataUrl(request)}"`,
+    `scope="${extra.scope ?? DEFAULT_CHALLENGE_SCOPE}"`,
+    ...(extra.error ? [`error="${extra.error}"`] : []),
+    ...(extra.description ? [`error_description="${extra.description.replace(/["\\]/g, "")}"`] : []),
+  ]
+  const headers = new Headers(response.headers)
+  headers.set("www-authenticate", `Bearer ${parts.join(", ")}`)
+  return new Response(response.body, { status: response.status, headers })
+}
+
+/**
+ * A tool an OAuth client wasn't granted the scope for: rather than a refusal the model reads, a 403
+ * with `insufficient_scope` naming every scope needed, so the client can ask the person for more
+ * (step-up authorization).
+ */
+const missingScope = (caller: Caller, messages: ReadonlyArray<RpcRequest>) => {
+  if (!caller.oauth) return null
+  for (const m of messages) {
+    if (m.method !== "tools/call") continue
+    const tool = TOOLS.find((t) => t.name === String(m.params?.name ?? ""))
+    if (tool && !canUse(caller, tool)) return { tool, scope: [...new Set([...caller.scopes, tool.scope])] }
+  }
+  return null
+}
+
 export const handleMcp = async (request: Request, env: Env): Promise<Response> => {
   if (request.method === "GET" || request.method === "DELETE")
     return new Response(null, { status: 405, headers: { allow: "POST" } })
   if (request.method !== "POST") return problem(405, "POST JSON-RPC to /mcp.")
-  const auth = await authorize(request, env)
-  if (auth instanceof Response) return auth
+  const auth = await authorize(request, env, { resources: mcpResources(request) })
+  if (auth instanceof Response) {
+    if (auth.status !== 401) return auth
+    // A missing credential gets the bare challenge; a bad one says why (RFC 6750 §3.1).
+    const sent = request.headers.has("authorization")
+    return challenge(auth, request, sent ? { error: "invalid_token" } : {})
+  }
   if (auth.caller.kind === "public")
     return problem(403, "Public keys can't use the MCP server.", { reason: "public-key" })
   const version = request.headers.get("mcp-protocol-version")
@@ -258,6 +336,24 @@ export const handleMcp = async (request: Request, env: Env): Promise<Response> =
       400,
     )
   }
+  const short = missingScope(auth.caller, messages as ReadonlyArray<RpcRequest>)
+  if (short)
+    return challenge(
+      problem(
+        403,
+        `${short.tool.name} needs the "${short.tool.scope}" scope, which this connection wasn't granted.`,
+        {
+          reason: "insufficient-scope",
+          required: short.tool.scope,
+        },
+      ),
+      request,
+      {
+        error: "insufficient_scope",
+        scope: short.scope.join(" "),
+        description: `${short.tool.name} needs ${short.tool.scope}`,
+      },
+    )
   const answers = (
     await Promise.all(
       messages.map((m) =>

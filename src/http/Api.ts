@@ -5920,6 +5920,23 @@ const NullableTime = Schema.NullOr(Schema.Number)
  * belongs to) for callers who manage keys, and is null for everyone else, who still see the counts.
  * Keys are made and revoked on `/v1/api-keys` and `/v1/agents`.
  */
+export const OAuthGrantSchema = Schema.Struct({
+  id: Schema.String,
+  client: Schema.Struct({
+    id: Schema.String,
+    name: Schema.String,
+    /** The client's host (from its metadata document's URL, or its home page), shown beside its name. */
+    host: Schema.NullOr(Schema.String),
+    registration: Schema.NullOr(Schema.Literals(["cimd", "dcr"])),
+  }),
+  grantedBy: Schema.Struct({ id: Schema.String, name: Schema.String, email: Schema.NullOr(Schema.String) }),
+  apiKeyId: Schema.String,
+  scopes: Schema.Array(Schema.String),
+  mailboxIds: Schema.Array(Schema.String),
+  createdAt: Schema.Number,
+  lastUsedAt: NullableTime,
+}).annotate({ identifier: "OAuthGrant" })
+
 export class IntegrationsApi extends HttpApiGroup.make("integrations")
   .add(
     HttpApiEndpoint.get("get", "/v1/integrations", {
@@ -5950,6 +5967,14 @@ export class IntegrationsApi extends HttpApiGroup.make("integrations")
               }),
             ),
           ),
+        }),
+        /**
+         * MCP clients connected by OAuth (HAL-3462): every grant for someone with `keys.manage`, else
+         * the ones the caller approved. Each is backed by a `purpose: mcp` key (`apiKeyId`).
+         */
+        oauth: Schema.Struct({
+          authorizationServer: Schema.NullOr(Schema.String),
+          grants: Schema.Array(OAuthGrantSchema),
         }),
         webhooks: Schema.Struct({
           count: Schema.Number,
@@ -5994,6 +6019,15 @@ export class IntegrationsApi extends HttpApiGroup.make("integrations")
         ),
       }),
       error: Forbidden,
+    }),
+    /**
+     * Disconnects an OAuth client: the grant, its key and every token stop working at once. Anyone
+     * with `keys.manage`, or the person who approved it.
+     */
+    HttpApiEndpoint.delete("revokeOAuthGrant", "/v1/integrations/oauth-grants/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ id: Schema.String, revoked: Schema.Literal(true) }),
+      error: [Forbidden, NotFound],
     }),
   )
   .middleware(ApiKeyAuth) {}

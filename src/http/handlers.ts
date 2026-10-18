@@ -33,6 +33,7 @@ import { refuseWhileDeleting } from "../domain/workspaceDeletion.ts"
 import type { ImapConnector } from "../imports/importer.ts"
 import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
+import { grantForKey, revokeGrant } from "../oauth/grants.ts"
 import { linkOrigin } from "../public/origin.ts"
 import type { Assistant } from "../services/Assistant.ts"
 import type { Classifier } from "../services/Classifier.ts"
@@ -486,6 +487,14 @@ export const ApiKeysHandlers = HttpApiBuilder.group(
       revoke: p(({ params }) =>
         requireScope("admin", "keys.manage").pipe(
           Effect.andThen(revokeKey(params.id)),
+          // An OAuth client's key ends its grant too, so it leaves Integrations (HAL-3462).
+          Effect.tap((row) =>
+            row
+              ? grantForKey(row.id).pipe(
+                  Effect.flatMap((g) => (g ? revokeGrant(g.id, "key-revoked", "keys") : Effect.void)),
+                )
+              : Effect.void,
+          ),
           Effect.flatMap((row) =>
             row
               ? Effect.succeed(summarizeKey(row))

@@ -30,6 +30,15 @@ bun run build    # wrangler dry-run build
 - When the relay, not Cloudflare, refuses a call, every response that reports it carries `relay: { reason, code, scope? }` beside its `message` (the `RelayRefusal` schema in `/openapi.json`). The reasons: `install_key_invalid` (10401), `relay_disconnected` (10402), `route_undeclared` (10403), `scope_not_granted` (10404, with the `scope` to grant), `wrong_account` (10405), `request_too_large` (10413), `rate_limited` (10429) and `cloudflare_unreachable` (10502). They appear on domain fixes, DMARC changes, suppression push, removal and sync, verified addresses, the first-run zone list, a domain's zone details, a new mailbox's routing check and the overview's routing rejections.
 - `bun run manifest`, part of `bun run check`, checks that every binding's scope is required, that every queue consumer has a dead-letter queue, and that `wrangler.jsonc` names resources without ids.
 
+## Connecting MCP clients
+
+`/mcp` takes an API key (`purpose: mcp`, made on Settings → Agents), or an OAuth sign-in, so Claude.ai and other MCP clients connect with a button instead of a pasted key (HAL-3462, the MCP authorization spec of 2026-07-28). Give the client `https://<your host>/mcp`. Mailyard is its own authorization server:
+
+- **Discovery:** `/.well-known/oauth-protected-resource/mcp` (RFC 9728) and `/.well-known/oauth-authorization-server` (RFC 8414). `/mcp` answers 401 with a `WWW-Authenticate` that points to them. A tool the connection wasn't granted the scope for answers 403 `insufficient_scope` with every scope needed, so the client can ask for more.
+- **Clients:** an https `client_id` is the client's metadata document (fetched, cached a day). Older clients register at `/oauth/register` (RFC 7591). Public clients only, with PKCE S256 and the `resource` parameter (RFC 8707). The answer carries `iss` (RFC 9207).
+- **Consent:** the person signs in (an emailed link brings them back) and picks the scopes (`read`, `send`; `admin` only on request and only if they hold it) and the mailboxes. A viewer can't hand out `send`.
+- **Tokens:** a grant is a `purpose: mcp` key with what was chosen, so agent limits, approvals and the audit of reads apply. Access tokens last an hour and work only on `/mcp`. Refresh tokens rotate, and reusing a spent one revokes the grant. Grants show on `GET /v1/integrations` (`oauth.grants`) and are revoked with `DELETE /v1/integrations/oauth-grants/{id}`, `/oauth/revoke`, or by revoking the key.
+
 ## Deploying by hand
 
 Until the Flareyard platform deploys it with your OAuth token, Mailyard deploys with Wrangler. These are the steps used for the first deploy (2026-10-17, HAL-3157).

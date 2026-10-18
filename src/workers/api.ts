@@ -64,6 +64,7 @@ import {
 } from "./files.ts"
 import { handleEmail, runtimeFor } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
+import { handleOAuth, OAUTH_PATH } from "./oauth.ts"
 import {
   CONFIRM_PATH,
   FORM_PAGE_PATH,
@@ -157,6 +158,8 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   // The web app's pages and files, when this deployment serves them (wrangler.jsonc `assets`).
   if (env.ASSETS && !isWorkerPath(path)) return env.ASSETS.fetch(request)
   if (path === MCP_PATH) return handleMcp(request, env)
+  const oauth = OAUTH_PATH.exec(path)
+  if (oauth) return handleOAuth(request, env, oauth)
   const d = (s: string | undefined) => decodeURIComponent(s ?? "")
   const wait = WAIT_PATH.exec(path)
   if (wait) return handleWait(request, env, d(wait[1]))
