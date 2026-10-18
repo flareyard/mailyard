@@ -450,7 +450,12 @@ describe("campaigns: fix targets, link statuses and block content (HAL-3430)", (
     expect(r.html).toContain("Our spring sale starts now.")
     expect(r.text).toContain("Our spring sale starts now.")
     expect(r.footerAdded).toBe(false)
+    // The kit's font stylesheet is loaded, not clicked: not a link (HAL-3432).
+    expect(r.html).toContain("fonts.googleapis.com")
     expect(r.links.map((l) => l.url)).toContain("https://ok.links.test/shop")
+    expect(r.links.some((l) => l.url.includes("fonts.googleapis.com"))).toBe(false)
+    const checks = await json<Checks>(await call(`/v1/campaigns/${campaign.id}/checks`, { key: ADMIN }))
+    expect(checks.checks.find((x) => x.id === "link_domains")?.detail ?? "").not.toContain("googleapis")
 
     const refused = async (body: Record<string, unknown>) => {
       const res = await createCampaign({ name: "B", fromAddress: `team@${domain}`, subject: "S", ...body })

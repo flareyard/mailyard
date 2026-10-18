@@ -59,6 +59,23 @@ describe("tracking rules", () => {
     )
     expect(none.html).toBe(message.html)
   })
+
+  it("leaves stylesheets alone: a client loading fonts is not a click (HAL-3432)", async () => {
+    const fonts = "https://fonts.googleapis.com/css2?family=Geist&amp;display=swap"
+    const message = {
+      from: { email: "a@b.co" },
+      to: [{ email: "c@d.co" }] as [{ email: string }],
+      subject: "s",
+      html: `<html><head><link href="${fonts}" rel="stylesheet"></head><body><A HREF="https://shop.test/a">a</A> <map><area shape="rect" href="https://shop.test/map"></map> <span data-href="https://shop.test/data">x</span></body></html>`,
+    }
+    const out = await runtimeFor(env).runPromise(
+      instrument(message, { messageId: "m1", origin: "https://api.test", opens: false, clicks: true }),
+    )
+    expect(out.html).toContain(`<link href="${fonts}" rel="stylesheet">`)
+    expect(out.html).toMatch(/<A HREF="https:\/\/api\.test\/t\/c\/[^"]+">a<\/A>/)
+    expect(out.html).toMatch(/<area shape="rect" href="https:\/\/api\.test\/t\/c\/[^"]+">/)
+    expect(out.html).toContain('data-href="https://shop.test/data"')
+  })
 })
 
 const stats = (id: string) =>
