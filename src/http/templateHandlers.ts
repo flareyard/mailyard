@@ -13,6 +13,8 @@ import {
   saveDraft,
   type TemplateMissing,
   type TemplateRejected,
+  templateUsage,
+  testTemplate,
 } from "../domain/templates.ts"
 import { MAX_MESSAGE_BYTES } from "../kit/index.ts"
 import type { DatabaseError } from "../services/Database.ts"
@@ -93,7 +95,18 @@ export const TemplatesHandlers = HttpApiBuilder.group(
       list: p(({ query }) =>
         requireScope("read").pipe(
           Effect.andThen(listTemplates(query.archived === "true")),
-          Effect.map((rows) => ({ templates: rows.map(summary) })),
+          Effect.flatMap((rows) =>
+            query.include === "usage"
+              ? templateUsage(rows.map((r) => r.id)).pipe(
+                  Effect.map((usage) => ({
+                    templates: rows.map((r) => ({
+                      ...summary(r),
+                      usage: usage.get(r.id) ?? { sends30d: 0, usedBy: [] },
+                    })),
+                  })),
+                )
+              : Effect.succeed({ templates: rows.map(summary) }),
+          ),
           dbDies,
         ),
       ),
@@ -131,6 +144,23 @@ export const TemplatesHandlers = HttpApiBuilder.group(
       ),
       archive: p(({ params }) =>
         requireScope("admin").pipe(Effect.andThen(archiveTemplate(params.id)), notFound, dbDies),
+      ),
+      test: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          yield* requireScope("send")
+          return yield* testTemplate(params.id, payload)
+        }).pipe(
+          Effect.catchTags({
+            TemplateTestInvalid: (e) =>
+              Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            InvalidMessage: (e) => Effect.fail(new InvalidRequest({ field: "message", message: e.message })),
+            BlobStoreError: Effect.die,
+            TrackingKeyMissing: Effect.die,
+          }),
+          notFound,
+          rejected,
+          dbDies,
+        ),
       ),
       render: p(({ params, payload }) =>
         Effect.gen(function* () {

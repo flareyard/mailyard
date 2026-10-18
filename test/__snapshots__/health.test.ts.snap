@@ -68887,6 +68887,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               "type": "string",
             },
           },
+          {
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "enum": [
+                "usage",
+              ],
+              "type": "string",
+            },
+          },
         ],
         "responses": {
           "200": {
@@ -68984,6 +68995,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "string",
                               },
                             ],
+                          },
+                          "usage": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "sends30d": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "usedBy": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                    },
+                                    "type": {
+                                      "enum": [
+                                        "automation",
+                                        "campaign",
+                                        "apiKey",
+                                      ],
+                                      "type": "string",
+                                    },
+                                  },
+                                  "required": [
+                                    "type",
+                                    "id",
+                                    "name",
+                                  ],
+                                  "type": "object",
+                                },
+                                "type": "array",
+                              },
+                            },
+                            "required": [
+                              "sends30d",
+                              "usedBy",
+                            ],
+                            "type": "object",
                           },
                         },
                         "required": [
@@ -69186,6 +69250,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                               ],
                             },
+                            "updatedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
                             "variables": {
                               "additionalProperties": false,
                               "properties": {
@@ -69230,6 +69319,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "source",
                             "text",
                             "publishedAt",
+                            "updatedAt",
+                            "updatedBy",
                             "variables",
                           ],
                           "type": "object",
@@ -69293,6 +69384,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "string",
                         },
                       ],
+                    },
+                    "usage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "sends30d": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "usedBy": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "automation",
+                                  "campaign",
+                                  "apiKey",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "sends30d",
+                        "usedBy",
+                      ],
+                      "type": "object",
                     },
                     "versions": {
                       "items": {
@@ -69728,6 +69872,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                               ],
                             },
+                            "updatedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
                             "variables": {
                               "additionalProperties": false,
                               "properties": {
@@ -69772,6 +69941,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "source",
                             "text",
                             "publishedAt",
+                            "updatedAt",
+                            "updatedBy",
                             "variables",
                           ],
                           "type": "object",
@@ -69835,6 +70006,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "string",
                         },
                       ],
+                    },
+                    "usage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "sends30d": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "usedBy": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "automation",
+                                  "campaign",
+                                  "apiKey",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "sends30d",
+                        "usedBy",
+                      ],
+                      "type": "object",
                     },
                     "versions": {
                       "items": {
@@ -70080,6 +70304,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                               ],
                             },
+                            "updatedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
                             "variables": {
                               "additionalProperties": false,
                               "properties": {
@@ -70124,6 +70373,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "source",
                             "text",
                             "publishedAt",
+                            "updatedAt",
+                            "updatedBy",
                             "variables",
                           ],
                           "type": "object",
@@ -70187,6 +70438,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "string",
                         },
                       ],
+                    },
+                    "usage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "sends30d": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "usedBy": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "automation",
+                                  "campaign",
+                                  "apiKey",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "sends30d",
+                        "usedBy",
+                      ],
+                      "type": "object",
                     },
                     "versions": {
                       "items": {
@@ -70468,6 +70772,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                               ],
                             },
+                            "updatedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
                             "variables": {
                               "additionalProperties": false,
                               "properties": {
@@ -70512,6 +70841,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "source",
                             "text",
                             "publishedAt",
+                            "updatedAt",
+                            "updatedBy",
                             "variables",
                           ],
                           "type": "object",
@@ -70575,6 +70906,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "string",
                         },
                       ],
+                    },
+                    "usage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "sends30d": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "usedBy": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "automation",
+                                  "campaign",
+                                  "apiKey",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "sends30d",
+                        "usedBy",
+                      ],
+                      "type": "object",
                     },
                     "versions": {
                       "items": {
@@ -70832,6 +71216,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                               ],
                             },
+                            "updatedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
                             "variables": {
                               "additionalProperties": false,
                               "properties": {
@@ -70876,6 +71285,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "source",
                             "text",
                             "publishedAt",
+                            "updatedAt",
+                            "updatedBy",
                             "variables",
                           ],
                           "type": "object",
@@ -70939,6 +71350,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "string",
                         },
                       ],
+                    },
+                    "usage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "sends30d": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "usedBy": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "automation",
+                                  "campaign",
+                                  "apiKey",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "sends30d",
+                        "usedBy",
+                      ],
+                      "type": "object",
                     },
                     "versions": {
                       "items": {
@@ -71391,6 +71855,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 },
                               ],
                             },
+                            "updatedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            "updatedBy": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                },
+                                {
+                                  "type": "null",
+                                },
+                              ],
+                            },
                             "variables": {
                               "additionalProperties": false,
                               "properties": {
@@ -71435,6 +71924,8 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "source",
                             "text",
                             "publishedAt",
+                            "updatedAt",
+                            "updatedBy",
                             "variables",
                           ],
                           "type": "object",
@@ -71498,6 +71989,59 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "string",
                         },
                       ],
+                    },
+                    "usage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "sends30d": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "usedBy": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "automation",
+                                  "campaign",
+                                  "apiKey",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "name",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                      },
+                      "required": [
+                        "sends30d",
+                        "usedBy",
+                      ],
+                      "type": "object",
                     },
                     "versions": {
                       "items": {
@@ -71599,6 +72143,180 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "templates",
+        ],
+      },
+    },
+    "/v1/templates/{id}/test": {
+      "post": {
+        "operationId": "templates.test",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "data": {
+                    "type": "object",
+                  },
+                  "from": {
+                    "type": "string",
+                  },
+                  "to": {
+                    "items": {
+                      "type": "string",
+                    },
+                    "type": "array",
+                  },
+                  "version": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "published",
+                          "latest",
+                        ],
+                        "type": "string",
+                      },
+                      {
+                        "maximum": 9007199254740991,
+                        "minimum": -9007199254740991,
+                        "type": "integer",
+                      },
+                    ],
+                  },
+                },
+                "required": [
+                  "to",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "sent": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "email": {
+                            "type": "string",
+                          },
+                          "messageId": {
+                            "type": "string",
+                          },
+                          "status": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "email",
+                          "messageId",
+                          "status",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "version": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "version",
+                    "sent",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
