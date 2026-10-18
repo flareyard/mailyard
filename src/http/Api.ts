@@ -5094,8 +5094,10 @@ export const InviteSchema = Schema.Struct({
   role: InviteRole,
   mailboxes: Schema.Array(MailboxGrant),
   message: Schema.NullOr(Schema.String),
-  /** The member (or key) who invited. */
-  invitedBy: Schema.String,
+  /** The name of the person who invited; null when a key (or the admin key) did, as in the public view. */
+  invitedBy: Schema.NullOr(Schema.String),
+  /** Who invited, for the audit trail: a member id, a key id, or `root` for the admin key. */
+  invitedById: Schema.String,
   createdAt: Schema.Number,
   expiresAt: Schema.Number,
   /** When the invitation email last went out; null while it's a draft. */

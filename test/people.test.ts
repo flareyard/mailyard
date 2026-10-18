@@ -297,6 +297,34 @@ describe("people, roles and invitations (HAL-3361)", () => {
     expect(reuse.status).toBe(410)
   })
 
+  it("names the inviter the same way everywhere: a person by name, a key as null (HAL-3492)", async () => {
+    const byKey = await json<{ invite: { id: string; invitedBy: string | null; invitedById: string } }>(
+      await call("/v1/invites", {
+        method: "POST",
+        key: ADMIN,
+        json: { email: `k-${uid()}@example.org`, role: "viewer" },
+      }),
+    )
+    expect(byKey.invite).toMatchObject({ invitedBy: null, invitedById: "root" })
+    const sent = await json<{ invitedBy: string | null }>(
+      await call(`/v1/invites/${byKey.invite.id}/send`, { method: "POST", key: ADMIN }),
+    )
+    expect(sent.invitedBy).toBeNull()
+    const byPerson = await json<{ invite: { id: string; invitedBy: string | null; invitedById: string } }>(
+      await as(owner, "/v1/invites", {
+        method: "POST",
+        json: { email: `p-${uid()}@example.org`, role: "viewer" },
+      }),
+    )
+    expect(byPerson.invite.invitedBy).toBe("Ada Owner")
+    expect(byPerson.invite.invitedById).toMatch(/^mem_/)
+    const listed = await json<{ invites: Array<{ id: string; invitedBy: string | null }> }>(
+      await as(owner, "/v1/invites"),
+    )
+    expect(listed.invites.find((i) => i.id === byKey.invite.id)?.invitedBy).toBeNull()
+    expect(listed.invites.find((i) => i.id === byPerson.invite.id)?.invitedBy).toBe("Ada Owner")
+  })
+
   it("resends with a fresh link, revokes, expires, and refuses the wrong account", async () => {
     const email = `viewer-${uid()}@example.org`
     const { invite: inv } = await json<{ invite: { id: string } }>(

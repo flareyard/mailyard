@@ -44889,6 +44889,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "type": "string",
                           },
                           "invitedBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "invitedById": {
                             "type": "string",
                           },
                           "mailboxes": {
@@ -44989,6 +44999,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "mailboxes",
                           "message",
                           "invitedBy",
+                          "invitedById",
                           "createdAt",
                           "expiresAt",
                           "sentAt",
@@ -45192,6 +45203,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "type": "string",
                         },
                         "invitedBy": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "invitedById": {
                           "type": "string",
                         },
                         "mailboxes": {
@@ -45292,6 +45313,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "mailboxes",
                         "message",
                         "invitedBy",
+                        "invitedById",
                         "createdAt",
                         "expiresAt",
                         "sentAt",
@@ -45429,6 +45451,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "type": "string",
                     },
                     "invitedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "invitedById": {
                       "type": "string",
                     },
                     "mailboxes": {
@@ -45529,6 +45561,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxes",
                     "message",
                     "invitedBy",
+                    "invitedById",
                     "createdAt",
                     "expiresAt",
                     "sentAt",
@@ -45678,6 +45711,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "type": "string",
                     },
                     "invitedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "invitedById": {
                       "type": "string",
                     },
                     "mailboxes": {
@@ -45778,6 +45821,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxes",
                     "message",
                     "invitedBy",
+                    "invitedById",
                     "createdAt",
                     "expiresAt",
                     "sentAt",
@@ -45947,6 +45991,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       "type": "string",
                     },
                     "invitedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "invitedById": {
                       "type": "string",
                     },
                     "mailboxes": {
@@ -46047,6 +46101,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxes",
                     "message",
                     "invitedBy",
+                    "invitedById",
                     "createdAt",
                     "expiresAt",
                     "sentAt",
@@ -70726,6 +70781,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "type": "string",
                           },
                           "invitedBy": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "invitedById": {
                             "type": "string",
                           },
                           "mailboxes": {
@@ -70826,6 +70891,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "mailboxes",
                           "message",
                           "invitedBy",
+                          "invitedById",
                           "createdAt",
                           "expiresAt",
                           "sentAt",
