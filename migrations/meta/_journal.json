@@ -232,6 +232,20 @@
       "when": 1792291306105,
       "tag": "0032_engagement",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1792292281549,
+      "tag": "0033_contact_detail",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1792292441386,
+      "tag": "0034_contact_bulk",
+      "breakpoints": true
     }
   ]
 }

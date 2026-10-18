@@ -233,7 +233,9 @@ describe("topics and double opt-in", () => {
     expect(page.status).toBe(200)
     expect(await page.text()).toContain("You're subscribed")
     const after = await json<Contact>(await call(`/v1/contacts/${contact.id}`, { key: ADMIN }))
-    expect(after.topics).toEqual([{ topicId: topic.id, name: topic.name, state: "subscribed" }])
+    expect(after.topics).toEqual([
+      expect.objectContaining({ topicId: topic.id, name: topic.name, state: "subscribed" }),
+    ])
     expect(after.status).toBe("subscribed")
     // Following the link again changes nothing and still says yes.
     expect((await call(link.pathname)).status).toBe(200)
@@ -388,6 +390,7 @@ describe("bulk actions", () => {
       }),
     )
     expect(added).toEqual({
+      mode: "sync",
       updated: 2,
       skipped: 1,
       errors: [{ id: "missing", message: "No such contact." }],
@@ -450,7 +453,9 @@ describe("signup forms", () => {
     expect(await json(response)).toEqual({ status: "confirm" })
     const contact = (await json<Page>(await call(`/v1/contacts?q=${email}`, { key: ADMIN }))).contacts[0]
     expect(contact).toMatchObject({ name: "Grace", status: "unconfirmed", fields: { company: "Navy" } })
-    expect(contact?.topics).toEqual([{ topicId: topic.id, name: topic.name, state: "unconfirmed" }])
+    expect(contact?.topics).toEqual([
+      expect.objectContaining({ topicId: topic.id, name: topic.name, state: "unconfirmed" }),
+    ])
     const message = await lastMessageTo(email)
     await call(new URL(confirmLink(message?.html ?? "")).pathname)
     const confirmed = await json<Contact>(await call(`/v1/contacts/${contact?.id}`, { key: ADMIN }))

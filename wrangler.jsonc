@@ -60,6 +60,12 @@
       "class_name": "ContactExportWorkflow"
     },
     {
+      // Bulk actions over a filter of more than 1,000 contacts (HAL-3422).
+      "name": "mailyard-contact-bulk",
+      "binding": "CONTACT_BULK_WORKFLOW",
+      "class_name": "ContactBulkWorkflow"
+    },
+    {
       "name": "mailyard-automation-run",
       "binding": "AUTOMATION_WORKFLOW",
       "class_name": "AutomationRunWorkflow"

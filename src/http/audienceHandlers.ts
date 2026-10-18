@@ -1,9 +1,10 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import { bulkByFilter, getBulkJob } from "../domain/contactBulk.ts"
 import { filterCondition } from "../domain/contactFilters.ts"
 import {
   type ContactConflict,
-  type ContactInvalid,
+  ContactInvalid,
   type ContactNotFound,
   contactTimeline,
   createContact,
@@ -11,8 +12,10 @@ import {
   eraseContact,
   exportContact,
   getContact,
+  listContactFields,
   listContacts,
   updateContact,
+  updateContactField,
 } from "../domain/contacts.ts"
 import {
   createForm,
@@ -181,10 +184,28 @@ export const ContactsHandlers = HttpApiBuilder.group(
         }).pipe(audienceErrors),
       ),
       bulk: p(({ payload, request }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin")
+          if (payload.ids && payload.filter)
+            return yield* new ContactInvalid({ field: "ids", message: "Give ids or a filter, not both." })
+          if (payload.filter)
+            return yield* bulkByFilter(payload.filter, payload.action, caller.keyId, originOf(request))
+          if (!payload.ids)
+            return yield* new ContactInvalid({
+              field: "ids",
+              message: "Give the contacts' ids, or a filter.",
+            })
+          const result = yield* bulkContacts(payload.ids, payload.action, caller.keyId, originOf(request))
+          return { mode: "sync" as const, ...result }
+        }).pipe(audienceErrors),
+      ),
+      bulkJob: p(({ params }) =>
+        requireScope("read").pipe(Effect.andThen(getBulkJob(params.id)), audienceErrors),
+      ),
+      fields: p(() => requireScope("read").pipe(Effect.andThen(listContactFields()), audienceErrors)),
+      updateField: p(({ params, payload }) =>
         requireScope("admin").pipe(
-          Effect.flatMap((caller) =>
-            bulkContacts(payload.ids, payload.action, caller.keyId, originOf(request)),
-          ),
+          Effect.flatMap((caller) => updateContactField(params.key, payload, caller.keyId)),
           audienceErrors,
         ),
       ),

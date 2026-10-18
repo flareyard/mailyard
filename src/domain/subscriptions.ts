@@ -9,6 +9,8 @@ import {
   BULK_LIMIT,
   ContactInvalid,
   type ContactRow,
+  chunksOf,
+  D1_MAX_PARAMS,
   deleteContacts,
   findContact,
   getContact,
@@ -155,11 +157,12 @@ export const bulkContacts = Effect.fn("contacts.bulk")(function* (
       return yield* new TopicInvalid({ field: "topicId", message: `Topic ${topic.name} is archived.` })
     }
   }
-  const found = new Set(
-    (yield* database.query("bulk.exists", (db) =>
-      db.select({ id: contacts.id }).from(contacts).where(inArray(contacts.id, unique)).all(),
-    )).map((r) => r.id),
-  )
+  const found = new Set<string>()
+  for (const chunk of chunksOf(unique, D1_MAX_PARAMS))
+    for (const r of yield* database.query("bulk.exists", (db) =>
+      db.select({ id: contacts.id }).from(contacts).where(inArray(contacts.id, chunk)).all(),
+    ))
+      found.add(r.id)
   const errors: Array<{ id: string; message: string }> = []
   let updated = 0
   for (const id of unique) {

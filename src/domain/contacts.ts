@@ -3,9 +3,14 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { fireTrigger, stopRunsFor } from "../automations/runs.ts"
 import {
+  automationRuns,
+  automations,
+  contactFields,
   contacts,
   events,
+  inboundMessages,
   messagesOut,
+  segments,
   subscriptionChanges,
   subscriptions,
   suppressions,
@@ -171,7 +176,15 @@ export const upsertContact = Effect.fn("contacts.upsert")(function* (input: {
 // Reading
 // ---------------------------------------------------------------------------------------------
 
-type Membership = { readonly topicId: string; readonly name: string; readonly state: SubscriptionState }
+type Membership = {
+  readonly topicId: string
+  readonly name: string
+  readonly state: SubscriptionState
+  /** When the state last changed, how (form, import, api, unsubscribe link…), and the consent on record. */
+  readonly changedAt?: number
+  readonly source?: string
+  readonly confirmedAt?: number | null
+}
 
 export const membershipsOf = (contactIds: ReadonlyArray<string>) =>
   Effect.gen(function* () {
@@ -184,6 +197,9 @@ export const membershipsOf = (contactIds: ReadonlyArray<string>) =>
           topicId: subscriptions.topicId,
           name: topics.name,
           state: subscriptions.state,
+          changedAt: subscriptions.changedAt,
+          source: subscriptions.source,
+          confirmedAt: subscriptions.confirmedAt,
         })
         .from(subscriptions)
         .innerJoin(topics, eq(topics.id, subscriptions.topicId))
@@ -193,7 +209,14 @@ export const membershipsOf = (contactIds: ReadonlyArray<string>) =>
     const byContact = new Map<string, Array<Membership>>()
     for (const r of rows) {
       const list = byContact.get(r.contactId) ?? []
-      list.push({ topicId: r.topicId, name: r.name, state: r.state })
+      list.push({
+        topicId: r.topicId,
+        name: r.name,
+        state: r.state,
+        changedAt: r.changedAt,
+        source: r.source,
+        confirmedAt: r.confirmedAt,
+      })
       byContact.set(r.contactId, list)
     }
     return byContact
@@ -227,7 +250,25 @@ export const findContact = Effect.fn("contacts.findById")(function* (id: string)
 export const getContact = Effect.fn("contacts.get")(function* (id: string) {
   const row = yield* findContact(id)
   const memberships = yield* membershipsOf([id])
-  return describeContact(row, memberships.get(id) ?? [])
+  const database = yield* Database
+  // Why mail to this contact is held back, if it is (HAL-3422).
+  const s = yield* database.query("contacts.suppression", (db) =>
+    db.select().from(suppressions).where(eq(suppressions.email, row.email)).get(),
+  )
+  return {
+    ...describeContact(row, memberships.get(id) ?? []),
+    suppression: s
+      ? {
+          reason: s.reason,
+          source: s.source,
+          detail: s.note,
+          messageId: s.messageId,
+          bulkOnly: s.bulkOnly,
+          createdAt: s.at,
+          cloudflare: { synced: s.syncedToCloudflare, id: s.cloudflareId, checkedAt: s.cloudflareCheckedAt },
+        }
+      : null,
+  }
 })
 
 export const CONTACT_SORTS = [
@@ -242,9 +283,10 @@ export type ContactSort = (typeof CONTACT_SORTS)[number]
 
 export interface ContactQuery {
   readonly q?: string | undefined
-  readonly status?: ContactStatus | undefined
+  /** One status, several, or a comma list of them: any matches. */
+  readonly status?: ContactStatus | ReadonlyArray<ContactStatus> | string | undefined
   readonly topicId?: string | undefined
-  readonly engagement?: Engagement | undefined
+  readonly engagement?: Engagement | ReadonlyArray<Engagement> | string | undefined
   readonly sort?: ContactSort | undefined
   readonly cursor?: string | undefined
   readonly limit?: number | undefined
@@ -285,16 +327,27 @@ const decodeCursor = (cursor: string) =>
     catch: () => new ContactInvalid({ field: "cursor", message: "The cursor isn't one this API returned." }),
   })
 
+const listOf = <T extends string>(value: T | ReadonlyArray<T> | string | undefined): ReadonlyArray<T> =>
+  value === undefined
+    ? []
+    : typeof value === "string"
+      ? (value.split(",").filter(Boolean) as Array<T>)
+      : value
+const statusesOf = (v: ContactQuery["status"]) => [...new Set(listOf<ContactStatus>(v))]
+const engagementsOf = (v: ContactQuery["engagement"]) => [...new Set(listOf<Engagement>(v))]
+
 /** The filters a list applies, shared by the page query and the filtered count. */
 export const filterOf = (query: ContactQuery, now: number): SQL | undefined => {
   const q = query.q?.trim().toLowerCase()
   return and(
     q ? or(like(contacts.email, `%${q}%`), like(sql`lower(${contacts.name})`, `%${q}%`)) : undefined,
-    query.status ? eq(contacts.status, query.status) : undefined,
+    statusesOf(query.status).length ? inArray(contacts.status, statusesOf(query.status)) : undefined,
     query.topicId
       ? sql`exists (select 1 from ${subscriptions} where ${subscriptions.contactId} = ${contacts.id} and ${subscriptions.topicId} = ${query.topicId} and ${subscriptions.state} = 'subscribed')`
       : undefined,
-    query.engagement ? engagementSql(query.engagement, now) : undefined,
+    engagementsOf(query.engagement).length
+      ? or(...engagementsOf(query.engagement).map((e) => engagementSql(e, now)))
+      : undefined,
   )
 }
 
@@ -346,6 +399,17 @@ export const listContacts = Effect.fn("contacts.list")(function* (query: Contact
   }
 })
 
+export const TIMELINE_KINDS = [
+  "event",
+  "message",
+  "delivery",
+  "subscription",
+  "consent",
+  "reply",
+  "automation",
+] as const
+export type TimelineKind = (typeof TIMELINE_KINDS)[number]
+
 export type TimelineItem =
   | {
       readonly kind: "event"
@@ -365,6 +429,16 @@ export type TimelineItem =
       readonly campaignId: string | null
     }
   | {
+      /** What happened to a message after it was sent: delivered, opened, clicked, bounced, complained… */
+      readonly kind: "delivery"
+      readonly id: string
+      readonly at: number
+      readonly event: string
+      readonly messageId: string | null
+      readonly subject: string | null
+      readonly data: Record<string, unknown> | null
+    }
+  | {
       readonly kind: "subscription"
       readonly id: string
       readonly at: number
@@ -374,74 +448,182 @@ export type TimelineItem =
       readonly to: SubscriptionState
       readonly source: string
     }
+  | {
+      /** The contact confirmed a double opt-in: the consent on record. */
+      readonly kind: "consent"
+      readonly id: string
+      readonly at: number
+      readonly topicId: string
+      readonly topic: string
+      readonly source: string
+    }
+  | {
+      /** Mail they sent in. */
+      readonly kind: "reply"
+      readonly id: string
+      readonly at: number
+      readonly subject: string | null
+      readonly to: string
+      readonly inReplyTo: string | null
+    }
+  | {
+      readonly kind: "automation"
+      readonly id: string
+      readonly at: number
+      readonly automationId: string
+      readonly automation: string | null
+      readonly state: string
+      readonly finishedAt: number | null
+    }
 
 /**
- * Everything that happened to a contact, newest first: tracked events, mail sent to them with its
- * delivery status, and subscription changes. Paged by time across all three.
+ * Everything that happened to a contact, newest first (HAL-3422): tracked events, mail sent to them
+ * and what happened to it, subscription changes and the consent on record, mail they sent in, and the
+ * automations they went through. Paged by time across all of them; `kinds` narrows it.
  */
 export const contactTimeline = Effect.fn("contacts.timeline")(function* (
   id: string,
-  options: { readonly cursor?: string | undefined; readonly limit?: number | undefined },
+  options: {
+    readonly cursor?: string | undefined
+    readonly limit?: number | undefined
+    readonly kind?: string | undefined
+  },
 ) {
   const database = yield* Database
   const contact = yield* findContact(id)
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 200)
   const cursor = options.cursor ? yield* decodeCursor(options.cursor) : undefined
   const before = cursor ? Number(cursor.value) : Number.MAX_SAFE_INTEGER
-  const tie = cursor?.id ?? "￿"
+  const tie = cursor?.id ?? "\uffff"
+  const wanted = new Set<TimelineKind>(
+    options.kind
+      ? (options.kind
+          .split(",")
+          .filter((k) => (TIMELINE_KINDS as ReadonlyArray<string>).includes(k)) as Array<TimelineKind>)
+      : TIMELINE_KINDS,
+  )
+  const want = (...kinds: Array<TimelineKind>) => kinds.some((k) => wanted.has(k))
   const olderThan = <T extends { at: unknown; id: unknown }>(at: T["at"], rowId: T["id"]) =>
     sql`(${at} < ${before} or (${at} = ${before} and ${rowId} < ${tie}))`
-  const [eventRows, messageRows, changeRows] = yield* Effect.all(
+  const none = Effect.succeed([] as Array<never>)
+  // Delivery and open events are recorded as `email.*` events; the rest are the contact's own.
+  const emailEvents = want("event") && want("delivery") ? undefined : want("delivery") ? true : false
+  const [eventRows, messageRows, changeRows, replyRows, runRows] = yield* Effect.all(
     [
-      database.query("contacts.timeline.events", (db) =>
-        db
-          .select()
-          .from(events)
-          .where(and(eq(events.contactId, id), olderThan(events.at, events.id)))
-          .orderBy(desc(events.at), desc(events.id))
-          .limit(limit)
-          .all(),
-      ),
-      database.query("contacts.timeline.messages", (db) =>
-        db
-          .select()
-          .from(messagesOut)
-          .where(
-            and(
-              or(eq(messagesOut.contactId, id), eq(messagesOut.recipient, contact.email)),
-              olderThan(messagesOut.createdAt, messagesOut.id),
-            ),
+      want("event", "delivery")
+        ? database.query("contacts.timeline.events", (db) =>
+            db
+              .select()
+              .from(events)
+              .where(
+                and(
+                  eq(events.contactId, id),
+                  olderThan(events.at, events.id),
+                  emailEvents === undefined
+                    ? undefined
+                    : emailEvents
+                      ? like(events.name, "email.%")
+                      : sql`${events.name} not like 'email.%'`,
+                ),
+              )
+              .orderBy(desc(events.at), desc(events.id))
+              .limit(limit)
+              .all(),
           )
-          .orderBy(desc(messagesOut.createdAt), desc(messagesOut.id))
-          .limit(limit)
-          .all(),
-      ),
-      database.query("contacts.timeline.subscriptions", (db) =>
-        db
-          .select({ change: subscriptionChanges, topic: topics.name })
-          .from(subscriptionChanges)
-          .innerJoin(topics, eq(topics.id, subscriptionChanges.topicId))
-          .where(
-            and(
-              eq(subscriptionChanges.contactId, id),
-              olderThan(subscriptionChanges.at, subscriptionChanges.id),
-            ),
+        : none,
+      want("message")
+        ? database.query("contacts.timeline.messages", (db) =>
+            db
+              .select()
+              .from(messagesOut)
+              .where(
+                and(
+                  or(eq(messagesOut.contactId, id), eq(messagesOut.recipient, contact.email)),
+                  olderThan(messagesOut.createdAt, messagesOut.id),
+                ),
+              )
+              .orderBy(desc(messagesOut.createdAt), desc(messagesOut.id))
+              .limit(limit)
+              .all(),
           )
-          .orderBy(desc(subscriptionChanges.at), desc(subscriptionChanges.id))
-          .limit(limit)
-          .all(),
-      ),
+        : none,
+      want("subscription", "consent")
+        ? database.query("contacts.timeline.subscriptions", (db) =>
+            db
+              .select({ change: subscriptionChanges, topic: topics.name })
+              .from(subscriptionChanges)
+              .innerJoin(topics, eq(topics.id, subscriptionChanges.topicId))
+              .where(
+                and(
+                  eq(subscriptionChanges.contactId, id),
+                  olderThan(subscriptionChanges.at, subscriptionChanges.id),
+                ),
+              )
+              .orderBy(desc(subscriptionChanges.at), desc(subscriptionChanges.id))
+              .limit(limit)
+              .all(),
+          )
+        : none,
+      want("reply")
+        ? database.query("contacts.timeline.replies", (db) =>
+            db
+              .select({
+                id: inboundMessages.id,
+                at: inboundMessages.receivedAt,
+                subject: inboundMessages.subject,
+                to: inboundMessages.envelopeTo,
+                inReplyTo: inboundMessages.inReplyTo,
+              })
+              .from(inboundMessages)
+              .where(
+                and(
+                  eq(inboundMessages.fromAddress, contact.email),
+                  olderThan(inboundMessages.receivedAt, inboundMessages.id),
+                ),
+              )
+              .orderBy(desc(inboundMessages.receivedAt), desc(inboundMessages.id))
+              .limit(limit)
+              .all(),
+          )
+        : none,
+      want("automation")
+        ? database.query("contacts.timeline.automations", (db) =>
+            db
+              .select({ run: automationRuns, name: automations.name })
+              .from(automationRuns)
+              .leftJoin(automations, eq(automations.id, automationRuns.automationId))
+              .where(
+                and(eq(automationRuns.contactId, id), olderThan(automationRuns.startedAt, automationRuns.id)),
+              )
+              .orderBy(desc(automationRuns.startedAt), desc(automationRuns.id))
+              .limit(limit)
+              .all(),
+          )
+        : none,
     ],
     { concurrency: "unbounded" },
   )
   const items: Array<TimelineItem> = [
-    ...eventRows.map((e) => ({
-      kind: "event" as const,
-      id: e.id,
-      at: e.at,
-      name: e.name,
-      data: e.data ?? null,
-    })),
+    ...eventRows.flatMap((e): Array<TimelineItem> => {
+      const isEmail = e.name.startsWith("email.")
+      if (isEmail && wanted.has("delivery")) {
+        const data = (e.data ?? null) as Record<string, unknown> | null
+        return [
+          {
+            kind: "delivery",
+            id: e.id,
+            at: e.at,
+            event: e.name.slice("email.".length),
+            messageId: typeof data?.messageId === "string" ? data.messageId : null,
+            subject: typeof data?.subject === "string" ? data.subject : null,
+            data,
+          },
+        ]
+      }
+      if (!isEmail && wanted.has("event"))
+        return [{ kind: "event", id: e.id, at: e.at, name: e.name, data: e.data ?? null }]
+      return []
+    }),
     ...messageRows.map((m) => ({
       kind: "message" as const,
       id: m.id,
@@ -452,15 +634,47 @@ export const contactTimeline = Effect.fn("contacts.timeline")(function* (
       bounceType: m.bounceType,
       campaignId: m.campaignId,
     })),
-    ...changeRows.map(({ change, topic }) => ({
-      kind: "subscription" as const,
-      id: change.id,
-      at: change.at,
-      topicId: change.topicId,
-      topic,
-      from: change.from,
-      to: change.to,
-      source: change.source,
+    ...changeRows.flatMap(({ change, topic }): Array<TimelineItem> => {
+      const out: Array<TimelineItem> = []
+      if (wanted.has("subscription"))
+        out.push({
+          kind: "subscription",
+          id: change.id,
+          at: change.at,
+          topicId: change.topicId,
+          topic,
+          from: change.from,
+          to: change.to,
+          source: change.source,
+        })
+      // A double opt-in confirmed: unconfirmed to subscribed.
+      if (wanted.has("consent") && change.from === "unconfirmed" && change.to === "subscribed")
+        out.push({
+          kind: "consent",
+          id: `${change.id}:consent`,
+          at: change.at,
+          topicId: change.topicId,
+          topic,
+          source: change.source,
+        })
+      return out
+    }),
+    ...replyRows.map((r) => ({
+      kind: "reply" as const,
+      id: r.id,
+      at: r.at,
+      subject: r.subject,
+      to: r.to,
+      inReplyTo: r.inReplyTo,
+    })),
+    ...runRows.map(({ run, name }) => ({
+      kind: "automation" as const,
+      id: run.id,
+      at: run.startedAt,
+      automationId: run.automationId,
+      automation: name ?? null,
+      state: run.state,
+      finishedAt: run.finishedAt,
     })),
   ].sort((a, b) => b.at - a.at || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0))
   const page = items.slice(0, limit)
@@ -650,25 +864,27 @@ export const deleteContacts = Effect.fn("contacts.delete")(function* (
 ) {
   if (ids.length === 0) return 0
   const database = yield* Database
-  const rows = yield* database.query("contacts.forDelete", (db) =>
-    db
-      .select({ id: contacts.id, email: contacts.email })
-      .from(contacts)
-      .where(inArray(contacts.id, [...ids]))
-      .all(),
-  )
+  // D1 binds at most 100 parameters a statement, so long lists go in chunks.
+  const rows: Array<{ id: string; email: string }> = []
+  for (const chunk of chunksOf([...ids], D1_MAX_PARAMS)) {
+    rows.push(
+      ...(yield* database.query("contacts.forDelete", (db) =>
+        db
+          .select({ id: contacts.id, email: contacts.email })
+          .from(contacts)
+          .where(inArray(contacts.id, chunk))
+          .all(),
+      )),
+    )
+  }
   if (rows.length === 0) return 0
-  yield* database.query("contacts.deleteMany", (db) =>
-    db
-      .delete(contacts)
-      .where(
-        inArray(
-          contacts.id,
-          rows.map((r) => r.id),
-        ),
-      )
-      .run(),
-  )
+  for (const chunk of chunksOf(
+    rows.map((r) => r.id),
+    D1_MAX_PARAMS,
+  ))
+    yield* database.query("contacts.deleteMany", (db) =>
+      db.delete(contacts).where(inArray(contacts.id, chunk)).run(),
+    )
   for (const r of rows) {
     yield* recordAudit({ actor, action: "contact.delete", target: r.id })
     yield* emitSafely("contact.deleted", { contactId: r.id, email: r.email })
@@ -803,3 +1019,100 @@ export const eraseContact = Effect.fn("contacts.erase")(function* (id: string, a
 })
 
 export const BULK_LIMIT = 1000
+
+/** D1 binds at most 100 parameters a statement; leave room for the others in it. */
+export const D1_MAX_PARAMS = 90
+
+export const chunksOf = <T>(items: ReadonlyArray<T>, size: number): Array<Array<T>> => {
+  const out: Array<Array<T>> = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
+
+// ---------------------------------------------------------------------------------------------
+// The field registry (HAL-3422)
+// ---------------------------------------------------------------------------------------------
+
+/** Where a field is used: segments whose rules read it, and automations that set or test it. */
+const fieldUsage = Effect.gen(function* () {
+  const database = yield* Database
+  const segs = yield* database.query("fields.segments", (db) =>
+    db.select({ id: segments.id, name: segments.name, filter: segments.filter }).from(segments).all(),
+  )
+  const autos = yield* database.query("fields.automations", (db) =>
+    db
+      .select({ id: automations.id, name: automations.name, graph: automations.graph })
+      .from(automations)
+      .all(),
+  )
+  const keysIn = (value: unknown): Set<string> => {
+    const found = new Set<string>()
+    const walk = (v: unknown) => {
+      if (Array.isArray(v)) for (const x of v) walk(x)
+      else if (v && typeof v === "object") {
+        const o = v as Record<string, unknown>
+        if (o.type === "field" && typeof o.field === "string") found.add(o.field)
+        if (o.type === "update" && o.config && typeof o.config === "object") {
+          const fields = (o.config as { fields?: unknown }).fields
+          if (fields && typeof fields === "object") for (const k of Object.keys(fields)) found.add(k)
+        }
+        for (const x of Object.values(o)) walk(x)
+      }
+    }
+    walk(value)
+    return found
+  }
+  return [
+    ...segs.map((s) => ({ type: "segment" as const, id: s.id, name: s.name, keys: keysIn(s.filter) })),
+    ...autos.map((a) => ({ type: "automation" as const, id: a.id, name: a.name, keys: keysIn(a.graph) })),
+  ]
+})
+
+/**
+ * `GET /v1/contact-fields`: every custom field, its label and type, and where it's used. Segments and
+ * automations are read whole (people write them, a few dozen at most) and searched here.
+ */
+export const listContactFields = Effect.fn("contacts.fields")(function* () {
+  const database = yield* Database
+  const rows = yield* database.query("fields.list", (db) =>
+    db.select().from(contactFields).orderBy(asc(contactFields.key)).all(),
+  )
+  const usage = yield* fieldUsage
+  return {
+    fields: rows.map((f) => ({
+      key: f.key,
+      label: f.label ?? f.key,
+      type: f.type,
+      createdAt: f.createdAt,
+      updatedAt: f.updatedAt,
+      usedBy: usage.filter((u) => u.keys.has(f.key)).map(({ type, id, name }) => ({ type, id, name })),
+    })),
+  }
+})
+
+/** `PATCH /v1/contact-fields/{key}`: a label people read, or a corrected type. Values aren't touched. */
+export const updateContactField = Effect.fn("contacts.fieldUpdate")(function* (
+  key: string,
+  patch: {
+    readonly label?: string | null | undefined
+    readonly type?: "string" | "number" | "boolean" | "date" | undefined
+  },
+  actor: string,
+) {
+  const database = yield* Database
+  const row = yield* database.query("fields.find", (db) =>
+    db.select().from(contactFields).where(eq(contactFields.key, key)).get(),
+  )
+  if (!row) return yield* new ContactNotFound({ id: `field ${key}` })
+  const set = {
+    ...(patch.label !== undefined ? { label: patch.label?.trim() || null } : {}),
+    ...(patch.type !== undefined ? { type: patch.type } : {}),
+    updatedAt: Date.now(),
+  }
+  yield* database.query("fields.update", (db) =>
+    db.update(contactFields).set(set).where(eq(contactFields.key, key)).run(),
+  )
+  yield* recordAudit({ actor, action: "contact_field.updated", target: key, before: row, after: set })
+  const { fields } = yield* listContactFields()
+  return fields.find((f) => f.key === key) as (typeof fields)[number]
+})
