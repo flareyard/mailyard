@@ -124,6 +124,11 @@ domains/reputation?rep=at-risk
 domains/reputation?rep=not-connected
 domains/reputation?rep=not-enough
 domains/dmarc
+domains/dmarc?range=7d
+domains/dmarc?domain=dom_02&range=90d
+domains/dmarc?fx=dmarc-empty
+domains/dmarc?fx=dmarc-none
+domains/dmarc?fx=dmarc-error
 domains/import
 domains/import?fx=token
 analytics

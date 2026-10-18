@@ -79,3 +79,40 @@ export function useFix(id: string) {
     onSuccess: (r) => put(r.domain),
   })
 }
+
+/** DMARC aggregate reports for one domain over a range (HAL-3375). */
+export const dmarcQuery = (id: string, range: "7d" | "30d" | "90d") =>
+  queryOptions({
+    queryKey: ["domains", id, "dmarc", range],
+    queryFn: () => unwrap(api.GET("/v1/domains/{id}/dmarc", { params: { path: { id }, query: { range } } })),
+  })
+
+/** Mark a sending IP as known (with an optional label), or take that back. */
+export function useMarkKnown(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ip, known, label }: { ip: string; known: boolean; label?: string }) =>
+      known
+        ? unwrap(
+            api.POST("/v1/domains/{id}/dmarc/sources/{ip}/known", {
+              params: { path: { id, ip } },
+              body: { label: label?.trim() ? label.trim() : null },
+            }),
+          )
+        : unwrap(api.DELETE("/v1/domains/{id}/dmarc/sources/{ip}/known", { params: { path: { id, ip } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["domains", id, "dmarc"] }),
+  })
+}
+
+/** `PATCH …/dmarc`: with `dryRun` it only returns the record before and after; without it, it writes DNS. */
+export const changeDmarcPolicy = (
+  id: string,
+  body: { p: "none" | "quarantine" | "reject"; pct?: number | null },
+  dryRun: boolean,
+) =>
+  unwrap(
+    api.PATCH("/v1/domains/{id}/dmarc", {
+      params: { path: { id }, query: dryRun ? { dryRun: "1" } : {} },
+      body,
+    }),
+  )

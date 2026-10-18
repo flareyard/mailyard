@@ -53,3 +53,12 @@
     white-space: normal;
   }
 }
+.dm-source-name {
+  font-weight: 600;
+  color: var(--my-fg);
+  overflow-wrap: anywhere;
+}
+.dm-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

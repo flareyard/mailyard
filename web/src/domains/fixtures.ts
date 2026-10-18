@@ -13,6 +13,9 @@
  *   fix=zone        the fix answers 409 zone_not_found;  fix=nothing  409 nothing_to_fix
  *                   (without fx=token every fix answers 409 no_dns_token, as production does today)
  *   rep=at-risk | not-connected | not-enough   the reputation states
+ *   fx=dmarc-empty  no reports, and the rua doesn't list Mailyard (production's in.flareyard.dev today)
+ *   fx=dmarc-none   no reports yet, though the rua does list Mailyard;  fx=dmarc-error  the report answers 503
+ *                   A policy dry run always previews; the write answers 409 no_dns_token unless fx=token.
  */
 import type { Json, Override } from "../fixtures/overrides.ts"
 
@@ -23,6 +26,7 @@ type Fix = Json<"/v1/domains/{id}/fix", "post">
 type Rep = Json<"/v1/reputation", "get">
 type Candidates = Json<"/v1/domains/candidates", "get">
 type Events = Json<"/v1/sending/events", "get">
+type DmarcView = Json<"/v1/domains/{id}/dmarc", "get">
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -596,6 +600,177 @@ class OnDomains extends RegExp {
 }
 const on = (re: RegExp) => new OnDomains(re.source)
 
+// ── DMARC (HAL-3375) ──────────────────────────────────────────────────────────────────────────────────
+
+const DMARC_ADDRESS = "dmarc@in.flareyard.dev"
+/** Sources marked known in this tab (ip → label), on top of the sample's own. */
+const marked = new Map<string, string | null>([["104.30.6.80", "Email Routing forwards"]])
+let published = "v=DMARC1; p=none; rua=mailto:dmarc@in.flareyard.dev"
+
+function dmarcView(id: string, range: string): DmarcView | null {
+  const d = byId(id)
+  if (!d) return null
+  const { fx } = flags()
+  const days = range === "7d" ? 7 : range === "90d" ? 90 : 30
+  const empty = fx.has("dmarc-empty") || fx.has("dmarc-none")
+  const record = fx.has("dmarc-empty")
+    ? "v=DMARC1; p=none; rua=mailto:postmaster@hostinger-mail.com"
+    : published
+  const rua = [...record.matchAll(/mailto:([^,;\s]+)/g)].map((m) => m[1] ?? "")
+  const pTag = (record.match(/\bp=(none|quarantine|reject)/)?.[1] ?? null) as DmarcView["policy"]["p"]
+  const pctTag = record.match(/\bpct=(\d+)/)?.[1]
+  const source = (
+    ip: string,
+    over: Partial<DmarcView["sources"][number]> &
+      Pick<DmarcView["sources"][number], "messages" | "spfPass" | "dkimPass" | "dmarcPass">,
+  ): DmarcView["sources"][number] => {
+    const markedKnown = marked.has(ip)
+    const passes = over.dmarcPass >= over.messages
+    return {
+      ip,
+      ptr: null,
+      provider: null,
+      quarantined: 0,
+      rejected: 0,
+      reason: passes
+        ? "Every message passed DMARC."
+        : "Fails DMARC: neither SPF nor DKIM aligns with your domain.",
+      dkimDomains: {},
+      spfDomains: {},
+      firstSeen: Date.now() - (days - 1) * DAY,
+      lastSeen: Date.now() - 6 * HOUR,
+      ...over,
+      markedKnown,
+      known: markedKnown || passes,
+      label: marked.get(ip) ?? null,
+    }
+  }
+  const sources = empty
+    ? []
+    : [
+        source("104.30.2.17", {
+          provider: "Cloudflare Email Sending",
+          ptr: "send-17.cloudflare.net",
+          messages: 3655,
+          spfPass: 3655,
+          dkimPass: 3655,
+          dmarcPass: 3655,
+          dkimDomains: { [d.name]: "pass" },
+          spfDomains: { [`cf-bounce.${d.name}`]: "pass" },
+        }),
+        source("104.30.6.80", {
+          provider: "Cloudflare Email Routing",
+          ptr: "forward-80.cloudflare.net",
+          messages: 128,
+          spfPass: 3,
+          dkimPass: 128,
+          dmarcPass: 128,
+          reason:
+            "Forwarded mail keeps your DKIM signature, so it passes DMARC even when SPF fails. Nothing to fix.",
+          dkimDomains: { [d.name]: "pass" },
+          spfDomains: { "forwarder.example": "fail" },
+        }),
+        source("145.14.158.20", {
+          provider: "Hostinger",
+          ptr: "smtp-out.hostinger.com",
+          messages: 96,
+          spfPass: 0,
+          dkimPass: 0,
+          dmarcPass: 0,
+          reason: `Your old provider is still sending as ${d.name}. Its mail fails SPF and DKIM. Find what still uses it, or remove it.`,
+          spfDomains: { "hostinger-mail.com": "pass" },
+        }),
+        source("209.85.220.41", {
+          provider: "Google",
+          ptr: "mail-sor-f41.google.com",
+          messages: 33,
+          spfPass: 30,
+          dkimPass: 18,
+          dmarcPass: 18,
+          reason:
+            "A Gmail account sending as you through “Send mail as” without the domain’s DKIM. Gmail mode in Settings fixes this.",
+          dkimDomains: { "gmail.com": "pass" },
+          spfDomains: { [d.name]: "pass" },
+        }),
+      ]
+  const sum = (k: "messages" | "spfPass" | "dkimPass" | "dmarcPass") =>
+    sources.reduce((n, x) => n + Number(x[k]), 0)
+  const unknownFail = sources
+    .filter((x) => !x.known)
+    .reduce((n, x) => n + (Number(x.messages) - Number(x.dmarcPass)), 0)
+  const messages = sum("messages")
+  const blockers = sources
+    .filter((x) => !x.known)
+    .map((x) => ({
+      kind: "unknown_failing",
+      ip: x.ip,
+      message: `${x.label ?? x.provider ?? x.ip} sends ${Number(x.messages) - Number(x.dmarcPass)} messages that fail.`,
+    }))
+  const next: DmarcView["recommendation"]["next"] =
+    pTag === "reject"
+      ? null
+      : pTag === "quarantine"
+        ? { p: "reject", pct: null }
+        : { p: "quarantine", pct: null }
+  return {
+    domain: { id: d.id, name: d.name },
+    range: { key: range, from: Date.now() - days * DAY, to: Date.now(), days },
+    receiving: { address: DMARC_ADDRESS, inRua: rua.includes(DMARC_ADDRESS), routed: d.receiving },
+    reports: empty ? 0 : 46,
+    reportDays: empty ? 0 : Math.min(days, 28),
+    lastReportAt: empty ? null : Date.now() - 6 * HOUR,
+    reporters: empty
+      ? []
+      : [
+          { org: "google.com", email: "noreply-dmarc-support@google.com", reports: 28, messages: 2410 },
+          { org: "Outlook.com", email: "dmarcreport@microsoft.com", reports: 12, messages: 1104 },
+          { org: "Yahoo", email: null, reports: 4, messages: 301 },
+          { org: "Fastmail", email: "dmarc@fastmail.com", reports: 2, messages: 97 },
+        ],
+    policy: {
+      record,
+      records: [record],
+      lookupError: null,
+      p: pTag,
+      sp: null,
+      pct: pctTag ? Number(pctTag) : null,
+      adkim: null,
+      aspf: null,
+      rua,
+    },
+    totals: {
+      messages,
+      dmarcPass: sum("dmarcPass"),
+      dkimPass: sum("dkimPass"),
+      spfPass: sum("spfPass"),
+      quarantined: 0,
+      rejected: 0,
+    },
+    sources,
+    recommendation: {
+      current: pTag,
+      unknownFailShare: messages ? unknownFail / messages : 0,
+      safeToQuarantine: blockers.length === 0,
+      safeToReject: blockers.length === 0 && pTag === "quarantine",
+      blockers,
+      next,
+      nextRecord: next ? withP(record, next.p, null) : null,
+    },
+  }
+}
+
+/** The record with p (and pct) replaced, every other tag kept, as the backend's withPolicy does. */
+function withP(record: string, p: string, pct: number | null): string {
+  const tags = record
+    .split(";")
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => !t.startsWith("pct="))
+  const out = tags.map((t) => (t.startsWith("p=") ? `p=${p}` : t))
+  if (pct !== null && pct < 100) out.splice(out.findIndex((t) => t.startsWith("p=")) + 1, 0, `pct=${pct}`)
+  return out.join("; ")
+}
+
 const byId = (id: string) => domains().find((d) => d.id === id)
 const notFound = (id: string) => refusal(404, "NotFound", undefined, `No domain ${id}.`)
 
@@ -681,6 +856,57 @@ export const DOMAINS_OVERRIDES: readonly Override[] = [
         flags().fx.has("token"),
       )
       return ok(d)
+    },
+  },
+  {
+    method: "GET",
+    path: on(/^\/v1\/domains\/(dom_[A-Za-z0-9]+)\/dmarc$/),
+    answer: ([, id = ""], _, url) => {
+      if (flags().fx.has("dmarc-error"))
+        return refusal(503, "ServiceUnavailable", undefined, "Service unavailable")
+      const v = dmarcView(id, url.searchParams.get("range") ?? "30d")
+      return v ? ok(v) : notFound(id)
+    },
+  },
+  {
+    method: "PATCH",
+    path: on(/^\/v1\/domains\/(dom_[A-Za-z0-9]+)\/dmarc$/),
+    answer: ([, id = ""], body, url) => {
+      const d = byId(id)
+      if (!d) return notFound(id)
+      const b = (body ?? {}) as { p?: string; pct?: number | null }
+      const before = published
+      const after = withP(before, b.p ?? "quarantine", b.pct ?? null)
+      const name = `_dmarc.${d.name}`
+      const dry = url.searchParams.get("dryRun") === "1" || url.searchParams.get("dryRun") === "true"
+      if (dry) return ok({ name, before, after, applied: false, changed: before !== after })
+      if (before === after) return ok({ name, before, after, applied: false, changed: false })
+      if (!flags().fx.has("token"))
+        return refusal(
+          409,
+          "DmarcRefused",
+          "no_dns_token",
+          "Mailyard has no CLOUDFLARE_DNS_TOKEN, so it can't change DNS. Set the record shown by hand.",
+        )
+      published = after
+      return ok({ name, before, after, applied: true, changed: true })
+    },
+  },
+  {
+    method: "POST",
+    path: on(/^\/v1\/domains\/(dom_[A-Za-z0-9]+)\/dmarc\/sources\/([^/]+)\/known$/),
+    answer: ([, , ip = ""], body) => {
+      const label = ((body ?? {}) as { label?: string | null }).label ?? null
+      marked.set(decodeURIComponent(ip), label)
+      return ok({ ip: decodeURIComponent(ip), known: true, label, markedBy: "fixture", markedAt: Date.now() })
+    },
+  },
+  {
+    method: "DELETE",
+    path: on(/^\/v1\/domains\/(dom_[A-Za-z0-9]+)\/dmarc\/sources\/([^/]+)\/known$/),
+    answer: ([, , ip = ""]) => {
+      marked.delete(decodeURIComponent(ip))
+      return ok({ ip: decodeURIComponent(ip), known: false, label: null, markedBy: null, markedAt: null })
     },
   },
   { method: "GET", path: on(/^\/v1\/sending\/events$/), answer: () => ok(events()) },

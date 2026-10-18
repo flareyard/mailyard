@@ -724,6 +724,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/domains/{id}/dmarc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["domains.dmarc"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["domains.dmarcPolicy"];
+        trace?: never;
+    };
+    "/v1/domains/{id}/dmarc/sources/{ip}/known": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["domains.dmarcKnown"];
+        delete: operations["domains.dmarcUnknown"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mailboxes": {
         parameters: {
             query?: never;
@@ -2628,6 +2660,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/automations/{id}/nodes/{nodeId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["automations.testStep"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/events/{name}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["automations.eventKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/automations/{id}/dry-run": {
         parameters: {
             query?: never;
@@ -3550,6 +3614,14 @@ export interface components {
             _tag: "IdempotencyConflict";
             /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
             requestId?: string;
+            message: string;
+        };
+        DmarcRefusedEncoded: {
+            /** @enum {string} */
+            _tag: "DmarcRefused";
+            requestId?: string;
+            /** @enum {string} */
+            reason: "no_dns_token" | "zone_not_found" | "several_records" | "write_failed";
             message: string;
         };
         FixRefusedEncoded: {
@@ -8400,6 +8472,396 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FixRefusedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "domains.dmarc": {
+        parameters: {
+            query?: {
+                range?: "7d" | "30d" | "90d";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        domain: {
+                            id: string;
+                            name: string;
+                        };
+                        range: {
+                            key: string;
+                            from: number | ("Infinity" | "-Infinity" | "NaN");
+                            to: number | ("Infinity" | "-Infinity" | "NaN");
+                            days: number | ("Infinity" | "-Infinity" | "NaN");
+                        };
+                        receiving: {
+                            address: string;
+                            inRua: boolean;
+                            routed: boolean;
+                        };
+                        reports: number | ("Infinity" | "-Infinity" | "NaN");
+                        reportDays: number | ("Infinity" | "-Infinity" | "NaN");
+                        lastReportAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        reporters: {
+                            org: string;
+                            email: string | null;
+                            reports: number | ("Infinity" | "-Infinity" | "NaN");
+                            messages: number | ("Infinity" | "-Infinity" | "NaN");
+                        }[];
+                        policy: {
+                            record: string | null;
+                            records: string[];
+                            lookupError: string | null;
+                            p: ("none" | "quarantine" | "reject") | null;
+                            sp: string | null;
+                            pct: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            adkim: string | null;
+                            aspf: string | null;
+                            rua: string[];
+                        };
+                        totals: {
+                            messages: number | ("Infinity" | "-Infinity" | "NaN");
+                            dmarcPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            dkimPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            spfPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            quarantined: number | ("Infinity" | "-Infinity" | "NaN");
+                            rejected: number | ("Infinity" | "-Infinity" | "NaN");
+                        };
+                        sources: {
+                            ip: string;
+                            ptr: string | null;
+                            provider: string | null;
+                            messages: number | ("Infinity" | "-Infinity" | "NaN");
+                            spfPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            dkimPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            dmarcPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            quarantined: number | ("Infinity" | "-Infinity" | "NaN");
+                            rejected: number | ("Infinity" | "-Infinity" | "NaN");
+                            known: boolean;
+                            markedKnown: boolean;
+                            label: string | null;
+                            reason: string;
+                            dkimDomains: {
+                                [key: string]: string;
+                            };
+                            spfDomains: {
+                                [key: string]: string;
+                            };
+                            firstSeen: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            lastSeen: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        }[];
+                        recommendation: {
+                            current: ("none" | "quarantine" | "reject") | null;
+                            unknownFailShare: number | ("Infinity" | "-Infinity" | "NaN");
+                            safeToQuarantine: boolean;
+                            safeToReject: boolean;
+                            blockers: {
+                                kind: string;
+                                message: string;
+                                ip?: string;
+                            }[];
+                            next: {
+                                /** @enum {string} */
+                                p: "none" | "quarantine" | "reject";
+                                pct: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            } | null;
+                            nextRecord: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "domains.dmarcPolicy": {
+        parameters: {
+            query?: {
+                dryRun?: "1" | "true" | "0" | "false";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    p: "none" | "quarantine" | "reject";
+                    pct?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        before: string | null;
+                        after: string;
+                        applied: boolean;
+                        changed: boolean;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description DmarcRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmarcRefusedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "domains.dmarcKnown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                ip: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    label?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ip: string;
+                        known: boolean;
+                        label: string | null;
+                        markedBy: string | null;
+                        markedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "domains.dmarcUnknown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                ip: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ip: string;
+                        known: boolean;
+                        label: string | null;
+                        markedBy: string | null;
+                        markedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -15246,6 +15708,17 @@ export interface operations {
                             /** @enum {string} */
                             to: "subscribed" | "unconfirmed" | "unsubscribed";
                             source: string;
+                            evidence: {
+                                importId?: string;
+                                attestedBy?: string;
+                                attestedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                                statement?: string;
+                                ip?: string;
+                                userAgent?: string;
+                                page?: string;
+                                formId?: string;
+                                formVersion?: string;
+                            } | null;
                         } | {
                             /** @enum {string} */
                             kind: "delivery";
@@ -15263,6 +15736,19 @@ export interface operations {
                             topicId: string;
                             topic: string;
                             source: string;
+                            /** @enum {string} */
+                            method: "double_opt_in" | "form" | "preference_page";
+                            evidence: {
+                                importId?: string;
+                                attestedBy?: string;
+                                attestedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                                statement?: string;
+                                ip?: string;
+                                userAgent?: string;
+                                page?: string;
+                                formId?: string;
+                                formVersion?: string;
+                            } | null;
                         } | {
                             /** @enum {string} */
                             kind: "reply";
@@ -15271,6 +15757,9 @@ export interface operations {
                             subject: string | null;
                             to: string;
                             inReplyTo: string | null;
+                            mailboxId: string | null;
+                            threadId: string | null;
+                            messageId: string | null;
                         } | {
                             /** @enum {string} */
                             kind: "automation";
@@ -26769,6 +27258,155 @@ export interface operations {
             };
         };
     };
+    "automations.testStep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    version?: number;
+                    contactId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        nodeId: string;
+                        url: string;
+                        status: number | ("Infinity" | "-Infinity" | "NaN");
+                        ok: boolean;
+                        tookMs: number | ("Infinity" | "-Infinity" | "NaN");
+                        error: ("timeout" | "network") | null;
+                        response: string | null;
+                        contact: {
+                            id: string;
+                            email: string;
+                            sample: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "automations.eventKeys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        sampled: number | ("Infinity" | "-Infinity" | "NaN");
+                        from: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        to: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        keys: {
+                            key: string;
+                            tag: string;
+                            seen: number | ("Infinity" | "-Infinity" | "NaN");
+                            types: string[];
+                            example: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "automations.dryRun": {
         parameters: {
             query?: never;
@@ -26828,6 +27466,7 @@ export interface operations {
                             /** @enum {string} */
                             outcome: "would-run" | "would-wait" | "yes" | "no" | "event" | "timed-out" | "would-send" | "skipped" | "deferred" | "exited" | "stopped";
                             detail: string;
+                            missing?: string[];
                             send?: {
                                 to: string;
                                 subject: string;
@@ -27142,6 +27781,7 @@ export interface operations {
                             port: string | null;
                             detail: string;
                             messageId: string | null;
+                            missing: string[];
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
@@ -27225,6 +27865,7 @@ export interface operations {
                             port: string | null;
                             detail: string;
                             messageId: string | null;
+                            missing: string[];
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
@@ -27317,6 +27958,7 @@ export interface operations {
                             port: string | null;
                             detail: string;
                             messageId: string | null;
+                            missing: string[];
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
