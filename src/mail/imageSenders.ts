@@ -84,6 +84,7 @@ export const showsImagesFrom = Effect.fn("mail.showsImagesFrom")(function* (
       .where(
         and(
           eq(mailboxImageSenders.mailboxId, mailboxId),
+          // d1: bounded: the address and its @domain, two values.
           inArray(mailboxImageSenders.value, [lower, `@${domain}`]),
         ),
       )
