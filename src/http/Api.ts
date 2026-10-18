@@ -825,8 +825,13 @@ export class WebhooksApi extends HttpApiGroup.make("webhooks")
       payload: Schema.Struct({
         url: Schema.String,
         description: Schema.optionalKey(Schema.String),
-        events: Schema.NonEmptyArray(Schema.String),
+        /** Required unless a preset sets them. */
+        events: Schema.optionalKey(Schema.NonEmptyArray(Schema.String)),
         filter: Schema.optionalKey(Schema.NullOr(WebhookFilterSchema)),
+        /** `agent-wake` (HAL-3461): `mail.received` for one mailbox, to wake an agent when mail arrives. */
+        preset: Schema.optionalKey(
+          Schema.Struct({ kind: Schema.Literal("agent-wake"), mailboxId: Schema.String }),
+        ),
         paused: Schema.optionalKey(Schema.Boolean),
       }),
       success: WithSecret,
@@ -5393,11 +5398,15 @@ export class AgentsApi extends HttpApiGroup.make("agents")
         /** `read` and `send` unless given; never `admin`. */
         scopes: Schema.optionalKey(Schema.Array(Scope)),
         limits: Schema.optionalKey(LimitsSchema),
+        /** A URL to POST `mail.received` to when mail reaches the agent's mailbox (the agent-wake preset). */
+        wake: Schema.optionalKey(Schema.Struct({ url: Schema.String })),
       }),
       success: Schema.Struct({
         agent: AgentSchema,
         key: Schema.String,
         mcp: Schema.Struct({ url: Schema.String, command: Schema.String }),
+        /** The wake webhook, with its signing secret shown once; null without `wake`. */
+        wake: Schema.NullOr(Schema.Struct({ endpointId: Schema.String, secret: Schema.String })),
       }),
       error: [Forbidden, InvalidRequest, Conflict, NotFound],
     }),

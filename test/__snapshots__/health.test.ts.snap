@@ -2130,6 +2130,18 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     },
                     "type": "array",
                   },
+                  "wake": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "url",
+                    ],
+                    "type": "object",
+                  },
                 },
                 "required": [
                   "name",
@@ -2403,11 +2415,35 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       ],
                       "type": "object",
                     },
+                    "wake": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "endpointId": {
+                              "type": "string",
+                            },
+                            "secret": {
+                              "type": "string",
+                            },
+                          },
+                          "required": [
+                            "endpointId",
+                            "secret",
+                          ],
+                          "type": "object",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                   },
                   "required": [
                     "agent",
                     "key",
                     "mcp",
+                    "wake",
                   ],
                   "type": "object",
                 },
@@ -73213,6 +73249,207 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/mailboxes/{id}/wait": {
+      "get": {
+        "description": "Blocks until mail newer than \`since\` is in the mailbox, at once if it already is, else answers 204 at the timeout. Sent copies don't count. Wait again from the \`cursor\` (also in \`x-mailyard-cursor\`). \`reset: true\` means the cursor was older than the kept log: refetch, then wait from \`cursor\`. Without \`since\` it waits for mail from now on. For an agent that can't run a webhook receiver.",
+        "operationId": "mail.wait",
+        "parameters": [
+          {
+            "description": "The mailbox.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "The cursor from the last answer.",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer",
+            },
+          },
+          {
+            "description": "Seconds to wait.",
+            "in": "query",
+            "name": "timeout",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 50,
+              "minimum": 0,
+              "type": "number",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "cursor": {
+                      "type": "integer",
+                    },
+                    "messages": {
+                      "items": {
+                        "properties": {
+                          "folder": {
+                            "type": "string",
+                          },
+                          "from": {
+                            "nullable": true,
+                            "type": "object",
+                          },
+                          "id": {
+                            "type": "string",
+                          },
+                          "receivedAt": {
+                            "type": "number",
+                          },
+                          "seen": {
+                            "type": "boolean",
+                          },
+                          "snippet": {
+                            "type": "string",
+                          },
+                          "subject": {
+                            "type": "string",
+                          },
+                          "threadId": {
+                            "type": "string",
+                          },
+                        },
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "reset": {
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "cursor",
+                    "messages",
+                    "reset",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Mail arrived.",
+          },
+          "204": {
+            "description": "Nothing arrived before the timeout; the cursor is in x-mailyard-cursor.",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "since or timeout isn't valid.",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No key or session, or one that no longer works.",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "The key can't read this mailbox.",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "error": {
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                        },
+                        "reason": {
+                          "type": "string",
+                        },
+                      },
+                      "type": "object",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "No such mailbox.",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "summary": "Wait for new mail (long-poll, HAL-3461)",
+        "tags": [
+          "mail",
+        ],
+      },
+    },
     "/v1/me": {
       "get": {
         "operationId": "me.me",
@@ -96828,13 +97065,31 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                   "paused": {
                     "type": "boolean",
                   },
+                  "preset": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "agent-wake",
+                        ],
+                        "type": "string",
+                      },
+                      "mailboxId": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "kind",
+                      "mailboxId",
+                    ],
+                    "type": "object",
+                  },
                   "url": {
                     "type": "string",
                   },
                 },
                 "required": [
                   "url",
-                  "events",
                 ],
                 "type": "object",
               },

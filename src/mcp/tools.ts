@@ -676,4 +676,27 @@ const AGENT_TOOLS: ReadonlyArray<Tool> = [
   },
 ]
 
-export const TOOLS: ReadonlyArray<Tool> = [...CORE_TOOLS, ...AGENT_TOOLS]
+/** Waiting for mail (HAL-3461): an agent blocks until something arrives instead of polling. */
+const WAIT_TOOLS: ReadonlyArray<Tool> = [
+  {
+    name: "wait_for_mail",
+    description:
+      "Waits for new mail in a mailbox and returns it as soon as it arrives (or at once if some arrived after `since`). Pass the `cursor` from the last call as `since`; without it, waits for mail from now on. Returns timedOut: true when nothing came within timeoutSeconds (at most 50).",
+    scope: "read",
+    input: Schema.Struct({
+      mailboxId: Schema.String,
+      since: Schema.optionalKey(Schema.Number.check(Schema.isGreaterThanOrEqualTo(0))),
+      timeoutSeconds: Schema.optionalKey(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 50 }))),
+    }),
+    annotations: reads("Wait for mail"),
+    run: (input: { mailboxId: string; since?: number; timeoutSeconds?: number }, caller) =>
+      Effect.gen(function* () {
+        yield* requireMailbox(caller, input.mailboxId, "read")
+        return yield* callMailbox(input.mailboxId, (s) =>
+          s.waitForMail(input.since ?? null, (input.timeoutSeconds ?? 25) * 1000),
+        )
+      }),
+  },
+]
+
+export const TOOLS: ReadonlyArray<Tool> = [...CORE_TOOLS, ...AGENT_TOOLS, ...WAIT_TOOLS]

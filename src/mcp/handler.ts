@@ -4,6 +4,7 @@ import * as Exit from "effect/Exit"
 import * as Schema from "effect/Schema"
 import type { Env } from "../Bindings.ts"
 import type { Caller } from "../domain/apiKeys.ts"
+import { recordAudit } from "../domain/audit.ts"
 import { linkOrigin } from "../public/origin.ts"
 import { authorize, problem } from "../workers/auth.ts"
 import { runtimeFor } from "../workers/inbound.ts"
@@ -59,6 +60,15 @@ const canUse = (caller: Caller, tool: Tool) =>
 
 const text = (value: unknown) => JSON.stringify(value, null, 2)
 
+/** The read tools an agent's (`purpose: mcp`) key leaves an audit row for: `mcp.<tool>`. */
+const AUDITED_READS = new Set([
+  "list_mailboxes",
+  "search_mail",
+  "read_thread",
+  "read_attachment",
+  "wait_for_mail",
+])
+
 /** A tool's outcome as MCP content: its result, or a refusal the model can read (isError). */
 const callTool = async (
   env: Env,
@@ -89,6 +99,27 @@ const callTool = async (
   )
   if (Exit.isSuccess(exit)) {
     const value = exit.value
+    // An agent's reads are audited (HAL-3461): what it looked at, never the content.
+    if (caller.purpose === "mcp" && AUDITED_READS.has(tool.name)) {
+      const args = decoded.value as Record<string, unknown>
+      const pick = (k: string) => (typeof args[k] === "string" ? { [k]: args[k] } : {})
+      await runtimeFor(env)
+        .runPromise(
+          recordAudit({
+            actor: caller.keyId,
+            action: `mcp.${tool.name}`,
+            target: typeof args.mailboxId === "string" ? args.mailboxId : "workspace",
+            after: {
+              ...pick("mailboxId"),
+              ...pick("threadId"),
+              ...pick("messageId"),
+              ...pick("attachmentId"),
+              ...(typeof args.q === "string" ? { query: args.q } : {}),
+            },
+          }),
+        )
+        .catch((cause) => console.error(`mcp: could not audit ${tool.name}`, cause))
+    }
     return {
       result: {
         content: [{ type: "text", text: text(value) }],

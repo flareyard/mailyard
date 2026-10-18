@@ -17,7 +17,7 @@ import { clearAlert, raiseAlert } from "./alerts.ts"
 import { type Caller, createKey, revokeKey, type Scope } from "./apiKeys.ts"
 import { recordAudit } from "./audit.ts"
 import { createMailbox, type MailboxInput } from "./mailboxes.ts"
-import { emitSafely } from "./webhooks.ts"
+import { checkUrl, createEndpoint, emitSafely } from "./webhooks.ts"
 
 /**
  * Agents and their guardrails (HAL-3460). An agent is a mailbox plus a `purpose: mcp` key that is a
@@ -406,6 +406,8 @@ export const createAgent = Effect.fn("agents.create")(function* (
     readonly displayName?: string | undefined
     readonly scopes?: ReadonlyArray<Scope> | undefined
     readonly limits?: Limits | undefined
+    /** Where to POST `mail.received` for the agent's mailbox: the agent-wake webhook preset (HAL-3461). */
+    readonly wake?: { readonly url: string } | undefined
   },
   origin: string,
 ) {
@@ -419,6 +421,11 @@ export const createAgent = Effect.fn("agents.create")(function* (
       field: "limits.allowDomains",
       message: "List the domains it may write to.",
     })
+  // Check the wake URL before making anything, so a bad one leaves nothing half-made.
+  if (input.wake) {
+    const problem = checkUrl(input.wake.url)
+    if (problem) return yield* new AgentInvalid({ field: "wake.url", message: problem })
+  }
   const mailbox = yield* createMailbox(
     { address: input.address, kind: "user", displayName: input.displayName ?? name } as MailboxInput,
     caller.keyId,
@@ -445,10 +452,23 @@ export const createAgent = Effect.fn("agents.create")(function* (
     target: id,
     after: { name, mailbox: mailbox.address, scopes, limits: input.limits ?? null },
   })
+  const wake = input.wake
+    ? yield* createEndpoint({
+        url: input.wake.url,
+        description: `Wakes ${name} when mail reaches ${mailbox.address}`,
+        preset: { kind: "agent-wake", mailboxId: mailbox.id },
+      }).pipe(
+        Effect.map((w) => ({ endpointId: w.endpoint.id, secret: w.secret })),
+        Effect.catchTag("WebhookInvalid", (e) =>
+          Effect.fail(new AgentInvalid({ field: "wake.url", message: e.message })),
+        ),
+      )
+    : null
   return {
     agent: yield* agentView({ ...row, removedAt: null }),
     key,
     mcp: { url: `${origin.replace(/\/$/, "")}/mcp`, command: mcpCommand(origin, key) },
+    wake,
   }
 })
 

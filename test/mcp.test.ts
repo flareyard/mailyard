@@ -120,6 +120,7 @@ describe("the MCP server (HAL-3303)", () => {
         "send_draft",
         "send_email",
         "track_event",
+        "wait_for_mail",
       ].sort(),
     )
     for (const t of all.result.tools) expect(t.inputSchema.type).toBe("object")

@@ -14,6 +14,8 @@ export interface Caller {
   readonly keyId: string
   readonly kind: "secret" | "public"
   readonly scopes: ReadonlyArray<Scope>
+  /** `mcp` for an agent's key: its MCP reads are audited (HAL-3461). */
+  readonly purpose?: "api" | "mcp" | undefined
   /** Set when the request came with a browser session cookie rather than a Bearer key (HAL-3358). */
   readonly sessionId?: string | undefined
   /**
@@ -79,7 +81,12 @@ export const authenticate = Effect.fn("apiKeys.authenticate")(function* (token: 
       revokedAt: row.revokedAt,
     })
   yield* recordUse(row.id, row.lastUsedAt, now)
-  return { keyId: row.id, kind: row.kind, scopes: row.scopes as ReadonlyArray<Scope> } satisfies Caller
+  return {
+    keyId: row.id,
+    kind: row.kind,
+    scopes: row.scopes as ReadonlyArray<Scope>,
+    purpose: row.purpose,
+  } satisfies Caller
 })
 
 /**

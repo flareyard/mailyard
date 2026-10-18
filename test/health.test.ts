@@ -240,6 +240,7 @@ describe("GET /openapi.json", () => {
       "/v1/mailboxes/{id}/threads/{threadId}",
       "/v1/mailboxes/{id}/threads/{threadId}/notes",
       "/v1/mailboxes/{id}/uploads",
+      "/v1/mailboxes/{id}/wait",
       "/v1/me",
       "/v1/members",
       "/v1/members/{id}",

@@ -8,6 +8,7 @@ import type {
   InboundDelivery,
   MailboxEvent,
   MessagePatch,
+  MessageSummary,
   ThreadFilter,
 } from "../mailbox/types.ts"
 import type { Rule } from "../rules/engine.ts"
@@ -32,8 +33,25 @@ const withoutEvents = <T extends { readonly events: ReadonlyArray<MailboxEvent> 
  * RPC methods delegate to the store, every change is pushed to open clients over hibernating
  * WebSockets, and the Durable Object alarm follows the store's schedule (snoozes, scheduled sends).
  */
+/** What a long-poll for new mail answers (HAL-3461). */
+export interface MailWait {
+  /** The seq to wait from next time. */
+  readonly cursor: number
+  /** Mail that arrived after the cursor asked from, oldest first; never the mailbox's own sent copies. */
+  readonly messages: ReadonlyArray<MessageSummary>
+  /** The cursor was older than the kept log: refetch the folder, then wait from `cursor`. */
+  readonly reset: boolean
+  /** Nothing arrived before the timeout. */
+  readonly timedOut: boolean
+}
+
 export class MailboxDO extends DurableObject<Env> {
   private readonly store: MailboxStore
+  /** Long-polls waiting for mail, answered from broadcast (HAL-3461). Held in memory: a wait keeps the object awake. */
+  private readonly waiters = new Set<{
+    readonly since: number
+    readonly resolve: (answer: MailWait) => void
+  }>()
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -126,11 +144,61 @@ export class MailboxDO extends DurableObject<Env> {
     ws.send(JSON.stringify({ type: "resumed", since, seq: this.store.latestSeq(), replayed: missed.length }))
   }
 
+  /** Incoming mail logged after `since`: the frames' new messages, minus sent copies and drafts. */
+  private incomingSince(since: number): MailWait {
+    const frames = this.store.eventsSince(since)
+    const cursor = this.store.latestSeq()
+    if (frames === null) return { cursor, messages: [], reset: true, timedOut: false }
+    const messages: Array<MessageSummary> = []
+    for (const { frame } of frames) {
+      const event = JSON.parse(frame) as { type?: string; message?: MessageSummary }
+      if (event.type === "message.added" && event.message && event.message.folder !== "sent")
+        messages.push(event.message)
+    }
+    return { cursor, messages, reset: false, timedOut: false }
+  }
+
+  /**
+   * `GET /v1/mailboxes/{id}/wait` (HAL-3461): answers as soon as mail newer than `since` is in the
+   * mailbox (at once if it already is), else at the timeout. Without `since` it waits from now.
+   */
+  async waitForMail(since: number | null, timeoutMs: number): Promise<MailWait> {
+    const from = since ?? this.store.latestSeq()
+    const now = this.incomingSince(from)
+    if (now.reset || now.messages.length > 0) return now
+    return await new Promise<MailWait>((resolve) => {
+      const waiter = { since: from, resolve }
+      this.waiters.add(waiter)
+      setTimeout(
+        () => {
+          if (this.waiters.delete(waiter))
+            resolve({ cursor: this.store.latestSeq(), messages: [], reset: false, timedOut: true })
+        },
+        Math.min(Math.max(timeoutMs, 0), 50_000),
+      )
+    })
+  }
+
+  /** How many long-polls are waiting (for tests). */
+  waitingForMail(): number {
+    return this.waiters.size
+  }
+
   private broadcast(events: ReadonlyArray<MailboxEvent>) {
     if (events.length === 0) return
     const sockets = this.ctx.getWebSockets(LIVE)
     // Numbered and kept first, so a client that was away can ask for exactly what it missed.
     const logged = this.store.logEvents(events.map((e) => JSON.stringify(e)))
+    // Mail arriving answers the long-polls waiting for it.
+    if (this.waiters.size > 0 && events.some((e) => e.type === "message.added")) {
+      for (const waiter of [...this.waiters]) {
+        const answer = this.incomingSince(waiter.since)
+        if (answer.reset || answer.messages.length > 0) {
+          this.waiters.delete(waiter)
+          waiter.resolve(answer)
+        }
+      }
+    }
     for (const { frame } of logged) {
       for (const ws of sockets) {
         try {
