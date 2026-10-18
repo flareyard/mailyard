@@ -1815,3 +1815,37 @@ export const mailboxImageSenders = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.mailboxId, t.value] })],
 )
+
+/**
+ * Browsers and devices that asked for Web Push (HAL-3369), each owned by the person (member id) or
+ * key that subscribed. `endpoint` is the push service's URL for that browser.
+ */
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    owner: text("owner").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    device: text("device"),
+    createdAt: integer("created_at").notNull(),
+    lastSentAt: integer("last_sent_at"),
+    failures: integer("failures").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("push_subscriptions_endpoint").on(t.endpoint),
+    index("push_subscriptions_owner").on(t.owner),
+  ],
+)
+
+/** What each person wants pushed: per mailbox all, assigned or off; alerts; and whether to hide content. */
+export const pushPreferences = sqliteTable("push_preferences", {
+  owner: text("owner").primaryKey(),
+  mailboxes: text("mailboxes", { mode: "json" })
+    .$type<ReadonlyArray<{ readonly mailboxId: string; readonly notify: "all" | "assigned" | "off" }>>()
+    .notNull(),
+  alerts: integer("alerts", { mode: "boolean" }).notNull().default(true),
+  hideContent: integer("hide_content", { mode: "boolean" }).notNull().default(false),
+  updatedAt: integer("updated_at").notNull(),
+})

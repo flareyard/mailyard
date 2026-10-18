@@ -37,7 +37,10 @@ export const addImageSender = Effect.fn("mail.addImageSender")(function* (
 ) {
   const value = raw.trim().toLowerCase()
   if (!SENDER_VALUE.test(value))
-    return yield* new ImageSenderInvalid({ field: "value", message: `${raw} is neither an address nor @domain.` })
+    return yield* new ImageSenderInvalid({
+      field: "value",
+      message: `${raw} is neither an address nor @domain.`,
+    })
   const database = yield* Database
   const now = Date.now()
   yield* database.query("imageSenders.add", (db) =>
@@ -50,7 +53,10 @@ export const addImageSender = Effect.fn("mail.addImageSender")(function* (
   return { value, createdBy: actor, createdAt: now }
 })
 
-export const removeImageSender = Effect.fn("mail.removeImageSender")(function* (mailboxId: string, raw: string) {
+export const removeImageSender = Effect.fn("mail.removeImageSender")(function* (
+  mailboxId: string,
+  raw: string,
+) {
   const database = yield* Database
   const value = raw.trim().toLowerCase()
   yield* database.query("imageSenders.remove", (db) =>
@@ -76,7 +82,10 @@ export const showsImagesFrom = Effect.fn("mail.showsImagesFrom")(function* (
       .select({ value: mailboxImageSenders.value })
       .from(mailboxImageSenders)
       .where(
-        and(eq(mailboxImageSenders.mailboxId, mailboxId), inArray(mailboxImageSenders.value, [lower, `@${domain}`])),
+        and(
+          eq(mailboxImageSenders.mailboxId, mailboxId),
+          inArray(mailboxImageSenders.value, [lower, `@${domain}`]),
+        ),
       )
       .get(),
   )

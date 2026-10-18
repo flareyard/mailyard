@@ -5857,6 +5857,70 @@ export class IntegrationsApi extends HttpApiGroup.make("integrations")
   )
   .middleware(ApiKeyAuth) {}
 
+const PushSubscriptionSchema = Schema.Struct({
+  id: Schema.String,
+  device: Schema.NullOr(Schema.String),
+  /** The push service's host; the endpoint itself is a capability and isn't returned. */
+  service: Schema.String,
+  createdAt: Schema.Number,
+  lastSentAt: Schema.NullOr(Schema.Number),
+})
+const PushPreferencesSchema = Schema.Struct({
+  mailboxes: Schema.Array(
+    Schema.Struct({ mailboxId: Schema.String, notify: Schema.Literals(["all", "assigned", "off"]) }),
+  ).check(Schema.isMaxLength(500)),
+  alerts: Schema.Boolean,
+  hideContent: Schema.Boolean,
+})
+
+/**
+ * Web Push (HAL-3369): a browser subscribes with its push service's endpoint and keys, and its person
+ * (or key) gets new mail in the mailboxes they read, conversations handed to them, and, for managers,
+ * alerts. Per mailbox `all` (default), `assigned` or `off`; `hideContent` sends only "New mail".
+ */
+export class PushApi extends HttpApiGroup.make("push")
+  .add(
+    /** The VAPID public key a browser subscribes with (`applicationServerKey`), base64url. */
+    HttpApiEndpoint.get("vapidKey", "/v1/push/vapid-key", {
+      success: Schema.Struct({ publicKey: Schema.String }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("subscriptions", "/v1/push/subscriptions", {
+      success: Schema.Struct({ subscriptions: Schema.Array(PushSubscriptionSchema) }),
+      error: Forbidden,
+    }),
+    /** A PushSubscription's JSON (`subscription.toJSON()`), with a name for the device. */
+    HttpApiEndpoint.post("subscribe", "/v1/push/subscriptions", {
+      payload: Schema.Struct({
+        endpoint: Schema.String,
+        keys: Schema.Struct({ p256dh: Schema.String, auth: Schema.String }),
+        device: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: PushSubscriptionSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("unsubscribe", "/v1/push/subscriptions/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("preferences", "/v1/push/preferences", {
+      success: PushPreferencesSchema,
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.put("putPreferences", "/v1/push/preferences", {
+      payload: PushPreferencesSchema,
+      success: PushPreferencesSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    /** Sends "Notifications work." to each of the caller's subscriptions, and says how it went. */
+    HttpApiEndpoint.post("test", "/v1/push/test", {
+      success: Schema.Struct({ sent: Schema.Number, failed: Schema.Number, gone: Schema.Number }),
+      error: Forbidden,
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
 /**
  * Agents: an AI agent's own mailbox and the MCP key that uses it, made together, with limits on
  * what the key may send. Managing them needs `agents.manage` (owners and admins; the admin scope).
@@ -6020,4 +6084,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(AgentsApi)
   .add(ApprovalsApi)
   .add(IntegrationsApi)
+  .add(PushApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}

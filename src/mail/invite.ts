@@ -38,7 +38,11 @@ interface Property {
 }
 
 /** RFC 5545 §3.1: a line starting with a space or tab continues the one before. */
-const unfold = (text: string) => text.replace(/\r\n/g, "\n").replace(/\n[ \t]/g, "").split("\n")
+const unfold = (text: string) =>
+  text
+    .replace(/\r\n/g, "\n")
+    .replace(/\n[ \t]/g, "")
+    .split("\n")
 
 const unescape = (v: string) =>
   v.replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\")
@@ -81,7 +85,11 @@ const parseLine = (line: string): Property | null => {
   return { name: name.toUpperCase(), params, value }
 }
 
-const mailto = (v: string) => v.replace(/^mailto:/i, "").trim().toLowerCase()
+const mailto = (v: string) =>
+  v
+    .replace(/^mailto:/i, "")
+    .trim()
+    .toLowerCase()
 
 /** `20261020T150000Z`, `20261020T150000` or `20261020` as ISO 8601. */
 const isoOf = (value: string) => {
@@ -177,7 +185,11 @@ const fold = (line: string) => {
   return out.join("\r\n ")
 }
 
-const stamp = (now: number) => new Date(now).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")
+const stamp = (now: number) =>
+  new Date(now)
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "")
 
 /**
  * The iTIP REPLY an attendee sends: the same UID and SEQUENCE, the attendee with its new PARTSTAT,

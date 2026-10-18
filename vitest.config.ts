@@ -13,6 +13,7 @@ const UNIT = [
   "test/live/**/*.test.ts",
   "test/contracts/**/*.test.ts",
   "test/mail/invite.test.ts",
+  "test/push/webPush.test.ts",
   "test/dmarc/parse.test.ts",
 ]
 

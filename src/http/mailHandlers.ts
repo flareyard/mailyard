@@ -1,9 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm"
-import * as Option from "effect/Option"
-import { addImageSender, listImageSenders, removeImageSender, showsImagesFrom } from "../mail/imageSenders.ts"
-import { buildReply, parseInvite, RESPONSE_WORDS } from "../mail/invite.ts"
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import * as Option from "effect/Option"
 import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
 import type { AgentLimited } from "../domain/agents.ts"
 import type { Caller } from "../domain/apiKeys.ts"
@@ -15,10 +13,13 @@ import { BlobStore } from "../kit/index.ts"
 import { type Access, type MailboxAccessDenied, type MailboxMissing, requireMailbox } from "../mail/access.ts"
 import { bodyTextOf, type ComposeInvalid, checkDraftAttachments, draftFromMessage } from "../mail/compose.ts"
 import { ATTACHMENT_LINK_TTL_SECONDS, fileUrl, signFileToken } from "../mail/files.ts"
+import { addImageSender, listImageSenders, removeImageSender, showsImagesFrom } from "../mail/imageSenders.ts"
+import { buildReply, parseInvite, RESPONSE_WORDS } from "../mail/invite.ts"
 import { callMailbox, type MailboxRefused } from "../mail/rpc.ts"
 import { cancelSend, type SendInvalid, sendDraft } from "../mail/send.ts"
 import type { MessagePatch, Party, StoredMessage } from "../mailbox/types.ts"
 import { linkOrigin } from "../public/origin.ts"
+import { notifyAssigned } from "../push/notifications.ts"
 import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.ts"
 import { Database } from "../services/Database.ts"
 import {
@@ -275,6 +276,20 @@ export const applyThreadAction = (mailboxId: string, caller: Caller, payload: Th
           assignee,
           by: caller.member?.id ?? caller.keyId,
         })
+      // The person it's handed to hears about it on their devices (HAL-3369).
+      if (assignee !== null)
+        for (const threadId of result.threadIds) {
+          const thread = yield* callMailbox(params.id, (s) => s.thread(threadId)).pipe(
+            Effect.orElseSucceed(() => null),
+          )
+          yield* notifyAssigned({
+            mailboxId: params.id,
+            threadId,
+            assignee,
+            by: caller.keyId,
+            subject: thread?.thread.subject ?? "",
+          })
+        }
       return { updated: result.updated }
     }
     const patch = BULK[payload.action]?.(payload)
@@ -590,7 +605,9 @@ export const MailHandlers = HttpApiBuilder.group(
                 return shown
               }),
             ),
-            remoteImages: (yield* showsImagesFrom(params.id, message.from?.address ?? null)) ? ("show" as const) : ("ask" as const),
+            remoteImages: (yield* showsImagesFrom(params.id, message.from?.address ?? null))
+              ? ("show" as const)
+              : ("ask" as const),
             ...(query.include === "headers" ? { headers: headers ?? [] } : {}),
           }
         }).pipe(mailErrors),
@@ -610,8 +627,10 @@ export const MailHandlers = HttpApiBuilder.group(
                 ? "This invitation doesn't list this mailbox as an attendee, or isn't a request to answer."
                 : "This message has no calendar invitation.",
             })
-          const me =
-            invite.attendees.find((a) => own.includes(a.address)) ?? { address: mailbox.address, name: null }
+          const me = invite.attendees.find((a) => own.includes(a.address)) ?? {
+            address: mailbox.address,
+            name: null,
+          }
           const ics = buildReply({ invite: invite.raw, attendee: me, response: payload.response })
           const bytes = new TextEncoder().encode(ics)
           const key = `upl/${params.id}/rsvp-${crypto.randomUUID()}.ics`
@@ -620,13 +639,23 @@ export const MailHandlers = HttpApiBuilder.group(
           const title = invite.summary ?? "the invitation"
           const draft = yield* createDraftNow(params.id, mailbox, {
             replyTo: { messageId: params.messageId, mode: "reply" },
-            to: [{ address: invite.organizer.address, ...(invite.organizer.name ? { name: invite.organizer.name } : {}) }],
+            to: [
+              {
+                address: invite.organizer.address,
+                ...(invite.organizer.name ? { name: invite.organizer.name } : {}),
+              },
+            ],
             subject: `${word}: ${title}`,
             bodyText: `${me.name ?? me.address} has ${payload.response === "tentative" ? "tentatively accepted" : payload.response} ${title}.${
               payload.comment ? `\n\n${payload.comment}` : ""
             }`,
             attachments: [
-              { key, filename: "invite.ics", mimeType: "text/calendar; method=REPLY", size: bytes.byteLength },
+              {
+                key,
+                filename: "invite.ics",
+                mimeType: "text/calendar; method=REPLY",
+                size: bytes.byteLength,
+              },
             ],
           })
           const sent = yield* sendDraft({
