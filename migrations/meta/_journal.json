@@ -183,6 +183,13 @@
       "when": 1792285415924,
       "tag": "0025_message_log",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792286205001,
+      "tag": "0026_webhook_dead_letters",
+      "breakpoints": true
     }
   ]
 }

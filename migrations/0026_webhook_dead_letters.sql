@@ -1,0 +1,1 @@
+CREATE INDEX `webhook_deliveries_endpoint_status` ON `webhook_deliveries` (`endpoint_id`,`status`,`created_at`);

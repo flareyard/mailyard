@@ -180,6 +180,68 @@ describe("delivery", () => {
     expect(log.deliveries.find((d) => d.id === test.deliveryId)?.status).toBe("succeeded")
   })
 
+  it("counts dead letters per endpoint and replays them all at once (HAL-3416)", async () => {
+    const { body } = await createHook(["*"])
+    const other = await createHook(["*"])
+    const id = body.endpoint.id
+    // Three dead deliveries here, one succeeded, and one dead at another endpoint.
+    const insert = (endpointId: string, status: string, n: number) =>
+      env.DB.prepare(
+        "insert into webhook_deliveries (id, endpoint_id, event_id, event_type, payload, status, attempts, created_at) values (?, ?, ?, 'contact.created', '{}', ?, 8, ?)",
+      )
+        .bind(`d-${endpointId}-${status}-${n}`, endpointId, `e-${n}`, status, Date.now() + n)
+        .run()
+    for (const n of [1, 2, 3]) await insert(id, "dead", n)
+    await insert(id, "succeeded", 4)
+    await insert(other.body.endpoint.id, "dead", 5)
+
+    const endpoint = async (eid: string) =>
+      json<{ deadLetters: number }>(await call(`/v1/webhooks/${eid}`, { key: secret }))
+    expect((await endpoint(id)).deadLetters).toBe(3)
+    const listed = await json<{ webhooks: Array<{ id: string; deadLetters: number }> }>(
+      await call("/v1/webhooks", { key: secret }),
+    )
+    expect(listed.webhooks.find((w) => w.id === id)?.deadLetters).toBe(3)
+    expect(listed.webhooks.find((w) => w.id === other.body.endpoint.id)?.deadLetters).toBe(1)
+
+    // Replay needs admin, and only takes status dead.
+    const replayAll = (key: string, json: unknown) =>
+      call(`/v1/webhooks/${id}/deliveries/replay`, { method: "POST", key, json })
+    expect((await replayAll(secret, { status: "dead" })).status).toBe(403)
+    expect((await replayAll(ADMIN, { status: "retrying" })).status).toBe(400)
+    const replayed = await json<{ replayed: number; remaining: number }>(
+      await replayAll(ADMIN, { status: "dead" }),
+    )
+    expect(replayed).toEqual({ replayed: 3, remaining: 0 })
+    expect((await endpoint(id)).deadLetters).toBe(0)
+    expect((await endpoint(other.body.endpoint.id)).deadLetters).toBe(1)
+    for (const n of [1, 2, 3]) {
+      await runDelivery(`d-${id}-dead-${n}`)
+      expect((await deliveryRow(`d-${id}-dead-${n}`))?.status).toBe("succeeded")
+    }
+    expect((await deliveryRow(`d-${id}-succeeded-4`))?.attempts).toBe(8)
+    expect(
+      (
+        await call(`/v1/webhooks/whk_none/deliveries/replay`, {
+          method: "POST",
+          key: ADMIN,
+          json: { status: "dead" },
+        })
+      ).status,
+    ).toBe(404)
+  })
+
+  it("reads only an endpoint's dead rows to count them", async () => {
+    const plan = await env.DB.prepare(
+      "explain query plan select endpoint_id, count(*) from webhook_deliveries where status = 'dead' and endpoint_id in (?) group by endpoint_id",
+    )
+      .bind("x")
+      .all<{ detail: string }>()
+    expect(plan.results.map((r) => r.detail).join(" | ")).toMatch(
+      /USING (COVERING )?INDEX webhook_deliveries_(endpoint_status|status)/,
+    )
+  })
+
   it("stops verifying with the old secret after a rotation", async () => {
     const { body } = await createHook(["*"])
     const rotated = await json<{ secret: string }>(

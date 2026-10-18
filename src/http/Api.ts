@@ -517,6 +517,8 @@ export const WebhookEndpoint = Schema.Struct({
   enabled: Schema.Boolean,
   lastSuccessAt: Schema.NullOr(Schema.Number),
   lastFailureAt: Schema.NullOr(Schema.Number),
+  /** Deliveries that failed for good; replay them with POST …/deliveries/replay. */
+  deadLetters: Schema.Number,
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
 })
@@ -602,6 +604,13 @@ export class WebhooksApi extends HttpApiGroup.make("webhooks")
         deliveries: Schema.Array(WebhookDelivery),
         nextCursor: Schema.NullOr(Schema.String),
       }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("replayAll", "/v1/webhooks/:id/deliveries/replay", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ status: Schema.Literal("dead") }),
+      /** At most 500 per call; call again while `remaining` is above 0. */
+      success: Schema.Struct({ replayed: Schema.Number, remaining: Schema.Number }),
       error: [Forbidden, NotFound],
     }),
     HttpApiEndpoint.post("replay", "/v1/webhooks/:id/deliveries/:deliveryId/replay", {

@@ -226,6 +226,7 @@ describe("GET /openapi.json", () => {
       "/v1/webhooks",
       "/v1/webhooks/{id}",
       "/v1/webhooks/{id}/deliveries",
+      "/v1/webhooks/{id}/deliveries/replay",
       "/v1/webhooks/{id}/deliveries/{deliveryId}/replay",
       "/v1/webhooks/{id}/rotate-secret",
       "/v1/webhooks/{id}/test",
