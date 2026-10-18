@@ -204,6 +204,13 @@
       "when": 1792287709523,
       "tag": "0028_template_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1792288958682,
+      "tag": "0029_domain_zone",
+      "breakpoints": true
     }
   ]
 }

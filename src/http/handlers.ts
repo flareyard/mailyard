@@ -29,6 +29,7 @@ import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
 import type { Classifier } from "../services/Classifier.ts"
 import type { CloudflareEmail } from "../services/CloudflareEmail.ts"
+import type { CloudflareZones } from "../services/CloudflareZones.ts"
 import { Database } from "../services/Database.ts"
 import type { Dns } from "../services/Dns.ts"
 import type { Governor } from "../services/Governor.ts"
@@ -100,6 +101,7 @@ export const appContext = Effect.context<
   | WebhookQueue
   | SecretBox
   | CloudflareEmail
+  | CloudflareZones
   | Mailboxes
   | Governor
   | InboundQueue

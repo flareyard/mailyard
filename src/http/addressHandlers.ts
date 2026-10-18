@@ -8,6 +8,8 @@ import {
   type DomainInvalid,
   type DomainNotFound,
   deleteDomain,
+  domainCandidates,
+  fixDomain,
   getDomain,
   listDomains,
   recheckDomain,
@@ -27,7 +29,7 @@ import {
 } from "../domain/mailboxes.ts"
 import { Database, type DatabaseError } from "../services/Database.ts"
 import type { MailboxUnavailable } from "../services/Mailboxes.ts"
-import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
+import { Conflict, FixRefused, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 
@@ -161,6 +163,17 @@ export const DomainsHandlers = HttpApiBuilder.group(
       recheck: p(({ params }) =>
         requireScope("admin").pipe(Effect.andThen(recheckDomain(params.id)), domainErrors, infraDies),
       ),
+      fix: p(({ params }) =>
+        requireScope("admin").pipe(
+          Effect.flatMap((caller) => fixDomain(params.id, caller.keyId)),
+          Effect.catchTag("DomainFixRefused", (e) =>
+            Effect.fail(new FixRefused({ reason: e.reason, message: e.message })),
+          ),
+          domainErrors,
+          infraDies,
+        ),
+      ),
+      candidates: p(() => requireScope("read").pipe(Effect.andThen(domainCandidates()), infraDies)),
     })
   }),
 )

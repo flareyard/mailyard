@@ -74,6 +74,13 @@ export interface Env {
    * Mailyard's own list changes.
    */
   readonly CLOUDFLARE_EMAIL_WRITE_TOKEN?: string
+  /**
+   * Optional (HAL-3365): a token for the zones Mailyard's domains live in. Zone: Read, DNS: Read and
+   * Email Sending: Read let the domain screens show zone status, nameservers, registrar, DNSSEC,
+   * complaints and the account's other zones; Email Routing: Edit and Email Sending: Edit add the
+   * Fix records button. Without it those fields are null and fixing is refused with a reason.
+   */
+  readonly CLOUDFLARE_DNS_TOKEN?: string
   /** Hours a conversation may wait for a reply before the Overview counts it as waiting; 24 by default. */
   readonly MAILYARD_REPLY_TARGET_HOURS?: string
   /** The queue Email Sending's delivery events arrive on; `mailyard-email-events` unless renamed. */
