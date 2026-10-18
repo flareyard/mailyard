@@ -6,7 +6,8 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { BrandSettings } from "../../src/domain/brand.ts"
+import { type BrandSettings, toBrand } from "../../src/domain/brand.ts"
+import { renderFormPage } from "../../src/forms/page.ts"
 import { invalidLinkPage, type Look, type Prefs, preferencePage, resultPage } from "../../src/public/pages.ts"
 import { pageTheme } from "../../src/public/shell.ts"
 
@@ -99,7 +100,51 @@ const states: Record<string, (look: Look) => Response> = {
     resultPage(l, 400, "Check your email address", "Enter a valid email address.", { kind: "danger" }),
 }
 
-const pages: Array<string> = []
+// The signup form after a failed submit (HAL-3443): its own page, in the brand's theme.
+const formTheme = toBrand(brand).theme
+writeFileSync(
+  join(dir, "f-form-error.html"),
+  renderFormPage({
+    form: {
+      id: "frm_preview",
+      name: "Join the Coursified Learning Platform weekly newsletter",
+      description: "One email every Friday with what's new.",
+      fields: ["email", "name", "company", "plan"],
+      fieldDefs: [
+        { key: "company", label: "Company or organisation", type: "text", required: true },
+        {
+          key: "plan",
+          label: "Plan",
+          type: "select",
+          required: false,
+          options: ["Free", "Team", "Enterprise"],
+        },
+      ],
+      topicChoice: "pick",
+      turnstileSiteKey: null,
+    },
+    topics: [
+      { id: "t1", name: "Weekly product updates", description: "Every Friday." },
+      { id: "t2", name: "Launches", description: null },
+    ],
+    theme: formTheme,
+    brandName: brand.name,
+    siteUrl: brand.siteUrl,
+    action: "/v1/forms/frm_preview/submit",
+    filled: {
+      values: {
+        email: "ada@verylongcompanydomainname.example",
+        name: "Ada Lovelace",
+        plan: "Team",
+        topics: ["t1"],
+      },
+      field: "company",
+      message: 'Fill in "Company or organisation".',
+    },
+  }),
+)
+
+const pages: Array<string> = ["f-form-error.html"]
 for (const [lookName, look] of Object.entries(looks))
   for (const [state, build] of Object.entries(states)) {
     const name = `${state}-${lookName}`
