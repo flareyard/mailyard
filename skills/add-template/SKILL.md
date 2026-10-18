@@ -13,11 +13,13 @@ A template in a running Mailyard is data (D1, versioned, edited in the UI). The 
    Done when the new file exports a `LibraryTemplate` whose `slug` matches its file name and whose `name` is unique.
 2. **Write the content.** Prefer `kind: "blocks"`: a `BlocksDocument` (`src/templates/document.ts` lists every block: heading, paragraph, button, steps, stats, list, receipt, otp, progress, feedback, question, file, html). The kit lays it out in the sender's brand and writes the text part. Use `kind: "html"` only for a design the blocks can't express.
    - Placeholders: `{{ name }}`, `{{ trigger.plan }}`, `{{ name ?? "there" }}`, and `{{#if x}}…{{/if}}`, `{{#each items}}…{{/each}}` (`src/domain/render.ts`). No expressions or helpers.
-   - What a send passes: the contact's custom fields at the top level, `name`, `email`, `unsubscribe_url`, `preferences_url`, `topic`; plus `trigger` (the tracked event's data) and `automation.name` in automations, `data` (the request's data) from `POST /v1/send`, `campaign.name` in campaigns.
-   - Every required placeholder (outside a section, with no `??` fallback) must have a value at send time. Give optional ones a fallback.
+   - What a send passes: the contact's custom fields at the top level, `name`, `email`, `unsubscribe_url`, `preferences_url`, `topic`; plus `trigger` and `automation.name` in automations, `data` (the request's data) from `POST /v1/send`, `campaign.name` in campaigns.
+   - `trigger` is the tracked event's data, and only an `event` trigger has any: runs from a `date`, `created`, `topic` or `segment` trigger see an empty `trigger` (HAL-3411). For those, read contact fields (`{{ first_name }}`, `{{ plan }}`), not `trigger.*`.
+   - A placeholder with no value renders as an empty string, silently: a button gets `href=""`. So every required placeholder (outside a section, with no `??` fallback) needs a source the send really has; give everything else a fallback.
+   - In a blocks template each string is parsed on its own, so a `{{#if}}…{{/if}}` opens and closes inside one string. A whole block can't be hidden by a section; use a fallback, or write the template as `kind: "html"`.
    - Put `{{ unsubscribe_url }}` in the footer links for marketing or automation mail; without it Mailyard appends its own footer.
 3. **Fill `sample`** with what a real send would pass, nested the same way (`trigger: { … }` or `data: { … }`).
-   Done when every placeholder the template uses has a sample value.
+   Done when every placeholder the template uses has a sample value (the test enforces the required ones; sample the optional ones too, so the render test exercises them).
 4. **Register it** in `src/templates/library/index.ts`: import it and add it to `LIBRARY`.
 5. **Prove it.** Run `bunx vitest run --project unit test/templates/library.test.ts`, then `bun run check`. The library test checks the file is listed under its slug, the template is valid, every required placeholder has a sample, and the sample renders with nothing left as `{{`. Add your own `it` to that file only for behaviour specific to your template (a section that hides when empty, say).
    Done when `bun run check` passes.

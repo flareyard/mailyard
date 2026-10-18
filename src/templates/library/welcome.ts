@@ -1,6 +1,9 @@
 import type { LibraryTemplate } from "./types.ts"
 
-/** The first email after sign-up: three steps to get going. Sent by a `contact.created` automation. */
+/**
+ * The first email after sign-up: three steps to get going. Sent by an automation on a tracked
+ * `signed_up` event whose data carries `url`; without it the button falls back to the site.
+ */
 export const welcome: LibraryTemplate = {
   slug: "welcome",
   name: "Welcome",
