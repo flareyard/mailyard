@@ -15,6 +15,16 @@ Mailyard (founder, 2026-10-17). It was Mailflare, then Flaremail was considered;
 - Project: Mailyard (P-HAL-120). Milestones M0 spikes → M7 catalog. Label `flareyard:apps`.
 - Repo: `flareyard/mailyard` (private until launch). Domain import is a platform feature: Flareyard Platform (P-HAL-116), HAL-3124.
 
+## Skills
+
+Before extending Mailyard at one of these points, read the skill's `SKILL.md` and follow it: it names the files, the test to copy and the command that proves it.
+
+- `skills/add-template`: an email template in the repo's library (`src/templates/library`), installed with `bun run templates:install`.
+- `skills/add-automation-step`: a new automation step type (a node in the graph).
+- `skills/add-inbox-rule-action`: a new action for mailbox rules.
+- `skills/add-webhook-event`: a new outgoing webhook event type.
+- `skills/deploy`: shipping a change to a running Mailyard, or building a Flareyard release.
+
 ## Repo rules
 
 - Self-contained (founder, 2026-10-16): no shared package with other Flareyard repos for now. `src/kit` is Mailyard's own copy; shared components get extracted later, once several apps have them.

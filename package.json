@@ -10,6 +10,7 @@
     "test": "vitest run",
     "check": "bun run typecheck && bun run lint && bun run manifest && bun run test",
     "manifest": "bun tools/manifest/cli.ts cloudflare-app.json",
+    "templates:install": "bun tools/templates/install.ts",
     "release": "bun \"${FLAREYARD_DIR:-../flareyard}/packages/manifest/src/release-cli.ts\" release . --out flareyard-release.json",
     "dev": "wrangler dev",
     "build": "wrangler deploy --dry-run --outdir dist",
