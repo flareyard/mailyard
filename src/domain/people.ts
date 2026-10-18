@@ -430,13 +430,31 @@ export const transferOwnership = Effect.fn("people.transfer")(function* (caller:
 // Members
 // ---------------------------------------------------------------------------------------------
 
-const inviteView = (i: typeof invites.$inferSelect, now = Date.now()) => ({
+/**
+ * Inviters' names by id. A key (or the admin key, `root`) has no name a person should see, so it
+ * maps to nothing and the invitation shows `invitedBy: null`, as the public view does (HAL-3492).
+ */
+const inviterNames = Effect.fn("people.inviterNames")(function* (ids: ReadonlyArray<string>) {
+  const wanted = [...new Set(ids.filter((id) => id.startsWith("mem_")))]
+  if (wanted.length === 0) return new Map<string, string>()
+  const rows = yield* queryIn("invites.inviterNames", wanted, (db, chunk) =>
+    db.select({ id: members.id, name: members.name }).from(members).where(inArray(members.id, chunk)).all(),
+  )
+  return new Map(rows.map((r) => [r.id, r.name]))
+})
+
+const inviteView = (
+  i: typeof invites.$inferSelect,
+  names: ReadonlyMap<string, string>,
+  now = Date.now(),
+) => ({
   id: i.id,
   email: i.email,
   role: i.role,
   mailboxes: i.mailboxes,
   message: i.message,
-  invitedBy: i.invitedBy,
+  invitedBy: names.get(i.invitedBy) ?? null,
+  invitedById: i.invitedBy,
   createdAt: i.createdAt,
   expiresAt: i.expiresAt,
   sentAt: i.sentAt,
@@ -468,9 +486,10 @@ export const listMembers = Effect.fn("people.list")(function* () {
       .limit(500)
       .all(),
   )
+  const inviters = yield* inviterNames(open.map((i) => i.invitedBy))
   return {
     members: rows.map((r) => ({ ...memberView(r), mailboxes: grants.get(r.id) ?? [] })),
-    invites: open.map((i) => inviteView(i)),
+    invites: open.map((i) => inviteView(i, inviters)),
   }
 })
 
@@ -662,7 +681,7 @@ export const createInvite = Effect.fn("people.invite")(function* (
     url: `${origin}/invite/…`,
   })
   return {
-    invite: inviteView(invite, now),
+    invite: inviteView(invite, yield* inviterNames([invite.invitedBy]), now),
     draft: {
       from: from._tag === "Some" ? from.value.email : null,
       to: email,
@@ -714,7 +733,8 @@ export const sendInvite = Effect.fn("people.sendInvite")(function* (
   })
   yield* sendSystemMail({ to: { email: invite.email }, ...mail, key: `invite:${id}:${sendCount}` })
   yield* recordAudit({ actor: actorOf(caller), action: "invite.send", target: id, after: { sendCount } })
-  return inviteView(yield* findInvite(id), now)
+  const updated = yield* findInvite(id)
+  return inviteView(updated, yield* inviterNames([updated.invitedBy]), now)
 })
 
 /** `DELETE /v1/invites/{id}`: the invitation's link stops working. */
@@ -732,7 +752,8 @@ export const revokeInvite = Effect.fn("people.revokeInvite")(function* (
       db.update(invites).set({ revokedAt: now }).where(eq(invites.id, id)).run(),
     )
   yield* recordAudit({ actor: actorOf(caller), action: "invite.revoke", target: id })
-  return inviteView(yield* findInvite(id), now)
+  const updated = yield* findInvite(id)
+  return inviteView(updated, yield* inviterNames([updated.invitedBy]), now)
 })
 
 /** `GET /v1/invites`: every invitation not yet accepted or revoked. */
