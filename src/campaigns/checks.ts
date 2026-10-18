@@ -5,6 +5,7 @@ import { getBrandSettings } from "../domain/brand.ts"
 import { eventCoverage } from "../domain/eventCoverage.ts"
 import { parseParty } from "../domain/outbox.ts"
 import { Database } from "../services/Database.ts"
+import { clickableHrefs } from "../tracking/track.ts"
 import { getCompliance } from "./compliance.ts"
 import { renderFor } from "./content.ts"
 import { isBroken, linkStatuses, MAX_PROBED_LINKS } from "./links.ts"
@@ -54,11 +55,11 @@ const SHORTENERS = new Set([
   "lnkd.in",
 ])
 
-/** Every http(s) link in the message, minus our own unsubscribe and preference links. */
+/** Every clickable http(s) link in the message, minus our own unsubscribe and preference links. */
 export const linksIn = (html: string, ownOrigin: string) => {
   const found = new Set<string>()
-  for (const m of html.matchAll(/href\s*=\s*"([^"]+)"|href\s*=\s*'([^']+)'/gi)) {
-    const href = (m[1] ?? m[2] ?? "").replaceAll("&amp;", "&").trim()
+  for (const m of html.matchAll(clickableHrefs())) {
+    const href = (m[3] ?? "").replaceAll("&amp;", "&").trim()
     if (!/^https?:\/\//i.test(href)) continue
     if (href.startsWith(`${ownOrigin}/u/`) || href.startsWith(`${ownOrigin}/c/`)) continue
     found.add(href)

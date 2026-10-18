@@ -94,7 +94,14 @@ export const verifyToken = Effect.fn("tracking.verify")(function* (token: string
 })
 
 /**
- * Adds the pixel and points every http(s) link through the click redirect. Unsubscribe and
+ * The href of every link a person can click: `<a>` and `<area>` only. A `<link rel=stylesheet>`
+ * (the template kit's fonts) is fetched by the mail client, not clicked, so it's never a link here
+ * (HAL-3432). Groups: 1 the tag up to the value, 2 the quote, 3 the URL as written.
+ */
+export const clickableHrefs = () => /(<(?:a|area)\b[^>]*?\shref\s*=\s*)(["'])([^"']*)\2/gi
+
+/**
+ * Adds the pixel and points every clickable http(s) link through the click redirect. Unsubscribe and
  * preference links are left as they are: one-click unsubscribing must not depend on tracking.
  */
 export const instrument = Effect.fn("tracking.instrument")(function* (
@@ -113,9 +120,12 @@ export const instrument = Effect.fn("tracking.instrument")(function* (
     const parts: Array<string> = []
     let last = 0
     let index = 0
-    for (const m of html.matchAll(/(href\s*=\s*)(["'])(https?:\/\/[^"']+)\2/gi)) {
+    for (const m of html.matchAll(clickableHrefs())) {
       const raw = (m[3] ?? "").replaceAll("&amp;", "&")
-      const skip = raw.startsWith(`${input.origin}/u/`) || raw.startsWith(`${input.origin}/c/`)
+      const skip =
+        !/^https?:\/\//i.test(raw) ||
+        raw.startsWith(`${input.origin}/u/`) ||
+        raw.startsWith(`${input.origin}/c/`)
       parts.push(html.slice(last, m.index))
       if (skip) parts.push(m[0])
       else {
