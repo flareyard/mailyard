@@ -34,18 +34,42 @@ const defsOfPage = (form: PageForm): ReadonlyArray<PageField> =>
     .filter((f) => f !== "email" && f !== "name")
     .map((key) => ({ key, label: labelOf(key), type: "text" as const, required: false }))
 
+/** What the visitor typed, and the error to show, when the page comes back after a failed submit. */
+export type Filled = {
+  readonly values: Readonly<Record<string, unknown>>
+  /** The field the error is about, shown under it; null for one about the whole form. */
+  readonly field: string | null
+  readonly message: string
+}
+
+const typedValue = (filled: Filled | undefined, key: string) => {
+  const v = filled?.values[key]
+  return typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : ""
+}
+
+/** The error under a field, and the attributes that tie it to the control (HAL-3443). */
+const errorFor = (filled: Filled | undefined, key: string, id: string) =>
+  filled?.field === key
+    ? {
+        attrs: ` aria-invalid="true" aria-describedby="${id}-error" autofocus`,
+        note: `<p class="field-error" id="${id}-error">${esc(filled.message)}</p>`,
+      }
+    : { attrs: "", note: "" }
+
 /** One custom field's control, as its definition asks; types and autofill from the definition or the name. */
-const controlFor = (d: PageField, idPrefix: string) => {
+const controlFor = (d: PageField, idPrefix: string, filled?: Filled) => {
   const id = `${idPrefix}${esc(d.key)}`
   const opt = d.required ? "" : ' <span class="opt">(optional)</span>'
   const req = d.required ? " required" : ""
+  const value = typedValue(filled, d.key)
+  const err = errorFor(filled, d.key, id)
   if (d.type === "checkbox")
-    return `<div class="field check"><input id="${id}" name="${esc(d.key)}" type="checkbox" value="true"${req}><label for="${id}">${esc(d.label)}${opt}</label></div>`
+    return `<div class="field check"><input id="${id}" name="${esc(d.key)}" type="checkbox" value="true"${req}${value === "true" ? " checked" : ""}${err.attrs}><label for="${id}">${esc(d.label)}${opt}</label>${err.note}</div>`
   if (d.type === "select")
-    return `<div class="field"><label for="${id}">${esc(d.label)}${opt}</label><select id="${id}" name="${esc(d.key)}"${req}><option value="">Choose…</option>${(d.options ?? []).map((o) => `<option>${esc(o)}</option>`).join("")}</select></div>`
+    return `<div class="field"><label for="${id}">${esc(d.label)}${opt}</label><select id="${id}" name="${esc(d.key)}"${req}${err.attrs}><option value="">Choose…</option>${(d.options ?? []).map((o) => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>${err.note}</div>`
   const hints = hintsFor(d.key)
   const type = d.type === "text" ? hints.type : d.type
-  return `<div class="field"><label for="${id}">${esc(d.label)}${opt}</label><input id="${id}" name="${esc(d.key)}" type="${type}" autocomplete="${hints.autocomplete}"${req}${type === "number" ? ' inputmode="decimal"' : ""} maxlength="200"></div>`
+  return `<div class="field"><label for="${id}">${esc(d.label)}${opt}</label><input id="${id}" name="${esc(d.key)}" type="${type}" autocomplete="${hints.autocomplete}"${req}${type === "number" ? ' inputmode="decimal"' : ""} maxlength="200"${value ? ` value="${esc(value)}"` : ""}${err.attrs}>${err.note}</div>`
 }
 
 export const TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js"
@@ -105,24 +129,32 @@ export const renderFormPage = (input: {
   readonly siteUrl: string | null
   /** Where the form posts: `/v1/forms/:id/submit` on this origin. */
   readonly action: string
-  /** Shown when the page is reloaded after a failed submit. */
-  readonly error?: string | undefined
+  /** After a failed submit: what was typed and what went wrong, shown on the form itself (HAL-3443). */
+  readonly filled?: Filled | undefined
 }) => {
-  const { form, topics, theme } = input
+  const { form, topics, theme, filled } = input
   const c = theme.colors
   const pick = form.topicChoice === "pick" && topics.length > 0
   const field = (
     name: string,
     label: string,
     opts: { type: string; autocomplete: string; required?: boolean },
-  ) =>
-    `<div class="field"><label for="f-${esc(name)}">${esc(label)}${opts.required ? "" : ' <span class="opt">(optional)</span>'}</label>
-<input id="f-${esc(name)}" name="${esc(name)}" type="${opts.type}" autocomplete="${opts.autocomplete}"${opts.required ? " required" : ""}${opts.type === "email" ? ' inputmode="email" spellcheck="false" autocapitalize="off"' : ""} maxlength="${opts.type === "email" ? 254 : 200}"></div>`
+  ) => {
+    const value = typedValue(filled, name)
+    const err = errorFor(filled, name, `f-${esc(name)}`)
+    return `<div class="field"><label for="f-${esc(name)}">${esc(label)}${opts.required ? "" : ' <span class="opt">(optional)</span>'}</label>
+<input id="f-${esc(name)}" name="${esc(name)}" type="${opts.type}" autocomplete="${opts.autocomplete}"${opts.required ? " required" : ""}${opts.type === "email" ? ' inputmode="email" spellcheck="false" autocapitalize="off"' : ""} maxlength="${opts.type === "email" ? 254 : 200}"${value ? ` value="${esc(value)}"` : ""}${err.attrs}>${err.note}</div>`
+  }
+  const picked = new Set(
+    (Array.isArray(filled?.values.topics) ? filled.values.topics : [filled?.values.topics]).filter(
+      (t): t is string => typeof t === "string",
+    ),
+  )
   const topicPicker = pick
-    ? `<fieldset class="topics pick"><legend>Choose what you'd like</legend>${topics
+    ? `<fieldset class="topics pick"${filled?.field === "topics" ? ' aria-invalid="true" aria-describedby="topics-error"' : ""}><legend>Choose what you'd like</legend>${filled?.field === "topics" ? `<p class="field-error" id="topics-error">${esc(filled.message)}</p>` : ""}${topics
         .map(
           (t, i) =>
-            `<div class="field check"><input id="t-${i}" name="topics" type="checkbox" value="${esc(t.id ?? "")}"${topics.length === 1 ? " checked" : ""}><label for="t-${i}"><strong>${esc(t.name)}</strong>${t.description ? `<span>${esc(t.description)}</span>` : ""}</label></div>`,
+            `<div class="field check"><input id="t-${i}" name="topics" type="checkbox" value="${esc(t.id ?? "")}"${topics.length === 1 || (t.id && picked.has(t.id)) ? " checked" : ""}><label for="t-${i}"><strong>${esc(t.name)}</strong>${t.description ? `<span>${esc(t.description)}</span>` : ""}</label></div>`,
         )
         .join("")}</fieldset>`
     : ""
@@ -172,8 +204,9 @@ label{font-weight:600;color:var(--fg);font-size:.95rem}
 .opt{font-weight:400;color:var(--muted)}
 input,select{font:inherit;font-size:16px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg)}
 .check{grid-template-columns:auto 1fr;align-items:start;gap:10px}
-.check input{width:22px;min-height:22px;height:22px;margin:2px 0 0;accent-color:var(--accent)}
-.check label{font-weight:400;display:grid;gap:2px}
+.check input{width:24px;min-height:24px;height:24px;margin:2px 0 0;accent-color:var(--accent)}
+.check label{font-weight:400;display:grid;gap:2px;min-height:28px;align-content:center}
+@media (pointer:coarse){.check label{min-height:44px}.check input{width:28px;height:28px;min-height:28px}}
 .check label strong{font-weight:600}
 .check label span{font-size:.9rem;color:var(--muted)}
 fieldset.pick{border:0;margin:0;padding:0;display:grid;gap:10px}
@@ -183,6 +216,8 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline
 button{font:600 16px/1 ${theme.fonts.body};min-height:48px;padding:0 20px;border:0;border-radius:10px;background:var(--accent);color:var(--on-accent);cursor:pointer;width:100%}
 button:hover{filter:brightness(1.08)}
 .error{margin:0;padding:10px 12px;border-radius:10px;border:1px solid var(--danger);color:var(--danger)}
+.field-error{margin:0;font-size:.9rem;color:var(--danger)}
+[aria-invalid="true"]{border-color:var(--danger);outline:1px solid var(--danger)}
 .fine{margin:4px 0 0;font-size:.8rem;color:var(--muted)}
 .fine a{color:inherit}
 </style>
@@ -194,11 +229,11 @@ ${logo}
 ${form.description ? `<p class="lede">${esc(form.description)}</p>` : ""}
 ${topicList}
 <form method="post" action="${esc(input.action)}" accept-charset="utf-8">
-${input.error ? `<p class="error" role="alert">${esc(input.error)}</p>` : ""}
+${filled ? `<p class="error" role="alert">${esc(filled.field ? "Check the highlighted field." : filled.message)}</p>` : ""}
 ${field("email", "Email", { type: "email", autocomplete: "email", required: true })}
 ${field("name", "Name", { type: "text", autocomplete: "name" })}
 ${defsOfPage(form)
-  .map((d) => controlFor(d, "f-"))
+  .map((d) => controlFor(d, "f-", filled))
   .join("\n")}
 ${topicPicker}
 <div class="hp" aria-hidden="true"><label for="f-hp">Leave this empty</label><input id="f-hp" name="_hp" type="text" tabindex="-1" autocomplete="off"></div>

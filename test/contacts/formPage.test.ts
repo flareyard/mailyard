@@ -101,6 +101,51 @@ describe("GET /f/:formId", () => {
     expect(await res.text()).toContain("You're subscribed")
   })
 
+  it("shows a failed submit on the form itself, beside the field, keeping what was typed (HAL-3443)", async () => {
+    const f = await form({
+      fieldDefs: [
+        { key: "company", label: "Company", type: "text", required: true },
+        { key: "plan", label: "Plan", type: "select", required: false, options: ["Free", "Team"] },
+      ],
+    })
+    const submit = (fields: Record<string, string>) =>
+      call(`/v1/forms/${f.id}/submit`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", accept: "text/html" },
+        body: new URLSearchParams({ _hp: "", ...fields }).toString(),
+      })
+    // A bad address: the form again, the error under Email, everything else as typed.
+    const bad = await submit({
+      email: "not-an-address",
+      name: "Ada <Lovelace>",
+      company: "Analytical",
+      plan: "Team",
+    })
+    expect(bad.status).toBe(400)
+    const html = await bad.text()
+    expect(html).toContain(`action="/v1/forms/${f.id}/submit"`)
+    expect(html).toMatch(
+      /id="f-email"[^>]*value="not-an-address" aria-invalid="true" aria-describedby="f-email-error"/,
+    )
+    expect(html).toContain('<p class="field-error" id="f-email-error">Enter a valid email address.</p>')
+    expect(html).toContain('value="Ada &lt;Lovelace&gt;"')
+    expect(html).toContain('value="Analytical"')
+    expect(html).toContain("<option selected>Team</option>")
+    expect(html).toContain('role="alert">Check the highlighted field.')
+    // A required custom field left empty: the error goes under that field.
+    const missing = await (await submit({ email: `inline-${uid()}@example.net` })).text()
+    expect(missing).toMatch(/id="f-company"[^>]*aria-invalid="true"/)
+    expect(missing).toContain('id="f-company-error">Fill in &quot;Company&quot;.</p>')
+    // JSON callers keep the machine answer.
+    const api = await call(`/v1/forms/${f.id}/submit`, {
+      method: "POST",
+      json: { email: "nope" },
+      headers: { accept: "application/json" },
+    })
+    expect(api.status).toBe(400)
+    expect(await json(api)).toMatchObject({ error: "invalid", field: "email" })
+  })
+
   it("labels custom fields readably", () => {
     expect(labelOf("first_name")).toBe("First name")
     expect(labelOf("favouriteColour")).toBe("Favourite colour")
