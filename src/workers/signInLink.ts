@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
-import { callerFor, redeemSignInLink } from "../domain/people.ts"
+import { callerFor, redeemSignInLinkFor } from "../domain/people.ts"
 import { ROLE_SCOPES } from "../domain/permissions.ts"
 import { clientOf, openSession, SESSION_COOKIE, SESSION_MAX_MS } from "../domain/sessions.ts"
 import { publicLook } from "../public/look.ts"
@@ -54,13 +54,13 @@ export const handleSignInLink = async (request: Request, env: Env, token: string
     )
   const result = await run.runPromise(
     Effect.result(
-      redeemSignInLink(token).pipe(
-        Effect.flatMap((member) => {
+      redeemSignInLinkFor(token).pipe(
+        Effect.flatMap(({ member, returnTo }) => {
           const caller = callerFor(member)
           return openSession(
             { ...caller, scopes: ROLE_SCOPES[member.role] },
             clientOf(Object.fromEntries(request.headers)),
-          )
+          ).pipe(Effect.map((opened) => ({ ...opened, returnTo })))
         }),
       ),
     ),
@@ -76,7 +76,8 @@ export const handleSignInLink = async (request: Request, env: Env, token: string
   return new Response(null, {
     status: 303,
     headers: {
-      location: "/",
+      // Back to the authorization that asked for the sign-in, if one did (HAL-3462).
+      location: result.success.returnTo ?? "/",
       "cache-control": "no-store",
       "set-cookie": `${SESSION_COOKIE}=${result.success.token}; Max-Age=${Math.floor(SESSION_MAX_MS / 1000)}; Path=/; Secure; HttpOnly; SameSite=Lax`,
     },

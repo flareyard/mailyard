@@ -262,6 +262,7 @@ const signInMail = (input: { name: string; workspace: string; url: string }) => 
 const mailSignInLink = Effect.fn("people.mailSignInLink")(function* (
   member: typeof members.$inferSelect,
   origin: string,
+  returnTo: string | null = null,
   now = Date.now(),
 ) {
   const database = yield* Database
@@ -271,7 +272,14 @@ const mailSignInLink = Effect.fn("people.mailSignInLink")(function* (
   yield* database.query("signInLinks.create", (db) =>
     db
       .insert(signInLinks)
-      .values({ id, memberId: member.id, tokenHash, createdAt: now, expiresAt: now + SIGN_IN_LINK_MS })
+      .values({
+        id,
+        memberId: member.id,
+        tokenHash,
+        createdAt: now,
+        expiresAt: now + SIGN_IN_LINK_MS,
+        returnTo: safeReturn(returnTo),
+      })
       .run(),
   )
   const url = `${origin}/v1/session/link/${token}`
@@ -280,24 +288,36 @@ const mailSignInLink = Effect.fn("people.mailSignInLink")(function* (
 })
 
 /**
+ * Where a sign-in link may send someone afterwards: only back to an OAuth authorization on this site
+ * (HAL-3462), so a link can't be turned into an open redirect.
+ */
+export const safeReturn = (returnTo: string | null | undefined) =>
+  returnTo && /^\/oauth\/authorize\?[^\s]*$/.test(returnTo) && returnTo.length <= 4000 ? returnTo : null
+
+/**
  * `POST /v1/session/link { email }`: mails a sign-in link to a current member. The answer is the same
  * whether or not the address belongs to someone, so it can't be used to learn who's in the workspace.
  */
 export const requestSignInLink = Effect.fn("people.requestSignInLink")(function* (
   email: string,
   origin: string,
+  returnTo: string | null = null,
 ) {
   const address = normalizeEmail(email)
   if (!EMAIL.test(address) || address.length > 254) return { sent: true }
   const member = yield* findByEmail(address)
   if (!member || member.removedAt !== null) return { sent: true }
   yield* systemFrom()
-  yield* mailSignInLink(member, origin)
+  yield* mailSignInLink(member, origin, returnTo)
   return { sent: true }
 })
 
 /** Uses a sign-in link: once, within 15 minutes, for a member who's still in the workspace. */
-export const redeemSignInLink = Effect.fn("people.redeemSignInLink")(function* (
+export const redeemSignInLink = (token: string, now = Date.now()) =>
+  redeemSignInLinkFor(token, now).pipe(Effect.map((r) => r.member))
+
+/** `redeemSignInLink`, with where the link was asked to land afterwards. */
+export const redeemSignInLinkFor = Effect.fn("people.redeemSignInLink")(function* (
   token: string,
   now = Date.now(),
 ) {
@@ -336,7 +356,7 @@ export const redeemSignInLink = Effect.fn("people.redeemSignInLink")(function* (
       Effect.fail(new SignInLinkInvalid({ reason: "unknown", message: "This sign-in link isn't valid." })),
     ),
   )
-  return member
+  return { member, returnTo: safeReturn(link.returnTo) }
 })
 
 /** A member as a caller, for opening their session. */

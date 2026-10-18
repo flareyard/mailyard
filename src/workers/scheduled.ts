@@ -9,6 +9,7 @@ import { snapshotAudience } from "../domain/overview.ts"
 import { pruneSessions } from "../domain/sessions.ts"
 import { syncWithCloudflare } from "../domain/suppressions.ts"
 import { ensureDeletionStarted } from "../domain/workspaceDeletion.ts"
+import { pruneOAuth } from "../oauth/grants.ts"
 import { deletionInstanceId } from "../workflows/workspaceDeletion.ts"
 import { runtimeFor } from "./inbound.ts"
 
@@ -51,6 +52,10 @@ export const handleScheduled = (env: Env) =>
         Effect.andThen(pruneSessions()),
         Effect.catchCause((cause) => Effect.logError("cron: session prune failed", cause)),
         Effect.asVoid,
+      )
+      .pipe(
+        Effect.andThen(pruneOAuth()),
+        Effect.catchCause((cause) => Effect.logError("cron: oauth prune failed", cause)),
       )
       .pipe(
         Effect.andThen(

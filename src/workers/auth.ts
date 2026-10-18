@@ -3,6 +3,7 @@ import type { Env } from "../Bindings.ts"
 import { authenticate, type Caller, type Scope } from "../domain/apiKeys.ts"
 import { allowedRoles, can, type Permission } from "../domain/permissions.ts"
 import { resolveSession, SESSION_COOKIE } from "../domain/sessions.ts"
+import { authenticateAccessToken } from "../oauth/grants.ts"
 import { runtimeFor } from "./inbound.ts"
 
 /** The subprotocol a browser asks for on a WebSocket; it carries the key as a second one, `bearer.<key>`. */
@@ -62,12 +63,29 @@ const SAFE = new Set(["GET", "HEAD", "OPTIONS"])
 /** The clearing Set-Cookie for a session that no longer works. */
 const CLEAR_COOKIE = `${SESSION_COOKIE}=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`
 
-/** The calling key (by Bearer, WebSocket subprotocol or session cookie), or the response to send back. */
+/**
+ * The calling key (by Bearer, WebSocket subprotocol or session cookie), or the response to send back.
+ * `resources` are the audiences this route answers for; only a route that names some accepts an
+ * OAuth access token (HAL-3462), and only one issued for one of them (RFC 8707).
+ */
 export const authorize = async (
   request: Request,
   env: Env,
+  options: { readonly resources?: ReadonlyArray<string> } = {},
 ): Promise<{ caller: Caller; protocol: string | null } | Response> => {
   const auth = credentials(request)
+  if (auth?.token.startsWith("oat_")) {
+    if (!options.resources)
+      return problem(401, "OAuth access tokens only work on /mcp, the resource they were issued for.", {
+        reason: "wrong-resource",
+      })
+    const access = await runtimeFor(env).runPromise(authenticateAccessToken(auth.token, options.resources))
+    if ("refused" in access)
+      return problem(401, access.refused.message, {
+        reason: access.refused.code === "wrong_resource" ? "wrong-resource" : "invalid-token",
+      })
+    return { caller: access.caller, protocol: auth.protocol }
+  }
   if (!auth) {
     const token = sessionToken(request)
     if (!token)
