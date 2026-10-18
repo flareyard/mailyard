@@ -406,6 +406,27 @@ describe("import extras (HAL-3371)", () => {
     })
   })
 
+  it("rejects a ragged row as a parse_error, but not a row that only has trailing empty cells (HAL-3472)", async () => {
+    const tag = uid()
+    const view = (await runImport({
+      uploadId: await uploadId(
+        `email,name\nok-${tag}@example.net,Ok,\nragged-${tag}@example.net,Rag,extra\n`,
+      ),
+      mapping: { email: "email", name: "name" },
+    })) as Extra
+    expect(view).toMatchObject({ created: 1, invalid: 1 })
+    expect(view.errors).toEqual([
+      {
+        line: 3,
+        message: "This row has 3 cells; the header has 2 columns.",
+        column: null,
+        value: null,
+        code: "parse_error",
+      },
+    ])
+    expect(await contact(`ragged-${tag}@example.net`)).toBeNull()
+  })
+
   it("refuses a mixed name mapping and an unattested consent", async () => {
     const id = await uploadId("email,n,f\na@b.co,x,y\n")
     const mixed = await startImportOf({

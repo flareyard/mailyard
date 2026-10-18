@@ -1,8 +1,10 @@
 import * as Effect from "effect/Effect"
+import * as HttpServerResponse from "effect/http/HttpServerResponse"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import {
   cancelContactImport,
   getContactImport,
+  importErrorsCsv,
   listContactImports,
   startContactImport,
 } from "../imports/contactImport.ts"
@@ -38,6 +40,22 @@ export const ImportsHandlers = HttpApiBuilder.group(
       get: p(({ params }) =>
         requireScope("read").pipe(
           Effect.andThen(getContactImport(params.id)),
+          Effect.catchTags({ ImportNotFound: notFound("Import"), DatabaseError: Effect.die }),
+        ),
+      ),
+      errorsCsv: p(({ params }) =>
+        requireScope("read").pipe(
+          Effect.andThen(importErrorsCsv(params.id)),
+          Effect.map((csv) =>
+            HttpServerResponse.text(csv, {
+              contentType: "text/csv; charset=utf-8",
+              headers: {
+                "content-disposition": `attachment; filename="${params.id}-errors.csv"`,
+                "cache-control": "private, no-store",
+                "x-content-type-options": "nosniff",
+              },
+            }),
+          ),
           Effect.catchTags({ ImportNotFound: notFound("Import"), DatabaseError: Effect.die }),
         ),
       ),

@@ -1,6 +1,7 @@
 import * as HttpApi from "effect/http-api/HttpApi"
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint"
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup"
+import * as HttpApiSchema from "effect/http-api/HttpApiSchema"
 import * as OpenApi from "effect/http-api/OpenApi"
 import * as Schema from "effect/Schema"
 import { DryRunInput } from "../automations/dryRun.ts"
@@ -31,7 +32,14 @@ export const Health = Schema.Struct({
 
 export class Unhealthy extends Schema.TaggedError<Unhealthy>()(
   "Unhealthy",
-  { database: Schema.Literal("unreachable") },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    database: Schema.Literal("unreachable"),
+  },
   { httpApiStatus: 503 },
 ) {}
 
@@ -108,32 +116,67 @@ export const TrackResponse = Schema.Struct({
 
 export class InvalidRequest extends Schema.TaggedError<InvalidRequest>()(
   "InvalidRequest",
-  { field: Schema.String, message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    field: Schema.String,
+    message: Schema.String,
+  },
   { httpApiStatus: 400 },
 ) {}
 
 /** `POST /v1/domains/{id}/fix` can't: no zone token, no zone for the domain, or nothing failing. */
 export class FixRefused extends Schema.TaggedError<FixRefused>()(
   "FixRefused",
-  { reason: Schema.Literals(["no_dns_token", "zone_not_found", "nothing_to_fix"]), message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    reason: Schema.Literals(["no_dns_token", "zone_not_found", "nothing_to_fix"]),
+    message: Schema.String,
+  },
   { httpApiStatus: 409 },
 ) {}
 
 export class NotFound extends Schema.TaggedError<NotFound>()(
   "NotFound",
-  { message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+  },
   { httpApiStatus: 404 },
 ) {}
 
 export class IdempotencyConflict extends Schema.TaggedError<IdempotencyConflict>()(
   "IdempotencyConflict",
-  { message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+  },
   { httpApiStatus: 409 },
 ) {}
 
 export class Conflict extends Schema.TaggedError<Conflict>()(
   "Conflict",
   {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
     message: Schema.String,
     /** A machine-readable why, where the screen acts on it (suppressions: `complaint`, `not-applicable`). */
     reason: Schema.optionalKey(Schema.String),
@@ -154,6 +197,11 @@ export class Conflict extends Schema.TaggedError<Conflict>()(
 export class NotReady extends Schema.TaggedError<NotReady>()(
   "NotReady",
   {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
     message: Schema.String,
     issues: Schema.Array(
       Schema.Struct({ nodeId: Schema.NullOr(Schema.String), code: Schema.String, message: Schema.String }),
@@ -164,7 +212,14 @@ export class NotReady extends Schema.TaggedError<NotReady>()(
 
 export class Unprocessable extends Schema.TaggedError<Unprocessable>()(
   "Unprocessable",
-  { message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+  },
   { httpApiStatus: 422 },
 ) {}
 
@@ -3057,7 +3112,14 @@ export const GovernorOverviewSchema = Schema.Struct({
 
 export class GovernorUnreachable extends Schema.TaggedError<GovernorUnreachable>()(
   "GovernorUnreachable",
-  { message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+  },
   { httpApiStatus: 503 },
 ) {}
 
@@ -3527,6 +3589,43 @@ const ContactImportSchema = Schema.Struct({
 })
 
 /** Contact CSV imports. The file goes up first, as the body of `POST /v1/uploads?filename=` (50 MiB). */
+const FormSubmitFields = Schema.Record(
+  Schema.String,
+  Schema.Union([Schema.String, Schema.Array(Schema.String)]),
+).annotate({
+  description:
+    "`email` (required), `name`, `topics` (topic ids, when the form lets the visitor pick), `cf-turnstile-response` (when the form has Turnstile), and the form's custom fields by key. `_hp` and `website` are honeypots and must stay empty.",
+})
+
+const FormSubmitRefused = (status: number, codes: ReadonlyArray<string>) =>
+  Schema.Struct({
+    error: Schema.Literals(codes as [string, ...Array<string>]),
+    /** The field that's wrong, for `invalid`. */
+    field: Schema.optionalKey(Schema.String),
+    requestId: Schema.optionalKey(Schema.String),
+  }).pipe(HttpApiSchema.status(status))
+
+/**
+ * A signup form's submit (HAL-3317, documented by HAL-3472). Public: no key. A browser posting the
+ * hosted page gets HTML back (the result page, or the form again with its error); a script asking
+ * for JSON gets these answers. CORS allows any origin, and `OPTIONS` answers the preflight.
+ */
+export class PublicFormsApi extends HttpApiGroup.make("publicForms").add(
+  HttpApiEndpoint.post("submit", "/v1/forms/:id/submit", {
+    params: { id: Schema.String },
+    payload: [FormSubmitFields, FormSubmitFields.pipe(HttpApiSchema.asFormUrlEncoded())],
+    success: Schema.Struct({
+      /** `confirm`: a double opt-in mail went out; `subscribed`: they're on the list now. */
+      status: Schema.Literals(["confirm", "subscribed"]),
+    }),
+    error: [
+      FormSubmitRefused(400, ["invalid", "invalid_body", "challenge"]),
+      FormSubmitRefused(404, ["not_found"]),
+      FormSubmitRefused(429, ["rate_limited"]),
+    ],
+  }),
+) {}
+
 export class ImportsApi extends HttpApiGroup.make("imports")
   .add(
     HttpApiEndpoint.post("contacts", "/v1/imports/contacts", {
@@ -3581,6 +3680,12 @@ export class ImportsApi extends HttpApiGroup.make("imports")
       params: { id: Schema.String },
       success: ContactImportSchema,
       error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    /** Every rejected row of an import as CSV (`line,column,value,code,message`), in file order. */
+    HttpApiEndpoint.get("errorsCsv", "/v1/imports/:id/errors.csv", {
+      params: { id: Schema.String },
+      success: Schema.String.pipe(HttpApiSchema.asText({ contentType: "text/csv" })),
+      error: [Forbidden, NotFound],
     }),
   )
   .middleware(ApiKeyAuth) {}
@@ -4263,13 +4368,28 @@ const SyncSchema = Schema.Struct({
 /** Cloudflare's list can't be changed from here: no CLOUDFLARE_EMAIL_WRITE_TOKEN. */
 export class CloudflareNotConnected extends Schema.TaggedError<CloudflareNotConnected>()(
   "CloudflareNotConnected",
-  { message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    message: Schema.String,
+  },
   { httpApiStatus: 409 },
 ) {}
 /** Cloudflare refused the change; its status and words. */
 export class CloudflareRefused extends Schema.TaggedError<CloudflareRefused>()(
   "CloudflareRefused",
-  { status: Schema.Number, message: Schema.String },
+  {
+    requestId: Schema.optionalKey(
+      Schema.String.annotate({
+        description: "The request's id, also in the x-request-id header: quote it when asking for help.",
+      }),
+    ),
+    status: Schema.Number,
+    message: Schema.String,
+  },
   { httpApiStatus: 502 },
 ) {}
 
@@ -4699,6 +4819,7 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(AlertsApi)
   .add(CampaignsApi)
   .add(ImportsApi)
+  .add(PublicFormsApi)
   .add(SuppressionsApi)
   .add(OverviewApi)
   .add(SearchApi)

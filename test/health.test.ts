@@ -90,6 +90,21 @@ describe("GET /openapi.json", () => {
     expect(response.status).toBe(200)
     const doc = (await response.json()) as { info: { title: string }; paths: Record<string, unknown> }
     expect(doc.info.title).toBe("Mailyard API")
+    // Every error the API declares names the request it answers (HAL-3472).
+    const schemas = ((
+      doc as { components?: { schemas?: Record<string, { properties?: Record<string, unknown> }> } }
+    ).components?.schemas ?? {}) as Record<string, { properties?: Record<string, unknown> }>
+    for (const name of [
+      "Unauthorized",
+      "Forbidden",
+      "RateLimited",
+      "NotFound",
+      "InvalidRequest",
+      "Conflict",
+    ]) {
+      const schema = Object.entries(schemas).find(([key]) => key === name || key.startsWith(`${name}`))?.[1]
+      expect(schema?.properties, name).toHaveProperty("requestId")
+    }
     expect(Object.keys(doc.paths).sort()).toEqual([
       "/healthz",
       "/mcp",
@@ -150,12 +165,14 @@ describe("GET /openapi.json", () => {
       "/v1/forms/{id}",
       "/v1/forms/{id}/embed",
       "/v1/forms/{id}/stats",
+      "/v1/forms/{id}/submit",
       "/v1/health",
       "/v1/identities",
       "/v1/imports",
       "/v1/imports/contacts",
       "/v1/imports/{id}",
       "/v1/imports/{id}/cancel",
+      "/v1/imports/{id}/errors.csv",
       "/v1/inbound",
       "/v1/inbound/{id}",
       "/v1/inbound/{id}/reprocess",
