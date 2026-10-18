@@ -14,6 +14,8 @@ export interface Caller {
   readonly keyId: string
   readonly kind: "secret" | "public"
   readonly scopes: ReadonlyArray<Scope>
+  /** Set when the request came with a browser session cookie rather than a Bearer key (HAL-3358). */
+  readonly sessionId?: string | undefined
 }
 
 /** The deploy-time ADMIN_KEY: everything, and the only way to mint the first API key. */
@@ -64,24 +66,36 @@ export const authenticate = Effect.fn("apiKeys.authenticate")(function* (token: 
       reason: "This key was revoked.",
       revokedAt: row.revokedAt,
     })
-  // One written row per request: this hour's count. lastUsedAt moves at most once a minute.
-  const touch = row.lastUsedAt === null || now - row.lastUsedAt > 60_000
+  yield* recordUse(row.id, row.lastUsedAt, now)
+  return { keyId: row.id, kind: row.kind, scopes: row.scopes as ReadonlyArray<Scope> } satisfies Caller
+})
+
+/**
+ * Counts one request against a key: one written row per request, this hour's count, and `lastUsedAt`
+ * at most once a minute. Shared by Bearer requests and browser sessions opened with the key.
+ */
+export const recordUse = Effect.fn("apiKeys.recordUse")(function* (
+  keyId: string,
+  lastUsedAt: number | null,
+  now = Date.now(),
+) {
+  const database = yield* Database
+  const touch = lastUsedAt === null || now - lastUsedAt > 60_000
   yield* database
     .query("apiKeys.touch", (db) => {
       const count = db
         .insert(apiKeyUsage)
-        .values({ keyId: row.id, hour: Math.floor(now / HOUR), requests: 1 })
+        .values({ keyId, hour: Math.floor(now / HOUR), requests: 1 })
         .onConflictDoUpdate({
           target: [apiKeyUsage.keyId, apiKeyUsage.hour],
           set: { requests: sql`${apiKeyUsage.requests} + 1` },
         })
       const write: Promise<unknown> = touch
-        ? db.batch([count, db.update(apiKeys).set({ lastUsedAt: now }).where(eq(apiKeys.id, row.id))])
+        ? db.batch([count, db.update(apiKeys).set({ lastUsedAt: now }).where(eq(apiKeys.id, keyId))])
         : count.run()
       return write
     })
     .pipe(Effect.ignore)
-  return { keyId: row.id, kind: row.kind, scopes: row.scopes as ReadonlyArray<Scope> } satisfies Caller
 })
 
 export const createKey = Effect.fn("apiKeys.create")(function* (input: {

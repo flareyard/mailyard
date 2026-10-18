@@ -812,6 +812,39 @@ export const apiKeyUsage = sqliteTable(
   (t) => [primaryKey({ columns: [t.keyId, t.hour] }), index("api_key_usage_hour").on(t.hour)],
 )
 
+/**
+ * Browser sessions (HAL-3358): an API key (or the ADMIN_KEY) exchanged for an HTTP-only cookie. Only
+ * the cookie token's SHA-256 is stored, never the key. A session lives 14 days from its last use and
+ * 30 days at most; the key's scopes are read live on each request, so revoking or narrowing the key
+ * ends or narrows its sessions at once.
+ */
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    /** SHA-256 of the cookie's token. */
+    tokenHash: text("token_hash").notNull(),
+    /** The key the session was opened with, or `root` for the ADMIN_KEY. */
+    keyId: text("key_id").notNull(),
+    via: text("via", { enum: ["session-key", "admin-key"] }).notNull(),
+    /** For `admin-key` sessions: a fingerprint of the ADMIN_KEY, so rotating it ends them. */
+    adminFingerprint: text("admin_fingerprint"),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+    /** City and country from Cloudflare, when it knew them. */
+    location: text("location"),
+    createdAt: integer("created_at").notNull(),
+    /** Moved at most once a minute, with `expiresAt`. */
+    lastSeenAt: integer("last_seen_at").notNull(),
+    /** Sliding: 14 days after `lastSeenAt`, never past `absoluteExpiresAt`. */
+    expiresAt: integer("expires_at").notNull(),
+    absoluteExpiresAt: integer("absolute_expires_at").notNull(),
+    /** Signed out, or ended from "Your sessions". */
+    endedAt: integer("ended_at"),
+  },
+  (t) => [uniqueIndex("sessions_token_hash").on(t.tokenHash), index("sessions_key").on(t.keyId, t.expiresAt)],
+)
+
 export const audit = sqliteTable(
   "audit",
   {
