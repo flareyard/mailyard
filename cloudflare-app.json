@@ -98,6 +98,11 @@
       "name": "CLOUDFLARE_EMAIL_WRITE_TOKEN",
       "ask": "An API token with Email Sending: Edit, so Mailyard can add to and remove from Cloudflare's suppression list",
       "optional": true
+    },
+    {
+      "name": "CLOUDFLARE_DNS_TOKEN",
+      "ask": "A token for your zones (Zone, DNS and Email Sending: Read; Email Routing and Email Sending: Edit to fix records), for zone status, DNSSEC and complaints",
+      "optional": true
     }
   ],
   "settings": [

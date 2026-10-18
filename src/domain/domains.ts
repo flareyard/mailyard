@@ -1,12 +1,16 @@
 import { and, asc, count, eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { domains, mailboxes } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
+import { CloudflareZones } from "../services/CloudflareZones.ts"
 import { Database } from "../services/Database.ts"
+import { Dns } from "../services/Dns.ts"
 import { clearAlert, raiseAlert } from "./alerts.ts"
 import { recordAudit } from "./audit.ts"
 import { checkDomain, type DomainCheck, expectedRecords, type RecordCheck } from "./dnsChecks.ts"
+import { readZoneInfo } from "./zoneInfo.ts"
 
 export class DomainNotFound extends Schema.TaggedError<DomainNotFound>()("DomainNotFound", {
   id: Schema.String,
@@ -40,12 +44,13 @@ const describe = (d: DomainRow, mailboxCount: number) => {
     mailboxCount,
     lastCheckedAt: d.lastCheckedAt,
     checkStatus: checks ? worstOf(checks) : null,
+    zoneStatus: d.zone?.zoneStatus ?? null,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   }
 }
 
-const RANK = { pass: 0, warn: 1, error: 2, fail: 3 } as const
+const RANK = { pass: 0, warn: 1, error: 2, fail: 3, checking: 4 } as const
 const worstOf = (checks: DomainCheck["checks"]) =>
   checks.reduce<keyof typeof RANK>((w, c) => (RANK[c.status] > RANK[w] ? c.status : w), "pass")
 
@@ -99,8 +104,17 @@ export const getDomain = Effect.fn("domains.get")(function* (id: string) {
       .orderBy(asc(mailboxes.address))
       .all(),
   )
+  const zone = d.zone ?? null
   return {
     ...describe(d, addresses.length),
+    zoneName: zone?.zoneName ?? null,
+    nameservers: zone?.nameservers ?? null,
+    currentNameservers: zone?.currentNameservers ?? null,
+    registrar: zone?.registrar ?? null,
+    dnssec: zone?.dnssec ?? null,
+    complaints30d: zone?.complaints30d ?? null,
+    returnPath: zone?.returnPath ?? (d.sendingEnabled ? `cf-bounce.${d.name}` : null),
+    zoneCheckedAt: zone?.checkedAt ?? null,
     checks: d.checks ?? [],
     expectedRecords: expectedRecords(d.name, purposesOf(d)),
     mailboxes: addresses,
@@ -110,8 +124,35 @@ export const getDomain = Effect.fn("domains.get")(function* (id: string) {
 /** Re-reads the domain's DNS and stores the result. A lookup failure is recorded as `error`, not raised. */
 export const recheckDomain = Effect.fn("domains.recheck")(function* (id: string) {
   const d = yield* findDomain(id)
-  const result = yield* checkDomain(d.name, purposesOf(d))
   const database = yield* Database
+  // While the lookups run, a reader sees each stored check as `checking` (HAL-3365).
+  if (d.checks?.length)
+    yield* database.query("domains.markChecking", (db) =>
+      db
+        .update(domains)
+        .set({ checks: d.checks?.map((c) => ({ ...c, status: "checking" as const })) ?? null })
+        .where(eq(domains.id, id))
+        .run(),
+    )
+  const [fresh, zone] = yield* Effect.all(
+    [checkDomain(d.name, purposesOf(d)), readZoneInfo(d.name, { sending: d.sendingEnabled })],
+    { concurrency: 2 },
+  )
+  // Each check keeps when it last changed status, so the screens can say "failing since".
+  const before = new Map((d.checks ?? []).map((c) => [c.id, c]))
+  const result = {
+    ...fresh,
+    checks: fresh.checks.map((c) => {
+      const prev = before.get(c.id)
+      return {
+        ...c,
+        changedAt:
+          prev && prev.status === c.status
+            ? (prev.changedAt ?? d.lastCheckedAt ?? fresh.checkedAt)
+            : fresh.checkedAt,
+      }
+    }),
+  }
   const allPass = result.checks.length > 0 && result.checks.every((c) => c.status === "pass")
   const activating = allPass && d.activatedAt === null
   yield* database.query("domains.saveCheck", (db) =>
@@ -119,6 +160,8 @@ export const recheckDomain = Effect.fn("domains.recheck")(function* (id: string)
       .update(domains)
       .set({
         checks: result.checks,
+        zone: zone.info,
+        ...(zone.zoneId && !d.zoneId ? { zoneId: zone.zoneId } : {}),
         lastCheckedAt: result.checkedAt,
         ...(activating ? { activatedAt: result.checkedAt } : {}),
       })
@@ -290,4 +333,136 @@ export const deleteDomain = Effect.fn("domains.delete")(function* (id: string, a
   yield* database.query("domains.delete", (db) => db.delete(domains).where(eq(domains.id, id)).run())
   yield* recordAudit({ actor, action: "domain.deleted", target: id, before: { name: d.name } })
   return describe(d, 0)
+})
+
+// ---------------------------------------------------------------------------------------------
+// Fixing records, and the account's other zones (HAL-3365)
+// ---------------------------------------------------------------------------------------------
+
+export class DomainFixRefused extends Schema.TaggedError<DomainFixRefused>()("DomainFixRefused", {
+  reason: Schema.Literals(["no_dns_token", "zone_not_found", "nothing_to_fix"]),
+  message: Schema.String,
+}) {}
+
+export interface FixAction {
+  readonly checks: ReadonlyArray<RecordCheck["id"]>
+  readonly action: "enable_routing" | "fix_sending" | "add_dmarc" | "manual"
+  readonly ok: boolean
+  readonly detail: string
+}
+
+const RECEIVING_CHECKS = new Set<RecordCheck["id"]>(["mx", "spf", "dkim"])
+const SENDING_CHECKS = new Set<RecordCheck["id"]>(["bounce-mx", "bounce-spf", "bounce-dkim"])
+
+/**
+ * `POST /v1/domains/{id}/fix`: re-applies what fails, the way Cloudflare's own buttons do. Receiving
+ * records (MX, SPF, routing DKIM) through Email Routing's "enable DNS", the cf-bounce records through
+ * Email Sending's "fix DNS" (or by onboarding the subdomain), and a missing DMARC record as a TXT.
+ * A DMARC record that exists but is wrong is left for a person: rewriting someone's policy is theirs
+ * to decide. Then rechecks. Needs CLOUDFLARE_DNS_TOKEN with Email Routing: Edit and Email Sending: Edit.
+ */
+export const fixDomain = Effect.fn("domains.fix")(function* (id: string, actor: string) {
+  const zones = yield* CloudflareZones
+  if (!zones.connected)
+    return yield* new DomainFixRefused({
+      reason: "no_dns_token",
+      message:
+        "Mailyard has no CLOUDFLARE_DNS_TOKEN, so it can't change DNS. Add the records shown, or give it a zone token.",
+    })
+  const d = yield* findDomain(id)
+  const failing = (d.checks ?? []).filter((c) => c.status === "fail" || c.status === "warn")
+  if (failing.length === 0)
+    return yield* new DomainFixRefused({
+      reason: "nothing_to_fix",
+      message: "Every record passed at the last check. Recheck first if DNS changed since.",
+    })
+  const zone = yield* zones.zoneFor(d.name)
+  if (Option.isNone(zone))
+    return yield* new DomainFixRefused({
+      reason: "zone_not_found",
+      message: `The token can't see a zone for ${d.name}. Is the domain on this Cloudflare account?`,
+    })
+  const zoneId = zone.value.id
+  const actions: Array<FixAction> = []
+  const receiving = failing.filter((c) => RECEIVING_CHECKS.has(c.id)).map((c) => c.id)
+  if (receiving.length > 0) {
+    const out = yield* zones.enableRouting(zoneId, d.name)
+    actions.push({
+      checks: receiving,
+      action: "enable_routing",
+      ok: out.ok,
+      detail: out.ok ? "Email Routing re-added its MX, SPF and DKIM records." : out.message,
+    })
+  }
+  const sending = failing.filter((c) => SENDING_CHECKS.has(c.id)).map((c) => c.id)
+  if (sending.length > 0) {
+    const out = yield* zones.fixSending(zoneId, d.name)
+    actions.push({
+      checks: sending,
+      action: "fix_sending",
+      ok: out.ok,
+      detail: out.ok ? "Email Sending re-applied the cf-bounce records." : out.message,
+    })
+  }
+  const dmarc = failing.find((c) => c.id === "dmarc")
+  if (dmarc) {
+    if (dmarc.actual.length === 0) {
+      const out = yield* zones.createTxt(
+        zoneId,
+        `_dmarc.${d.name}`,
+        `v=DMARC1; p=quarantine; rua=mailto:dmarc@${d.name}`,
+      )
+      actions.push({
+        checks: ["dmarc"],
+        action: "add_dmarc",
+        ok: out.ok,
+        detail: out.ok ? "Added a DMARC record with p=quarantine." : out.message,
+      })
+    } else
+      actions.push({
+        checks: ["dmarc"],
+        action: "manual",
+        ok: false,
+        detail: `There's already a DMARC record (${dmarc.detail}) Mailyard won't overwrite: edit it by hand.`,
+      })
+  }
+  yield* recordAudit({ actor, action: "domain.fixed", target: id, after: { actions } })
+  const domain = yield* recheckDomain(id)
+  return { domain, actions }
+})
+
+/**
+ * `GET /v1/domains/candidates`: the zones the token can see, each with whether it's in the workspace
+ * (itself or a subdomain of it) and what its MX says today, so first-run can offer them.
+ */
+export const domainCandidates = Effect.fn("domains.candidates")(function* () {
+  const zones = yield* CloudflareZones
+  if (!zones.connected) return { connected: false, candidates: [] }
+  const all = yield* zones.zones
+  if (Option.isNone(all)) return { connected: false, candidates: [] }
+  const database = yield* Database
+  const names = (yield* database.query("domains.names", (db) =>
+    db.select({ name: domains.name }).from(domains).all(),
+  )).map((r) => r.name)
+  const dns = yield* Dns
+  const candidates = yield* Effect.forEach(
+    all.value,
+    (z) =>
+      Effect.gen(function* () {
+        const mx = yield* dns.resolve(z.name, "MX").pipe(Effect.option)
+        const inWorkspace = names.filter((n) => n === z.name || n.endsWith(`.${z.name}`))
+        return {
+          name: z.name,
+          zoneId: z.id,
+          zoneStatus: z.status,
+          nameservers: (z.name_servers ?? []).map((n) => n.toLowerCase()),
+          registrar: z.original_registrar ?? null,
+          inWorkspace: inWorkspace.length > 0,
+          workspaceDomains: inWorkspace,
+          existingMx: Option.match(mx, { onNone: () => [], onSome: (r) => r.answers.map((a) => a.data) }),
+        }
+      }),
+    { concurrency: 8 },
+  )
+  return { connected: true, candidates }
 })

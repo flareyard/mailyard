@@ -15,17 +15,23 @@ export const CLOUDFLARE_SPF_INCLUDE = "include:_spf.mx.cloudflare.net"
 export const ROUTING_DKIM_SELECTOR = "cf2024-1"
 export const SENDING_SUBDOMAIN = "cf-bounce"
 
-export type CheckStatus = "pass" | "warn" | "fail" | "error"
+/** `checking` only while a recheck runs: the stored checks are marked, then replaced by the result. */
+export type CheckStatus = "pass" | "warn" | "fail" | "error" | "checking"
+
+/** The record types the checks read; NS is looked up for the zone, never checked. */
+export type CheckedType = Exclude<RecordType, "NS">
 
 export interface RecordCheck {
   readonly id: "mx" | "spf" | "dkim" | "dmarc" | "bounce-mx" | "bounce-spf" | "bounce-dkim"
   readonly purpose: "receiving" | "sending"
   readonly name: string
-  readonly type: RecordType
+  readonly type: CheckedType
   readonly expected: string
   readonly actual: ReadonlyArray<string>
   readonly status: CheckStatus
   readonly detail: string
+  /** When this check last changed status (HAL-3365); set when a recheck stores it. */
+  readonly changedAt?: number
 }
 
 export interface DomainCheck {
@@ -35,7 +41,7 @@ export interface DomainCheck {
   readonly checks: ReadonlyArray<RecordCheck>
 }
 
-const RANK: Record<CheckStatus, number> = { pass: 0, warn: 1, error: 2, fail: 3 }
+const RANK: Record<CheckStatus, number> = { pass: 0, warn: 1, error: 2, fail: 3, checking: 4 }
 export const worst = (statuses: ReadonlyArray<CheckStatus>): CheckStatus =>
   statuses.reduce<CheckStatus>((w, s) => (RANK[s] > RANK[w] ? s : w), "pass")
 
@@ -262,7 +268,7 @@ export const expectedRecords = (
   const name = domain.toLowerCase()
   const records: Array<{
     readonly purpose: string
-    readonly type: RecordType
+    readonly type: CheckedType
     readonly name: string
     readonly value: string
   }> = []

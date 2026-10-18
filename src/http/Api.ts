@@ -108,6 +108,13 @@ export class InvalidRequest extends Schema.TaggedError<InvalidRequest>()(
   { httpApiStatus: 400 },
 ) {}
 
+/** `POST /v1/domains/{id}/fix` can't: no zone token, no zone for the domain, or nothing failing. */
+export class FixRefused extends Schema.TaggedError<FixRefused>()(
+  "FixRefused",
+  { reason: Schema.Literals(["no_dns_token", "zone_not_found", "nothing_to_fix"]), message: Schema.String },
+  { httpApiStatus: 409 },
+) {}
+
 export class NotFound extends Schema.TaggedError<NotFound>()(
   "NotFound",
   { message: Schema.String },
@@ -892,7 +899,8 @@ export class InboundApi extends HttpApiGroup.make("inbound")
 // Domains, mailboxes and identities (docs/email-ui.html: Domain detail, Mailboxes and addresses)
 // ---------------------------------------------------------------------------------------------
 
-const CheckStatus = Schema.Literals(["pass", "warn", "fail", "error"])
+/** `checking`: a recheck is running; the record's last known detail stays until it finishes. */
+const CheckStatus = Schema.Literals(["pass", "warn", "fail", "error", "checking"])
 const CatchAll = Schema.Literals(["bounce", "keep"])
 
 export const RecordCheckSchema = Schema.Struct({
@@ -904,6 +912,8 @@ export const RecordCheckSchema = Schema.Struct({
   actual: Schema.Array(Schema.String),
   status: CheckStatus,
   detail: Schema.String,
+  /** When this check last changed status; missing on checks stored before 2026-10-18. */
+  changedAt: Schema.optionalKey(Schema.Number),
 })
 
 export const DomainSummarySchema = Schema.Struct({
@@ -916,6 +926,8 @@ export const DomainSummarySchema = Schema.Struct({
   mailboxCount: Schema.Number,
   lastCheckedAt: Schema.NullOr(Schema.Number),
   checkStatus: Schema.NullOr(CheckStatus),
+  /** Cloudflare's zone status at the last recheck (`active`, `pending`, `moved`, …); null without a zone token. */
+  zoneStatus: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
 })
@@ -924,6 +936,21 @@ const MailboxKindSchema = Schema.Literals(["user", "shared", "group", "alias", "
 
 export const DomainDetailSchema = Schema.Struct({
   ...DomainSummarySchema.fields,
+  /** The zone the domain lives in (itself or a parent). From public DNS, or the zone token. */
+  zoneName: Schema.NullOr(Schema.String),
+  /** The nameservers Cloudflare assigned; null without CLOUDFLARE_DNS_TOKEN. */
+  nameservers: Schema.NullOr(Schema.Array(Schema.String)),
+  /** What public DNS answers now; differs from `nameservers` while a move is pending. */
+  currentNameservers: Schema.NullOr(Schema.Array(Schema.String)),
+  registrar: Schema.NullOr(Schema.String),
+  /** DNSSEC status (`active`, `pending`, `disabled`). */
+  dnssec: Schema.NullOr(Schema.String),
+  /** Complaints Email Sending counted in the last 30 days. */
+  complaints30d: Schema.NullOr(Schema.Number),
+  /** The bounce (return-path) domain mail is sent with. */
+  returnPath: Schema.NullOr(Schema.String),
+  /** When the zone fields were read: the last recheck. */
+  zoneCheckedAt: Schema.NullOr(Schema.Number),
   checks: Schema.Array(RecordCheckSchema),
   expectedRecords: Schema.Array(
     Schema.Struct({
@@ -1026,6 +1053,27 @@ export class DomainsApi extends HttpApiGroup.make("domains")
       success: DomainDetailSchema,
       error: [Forbidden, NotFound, InvalidRequest, Conflict],
     }),
+    HttpApiEndpoint.get("candidates", "/v1/domains/candidates", {
+      success: Schema.Struct({
+        /** False without CLOUDFLARE_DNS_TOKEN (or when it can't list zones); `candidates` is then empty. */
+        connected: Schema.Boolean,
+        candidates: Schema.Array(
+          Schema.Struct({
+            name: Schema.String,
+            zoneId: Schema.String,
+            zoneStatus: Schema.String,
+            nameservers: Schema.Array(Schema.String),
+            registrar: Schema.NullOr(Schema.String),
+            /** The zone, or a subdomain of it, is already a workspace domain. */
+            inWorkspace: Schema.Boolean,
+            workspaceDomains: Schema.Array(Schema.String),
+            /** The zone apex's MX today: who receives its mail now. */
+            existingMx: Schema.Array(Schema.String),
+          }),
+        ),
+      }),
+      error: Forbidden,
+    }),
     HttpApiEndpoint.get("get", "/v1/domains/:id", {
       params: { id: Schema.String },
       success: DomainDetailSchema,
@@ -1051,6 +1099,22 @@ export class DomainsApi extends HttpApiGroup.make("domains")
       params: { id: Schema.String },
       success: DomainDetailSchema,
       error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.post("fix", "/v1/domains/:id/fix", {
+      params: { id: Schema.String },
+      success: Schema.Struct({
+        domain: DomainDetailSchema,
+        actions: Schema.Array(
+          Schema.Struct({
+            checks: Schema.Array(Schema.String),
+            action: Schema.Literals(["enable_routing", "fix_sending", "add_dmarc", "manual"]),
+            ok: Schema.Boolean,
+            detail: Schema.String,
+          }),
+        ),
+      }),
+      /** 409 with `reason`: `no_dns_token`, `zone_not_found` or `nothing_to_fix`. */
+      error: [Forbidden, NotFound, FixRefused],
     }),
   )
   .middleware(ApiKeyAuth) {}

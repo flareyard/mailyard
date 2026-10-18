@@ -3,9 +3,9 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-export type RecordType = "MX" | "TXT" | "CNAME"
+export type RecordType = "MX" | "TXT" | "CNAME" | "NS"
 
-const TYPE_CODES: Record<RecordType, number> = { MX: 15, TXT: 16, CNAME: 5 }
+const TYPE_CODES: Record<RecordType, number> = { MX: 15, TXT: 16, CNAME: 5, NS: 2 }
 
 export interface DnsAnswer {
   readonly name: string

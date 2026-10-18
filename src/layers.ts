@@ -7,6 +7,7 @@ import { BlobStore, Ids, Sender, SenderCloudflareWithSmtpFallback } from "./kit/
 import { workerSmtpTransport } from "./kit/smtp-worker.ts"
 import { Classifier } from "./services/Classifier.ts"
 import { CloudflareEmail } from "./services/CloudflareEmail.ts"
+import { CloudflareZones } from "./services/CloudflareZones.ts"
 import { Database } from "./services/Database.ts"
 import { Dns } from "./services/Dns.ts"
 import { Governor } from "./services/Governor.ts"
@@ -47,6 +48,7 @@ export const appLayer = (env: Env) => {
     ImapConnector.layer,
     SecretBox.layer,
     CloudflareEmail.layer,
+    CloudflareZones.layer,
     Governor.layer.pipe(Layer.provide(CloudflareEmail.layer)),
     BlobStore.layerR2(env.STORE),
     senderLayer(env).pipe(Layer.provideMerge(Ids.layer)),

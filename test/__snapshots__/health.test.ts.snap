@@ -80,6 +80,34 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "type": "object",
       },
+      "FixRefusedEncoded": {
+        "additionalProperties": false,
+        "properties": {
+          "_tag": {
+            "enum": [
+              "FixRefused",
+            ],
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+          "reason": {
+            "enum": [
+              "no_dns_token",
+              "zone_not_found",
+              "nothing_to_fix",
+            ],
+            "type": "string",
+          },
+        },
+        "required": [
+          "_tag",
+          "reason",
+          "message",
+        ],
+        "type": "object",
+      },
       "ForbiddenEncoded": {
         "additionalProperties": false,
         "properties": {
@@ -28501,6 +28529,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                   "warn",
                                   "fail",
                                   "error",
+                                  "checking",
                                 ],
                                 "type": "string",
                               },
@@ -28598,6 +28627,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               },
                             ],
                           },
+                          "zoneStatus": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
                         },
                         "required": [
                           "id",
@@ -28609,6 +28648,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                           "mailboxCount",
                           "lastCheckedAt",
                           "checkStatus",
+                          "zoneStatus",
                           "createdAt",
                           "updatedAt",
                         ],
@@ -28733,6 +28773,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "warn",
                             "fail",
                             "error",
+                            "checking",
                           ],
                           "type": "string",
                         },
@@ -28750,6 +28791,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "string",
                             },
                             "type": "array",
+                          },
+                          "changedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "detail": {
                             "type": "string",
@@ -28785,6 +28841,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "warn",
                               "fail",
                               "error",
+                              "checking",
                             ],
                             "type": "string",
                           },
@@ -28811,6 +28868,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "complaints30d": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -28823,6 +28902,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "currentNameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "dnssec": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -28942,8 +29044,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "name": {
                       "type": "string",
                     },
+                    "nameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "receiving": {
                       "type": "boolean",
+                    },
+                    "registrar": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "returnPath": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "sending": {
                       "type": "boolean",
@@ -28963,7 +29098,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "zoneCheckedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "zoneId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneName": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneStatus": {
                       "anyOf": [
                         {
                           "type": "string",
@@ -28984,8 +29161,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxCount",
                     "lastCheckedAt",
                     "checkStatus",
+                    "zoneStatus",
                     "createdAt",
                     "updatedAt",
+                    "zoneName",
+                    "nameservers",
+                    "currentNameservers",
+                    "registrar",
+                    "dnssec",
+                    "complaints30d",
+                    "returnPath",
+                    "zoneCheckedAt",
                     "checks",
                     "expectedRecords",
                     "mailboxes",
@@ -29067,6 +29253,131 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/domains/candidates": {
+      "get": {
+        "operationId": "domains.candidates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "candidates": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "existingMx": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "inWorkspace": {
+                            "type": "boolean",
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "nameservers": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "registrar": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "workspaceDomains": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "zoneId": {
+                            "type": "string",
+                          },
+                          "zoneStatus": {
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "name",
+                          "zoneId",
+                          "zoneStatus",
+                          "nameservers",
+                          "registrar",
+                          "inWorkspace",
+                          "workspaceDomains",
+                          "existingMx",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "connected": {
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "connected",
+                    "candidates",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "domains",
+        ],
+      },
+    },
     "/v1/domains/{id}": {
       "delete": {
         "operationId": "domains.remove",
@@ -29102,6 +29413,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "warn",
                             "fail",
                             "error",
+                            "checking",
                           ],
                           "type": "string",
                         },
@@ -29199,6 +29511,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "zoneStatus": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                   },
                   "required": [
                     "id",
@@ -29210,6 +29532,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxCount",
                     "lastCheckedAt",
                     "checkStatus",
+                    "zoneStatus",
                     "createdAt",
                     "updatedAt",
                   ],
@@ -29313,6 +29636,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "warn",
                             "fail",
                             "error",
+                            "checking",
                           ],
                           "type": "string",
                         },
@@ -29330,6 +29654,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "string",
                             },
                             "type": "array",
+                          },
+                          "changedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "detail": {
                             "type": "string",
@@ -29365,6 +29704,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "warn",
                               "fail",
                               "error",
+                              "checking",
                             ],
                             "type": "string",
                           },
@@ -29391,6 +29731,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "complaints30d": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -29403,6 +29765,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "currentNameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "dnssec": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -29522,8 +29907,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "name": {
                       "type": "string",
                     },
+                    "nameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "receiving": {
                       "type": "boolean",
+                    },
+                    "registrar": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "returnPath": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "sending": {
                       "type": "boolean",
@@ -29543,7 +29961,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "zoneCheckedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "zoneId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneName": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneStatus": {
                       "anyOf": [
                         {
                           "type": "string",
@@ -29564,8 +30024,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxCount",
                     "lastCheckedAt",
                     "checkStatus",
+                    "zoneStatus",
                     "createdAt",
                     "updatedAt",
+                    "zoneName",
+                    "nameservers",
+                    "currentNameservers",
+                    "registrar",
+                    "dnssec",
+                    "complaints30d",
+                    "returnPath",
+                    "zoneCheckedAt",
                     "checks",
                     "expectedRecords",
                     "mailboxes",
@@ -29696,6 +30165,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "warn",
                             "fail",
                             "error",
+                            "checking",
                           ],
                           "type": "string",
                         },
@@ -29713,6 +30183,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "string",
                             },
                             "type": "array",
+                          },
+                          "changedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "detail": {
                             "type": "string",
@@ -29748,6 +30233,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "warn",
                               "fail",
                               "error",
+                              "checking",
                             ],
                             "type": "string",
                           },
@@ -29774,6 +30260,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "complaints30d": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -29786,6 +30294,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "currentNameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "dnssec": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -29905,8 +30436,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "name": {
                       "type": "string",
                     },
+                    "nameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "receiving": {
                       "type": "boolean",
+                    },
+                    "registrar": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "returnPath": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "sending": {
                       "type": "boolean",
@@ -29926,7 +30490,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "zoneCheckedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "zoneId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneName": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneStatus": {
                       "anyOf": [
                         {
                           "type": "string",
@@ -29947,8 +30553,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxCount",
                     "lastCheckedAt",
                     "checkStatus",
+                    "zoneStatus",
                     "createdAt",
                     "updatedAt",
+                    "zoneName",
+                    "nameservers",
+                    "currentNameservers",
+                    "registrar",
+                    "dnssec",
+                    "complaints30d",
+                    "returnPath",
+                    "zoneCheckedAt",
                     "checks",
                     "expectedRecords",
                     "mailboxes",
@@ -30020,6 +30635,557 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/domains/{id}/fix": {
+      "post": {
+        "operationId": "domains.fix",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "actions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "action": {
+                            "enum": [
+                              "enable_routing",
+                              "fix_sending",
+                              "add_dmarc",
+                              "manual",
+                            ],
+                            "type": "string",
+                          },
+                          "checks": {
+                            "items": {
+                              "type": "string",
+                            },
+                            "type": "array",
+                          },
+                          "detail": {
+                            "type": "string",
+                          },
+                          "ok": {
+                            "type": "boolean",
+                          },
+                        },
+                        "required": [
+                          "checks",
+                          "action",
+                          "ok",
+                          "detail",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "domain": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "catchAll": {
+                          "enum": [
+                            "bounce",
+                            "keep",
+                          ],
+                          "type": "string",
+                        },
+                        "checkStatus": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "pass",
+                                "warn",
+                                "fail",
+                                "error",
+                                "checking",
+                              ],
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "checks": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "actual": {
+                                "items": {
+                                  "type": "string",
+                                },
+                                "type": "array",
+                              },
+                              "changedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "detail": {
+                                "type": "string",
+                              },
+                              "expected": {
+                                "type": "string",
+                              },
+                              "id": {
+                                "enum": [
+                                  "mx",
+                                  "spf",
+                                  "dkim",
+                                  "dmarc",
+                                  "bounce-mx",
+                                  "bounce-spf",
+                                  "bounce-dkim",
+                                ],
+                                "type": "string",
+                              },
+                              "name": {
+                                "type": "string",
+                              },
+                              "purpose": {
+                                "enum": [
+                                  "receiving",
+                                  "sending",
+                                ],
+                                "type": "string",
+                              },
+                              "status": {
+                                "enum": [
+                                  "pass",
+                                  "warn",
+                                  "fail",
+                                  "error",
+                                  "checking",
+                                ],
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "MX",
+                                  "TXT",
+                                  "CNAME",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "purpose",
+                              "name",
+                              "type",
+                              "expected",
+                              "actual",
+                              "status",
+                              "detail",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "complaints30d": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "createdAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "currentNameservers": {
+                          "anyOf": [
+                            {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "dnssec": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "expectedRecords": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                              },
+                              "purpose": {
+                                "type": "string",
+                              },
+                              "type": {
+                                "enum": [
+                                  "MX",
+                                  "TXT",
+                                  "CNAME",
+                                ],
+                                "type": "string",
+                              },
+                              "value": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "purpose",
+                              "type",
+                              "name",
+                              "value",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "id": {
+                          "type": "string",
+                        },
+                        "lastCheckedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "mailboxCount": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "mailboxes": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "address": {
+                                "type": "string",
+                              },
+                              "displayName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                              "kind": {
+                                "enum": [
+                                  "user",
+                                  "shared",
+                                  "group",
+                                  "alias",
+                                  "catch_all",
+                                ],
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "address",
+                              "kind",
+                              "displayName",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "name": {
+                          "type": "string",
+                        },
+                        "nameservers": {
+                          "anyOf": [
+                            {
+                              "items": {
+                                "type": "string",
+                              },
+                              "type": "array",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "receiving": {
+                          "type": "boolean",
+                        },
+                        "registrar": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "returnPath": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "sending": {
+                          "type": "boolean",
+                        },
+                        "updatedAt": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "zoneCheckedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "zoneId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "zoneName": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "zoneStatus": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "zoneId",
+                        "receiving",
+                        "sending",
+                        "catchAll",
+                        "mailboxCount",
+                        "lastCheckedAt",
+                        "checkStatus",
+                        "zoneStatus",
+                        "createdAt",
+                        "updatedAt",
+                        "zoneName",
+                        "nameservers",
+                        "currentNameservers",
+                        "registrar",
+                        "dnssec",
+                        "complaints30d",
+                        "returnPath",
+                        "zoneCheckedAt",
+                        "checks",
+                        "expectedRecords",
+                        "mailboxes",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "domain",
+                    "actions",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundEncoded",
+                },
+              },
+            },
+            "description": "NotFound",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FixRefusedEncoded",
+                },
+              },
+            },
+            "description": "FixRefused",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "domains",
+        ],
+      },
+    },
     "/v1/domains/{id}/recheck": {
       "post": {
         "operationId": "domains.recheck",
@@ -30055,6 +31221,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "warn",
                             "fail",
                             "error",
+                            "checking",
                           ],
                           "type": "string",
                         },
@@ -30072,6 +31239,21 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "string",
                             },
                             "type": "array",
+                          },
+                          "changedAt": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                              },
+                              {
+                                "enum": [
+                                  "Infinity",
+                                  "-Infinity",
+                                  "NaN",
+                                ],
+                                "type": "string",
+                              },
+                            ],
                           },
                           "detail": {
                             "type": "string",
@@ -30107,6 +31289,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "warn",
                               "fail",
                               "error",
+                              "checking",
                             ],
                             "type": "string",
                           },
@@ -30133,6 +31316,28 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                       },
                       "type": "array",
                     },
+                    "complaints30d": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "createdAt": {
                       "anyOf": [
                         {
@@ -30145,6 +31350,29 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                             "NaN",
                           ],
                           "type": "string",
+                        },
+                      ],
+                    },
+                    "currentNameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "dnssec": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
                         },
                       ],
                     },
@@ -30264,8 +31492,41 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "name": {
                       "type": "string",
                     },
+                    "nameservers": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "receiving": {
                       "type": "boolean",
+                    },
+                    "registrar": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "returnPath": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
                     },
                     "sending": {
                       "type": "boolean",
@@ -30285,7 +31546,49 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         },
                       ],
                     },
+                    "zoneCheckedAt": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
                     "zoneId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneName": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "zoneStatus": {
                       "anyOf": [
                         {
                           "type": "string",
@@ -30306,8 +31609,17 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "mailboxCount",
                     "lastCheckedAt",
                     "checkStatus",
+                    "zoneStatus",
                     "createdAt",
                     "updatedAt",
+                    "zoneName",
+                    "nameservers",
+                    "currentNameservers",
+                    "registrar",
+                    "dnssec",
+                    "complaints30d",
+                    "returnPath",
+                    "zoneCheckedAt",
                     "checks",
                     "expectedRecords",
                     "mailboxes",

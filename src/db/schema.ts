@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm"
 import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import type { RecordCheck } from "../domain/dnsChecks.ts"
+import type { ZoneInfo } from "../domain/zoneInfo.ts"
 import type { Action, Condition } from "../rules/engine.ts"
 
 /**
@@ -28,6 +29,8 @@ export const domains = sqliteTable(
     activatedAt: integer("activated_at"),
     /** The last DNS record check (src/domain/dnsChecks.ts), as shown on the domain detail screen. */
     checks: text("checks", { mode: "json" }).$type<ReadonlyArray<RecordCheck>>(),
+    /** What the zone said at the last recheck (HAL-3365): status, nameservers, registrar, DNSSEC, complaints. */
+    zone: text("zone", { mode: "json" }).$type<ZoneInfo>(),
     createdAt: createdAt(),
     updatedAt: integer("updated_at").notNull().default(0),
   },
