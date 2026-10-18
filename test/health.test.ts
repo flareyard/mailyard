@@ -299,7 +299,10 @@ describe("GET /openapi.json", () => {
       "/v1/webhooks/{id}/deliveries/{deliveryId}/replay",
       "/v1/webhooks/{id}/rotate-secret",
       "/v1/webhooks/{id}/test",
+      "/v1/workspace",
       "/v1/workspace/claim",
+      "/v1/workspace/deletion",
+      "/v1/workspace/restore",
       "/v1/workspace/transfer",
     ])
   })

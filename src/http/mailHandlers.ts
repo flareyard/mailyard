@@ -17,7 +17,7 @@ import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.
 import { Database } from "../services/Database.ts"
 import { Conflict, type CreateDraftPayload, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { CurrentCaller, Forbidden } from "./Auth.ts"
-import { appContext, idempotent, provideTo } from "./handlers.ts"
+import { appContext, idempotent, notWhileDeleting, provideTo } from "./handlers.ts"
 
 const tagOf = (e: unknown) => (typeof e === "object" && e !== null && "_tag" in e ? String(e._tag) : "")
 
@@ -627,6 +627,7 @@ export const MailHandlers = HttpApiBuilder.group(
       send: p(({ params, payload, request, headers }) =>
         Effect.gen(function* () {
           const { caller, mailbox } = yield* access(params.id, "send")
+          yield* notWhileDeleting
           return yield* idempotent(
             caller,
             `send:${params.id}:${params.draftId}`,

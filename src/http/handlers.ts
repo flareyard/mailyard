@@ -28,6 +28,7 @@ import { decodeRendered, sendTransactional } from "../domain/outbox.ts"
 import { allowedRoles, can, type Permission } from "../domain/permissions.ts"
 import { resolveSession, SESSION_COOKIE } from "../domain/sessions.ts"
 import type { SecretBox, WebhookQueue } from "../domain/webhooks.ts"
+import { refuseWhileDeleting } from "../domain/workspaceDeletion.ts"
 import type { ImapConnector } from "../imports/importer.ts"
 import type { InboundQueue } from "../inbound/pipeline.ts"
 import { BlobStore, type Ids, type Sender } from "../kit/index.ts"
@@ -42,6 +43,7 @@ import type { Mailboxes } from "../services/Mailboxes.ts"
 import type { SendQueue } from "../services/SendQueue.ts"
 import {
   type ApiKeySummary,
+  Conflict,
   IdempotencyConflict,
   InvalidRequest,
   MailApi,
@@ -186,6 +188,22 @@ export const appContext = Effect.context<
   | ImapConnector
 >()
 
+/**
+ * The endpoints that send call this first: while the workspace is being deleted (HAL-3448) they
+ * answer `409 { reason: "workspace-deleting", deletesAt }` instead.
+ */
+export const notWhileDeleting = refuseWhileDeleting().pipe(
+  Effect.catchTag("WorkspaceDeleting", (e) =>
+    Effect.fail(
+      new Conflict({
+        reason: "workspace-deleting",
+        message: `The workspace is being deleted on ${new Date(e.deletesAt).toUTCString()}, so nothing more is sent. Restore it to send again.`,
+        deletesAt: e.deletesAt,
+      }),
+    ),
+  ),
+)
+
 /** The refusal for a person whose role doesn't hold a permission (HAL-3361). */
 export const roleRefusal = (caller: Caller, permission: Permission) =>
   new Forbidden({
@@ -279,6 +297,7 @@ export const ActionsHandlers = HttpApiBuilder.group(
       send: p(({ payload, headers, request }) =>
         Effect.gen(function* () {
           const caller = yield* requireScope("send", "email.send")
+          yield* notWhileDeleting
           const from =
             payload.from === undefined
               ? undefined
