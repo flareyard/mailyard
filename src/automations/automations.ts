@@ -17,7 +17,7 @@ import { recordAudit } from "../domain/audit.ts"
 import { parseParty } from "../domain/outbox.ts"
 import { Ids } from "../kit/index.ts"
 import { validate as validateRule } from "../segments/rules.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { templateTexts, variablesOf } from "../templates/render.ts"
 import {
   DEFAULT_SETTINGS,
@@ -112,7 +112,7 @@ export const issuesOf = Effect.fn("automations.issues")(function* (graph: Graph,
   const found =
     templateIds.length === 0
       ? []
-      : yield* database.query("automations.templates", (db) =>
+      : yield* queryIn("automations.templates", templateIds, (db, chunk) =>
           db
             .select({
               id: templates.id,
@@ -121,7 +121,7 @@ export const issuesOf = Effect.fn("automations.issues")(function* (graph: Graph,
               archivedAt: templates.archivedAt,
             })
             .from(templates)
-            .where(inArray(templates.id, templateIds))
+            .where(inArray(templates.id, chunk))
             .all(),
         )
   for (const s of sends) {
@@ -226,11 +226,11 @@ export const issuesOf = Effect.fn("automations.issues")(function* (graph: Graph,
     ),
   ]
   if (topicIds.length > 0) {
-    const rows = yield* database.query("automations.topics", (db) =>
+    const rows = yield* queryIn("automations.topics", topicIds, (db, chunk) =>
       db
         .select({ id: topics.id, archived: topics.archived })
         .from(topics)
-        .where(inArray(topics.id, topicIds))
+        .where(inArray(topics.id, chunk))
         .all(),
     )
     for (const id of topicIds)

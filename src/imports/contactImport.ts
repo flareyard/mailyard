@@ -9,7 +9,7 @@ import { recordAudit } from "../domain/audit.ts"
 import { normalizeEmail } from "../domain/contacts.ts"
 import { sha256Hex } from "../inbound/parse.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { BOM, byteLength, parseCsv } from "./csv.ts"
 
 /**
@@ -167,8 +167,8 @@ export const createContactImport = Effect.fn("imports.create")(function* (input:
   yield* checkMapping(input.mapping)
   const topicIds = [...new Set(input.topicIds ?? [])]
   if (topicIds.length > 0) {
-    const found = yield* database.query("imports.topics", (db) =>
-      db.select({ id: topics.id }).from(topics).where(inArray(topics.id, topicIds)).all(),
+    const found = yield* queryIn("imports.topics", topicIds, (db, chunk) =>
+      db.select({ id: topics.id }).from(topics).where(inArray(topics.id, chunk)).all(),
     )
     const missing = topicIds.filter((t) => !found.some((f) => f.id === t))
     if (missing.length > 0)

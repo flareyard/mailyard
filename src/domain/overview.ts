@@ -16,7 +16,7 @@ import {
 } from "../db/schema.ts"
 import { callMailbox } from "../mail/rpc.ts"
 import type { MailboxDO } from "../objects/MailboxDO.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import type { Caller } from "./apiKeys.ts"
 import { HOLDS_MAIL } from "./mailboxes.ts"
 
@@ -250,6 +250,7 @@ const closedDays = (days: ReadonlyArray<string>) =>
       db
         .select()
         .from(inboundDaily)
+        // d1: bounded: a range is at most 90 days.
         .where(inArray(inboundDaily.day, [...days]))
         .all(),
     )
@@ -257,6 +258,7 @@ const closedDays = (days: ReadonlyArray<string>) =>
       db
         .select()
         .from(inboundDailySenders)
+        // d1: bounded: a range is at most 90 days.
         .where(inArray(inboundDailySenders.day, [...days]))
         .all(),
     )
@@ -626,12 +628,8 @@ export const activity = Effect.fn("overview.activity")(function* (query: {
   ]
   const names = new Map<string, string>()
   if (keyIds.length > 0) {
-    const rows = yield* database.query("overview.activityKeys", (db) =>
-      db
-        .select({ id: apiKeys.id, name: apiKeys.name })
-        .from(apiKeys)
-        .where(inArray(apiKeys.id, keyIds))
-        .all(),
+    const rows = yield* queryIn("overview.activityKeys", keyIds, (db, chunk) =>
+      db.select({ id: apiKeys.id, name: apiKeys.name }).from(apiKeys).where(inArray(apiKeys.id, chunk)).all(),
     )
     for (const r of rows) names.set(r.id, r.name)
   }

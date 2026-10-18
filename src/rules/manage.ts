@@ -7,7 +7,7 @@ import { recordAudit } from "../domain/audit.ts"
 import { Ids } from "../kit/index.ts"
 import { callMailbox } from "../mail/rpc.ts"
 import type { Folder, StoredMessage } from "../mailbox/types.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { type Action, type Condition, evaluate, type Rule } from "./engine.ts"
 import { authScore } from "./spam.ts"
 
@@ -60,11 +60,11 @@ const checkActions = Effect.fn("rules.checkActions")(function* (
   }
   const endpointIds = actions.flatMap((a) => (a.type === "webhook" ? [a.endpointId] : []))
   if (endpointIds.length > 0) {
-    const found = yield* database.query("rules.endpoints", (db) =>
+    const found = yield* queryIn("rules.endpoints", endpointIds, (db, chunk) =>
       db
         .select({ id: webhookEndpoints.id })
         .from(webhookEndpoints)
-        .where(inArray(webhookEndpoints.id, endpointIds))
+        .where(inArray(webhookEndpoints.id, chunk))
         .all(),
     )
     const missing = endpointIds.filter((id) => !found.some((f) => f.id === id))

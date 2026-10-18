@@ -14,7 +14,7 @@ import { BlobStore, Ids } from "../kit/index.ts"
 import { BODY_TEXT_LIMIT, type InboundDelivery } from "../mailbox/types.ts"
 import { runEffects } from "../rules/effects.ts"
 import { type FilingPlan, planFiling } from "../rules/filing.ts"
-import { Database } from "../services/Database.ts"
+import { chunksOf, Database } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { type ParsedMessage, parseMessage, sha256Hex } from "./parse.ts"
 import { type Resolution, resolveRecipient, Unroutable } from "./resolve.ts"
@@ -324,13 +324,15 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
     if (result.stored && plan.rulesMatched.length > 0) {
       // Counted once per stored copy, so a retried filing doesn't count again.
       const now = Date.now()
-      yield* (yield* Database).query("inbound.ruleMatches", (db) =>
-        db
-          .update(mailboxRules)
-          .set({ matchCount: sql`${mailboxRules.matchCount} + 1`, lastMatchedAt: now })
-          .where(inArray(mailboxRules.id, [...plan.rulesMatched]))
-          .run(),
-      )
+      // A mailbox has up to 100 rules, more than D1 binds at once.
+      for (const chunk of chunksOf([...plan.rulesMatched]))
+        yield* (yield* Database).query("inbound.ruleMatches", (db) =>
+          db
+            .update(mailboxRules)
+            .set({ matchCount: sql`${mailboxRules.matchCount} + 1`, lastMatchedAt: now })
+            .where(inArray(mailboxRules.id, chunk))
+            .run(),
+        )
     }
     if (result.stored) {
       yield* emitSafely("mail.received", {

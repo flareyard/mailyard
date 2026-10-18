@@ -306,6 +306,7 @@ export const checkRun = Effect.fn("runs.check")(function* (runId: string) {
         .where(
           and(
             eq(events.contactId, run.contactId),
+            // d1: bounded: settings allow at most 20 stop events.
             inArray(events.name, [...settings.stopEvents]),
             gte(events.at, run.startedAt),
           ),

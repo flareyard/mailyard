@@ -49,6 +49,7 @@ Before extending Mailyard at one of these points, read the skill's `SKILL.md` an
   - IMAP is read-only: `EXAMINE` and `BODY.PEEK[]`.
   - The password is sealed while the Workflow runs and wiped when it ends.
   - Exports write R2 multipart parts of exactly 8 MiB, because R2 needs equal non-final parts.
+- D1 binds at most 100 parameters a statement. An `inArray` over a list that can grow goes through `queryIn` or `chunksOf` (`src/services/Database.ts`, 90 a chunk); a list that stays small gets a `// d1: bounded: <why>` comment. `test/d1Params.test.ts` fails on anything else (HAL-3425).
 - D1 is deployed (since 2026-10-17): migrations are append-only. Run `bun run db:generate --name <change>`, then `wrangler d1 migrations apply mailyard --remote` before deploying code that needs it. Never edit or regenerate a shipped migration.
 - DNS checks (`src/domain/dnsChecks.ts`) go through the `Dns` service over DoH. In tests, `test/dns.ts` answers DoH from a table, and `LIVE_DNS=1` runs the read-only check against bridgehook.dev.
 - Tests never bind queue consumers: `vitest.config.ts` strips them from the generated Wrangler config, and tests drive consumers with `createMessageBatch` (HAL-3218).

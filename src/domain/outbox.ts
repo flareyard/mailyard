@@ -16,7 +16,7 @@ import {
   Sender,
   validate,
 } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { SendQueue } from "../services/SendQueue.ts"
@@ -139,21 +139,21 @@ export const sendTransactional = Effect.fn("outbox.sendTransactional")(function*
   // request without half of it already sent.
   const prepared: Array<{ contact: { id: string; email: string }; message: Outgoing }> = []
   const suppressed = new Set(
-    (yield* database.query("suppressions.forRecipients", (db) =>
-      db
-        .select({ email: suppressions.email })
-        .from(suppressions)
-        .where(
-          and(
-            inArray(
-              suppressions.email,
-              request.recipients.map((r) => r.email.trim().toLowerCase()),
+    (yield* queryIn(
+      "suppressions.forRecipients",
+      request.recipients.map((r) => r.email.trim().toLowerCase()),
+      (db, chunk) =>
+        db
+          .select({ email: suppressions.email })
+          .from(suppressions)
+          .where(
+            and(
+              inArray(suppressions.email, chunk),
+              // A bulk-only suppression (a complaint narrowed to bulk mail) still lets transactional mail through.
+              eq(suppressions.bulkOnly, false),
             ),
-            // A bulk-only suppression (a complaint narrowed to bulk mail) still lets transactional mail through.
-            eq(suppressions.bulkOnly, false),
-          ),
-        )
-        .all(),
+          )
+          .all(),
     )).map((r) => r.email),
   )
   for (const recipient of request.recipients) {
@@ -584,6 +584,7 @@ export const sendFromMailbox = Effect.fn("outbox.sendFromMailbox")(function* (in
         .from(suppressions)
         .where(
           and(
+            // d1: bounded: a mailbox send has at most 50 recipients (MAX_RECIPIENTS).
             inArray(
               suppressions.email,
               all.map((a) => a.email.trim().toLowerCase()),

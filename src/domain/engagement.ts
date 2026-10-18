@@ -10,7 +10,7 @@ import {
   topics,
   uploads,
 } from "../db/schema.ts"
-import { Database } from "../services/Database.ts"
+import { Database, queryIn } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { type Range, since } from "./insights.ts"
 import { HOLDS_MAIL } from "./mailboxes.ts"
@@ -37,20 +37,12 @@ export const engagementStats = Effect.fn("stats.engagement")(function* (range: R
       .limit(100)
       .all(),
   )
-  const counts = started.length
-    ? yield* database.query("stats.engagementCounts", (db) =>
-        db
-          .select()
-          .from(campaignEngagement)
-          .where(
-            inArray(
-              campaignEngagement.campaignId,
-              started.map((c) => c.id),
-            ),
-          )
-          .all(),
-      )
-    : []
+  const counts = yield* queryIn(
+    "stats.engagementCounts",
+    started.map((c) => c.id),
+    (db, chunk) =>
+      db.select().from(campaignEngagement).where(inArray(campaignEngagement.campaignId, chunk)).all(),
+  )
   const grid = yield* database.query("stats.engagementGrid", (db) =>
     db
       .select({
