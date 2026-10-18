@@ -48570,6 +48570,565 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
       },
     },
+    "/v1/integrations": {
+      "get": {
+        "operationId": "integrations.get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "hermes": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "connected": {
+                          "type": "boolean",
+                        },
+                        "lane": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "mailboxes": {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        "since": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "connected",
+                        "lane",
+                        "mailboxes",
+                        "since",
+                      ],
+                      "type": "object",
+                    },
+                    "mcp": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "agentCount": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "endpoint": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "keyCount": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "keys": {
+                          "anyOf": [
+                            {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "agent": {
+                                    "anyOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "address": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                              },
+                                              {
+                                                "type": "null",
+                                              },
+                                            ],
+                                          },
+                                          "id": {
+                                            "type": "string",
+                                          },
+                                          "mailboxId": {
+                                            "type": "string",
+                                          },
+                                          "name": {
+                                            "type": "string",
+                                          },
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "mailboxId",
+                                          "address",
+                                        ],
+                                        "type": "object",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "createdAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                  },
+                                  "lastUsedAt": {
+                                    "anyOf": [
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "number",
+                                          },
+                                          {
+                                            "enum": [
+                                              "Infinity",
+                                              "-Infinity",
+                                              "NaN",
+                                            ],
+                                            "type": "string",
+                                          },
+                                        ],
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                  },
+                                  "prefix": {
+                                    "type": "string",
+                                  },
+                                  "scopes": {
+                                    "items": {
+                                      "type": "string",
+                                    },
+                                    "type": "array",
+                                  },
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "prefix",
+                                  "scopes",
+                                  "lastUsedAt",
+                                  "createdAt",
+                                  "agent",
+                                ],
+                                "type": "object",
+                              },
+                              "type": "array",
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                        "lastUsedAt": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                },
+                                {
+                                  "enum": [
+                                    "Infinity",
+                                    "-Infinity",
+                                    "NaN",
+                                  ],
+                                  "type": "string",
+                                },
+                              ],
+                            },
+                            {
+                              "type": "null",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "endpoint",
+                        "keyCount",
+                        "agentCount",
+                        "lastUsedAt",
+                        "keys",
+                      ],
+                      "type": "object",
+                    },
+                    "siblings": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "app": {
+                            "type": "string",
+                          },
+                          "connected": {
+                            "type": "boolean",
+                          },
+                          "keyId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "lastUsedAt": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                          },
+                          "name": {
+                            "type": "string",
+                          },
+                          "via": {
+                            "enum": [
+                              "mcp",
+                              "queue",
+                            ],
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "app",
+                          "name",
+                          "via",
+                          "connected",
+                          "keyId",
+                          "lastUsedAt",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "webhooks": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "count": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "deadLetters": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "enabled": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "failing": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "failingEndpoints": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "deadLetters": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                  },
+                                  {
+                                    "enum": [
+                                      "Infinity",
+                                      "-Infinity",
+                                      "NaN",
+                                    ],
+                                    "type": "string",
+                                  },
+                                ],
+                              },
+                              "id": {
+                                "type": "string",
+                              },
+                              "lastFailureAt": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "lastSuccessAt": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "number",
+                                      },
+                                      {
+                                        "enum": [
+                                          "Infinity",
+                                          "-Infinity",
+                                          "NaN",
+                                        ],
+                                        "type": "string",
+                                      },
+                                    ],
+                                  },
+                                  {
+                                    "type": "null",
+                                  },
+                                ],
+                              },
+                              "url": {
+                                "type": "string",
+                              },
+                            },
+                            "required": [
+                              "id",
+                              "url",
+                              "deadLetters",
+                              "lastFailureAt",
+                              "lastSuccessAt",
+                            ],
+                            "type": "object",
+                          },
+                          "type": "array",
+                        },
+                        "held": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        "paused": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                      },
+                      "required": [
+                        "count",
+                        "enabled",
+                        "paused",
+                        "failing",
+                        "deadLetters",
+                        "held",
+                        "failingEndpoints",
+                      ],
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "mcp",
+                    "webhooks",
+                    "hermes",
+                    "siblings",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "integrations",
+        ],
+      },
+    },
     "/v1/invites": {
       "get": {
         "operationId": "people.listInvites",
@@ -100922,6 +101481,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
     },
     {
       "name": "approvals",
+    },
+    {
+      "name": "integrations",
     },
   ],
 }

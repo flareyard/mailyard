@@ -192,6 +192,7 @@ describe("GET /openapi.json", () => {
       "/v1/inbound",
       "/v1/inbound/{id}",
       "/v1/inbound/{id}/reprocess",
+      "/v1/integrations",
       "/v1/invites",
       "/v1/invites/{id}",
       "/v1/invites/{id}/resend",
