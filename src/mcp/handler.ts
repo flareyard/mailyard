@@ -92,7 +92,15 @@ const callTool = async (env: Env, caller: Caller, params: Record<string, unknown
   }
   // Expected refusals (no access, not found, invalid, blocked) are answers for the model, not crashes.
   const failure = exit.cause.reasons.find(Cause.isFailReason)?.error as
-    | { _tag?: string; message?: string; reason?: string }
+    | {
+        _tag?: string
+        message?: string
+        reason?: string
+        limit?: number
+        sentToday?: number
+        resetsAt?: number
+        notAllowed?: ReadonlyArray<string>
+      }
     | undefined
   if (failure)
     return {
@@ -107,6 +115,11 @@ const callTool = async (env: Env, caller: Caller, params: Record<string, unknown
           error: failure._tag ?? "Error",
           message: failure.message ?? null,
           reason: failure.reason ?? null,
+          // A key's send limits (HAL-3460): the cap, when it resets, who was outside the allow-list.
+          ...(failure.limit !== undefined ? { limit: failure.limit } : {}),
+          ...(failure.sentToday !== undefined ? { sentToday: failure.sentToday } : {}),
+          ...(failure.resetsAt !== undefined ? { resetsAt: failure.resetsAt } : {}),
+          ...(failure.notAllowed !== undefined ? { notAllowed: failure.notAllowed } : {}),
         },
         isError: true,
       },

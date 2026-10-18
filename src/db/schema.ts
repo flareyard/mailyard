@@ -917,6 +917,87 @@ export const invites = sqliteTable(
   (t) => [uniqueIndex("invites_token").on(t.tokenHash), index("invites_email").on(t.email)],
 )
 
+/**
+ * Agents (HAL-3460): an AI agent's mailbox and its `purpose: mcp` key, made together by
+ * `POST /v1/agents`. Removing an agent revokes its key and keeps the mailbox and its mail.
+ */
+export const agents = sqliteTable(
+  "agents",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    keyId: text("key_id").notNull(),
+    mailboxId: text("mailbox_id").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: integer("created_at").notNull(),
+    removedAt: integer("removed_at"),
+  },
+  (t) => [uniqueIndex("agents_key").on(t.keyId)],
+)
+
+/**
+ * Guardrails on what a key may send (HAL-3460), checked on every path a key can send through.
+ * No row means no limits beyond scopes and memberships.
+ */
+export const keyLimits = sqliteTable("key_limits", {
+  keyId: text("key_id")
+    .primaryKey()
+    .references(() => apiKeys.id, { onDelete: "cascade" }),
+  /** Messages a UTC day; null for no cap. */
+  sendsPerDay: integer("sends_per_day"),
+  /** Who it may write to: anyone, addresses already in contacts, or the listed domains. */
+  recipients: text("recipients", { enum: ["any", "contacts", "domains"] })
+    .notNull()
+    .default("any"),
+  allowDomains: text("allow_domains", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+  /** Every send waits for a person's yes in `GET /v1/approvals`. */
+  requireApproval: integer("require_approval", { mode: "boolean" }).notNull().default(false),
+  updatedAt: integer("updated_at").notNull(),
+})
+
+/** Messages a limited key sent each UTC day: one conditional upsert enforces the cap (HAL-3460). */
+export const keySendDaily = sqliteTable(
+  "key_send_daily",
+  {
+    keyId: text("key_id").notNull(),
+    /** YYYY-MM-DD, UTC. */
+    day: text("day").notNull(),
+    sends: integer("sends").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.keyId, t.day] })],
+)
+
+/**
+ * Sends held for a person's approval (HAL-3460): a transactional email or a mailbox draft from a
+ * key whose limits say `requireApproval`. Approving sends it through the normal path.
+ */
+export const approvals = sqliteTable(
+  "approvals",
+  {
+    id: text("id").primaryKey(),
+    keyId: text("key_id").notNull(),
+    kind: text("kind", { enum: ["transactional", "draft"] }).notNull(),
+    /** For a draft: the mailbox and draft held. */
+    mailboxId: text("mailbox_id"),
+    draftId: text("draft_id"),
+    /** What to do on approval: the transactional request, or the draft send's options. */
+    request: text("request", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    recipients: text("recipients", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    subject: text("subject").notNull(),
+    from: text("from"),
+    status: text("status", { enum: ["pending", "approved", "rejected", "failed"] })
+      .notNull()
+      .default("pending"),
+    createdAt: integer("created_at").notNull(),
+    decidedAt: integer("decided_at"),
+    decidedBy: text("decided_by"),
+    reason: text("reason"),
+    /** What approving it did: the message ids, or the draft's send time. */
+    result: text("result", { mode: "json" }).$type<Record<string, unknown>>(),
+  },
+  (t) => [index("approvals_status").on(t.status, t.createdAt), index("approvals_key").on(t.keyId, t.status)],
+)
+
 export const audit = sqliteTable(
   "audit",
   {

@@ -38,6 +38,9 @@ export const WEBHOOK_EVENTS = [
   "campaign.sent",
   "mail.received",
   "mail.rule_matched",
+  "approval.pending",
+  "approval.approved",
+  "approval.rejected",
 ] as const
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]
 

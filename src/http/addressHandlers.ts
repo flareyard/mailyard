@@ -39,7 +39,7 @@ import { appContext, provideTo, requireScope } from "./handlers.ts"
 type Infra = DatabaseError | MailboxUnavailable
 
 /** Database and Durable Object failures are faults, not answers: they surface as 500s. */
-const infraDies = <A, E, R>(self: Effect.Effect<A, E, R>) =>
+export const infraDies = <A, E, R>(self: Effect.Effect<A, E, R>) =>
   self.pipe(
     Effect.catchIf(
       (e): e is Extract<E, Infra> =>
@@ -86,7 +86,7 @@ const domainErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
     }
   }) as unknown as Effect.Effect<A, DomainHttp<E>, R>
 
-const mailboxErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
+export const mailboxErrors = <A, E, R>(self: Effect.Effect<A, E, R>) =>
   Effect.mapError(self, (e) => {
     switch (tagOf(e)) {
       case "MailboxNotFound":
