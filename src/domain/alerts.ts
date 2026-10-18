@@ -4,34 +4,14 @@ import * as Schema from "effect/Schema"
 import { alerts } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
+import { notifyAlert, rank } from "./alertChannels.ts"
+import type { AlertKind } from "./alertKinds.ts"
 
 export class AlertNotFound extends Schema.TaggedError<AlertNotFound>()("AlertNotFound", {
   id: Schema.String,
 }) {}
 
-/**
- * Every alert Mailyard raises (HAL-3364), one name each. Each is raised by the event that causes it or
- * by the hourly sweep (src/domain/alertSweep.ts), and cleared when its condition clears; the notices
- * (`export_ready`, `domain_activated`, `import_failed`) clear themselves after a while.
- */
-export const ALERT_KINDS = [
-  "delivery_events_missing",
-  "campaign_paused",
-  "dns_drift",
-  "reputation_warning",
-  "reputation_at_risk",
-  "bounce_spike",
-  "complaint_spike",
-  "quota_80",
-  "quota_100",
-  "webhook_dead_letter",
-  "import_failed",
-  "export_ready",
-  "domain_activated",
-  "automation_failed",
-  "approval_pending",
-] as const
-export type AlertKind = (typeof ALERT_KINDS)[number]
+export { ALERT_KINDS, type AlertKind } from "./alertKinds.ts"
 
 const HOUR = 3_600_000
 /** Notices that clear on their own: an export's link lasts a day; the others are news for a week. */
@@ -58,10 +38,26 @@ const describe = (a: AlertRow) => ({
 })
 export type AlertView = ReturnType<typeof describe>
 
+const alertOf = (input: {
+  readonly key: string
+  readonly kind: AlertKind
+  readonly severity: "info" | "warning" | "critical"
+  readonly title: string
+  readonly detail: string
+  readonly subject?: { readonly type: string; readonly id: string } | null
+}) => ({
+  key: input.key,
+  kind: input.kind,
+  severity: input.severity,
+  title: input.title,
+  detail: input.detail,
+  subject: input.subject ?? null,
+})
+
 /**
  * Opens an alert, or, when one is already open for the same `key`, brings it up to date: the latest
  * title, detail and severity, and one more in `count` (or the count given). A raise never fails what
- * raised it.
+ * raised it. A new alert, and one whose severity rises, goes to its channels (src/domain/alertChannels.ts).
  */
 export const raiseAlert = (input: {
   readonly key: string
@@ -96,7 +92,7 @@ export const raiseAlert = (input: {
         open.title !== input.title ||
         open.detail !== input.detail ||
         open.severity !== input.severity
-      )
+      ) {
         yield* database.query("alerts.refresh", (db) =>
           db
             .update(alerts)
@@ -110,6 +106,10 @@ export const raiseAlert = (input: {
             .where(eq(alerts.id, open.id))
             .run(),
         )
+        // Its channels hear again only when it gets worse (HAL-3465).
+        if (rank(input.severity) > rank(open.severity))
+          yield* notifyAlert({ ...alertOf(input), id: open.id, escalated: true })
+      }
       return open.id
     }
     const id = `alr_${yield* (yield* Ids).next}`
@@ -129,6 +129,7 @@ export const raiseAlert = (input: {
         })
         .run(),
     )
+    yield* notifyAlert({ ...alertOf(input), id, escalated: false })
     return id
   }).pipe(
     Effect.catchCause((cause) =>

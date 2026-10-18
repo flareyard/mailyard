@@ -502,6 +502,7 @@ The OpenAPI has **no automation endpoints at all**: re-measured live, zero paths
 | A8.10 | Manual trigger | `contact.html` → Trigger automation | `POST /v1/automations/{id}/enter { contactId }` |
 | A8.11 | Live counts | Node counts | Push `automation.counts { id, counts }` on `ws: workspace` (GAPS.md 2.3); until then, poll A8.2 on focus. |
 | A8.12 | Alerts | Alerts drawer | **Built** (HAL-3364): `automation_failed:<automationId>`, with `count` = runs failed in the last 24 hours and the step most of them failed on in `detail`. Retrying them, or a quiet day, clears it. |
+| A8.13 | Alert channels | Settings → Alerts | **Built** (HAL-3465): `GET/PUT /v1/settings/alerts { channels: [{ kind: "email"\|"webhook", target, kinds?, minSeverity }], defaultEmail? }` → the same plus `effective: { criticalEmail, note }`. An email `target` is an address; a webhook `target` is an endpoint id. A channel takes `kinds` (all when empty) at or above `minSeverity`. With no channels, critical alerts mail `defaultEmail`, else the owner, else nobody (the `note` says so). An alert is sent when it opens and again when its severity rises. Email goes on the `system` stream; webhooks get the new `alert.raised` event `{ alertId, key, kind, severity, title, detail, subject, escalated }`, sent to every endpoint subscribed to it and to webhook channels. |
 
 ## A9. Design decisions to confirm
 

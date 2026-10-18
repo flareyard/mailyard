@@ -43,6 +43,7 @@ export const WEBHOOK_EVENTS = [
   "approval.pending",
   "approval.approved",
   "approval.rejected",
+  "alert.raised",
 ] as const
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]
 
