@@ -5,6 +5,7 @@ import * as Option from "effect/Option"
 import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
 import type { AgentLimited } from "../domain/agents.ts"
 import type { Caller } from "../domain/apiKeys.ts"
+import { draftReplyText, summarizeThread } from "../domain/assistant.ts"
 import { recipientsOf } from "../domain/deliveryEvents.ts"
 import { publishMailEvent } from "../domain/mailEvents.ts"
 import { isManager } from "../domain/permissions.ts"
@@ -23,6 +24,7 @@ import { notifyAssigned } from "../push/notifications.ts"
 import { putSender, type RuleInvalid, type RuleNotFound } from "../rules/manage.ts"
 import { Database } from "../services/Database.ts"
 import {
+  AssistantRefused,
   type BULK_ACTIONS,
   Conflict,
   type CreateDraftPayload,
@@ -479,6 +481,59 @@ export const MailHandlers = HttpApiBuilder.group(
           return yield* callMailbox(params.id, (s) =>
             s.search(query.q, { limit: query.limit ?? 25, sort: query.sort ?? "recent" }),
           )
+        }).pipe(mailErrors),
+      ),
+      summarizeThread: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          yield* access(params.id, "read")
+          const result = yield* callMailbox(params.id, (s) => s.thread(params.threadId))
+          if (!result) return yield* new NotFound({ message: `Thread ${params.threadId} not found.` })
+          return yield* summarizeThread({
+            mailboxId: params.id,
+            thread: result.thread,
+            messages: result.messages,
+            refresh: payload.refresh,
+          }).pipe(
+            Effect.catchTag(
+              "AssistantUnavailable",
+              (e: {
+                readonly reason: "off" | "disabled" | "cap" | "no_answer" | "invalid"
+                readonly message: string
+              }) => Effect.fail(new AssistantRefused({ reason: e.reason, message: e.message })),
+            ),
+          )
+        }).pipe(mailErrors),
+      ),
+      draftReply: p(({ params, payload }) =>
+        Effect.gen(function* () {
+          const { mailbox } = yield* access(params.id, "write")
+          const result = yield* callMailbox(params.id, (s) => s.thread(params.threadId))
+          if (!result) return yield* new NotFound({ message: `Thread ${params.threadId} not found.` })
+          const incoming = [...result.messages].reverse().find((m) => m.folder !== "sent")
+          if (!incoming)
+            return yield* new InvalidRequest({
+              field: "threadId",
+              message: "This conversation has no incoming message to reply to.",
+            })
+          const written = yield* draftReplyText({
+            mailboxId: params.id,
+            mailboxAddress: mailbox.address,
+            messages: result.messages,
+            instructions: payload.instructions,
+          }).pipe(
+            Effect.catchTag(
+              "AssistantUnavailable",
+              (e: {
+                readonly reason: "off" | "disabled" | "cap" | "no_answer" | "invalid"
+                readonly message: string
+              }) => Effect.fail(new AssistantRefused({ reason: e.reason, message: e.message })),
+            ),
+          )
+          const draft = yield* createDraftNow(params.id, mailbox, {
+            replyTo: { messageId: incoming.id, mode: "reply" },
+            bodyText: written.bodyText,
+          })
+          return { draft, model: written.model }
         }).pipe(mailErrors),
       ),
       addNote: p(({ params, payload }) =>

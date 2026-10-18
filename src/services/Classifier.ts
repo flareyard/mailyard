@@ -24,6 +24,16 @@ export interface Verdict {
 
 export const NO_OPINION = (source: Verdict["source"]): Verdict => ({ spamProbability: null, source })
 
+/**
+ * The chat completions endpoint from a configured URL: the API's base (`…/v1`) or the endpoint itself
+ * (`…/v1/chat/completions`, as the install form asks for). Both used to be taken as the base, so the
+ * full URL became `…/chat/completions/chat/completions`.
+ */
+export const chatCompletionsUrl = (url: string) => {
+  const trimmed = url.trim().replace(/\/+$/, "")
+  return /\/chat\/completions$/.test(trimmed) ? trimmed : `${trimmed}/chat/completions`
+}
+
 /** What the model sees: enough to judge, little enough to keep each call cheap. */
 export const CLASSIFIER_TEXT_LIMIT = 2_000
 
@@ -110,7 +120,7 @@ export class Classifier extends Context.Service<
       Classifier.of({
         classify: (input) =>
           Effect.tryPromise(async () => {
-            const response = await fetch(`${config.url.replace(/\/$/, "")}/chat/completions`, {
+            const response = await fetch(chatCompletionsUrl(config.url), {
               method: "POST",
               headers: {
                 "content-type": "application/json",

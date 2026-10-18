@@ -89,6 +89,11 @@
       "optional": true
     },
     {
+      "name": "ASSISTANT_API_KEY",
+      "ask": "API key for the OpenAI-compatible model behind the mailbox and audience helpers, if you use one",
+      "optional": true
+    },
+    {
       "name": "CLOUDFLARE_ACCOUNT_ID",
       "ask": "Your Cloudflare account ID, so the Overview can show your daily sending quota and reputation",
       "optional": true
@@ -190,6 +195,56 @@
         "setting": "MAILYARD_CLASSIFIER",
         "equals": "openai"
       }
+    },
+    {
+      "name": "MAILYARD_ASSISTANT",
+      "label": "Model for summaries, reply drafts, categories and segments",
+      "type": "enum",
+      "default": "off",
+      "options": [
+        {
+          "value": "off",
+          "label": "Off"
+        },
+        {
+          "value": "workers-ai",
+          "label": "Workers AI"
+        },
+        {
+          "value": "openai",
+          "label": "An OpenAI-compatible endpoint"
+        }
+      ],
+      "help": "Each helper is also off until turned on in Settings, Assistant, with a daily cap per mailbox."
+    },
+    {
+      "name": "ASSISTANT_MODEL",
+      "label": "Assistant model",
+      "type": "string",
+      "optional": true,
+      "help": "Workers AI defaults to @cf/zai-org/glm-4.7-flash; an OpenAI-compatible endpoint needs one."
+    },
+    {
+      "name": "ASSISTANT_URL",
+      "label": "Assistant endpoint",
+      "type": "url",
+      "optional": true,
+      "when": {
+        "setting": "MAILYARD_ASSISTANT",
+        "equals": "openai"
+      },
+      "help": "The API base (https://api.openai.com/v1) or its chat completions URL."
+    },
+    {
+      "name": "AI_GATEWAY_ID",
+      "label": "AI Gateway",
+      "type": "string",
+      "optional": true,
+      "when": {
+        "setting": "MAILYARD_ASSISTANT",
+        "equals": "workers-ai"
+      },
+      "help": "Route Workers AI calls through this gateway, for logs, caching and spend limits."
     },
     {
       "name": "SMTP_HOST",
