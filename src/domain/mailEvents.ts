@@ -11,7 +11,7 @@ import {
 } from "../contracts/mailEvents.ts"
 import { mailboxes, settings } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
-import { Database } from "../services/Database.ts"
+import { chunksOf, Database } from "../services/Database.ts"
 
 /**
  * The producer side of the mail-events lane (HAL-3306). The lane is off until someone turns it on
@@ -87,10 +87,15 @@ export const putLane = Effect.fn("mailEvents.put")(function* (input: {
   const database = yield* Database
   const ids = input.mailboxIds ? [...new Set(input.mailboxIds)] : null
   if (ids && ids.length > 0) {
-    const found = yield* database.query("mailEvents.mailboxes", (db) =>
-      db.select({ id: mailboxes.id }).from(mailboxes).where(inArray(mailboxes.id, ids)).all(),
-    )
-    const missing = ids.filter((id) => !found.some((f) => f.id === id))
+    // Up to 500 ids, more than D1 binds at once.
+    const found = new Set<string>()
+    for (const chunk of chunksOf(ids)) {
+      const rows = yield* database.query("mailEvents.mailboxes", (db) =>
+        db.select({ id: mailboxes.id }).from(mailboxes).where(inArray(mailboxes.id, chunk)).all(),
+      )
+      for (const row of rows) found.add(row.id)
+    }
+    const missing = ids.filter((id) => !found.has(id))
     if (missing.length > 0)
       return yield* new LaneInvalid({ field: "mailboxIds", message: `No mailbox ${missing.join(", ")}.` })
   }
