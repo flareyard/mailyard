@@ -1,0 +1,44 @@
+/* First run: only what the design CSS doesn't already cover. Tokens only. */
+
+/* The step heading takes focus when the step changes, for screen readers; the ring shows for keyboards only. */
+.step-panel h2[tabindex="-1"]:focus {
+  outline: none;
+}
+.step-panel h2[tabindex="-1"]:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-base);
+}
+
+/* A step's form keeps the panel body's 20 px rhythm, so fields sit as they do in the designs. */
+.step-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Key-value tables stack on narrow phones: a label column 79 px wide crushed "Cloudflare routing" onto four
+   lines at 360 px (responsive audit). */
+@media (max-width: 480px) {
+  .kv-table tr {
+    display: grid;
+    gap: 2px;
+    padding: 8px 0;
+  }
+  .kv-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+}
+
+/* The chosen file: on narrow screens its status pill drops under the name, which otherwise shrank to 68 px and
+   broke a file name over four lines (responsive audit, a 390 px phone at 130% zoom). */
+@media (max-width: 480px) {
+  .file-choice {
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
+  .file-choice > :nth-child(3) {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

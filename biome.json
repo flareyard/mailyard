@@ -8,7 +8,15 @@
       "!**/dist",
       "!docs",
       "!design",
-      "!**/migrations/meta"
+      "!**/migrations/meta",
+      "!web/src/routeTree.gen.ts",
+      "!web/src/api/schema.d.ts",
+      "!web/src/fixtures/fixtures.json",
+      "!web/e2e/responsive-audit.mjs",
+      "!web/src/styles",
+      "!web/dist-audit",
+      "!web/test-results",
+      "!web/playwright-report"
     ]
   },
   "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 110 },
