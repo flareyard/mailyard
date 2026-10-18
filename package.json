@@ -14,7 +14,8 @@
     "release": "bun \"${FLAREYARD_DIR:-../flareyard}/packages/manifest/src/release-cli.ts\" release . --out flareyard-release.json",
     "dev": "wrangler dev",
     "build": "wrangler deploy --dry-run --outdir dist",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "smoke:prod": "bun tools/smoke/prod.ts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",

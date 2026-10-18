@@ -57,3 +57,11 @@ Before extending Mailyard at one of these points, read the skill's `SKILL.md` an
 - The app holds no Cloudflare API token. Cloudflare-side config is declared and applied by the platform's OAuth deploy.
 - The OpenAPI snapshot in `test/__snapshots__` is the API contract; a change to it is a contract change and needs saying so in the PR.
 - Wrangler on the founder's laptop may be logged into a different Cloudflare account from the one holding the sending domains; check `wrangler whoami` before remote work.
+
+## Production smoke test
+
+`bun run smoke:prod` calls every read endpoint (and the read-only previews) against production with
+the admin key from `.env`, and checks each answers 200, decodes with its own success schema, and
+carries `x-request-id`. It refuses to write. Run it after a deploy that changes response shapes;
+`--designed <contract.json>` also lists designed endpoints the API lacks. CI runs it daily once
+the `MAILYARD_SMOKE_KEY` secret exists (`.github/workflows/smoke.yml`).
