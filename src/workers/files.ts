@@ -1,11 +1,16 @@
+import { eq } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Option from "effect/Option"
 import type { Env } from "../Bindings.ts"
+import { messagesOut } from "../db/schema.ts"
+import { rawMessage } from "../domain/messageRaw.ts"
+import { decodeRendered } from "../domain/outbox.ts"
 import { sha256Hex } from "../inbound/parse.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
 import { type Access, requireMailbox } from "../mail/access.ts"
 import { verifyFileToken } from "../mail/files.ts"
 import { callMailbox } from "../mail/rpc.ts"
+import { Database } from "../services/Database.ts"
 import { authorize, problem } from "./auth.ts"
 import { runtimeFor } from "./inbound.ts"
 
@@ -16,6 +21,7 @@ export const UPLOAD_PATH = /^\/v1\/mailboxes\/([^/]+)\/uploads$/
 export const RAW_PATH = /^\/v1\/mailboxes\/([^/]+)\/messages\/([^/]+)\/raw$/
 export const ATTACHMENT_PATH = /^\/v1\/mailboxes\/([^/]+)\/messages\/([^/]+)\/attachments\/([^/]+)$/
 export const FILE_PATH = /^\/v1\/files\/([^/]+)$/
+export const MESSAGE_RAW_PATH = /^\/v1\/messages\/([^/]+)\/raw$/
 
 /** RFC 6266 Content-Disposition with an ASCII fallback and the UTF-8 name. */
 const disposition = (kind: "attachment" | "inline", filename: string) => {
@@ -107,6 +113,38 @@ export const handleRaw = async (request: Request, env: Env, mailboxId: string, m
   const raw = await blob(env, message.rawKey)
   if (Option.isNone(raw)) return problem(404, "The original of this message is no longer stored.")
   return serve(raw.value.body, "message/rfc822", "attachment", `${messageId}.eml`)
+}
+
+/** `GET /v1/messages/{id}/raw`: a sent message as `.eml`, rebuilt from the message log's stored copy. */
+export const handleMessageRaw = async (request: Request, env: Env, messageId: string) => {
+  const auth = await authorize(request, env)
+  if (auth instanceof Response) return auth
+  if (auth.caller.kind !== "secret" || !auth.caller.scopes.includes("read"))
+    return problem(403, "This needs a secret key with the read scope.", {
+      reason: auth.caller.kind === "public" ? "public-key" : "insufficient-scope",
+      required: "read",
+    })
+  const row = await runtimeFor(env).runPromise(
+    Effect.gen(function* () {
+      const database = yield* Database
+      return yield* database.query("messages.raw", (db) =>
+        db
+          .select({
+            renderedKey: messagesOut.renderedKey,
+            cfMessageId: messagesOut.cfMessageId,
+            createdAt: messagesOut.createdAt,
+          })
+          .from(messagesOut)
+          .where(eq(messagesOut.id, messageId))
+          .get(),
+      )
+    }).pipe(Effect.orElseSucceed(() => undefined)),
+  )
+  if (!row) return problem(404, `Message ${messageId} not found.`)
+  const stored = row.renderedKey ? await blob(env, row.renderedKey) : Option.none()
+  if (Option.isNone(stored)) return problem(404, "The copy of this message is no longer stored.")
+  const message = decodeRendered(new TextDecoder().decode(stored.value.body))
+  return serve(rawMessage(message, row), "message/rfc822", "attachment", `${messageId}.eml`)
 }
 
 /** `GET /v1/mailboxes/{id}/messages/{messageId}/attachments/{attachmentId}`. */

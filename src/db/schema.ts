@@ -364,6 +364,8 @@ export const messagesOut = sqliteTable(
     /** Why the last attempt failed, in the sender's words (a typed error tag and its message). */
     error: text("error"),
     attempts: integer("attempts").notNull().default(0),
+    /** When Mailyard's own retry of a deferred send is due; null when none is queued (HAL-3413). */
+    nextAttemptAt: integer("next_attempt_at"),
     /** R2 key of the rendered message as sent, for the message log and for retries. */
     renderedKey: text("rendered_key"),
     /** Which subject an A/B campaign message carried. */
@@ -387,7 +389,44 @@ export const messagesOut = sqliteTable(
     index("messages_out_recipient").on(t.recipient, t.createdAt),
     index("messages_out_campaign").on(t.campaignId, t.status),
     index("messages_out_created").on(t.createdAt),
+    index("messages_out_stream").on(t.stream, t.createdAt),
+    index("messages_out_template").on(t.templateId, t.createdAt),
   ],
+)
+
+/**
+ * A message's trail (HAL-3413): accepted, every status change and retry, the first human open and
+ * click. Written by triggers on `messages_out` (migration 0025), so every writer (the outbox, the
+ * events consumer, tracking, campaigns) is covered without each one remembering to.
+ */
+export const messageEvents = sqliteTable(
+  "message_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    messageId: text("message_id").notNull(),
+    type: text("type", {
+      enum: [
+        "accepted",
+        "sent",
+        "deferred",
+        "delivered",
+        "bounced",
+        "complained",
+        "failed",
+        "rejected",
+        "suppressed",
+        "opened",
+        "clicked",
+      ],
+    }).notNull(),
+    at: integer("at").notNull(),
+    attempt: integer("attempt"),
+    provider: text("provider"),
+    bounceType: text("bounce_type"),
+    smtpResponse: text("smtp_response"),
+    detail: text("detail"),
+  },
+  (t) => [index("message_events_message").on(t.messageId, t.at)],
 )
 
 /** Processed Email Sending event ids, so a redelivered queue message is applied once. */

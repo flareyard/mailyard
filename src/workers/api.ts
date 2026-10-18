@@ -42,8 +42,10 @@ import {
   FILE_PATH,
   handleAttachment,
   handleFile,
+  handleMessageRaw,
   handleRaw,
   handleUpload,
+  MESSAGE_RAW_PATH,
   RAW_PATH,
   UPLOAD_PATH,
 } from "./files.ts"
@@ -128,6 +130,8 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   const attachment = ATTACHMENT_PATH.exec(path)
   if (attachment && request.method === "GET")
     return handleAttachment(request, env, d(attachment[1]), d(attachment[2]), d(attachment[3]))
+  const messageRaw = MESSAGE_RAW_PATH.exec(path)
+  if (messageRaw && request.method === "GET") return handleMessageRaw(request, env, d(messageRaw[1]))
   const file = FILE_PATH.exec(path)
   if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
   const confirm = CONFIRM_PATH.exec(path)

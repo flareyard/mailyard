@@ -398,6 +398,7 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
           cfMessageId: outcome.success.messageId,
           attempts,
           error: null,
+          nextAttemptAt: null,
           updatedAt: now,
         })
         .where(eq(messagesOut.id, id))
@@ -448,15 +449,21 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
       : `${e._tag}: ${messageOf(e)}`
   const retryable = error._tag === "SendDeferred" || error._tag === "QuotaExceeded"
   if (retryable && attempts < MAX_ATTEMPTS) {
+    // Quota resets daily; anything else backs off exponentially from a minute.
+    const delay = error._tag === "QuotaExceeded" ? 3600 : 60 * 2 ** (attempts - 1)
     yield* database.query("messagesOut.deferred", (db) =>
       db
         .update(messagesOut)
-        .set({ status: "deferred", attempts, error: describe(error), updatedAt: now })
+        .set({
+          status: "deferred",
+          attempts,
+          error: describe(error),
+          nextAttemptAt: now + delay * 1000,
+          updatedAt: now,
+        })
         .where(eq(messagesOut.id, id))
         .run(),
     )
-    // Quota resets daily; anything else backs off exponentially from a minute.
-    const delay = error._tag === "QuotaExceeded" ? 3600 : 60 * 2 ** (attempts - 1)
     yield* queue.enqueue({ messageId: id }, delay)
     yield* emitSafely("message.deferred", {
       messageId: id,
@@ -472,7 +479,7 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
   yield* database.query("messagesOut.failed", (db) =>
     db
       .update(messagesOut)
-      .set({ status, attempts, error: describe(error), updatedAt: now })
+      .set({ status, attempts, error: describe(error), nextAttemptAt: null, updatedAt: now })
       .where(eq(messagesOut.id, id))
       .run(),
   )
