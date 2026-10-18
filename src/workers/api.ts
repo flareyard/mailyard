@@ -183,7 +183,7 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   const file = FILE_PATH.exec(path)
   if (file && request.method === "GET") return handleFile(request, env, d(file[1]))
   const confirm = CONFIRM_PATH.exec(path)
-  if (confirm && request.method === "GET") return handleConfirm(env, d(confirm[1]))
+  if (confirm && request.method === "GET") return handleConfirm(env, d(confirm[1]), request)
   const open = OPEN_PATH.exec(path)
   if (open && request.method === "GET") return handleOpen(request, env, d(open[1]), ctx)
   const click = CLICK_PATH.exec(path)

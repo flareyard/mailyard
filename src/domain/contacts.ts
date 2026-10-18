@@ -5,9 +5,11 @@ import { fireTrigger, stopRunsFor } from "../automations/runs.ts"
 import {
   automationRuns,
   automations,
+  type ConsentEvidence,
   contactFields,
   contacts,
   events,
+  inboundDeliveries,
   inboundMessages,
   messagesOut,
   segments,
@@ -448,24 +450,33 @@ export type TimelineItem =
       readonly from: SubscriptionState | null
       readonly to: SubscriptionState
       readonly source: string
+      readonly evidence: ConsentEvidence | null
     }
   | {
-      /** The contact confirmed a double opt-in: the consent on record. */
+      /**
+       * The person opted in themselves: confirmed a double opt-in, signed up through a form to a topic
+       * without one, or ticked a topic on the preference page. The consent on record, with its evidence.
+       */
       readonly kind: "consent"
       readonly id: string
       readonly at: number
       readonly topicId: string
       readonly topic: string
       readonly source: string
+      readonly method: "double_opt_in" | "form" | "preference_page"
+      readonly evidence: ConsentEvidence | null
     }
   | {
-      /** Mail they sent in. */
+      /** Mail they sent in, and where it was filed: the first mailbox's copy and conversation. */
       readonly kind: "reply"
       readonly id: string
       readonly at: number
       readonly subject: string | null
       readonly to: string
       readonly inReplyTo: string | null
+      readonly mailboxId: string | null
+      readonly threadId: string | null
+      readonly messageId: string | null
     }
   | {
       readonly kind: "automation"
@@ -604,6 +615,25 @@ export const contactTimeline = Effect.fn("contacts.timeline")(function* (
     ],
     { concurrency: "unbounded" },
   )
+  // Where each reply was filed (one page of them, at most `limit`); the first mailbox's copy wins.
+  const filings = new Map<string, { mailboxId: string; threadId: string | null; messageId: string | null }>()
+  for (const chunk of chunksOf(replyRows.map((r) => r.id))) {
+    const rows = yield* database.query("contacts.timeline.replyFilings", (db) =>
+      db
+        .select({
+          inboundId: inboundDeliveries.inboundId,
+          mailboxId: inboundDeliveries.mailboxId,
+          threadId: inboundDeliveries.threadId,
+          messageId: inboundDeliveries.messageId,
+          at: inboundDeliveries.at,
+        })
+        .from(inboundDeliveries)
+        .where(inArray(inboundDeliveries.inboundId, chunk))
+        .orderBy(asc(inboundDeliveries.at))
+        .all(),
+    )
+    for (const row of rows) if (!filings.has(row.inboundId)) filings.set(row.inboundId, row)
+  }
   const items: Array<TimelineItem> = [
     ...eventRows.flatMap((e): Array<TimelineItem> => {
       const isEmail = e.name.startsWith("email.")
@@ -647,9 +677,10 @@ export const contactTimeline = Effect.fn("contacts.timeline")(function* (
           from: change.from,
           to: change.to,
           source: change.source,
+          evidence: change.evidence ?? null,
         })
-      // A double opt-in confirmed: unconfirmed to subscribed.
-      if (wanted.has("consent") && change.from === "unconfirmed" && change.to === "subscribed")
+      const method = consentMethod(change)
+      if (wanted.has("consent") && method)
         out.push({
           kind: "consent",
           id: `${change.id}:consent`,
@@ -657,17 +688,25 @@ export const contactTimeline = Effect.fn("contacts.timeline")(function* (
           topicId: change.topicId,
           topic,
           source: change.source,
+          method,
+          evidence: change.evidence ?? null,
         })
       return out
     }),
-    ...replyRows.map((r) => ({
-      kind: "reply" as const,
-      id: r.id,
-      at: r.at,
-      subject: r.subject,
-      to: r.to,
-      inReplyTo: r.inReplyTo,
-    })),
+    ...replyRows.map((r) => {
+      const filed = filings.get(r.id)
+      return {
+        kind: "reply" as const,
+        id: r.id,
+        at: r.at,
+        subject: r.subject,
+        to: r.to,
+        inReplyTo: r.inReplyTo,
+        mailboxId: filed?.mailboxId ?? null,
+        threadId: filed?.threadId ?? null,
+        messageId: filed?.messageId ?? null,
+      }
+    }),
     ...runRows.map(({ run, name }) => ({
       kind: "automation" as const,
       id: run.id,
@@ -803,6 +842,8 @@ export const writeSubscription = Effect.fn("contacts.writeSubscription")(functio
   topicId: string,
   to: SubscriptionState,
   source: string,
+  /** Where the person acted from, kept with the change as consent evidence (HAL-3426). */
+  evidence?: ConsentEvidence | undefined,
 ) {
   const database = yield* Database
   const now = Date.now()
@@ -835,6 +876,7 @@ export const writeSubscription = Effect.fn("contacts.writeSubscription")(functio
         from: current?.state ?? null,
         to,
         source,
+        evidence: evidence && Object.keys(evidence).length > 0 ? evidence : null,
         at: now,
       })
       .run(),
@@ -1046,6 +1088,12 @@ const fieldUsage = Effect.gen(function* () {
           const fields = (o.config as { fields?: unknown }).fields
           if (fields && typeof fields === "object") for (const k of Object.keys(fields)) found.add(k)
         }
+        // A date trigger and a wait-until-field both read a contact field (HAL-3426).
+        if ((o.type === "trigger" || o.type === "wait_until") && o.config && typeof o.config === "object") {
+          const config = o.config as { kind?: unknown; field?: unknown }
+          if ((config.kind === "date" || config.kind === "field") && typeof config.field === "string")
+            found.add(config.field)
+        }
         for (const x of Object.values(o)) walk(x)
       }
     }
@@ -1057,6 +1105,19 @@ const fieldUsage = Effect.gen(function* () {
     ...autos.map((a) => ({ type: "automation" as const, id: a.id, name: a.name, keys: keysIn(a.graph) })),
   ]
 })
+
+/** Whether a subscription change was the person opting in themselves, and how. */
+const consentMethod = (change: {
+  readonly from: SubscriptionState | null
+  readonly to: SubscriptionState
+  readonly source: string
+}): "double_opt_in" | "form" | "preference_page" | null => {
+  if (change.to !== "subscribed") return null
+  if (change.from === "unconfirmed") return "double_opt_in"
+  if (change.source.startsWith("form:")) return "form"
+  if (change.source === "preference page") return "preference_page"
+  return null
+}
 
 /**
  * `GET /v1/contact-fields`: every custom field, its label and type, and where it's used. Segments and

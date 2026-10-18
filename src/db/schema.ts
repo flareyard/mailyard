@@ -158,6 +158,26 @@ export const campaignLinks = sqliteTable(
 )
 
 /** Every change to a contact's subscription to a topic, for the timeline and for consent records. */
+/**
+ * The evidence behind a subscription change, for a GDPR or CASL request: an import's attestation
+ * (HAL-3371), or, when the person acted themselves (a signup form, a confirmation link, the
+ * preference page), where from and what they saw (HAL-3426).
+ */
+export interface ConsentEvidence {
+  readonly importId?: string
+  readonly attestedBy?: string
+  readonly attestedAt?: number
+  readonly statement?: string
+  /** The client's IP (`cf-connecting-ip`) and browser, when the person acted themselves. */
+  readonly ip?: string
+  readonly userAgent?: string
+  /** The page they acted on. */
+  readonly page?: string
+  /** The form they signed up through, and a hash of what it showed them then. */
+  readonly formId?: string
+  readonly formVersion?: string
+}
+
 export const subscriptionChanges = sqliteTable(
   "subscription_changes",
   {
@@ -172,12 +192,7 @@ export const subscriptionChanges = sqliteTable(
     to: text("to", { enum: ["subscribed", "unconfirmed", "unsubscribed"] }).notNull(),
     source: text("source").notNull(),
     /** The consent behind a change made for the person, such as an import's attestation (HAL-3371). */
-    evidence: text("evidence", { mode: "json" }).$type<{
-      readonly importId?: string
-      readonly attestedBy?: string
-      readonly attestedAt?: number
-      readonly statement?: string
-    }>(),
+    evidence: text("evidence", { mode: "json" }).$type<ConsentEvidence>(),
     at: integer("at").notNull(),
   },
   (t) => [
@@ -1586,6 +1601,9 @@ export const inboundDeliveries = sqliteTable(
     inboundId: text("inbound_id").notNull(),
     mailboxId: text("mailbox_id").notNull(),
     folder: text("folder"),
+    /** The filed copy and its conversation, so the contact timeline can open it (HAL-3426). */
+    messageId: text("message_id"),
+    threadId: text("thread_id"),
     at: integer("at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.inboundId, t.mailboxId] }), index("inbound_deliveries_at").on(t.at)],
