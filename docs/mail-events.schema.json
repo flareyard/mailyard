@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/flareyard/mailyard/blob/main/docs/mail-events.schema.json",
+  "title": "Mailyard mail event, version 1",
+  "$comment": "Generated from src/contracts/mailEvents.ts by bun run contracts. Don't edit by hand.",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "enum": [
+            1
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "message.received"
+          ]
+        },
+        "at": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "mailboxId": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "messageId": {
+          "type": "string"
+        },
+        "internetMessageId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string"
+                },
+                "name": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "email",
+                "name"
+              ],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "spam": {
+          "type": "boolean"
+        },
+        "automated": {
+          "type": "boolean"
+        },
+        "attachments": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "id",
+        "type",
+        "at",
+        "mailboxId",
+        "threadId",
+        "messageId",
+        "internetMessageId",
+        "from",
+        "to",
+        "subject",
+        "snippet",
+        "folder",
+        "spam",
+        "automated",
+        "attachments"
+      ],
+      "additionalProperties": true
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "enum": [
+            1
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "message.sent"
+          ]
+        },
+        "at": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "mailboxId": {
+          "type": "string"
+        },
+        "outId": {
+          "type": "string"
+        },
+        "messageId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recipient": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "id",
+        "type",
+        "at",
+        "mailboxId",
+        "outId",
+        "messageId",
+        "recipient",
+        "subject"
+      ],
+      "additionalProperties": true
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "enum": [
+            1
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "thread.assigned"
+          ]
+        },
+        "at": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "mailboxId": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "assignee": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "by": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "id",
+        "type",
+        "at",
+        "mailboxId",
+        "threadId",
+        "assignee",
+        "by"
+      ],
+      "additionalProperties": true
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "enum": [
+            1
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "delivery"
+          ]
+        },
+        "at": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "mailboxId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "delivered",
+            "deferred",
+            "bounced",
+            "failed",
+            "rejected",
+            "complained"
+          ]
+        },
+        "outId": {
+          "type": "string"
+        },
+        "recipient": {
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bounce": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "smtpResponse": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "id",
+        "type",
+        "at",
+        "mailboxId",
+        "kind",
+        "outId",
+        "recipient",
+        "subject",
+        "bounce",
+        "smtpResponse"
+      ],
+      "additionalProperties": true
+    }
+  ]
+}

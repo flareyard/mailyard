@@ -46,6 +46,8 @@ export interface Env {
   readonly CAMPAIGN_WORKFLOW: Workflow<{ readonly campaignId: string; readonly origin: string }>
   /** Automation triggers, fanned out to runs (src/automations/runs.ts). */
   readonly AUTOMATION_QUEUE: Queue<import("./automations/runs.ts").AutomationTriggerJob>
+  /** The mail-events lane Hermes reads (HAL-3306, src/contracts/mailEvents.ts); absent off Cloudflare. */
+  readonly MAIL_EVENTS_QUEUE?: Queue<import("./contracts/mailEvents.ts").MailEvent>
   /** One automation run: walks a published graph for one contact (src/workflows/automation.ts). */
   readonly AUTOMATION_WORKFLOW: Workflow<{ readonly runId: string }>
   /** Imports a contact CSV in 5,000-row steps (src/workflows/contactImport.ts). */

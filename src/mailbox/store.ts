@@ -1931,7 +1931,7 @@ export class MailboxStore {
     return this.transaction(() => {
       const threads = threadIds.filter((id) => this.threadRow(id))
       for (const id of threads) this.sql.exec("UPDATE threads SET assignee = ? WHERE id = ?", assignee, id)
-      return { updated: threads.length, events: [this.changed(threads)] }
+      return { updated: threads.length, threadIds: threads, events: [this.changed(threads)] }
     })
   }
 

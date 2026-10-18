@@ -25,6 +25,7 @@ import { instrument } from "../tracking/track.ts"
 import { getBrand } from "./brand.ts"
 import { isBlocked, upsertContact } from "./contacts.ts"
 import { bumpDailyStat } from "./deliveryEvents.ts"
+import { publishMailEvent } from "./mailEvents.ts"
 import { resolveForSend } from "./templates.ts"
 import { emitSafely } from "./webhooks.ts"
 import { DELETING_ERROR, pendingDeletion } from "./workspaceDeletion.ts"
@@ -486,6 +487,16 @@ export const attempt = Effect.fn("outbox.attempt")(function* (
       campaignId: stream?.campaignId ?? null,
       mailboxId: stream?.mailboxId ?? null,
     })
+    if (stream?.mailboxId)
+      yield* publishMailEvent({
+        type: "message.sent",
+        mailboxId: stream.mailboxId,
+        outId: id,
+        messageId: stream.mailboxMessageId ?? null,
+        recipient: message.to[0]?.email ?? null,
+        subject: message.subject,
+        at: now,
+      })
     return "sent"
   }
 
