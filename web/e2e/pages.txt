@@ -18,3 +18,6 @@ mail
 audience
 settings
 no-such-page
+invite/expired
+invite/revoked
+invite/unknown
