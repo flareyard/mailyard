@@ -5,6 +5,27 @@
   "minify": true,
   "upload_source_maps": true,
   "compatibility_date": "2026-10-16",
+  // The web app (web/, HAL-3307) is served from the same origin as the API, so its session cookie is
+  // first-party. Everything the Worker answers itself runs first; any other path is the app, and unknown
+  // app paths fall back to index.html for client-side routing. A new top-level Worker prefix goes here too.
+  "assets": {
+    "directory": "web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/v1/*",
+      "/healthz",
+      "/openapi.json",
+      "/mcp",
+      "/mcp/*",
+      "/t/*",
+      "/u/*",
+      "/p/*",
+      "/c/*",
+      "/f/*",
+      "/v/*",
+      "/brand/*"
+    ]
+  },
   // No resource ids: `wrangler deploy` provisions D1, R2 and the queues in whichever account deploys, and
   // keeps them linked by name. Don't commit the ids wrangler writes back after a deploy.
   "d1_databases": [{ "binding": "DB", "database_name": "mailyard", "migrations_dir": "migrations" }],

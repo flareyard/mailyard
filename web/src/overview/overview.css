@@ -1,0 +1,177 @@
+/*
+ * Overview-only glue. The design's classes (mailyard.css) do the real styling; these rules replace the inline
+ * styles the design screens carry, and seat the panel footers inside <Panel>'s body. Tokens only.
+ */
+
+/* Needs you spans the full row between 900 and 1279 px, as the design's `lg-span-12` does. */
+@media (max-width: 1279px) {
+  .grid-12 > .panel[aria-labelledby="h-needs-you"] {
+    grid-column: span 12;
+  }
+}
+
+/* Offline: every panel is dashed, as .panel.is-stale (HANDOFF §4). */
+.ov-offline > .panel {
+  border-style: dashed;
+}
+
+/* Footers drawn inside the body, pinned to the panel's bottom edge like the design's .panel-foot. */
+.panel-body:has(> .ov-foot, > .ov-health-account) {
+  display: flex;
+  flex-direction: column;
+}
+.panel-body > .ov-foot {
+  margin: auto -16px -16px;
+}
+.panel-body > :not(.ov-foot, .ov-health-account):has(+ .ov-foot) {
+  margin-bottom: 14px;
+}
+.panel-body > .ov-health-account {
+  margin: auto -16px -16px;
+}
+.panel-body > .health + .ov-health-account {
+  margin-top: 0;
+}
+
+/* Text tones. */
+.ov-text-fail {
+  color: var(--red-900);
+}
+.ov-text-warn {
+  color: var(--amber-900);
+}
+.ov-text-pass {
+  color: var(--green-900);
+}
+.ov-fg {
+  color: var(--my-fg);
+}
+.ov-failed {
+  color: var(--red-900);
+  font-weight: 600;
+}
+
+/* Links that read as their content. */
+.ov-plain-link,
+.ov-plain-link:hover {
+  text-decoration: none;
+  color: inherit;
+}
+.ov-inherit {
+  color: inherit;
+}
+
+/* Spacing the design writes inline. */
+.ov-mt-6 {
+  margin-top: 6px;
+}
+.ov-mt-12 {
+  margin-top: 12px;
+}
+.ov-mb-2 {
+  margin-bottom: 2px;
+}
+.ov-mb-4 {
+  margin-bottom: 4px;
+}
+.ov-mb-6 {
+  margin-bottom: 6px;
+}
+.ov-mb-12 {
+  margin-bottom: 12px;
+}
+.ov-divider-top {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-300);
+}
+.ov-block {
+  display: block;
+}
+.ov-align-end {
+  align-items: flex-end;
+}
+
+/* Stats, lists and small bars. */
+.ov-stat-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ov-sans {
+  font-family: var(--font-sans);
+}
+.ov-regular {
+  font-weight: 400;
+}
+.ov-wrap {
+  white-space: normal;
+}
+.ov-row-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.ov-mini-bar {
+  height: 6px;
+  background: var(--data-track);
+}
+.ov-spam-count {
+  min-width: 56px;
+  text-align: right;
+}
+.ov-spark-box {
+  width: 45%;
+}
+.ov-meter-10 {
+  height: 10px;
+}
+.table th.ov-th-plain {
+  font-weight: 400;
+  color: inherit;
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--gray-300);
+  white-space: normal;
+}
+.table th.ov-th-plain.muted {
+  color: var(--my-muted);
+}
+
+/* Empty states and callouts sized for a panel. */
+.ov-empty-tight {
+  padding: 12px 0;
+}
+.ov-empty-going {
+  padding: 12px 0 4px;
+}
+.ov-callout-tight {
+  padding: 8px 10px;
+}
+
+/* Skeleton pieces. */
+.ov-chip-spinner {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+.ov-sk-inline {
+  display: inline-block;
+  width: 160px;
+}
+.ov-sk-plot {
+  border: 0;
+}
+.ov-sk-bar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+}
+
+/* The not-enough-data note spans the grid. */
+.grid-12 > .ov-note {
+  grid-column: span 12;
+}
+
+/* The check chips are a real list; drop the list chrome. */
+.ov-list-reset {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

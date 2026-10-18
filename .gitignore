@@ -10,3 +10,7 @@ shots/
 *.log
 .sendtest/
 flareyard-release.json
+web/test-results/
+web/playwright-report/
+web/*.tmp.mjs
+web/dist-audit/

@@ -25,6 +25,13 @@ Before extending Mailyard at one of these points, read the skill's `SKILL.md` an
 - `skills/add-webhook-event`: a new outgoing webhook event type.
 - `skills/deploy`: shipping a change to a running Mailyard, or building a Flareyard release.
 
+## Web app
+
+`web/` is the browser app (HAL-3307): React 19, Vite, TanStack Router and Query, typed from the live OpenAPI. It is its own bun package (`cd web && bun install`) and is served by this Worker as Static Assets (`wrangler.jsonc` `assets`). Read `web/README.md` before changing it.
+- A new top-level path the Worker answers (like `/t/*` or `/u/*`) must be added to `assets.run_worker_first`, or the app's SPA fallback swallows it.
+- After an API change, run `cd web && bun run api:types`; the typecheck then lists the screens to update.
+- UI changes pass `bun run check:ui` (the responsive audit) before the PR.
+
 ## Repo rules
 
 - Self-contained (founder, 2026-10-16): no shared package with other Flareyard repos for now. `src/kit` is Mailyard's own copy; shared components get extracted later, once several apps have them.

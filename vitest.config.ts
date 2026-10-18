@@ -26,6 +26,8 @@ const testWranglerConfig = () => {
     source.replace(/("(?:[^"\\]|\\.)*")|\/\/[^\n]*/g, (_, s: string | undefined) => s ?? ""),
   )
   delete config.queues.consumers
+  // The web app's static assets aren't part of the Worker under test, and web/dist only exists after a build.
+  delete config.assets
   config.main = path.join(root, config.main)
   for (const db of config.d1_databases ?? []) db.migrations_dir = path.join(root, db.migrations_dir)
   const dir = path.join(root, ".wrangler", "vitest")

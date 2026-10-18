@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Mailyard</title>
+    <link rel="icon" href="/ui/brand/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/ui/fonts/FunnelSans-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/ui/fonts/FunnelDisplay-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      // Theme before first paint: ?theme= wins, then the stored choice; absent means follow the system.
+      try {
+        const t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("mailyard-theme")
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

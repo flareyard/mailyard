@@ -8,14 +8,17 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
-    "check": "bun run typecheck && bun run lint && bun run manifest && bun run test",
+    "check": "bun run typecheck && bun run lint && bun run manifest && bun run test && bun run web:check",
     "manifest": "bun tools/manifest/cli.ts cloudflare-app.json",
     "templates:install": "bun tools/templates/install.ts",
-    "release": "bun \"${FLAREYARD_DIR:-../flareyard}/packages/manifest/src/release-cli.ts\" release . --out flareyard-release.json",
+    "release": "bun run web:build && bun \"${FLAREYARD_DIR:-../flareyard}/packages/manifest/src/release-cli.ts\" release . --out flareyard-release.json",
     "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run --outdir dist",
+    "build": "bun run web:build && wrangler deploy --dry-run --outdir dist",
     "db:generate": "drizzle-kit generate",
-    "smoke:prod": "bun tools/smoke/prod.ts"
+    "smoke:prod": "bun tools/smoke/prod.ts",
+    "web:build": "cd web && bun run build",
+    "web:check": "cd web && bun run typecheck && bun run test",
+    "check:ui": "cd web && bun run audit"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",
