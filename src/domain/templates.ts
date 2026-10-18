@@ -1,10 +1,27 @@
-import { and, desc, eq, isNull } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
-import { templates, templateVersions } from "../db/schema.ts"
+import { Bindings } from "../Bindings.ts"
+import {
+  apiKeys,
+  automations,
+  automationVersions,
+  campaigns,
+  templateDaily,
+  templates,
+  templateVersions,
+} from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
-import { type TemplateSource, templateTexts, validateTemplate, variablesOf } from "../templates/render.ts"
+import {
+  renderTemplate,
+  type TemplateSource,
+  templateTexts,
+  validateTemplate,
+  variablesOf,
+} from "../templates/render.ts"
+import { getBrand } from "./brand.ts"
+import { parseParty, sendBulkMessage } from "./outbox.ts"
 
 export class TemplateMissing extends Schema.TaggedError<TemplateMissing>()("TemplateMissing", {
   template: Schema.String,
@@ -35,6 +52,9 @@ export const describeTemplate = (t: TemplateRow, v: VersionRow | undefined) => (
         source: v.source,
         text: v.text,
         publishedAt: v.publishedAt,
+        /** When the draft was last saved, and by which key (HAL-3415). */
+        updatedAt: v.updatedAt ?? v.createdAt,
+        updatedBy: v.createdBy,
         variables: variablesOf(
           ...templateTexts({ kind: t.kind, subject: v.subject, source: v.source, text: v.text }),
         ),
@@ -144,6 +164,7 @@ export const createTemplate = Effect.fn("templates.create")(function* (input: {
         text: input.text ?? null,
         publishedAt: input.publish ? now : null,
         createdBy: input.createdBy,
+        updatedAt: now,
       }),
     ]),
   )
@@ -178,6 +199,7 @@ export const saveDraft = Effect.fn("templates.saveDraft")(function* (
             source: input.source,
             text: input.text ?? null,
             createdBy: input.by,
+            updatedAt: now,
           })
           .where(and(eq(templateVersions.templateId, t.id), eq(templateVersions.version, latest.version))),
         db.update(templates).set({ updatedAt: now }).where(eq(templates.id, t.id)),
@@ -194,6 +216,7 @@ export const saveDraft = Effect.fn("templates.saveDraft")(function* (
           source: input.source,
           text: input.text ?? null,
           createdBy: input.by,
+          updatedAt: now,
         }),
         db.update(templates).set({ latestVersion: version, updatedAt: now }).where(eq(templates.id, t.id)),
       ]),
@@ -248,6 +271,7 @@ export const rollbackTemplate = Effect.fn("templates.rollback")(function* (
         text: old.text,
         publishedAt: now,
         createdBy: by,
+        updatedAt: now,
       }),
       db
         .update(templates)
@@ -289,4 +313,180 @@ export const resolveForSend = Effect.fn("templates.resolveForSend")(function* (
     version: v,
     source: { kind: t.kind, subject: v.subject, source: v.source, text: v.text } as TemplateSource,
   }
+})
+
+// ---------------------------------------------------------------------------------------------
+// Usage and test sends (HAL-3415)
+// ---------------------------------------------------------------------------------------------
+
+export type TemplateUsage = {
+  readonly sends30d: number
+  readonly usedBy: ReadonlyArray<{
+    readonly type: "automation" | "campaign" | "apiKey"
+    readonly id: string
+    readonly name: string
+  }>
+}
+
+const graphTemplates = (graph: unknown): ReadonlyArray<string> => {
+  const nodes = (graph as { nodes?: ReadonlyArray<{ type?: string; config?: { templateId?: unknown } }> })
+    ?.nodes
+  return (nodes ?? []).flatMap((n) =>
+    n.type === "send" && typeof n.config?.templateId === "string" ? [n.config.templateId] : [],
+  )
+}
+
+/**
+ * Per template: sends in the last 30 days (the daily rollup), and what uses it: automations whose
+ * draft or live graph sends it, campaigns that name it, and API keys that sent it in those 30 days.
+ * Automations are read whole (people write them, a few dozen at most) and their graphs searched here.
+ */
+export const templateUsage = Effect.fn("templates.usage")(function* (
+  templateIds: ReadonlyArray<string>,
+  now = Date.now(),
+) {
+  const usage = new Map<string, { sends30d: number; usedBy: Array<TemplateUsage["usedBy"][number]> }>(
+    templateIds.map((id) => [id, { sends30d: 0, usedBy: [] }]),
+  )
+  if (templateIds.length === 0) return usage as ReadonlyMap<string, TemplateUsage>
+  const database = yield* Database
+  const since = new Date(now - 29 * 86_400_000).toISOString().slice(0, 10)
+  const daily = yield* database.query("templates.usageDaily", (db) =>
+    db
+      .select({
+        templateId: templateDaily.templateId,
+        apiKeyId: templateDaily.apiKeyId,
+        sends: sql<number>`sum(${templateDaily.sends})`,
+      })
+      .from(templateDaily)
+      .where(and(inArray(templateDaily.templateId, [...templateIds]), gte(templateDaily.day, since)))
+      .groupBy(templateDaily.templateId, templateDaily.apiKeyId)
+      .all(),
+  )
+  const keyIds = [...new Set(daily.map((d) => d.apiKeyId).filter((k) => k !== ""))]
+  const keyNames = keyIds.length
+    ? yield* database.query("templates.usageKeys", (db) =>
+        db
+          .select({ id: apiKeys.id, name: apiKeys.name })
+          .from(apiKeys)
+          .where(inArray(apiKeys.id, keyIds))
+          .all(),
+      )
+    : []
+  for (const d of daily) {
+    const u = usage.get(d.templateId)
+    if (!u) continue
+    u.sends30d += Number(d.sends)
+    if (d.apiKeyId)
+      u.usedBy.push({
+        type: "apiKey",
+        id: d.apiKeyId,
+        name: keyNames.find((k) => k.id === d.apiKeyId)?.name ?? d.apiKeyId,
+      })
+  }
+  const usedCampaigns = yield* database.query("templates.usageCampaigns", (db) =>
+    db
+      .select({ id: campaigns.id, name: campaigns.name, templateId: campaigns.templateId })
+      .from(campaigns)
+      .where(inArray(campaigns.templateId, [...templateIds]))
+      .all(),
+  )
+  for (const c of usedCampaigns)
+    if (c.templateId) usage.get(c.templateId)?.usedBy.push({ type: "campaign", id: c.id, name: c.name })
+  const autos = yield* database.query("templates.usageAutomations", (db) =>
+    db
+      .select({ id: automations.id, name: automations.name, graph: automations.graph })
+      .from(automations)
+      .all(),
+  )
+  const live = yield* database.query("templates.usageLive", (db) =>
+    db
+      .select({ automationId: automationVersions.automationId, graph: automationVersions.graph })
+      .from(automationVersions)
+      .innerJoin(
+        automations,
+        and(
+          eq(automations.id, automationVersions.automationId),
+          eq(automations.publishedVersion, automationVersions.version),
+        ),
+      )
+      .all(),
+  )
+  for (const a of autos) {
+    const used = new Set([
+      ...graphTemplates(a.graph),
+      ...live.filter((l) => l.automationId === a.id).flatMap((l) => graphTemplates(l.graph)),
+    ])
+    for (const id of used) usage.get(id)?.usedBy.push({ type: "automation", id: a.id, name: a.name })
+  }
+  return usage as ReadonlyMap<string, TemplateUsage>
+})
+
+export class TemplateTestInvalid extends Schema.TaggedError<TemplateTestInvalid>()("TemplateTestInvalid", {
+  field: Schema.String,
+  message: Schema.String,
+}) {}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/**
+ * `POST /v1/templates/{id}/test`: renders a version (the latest by default, so a draft can be tried)
+ * with the given data and sends it to up to five addresses, marked [Test], on the `test` stream:
+ * outside the template's numbers and the bulk quota share.
+ */
+export const testTemplate = Effect.fn("templates.test")(function* (
+  idOrName: string,
+  input: {
+    readonly to: ReadonlyArray<string>
+    readonly data?: Readonly<Record<string, unknown>> | undefined
+    readonly version?: number | "latest" | "published" | undefined
+    readonly from?: string | undefined
+  },
+) {
+  if (input.to.length === 0 || input.to.length > 5)
+    return yield* new TemplateTestInvalid({ field: "to", message: "Send a test to 1 to 5 addresses." })
+  const bad = input.to.find((t) => !EMAIL_PATTERN.test(t.trim()))
+  if (bad) return yield* new TemplateTestInvalid({ field: "to", message: `${bad} isn't an email address.` })
+  const { DEFAULT_FROM } = yield* Bindings
+  const fromRaw = input.from ?? DEFAULT_FROM
+  if (!fromRaw)
+    return yield* new TemplateTestInvalid({
+      field: "from",
+      message: "Say who the test comes from (from), or set DEFAULT_FROM.",
+    })
+  const from = parseParty(fromRaw)
+  const resolved = yield* resolveForSend(idOrName, input.version ?? "latest")
+  const brand = yield* getBrand()
+  const stamp = Date.now()
+  const sent: Array<{ email: string; messageId: string; status: string }> = []
+  for (const raw of input.to) {
+    const email = raw.trim().toLowerCase()
+    const rendered = yield* Effect.try({
+      try: () =>
+        renderTemplate(
+          resolved.source,
+          { ...input.data, data: input.data ?? {}, trigger: input.data ?? {}, email, name: null },
+          brand,
+        ),
+      catch: (e) =>
+        new TemplateTestInvalid({ field: "template", message: e instanceof Error ? e.message : String(e) }),
+    })
+    const result = yield* sendBulkMessage({
+      stream: "test",
+      message: {
+        from: from.name ? { email: from.email, name: from.name } : { email: from.email },
+        to: [{ email }],
+        subject: `[Test] ${rendered.subject}`,
+        html: rendered.html,
+        text: rendered.text,
+      },
+      contactId: null,
+      campaignId: null,
+      templateId: resolved.template.id,
+      templateVersion: resolved.version.version,
+      idempotencyKey: `test:${resolved.template.id}:${email}:${stamp}`,
+    })
+    sent.push({ email, messageId: result.id, status: result.status })
+  }
+  return { version: resolved.version.version, sent }
 })

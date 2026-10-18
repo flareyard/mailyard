@@ -389,6 +389,19 @@ export const TemplateSummary = Schema.Struct({
   archived: Schema.Boolean,
   updatedAt: Schema.Number,
   createdAt: Schema.Number,
+  /** With `?include=usage`: sends in the last 30 days, and what uses it. */
+  usage: Schema.optionalKey(
+    Schema.Struct({
+      sends30d: Schema.Number,
+      usedBy: Schema.Array(
+        Schema.Struct({
+          type: Schema.Literals(["automation", "campaign", "apiKey"]),
+          id: Schema.String,
+          name: Schema.String,
+        }),
+      ),
+    }),
+  ),
 })
 
 export const TemplateDetail = Schema.Struct({
@@ -400,6 +413,9 @@ export const TemplateDetail = Schema.Struct({
       source: Schema.String,
       text: Schema.NullOr(Schema.String),
       publishedAt: Schema.NullOr(Schema.Number),
+      /** When this version was last saved, and the key that saved it. */
+      updatedAt: Schema.Number,
+      updatedBy: Schema.NullOr(Schema.String),
       variables: Variables,
     }),
   ),
@@ -436,7 +452,10 @@ const RenderData = Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknow
 export class TemplatesApi extends HttpApiGroup.make("templates")
   .add(
     HttpApiEndpoint.get("list", "/v1/templates", {
-      query: { archived: Schema.optionalKey(Schema.Literals(["true", "false"])) },
+      query: {
+        archived: Schema.optionalKey(Schema.Literals(["true", "false"])),
+        include: Schema.optionalKey(Schema.Literal("usage")),
+      },
       success: Schema.Struct({ templates: Schema.Array(TemplateSummary) }),
       error: Forbidden,
     }),
@@ -485,6 +504,26 @@ export class TemplatesApi extends HttpApiGroup.make("templates")
         version: Schema.optionalKey(Schema.Union([Schema.Literals(["published", "latest"]), Schema.Int])),
       }),
       success: RenderResult,
+      error: [Forbidden, NotFound, InvalidRequest],
+    }),
+    HttpApiEndpoint.post("test", "/v1/templates/:id/test", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({
+        /** One to five addresses. */
+        to: Schema.Array(Schema.String),
+        /** Merge data, as `POST /v1/send` takes it; also visible as `data.*` and `trigger.*`. */
+        data: RenderData,
+        /** `latest` (default, so a draft can be tried), `published`, or a version number. */
+        version: Schema.optionalKey(Schema.Union([Schema.Literals(["published", "latest"]), Schema.Int])),
+        /** Who it comes from; DEFAULT_FROM when left out. */
+        from: Schema.optionalKey(Schema.String),
+      }),
+      success: Schema.Struct({
+        version: Schema.Number,
+        sent: Schema.Array(
+          Schema.Struct({ email: Schema.String, messageId: Schema.String, status: Schema.String }),
+        ),
+      }),
       error: [Forbidden, NotFound, InvalidRequest],
     }),
     HttpApiEndpoint.post("preview", "/v1/templates/preview", {

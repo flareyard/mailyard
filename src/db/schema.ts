@@ -270,10 +270,29 @@ export const templateVersions = sqliteTable(
     /** Optional hand-written text part; otherwise it is derived from the HTML. */
     text: text("text"),
     publishedAt: integer("published_at"),
+    /** Who last saved this version: its creator, or whoever saved the draft since. */
     createdBy: text("created_by"),
     createdAt: createdAt(),
+    /** When the draft was last saved (HAL-3415); the creation time for versions saved once. */
+    updatedAt: integer("updated_at"),
   },
   (t) => [primaryKey({ columns: [t.templateId, t.version] })],
+)
+
+/**
+ * Sends per template per UTC day and API key (`""` for campaigns, automations and mailboxes), kept by
+ * a trigger on `messages_out` (migration 0028), so a template's 30-day count and the keys sending it
+ * are a read of at most 30 days × senders, however much mail it sent (HAL-3415). Test sends aren't counted.
+ */
+export const templateDaily = sqliteTable(
+  "template_daily",
+  {
+    templateId: text("template_id").notNull(),
+    day: text("day").notNull(),
+    apiKeyId: text("api_key_id").notNull().default(""),
+    sends: integer("sends").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.templateId, t.day, t.apiKeyId] })],
 )
 
 /** Workspace settings as JSON documents by key: `brand` (the theme templates are laid out in), and more later. */
@@ -324,7 +343,7 @@ export const campaigns = sqliteTable(
     createdAt: createdAt(),
     updatedAt: integer("updated_at"),
   },
-  (t) => [index("campaigns_status").on(t.status)],
+  (t) => [index("campaigns_status").on(t.status), index("campaigns_template").on(t.templateId)],
 )
 
 /**
