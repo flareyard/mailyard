@@ -13,6 +13,7 @@ import {
   putBrandSettings,
   storeLogo,
 } from "../domain/brand.ts"
+import { describeLane, putLane } from "../domain/mailEvents.ts"
 import {
   archiveTemplate,
   createTemplate,
@@ -220,6 +221,27 @@ export const SettingsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
+      getMailEvents: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(describeLane()), dbDies),
+      ),
+      putMailEvents: p(({ payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "settings.write")
+          const { before, after } = yield* putLane(payload).pipe(
+            Effect.catchTag("LaneInvalid", (e) =>
+              Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            ),
+          )
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "settings.mail_events",
+            target: "mail_events",
+            before,
+            after: { enabled: after.enabled, mailboxIds: after.mailboxIds, types: after.types },
+          })
+          return after
+        }).pipe(dbDies),
+      ),
       getAlertSettings: p(() =>
         requireScope("read", "settings.read").pipe(Effect.andThen(describeAlertSettings()), dbDies),
       ),

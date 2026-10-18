@@ -11,6 +11,7 @@ const UNIT = [
   "test/d1Params.test.ts",
   "test/automations/triggerData.test.ts",
   "test/live/**/*.test.ts",
+  "test/contracts/**/*.test.ts",
 ]
 
 /**

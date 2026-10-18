@@ -5,6 +5,7 @@ import { apiKeys, mailboxes, messagesOut } from "../db/schema.ts"
 import type { AgentLimited } from "../domain/agents.ts"
 import type { Caller } from "../domain/apiKeys.ts"
 import { recipientsOf } from "../domain/deliveryEvents.ts"
+import { publishMailEvent } from "../domain/mailEvents.ts"
 import { isManager } from "../domain/permissions.ts"
 import type { TransferInvalid, TransferNotFound } from "../imports/manage.ts"
 import { BlobStore } from "../kit/index.ts"
@@ -238,7 +239,17 @@ export const applyThreadAction = (mailboxId: string, caller: Caller, payload: Th
           message: "Only admin keys may assign a conversation to someone else.",
         })
       }
-      return yield* callMailbox(params.id, (s) => s.assign(ids, assignee))
+      const result = yield* callMailbox(params.id, (s) => s.assign(ids, assignee))
+      // The mail-events lane hears each handover (HAL-3306).
+      for (const threadId of result.threadIds)
+        yield* publishMailEvent({
+          type: "thread.assigned",
+          mailboxId: params.id,
+          threadId,
+          assignee,
+          by: caller.member?.id ?? caller.keyId,
+        })
+      return { updated: result.updated }
     }
     const patch = BULK[payload.action]?.(payload)
     if (!patch) {

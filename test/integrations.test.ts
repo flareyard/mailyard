@@ -58,7 +58,7 @@ const hook = async (body: Record<string, unknown> = {}) => {
 describe("GET /v1/integrations (HAL-3466)", () => {
   it("lists MCP keys with their agents, and finds Support Inbox by its key", async () => {
     const before = await json<Integrations>(await integrations())
-    expect(before.hermes).toEqual({ connected: false, lane: null, mailboxes: [], since: null })
+    expect(before.hermes).toMatchObject({ connected: false, lane: null, mailboxes: [], since: null })
     expect(before.siblings.find((s) => s.app === "support-inbox")).toMatchObject({
       connected: false,
       via: "mcp",

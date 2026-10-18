@@ -2,11 +2,12 @@ import { and, desc, eq, gt, isNull, or } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import { agents, apiKeys, mailboxes } from "../db/schema.ts"
 import { Database } from "../services/Database.ts"
+import { describeLane } from "./mailEvents.ts"
 import { listEndpoints } from "./webhooks.ts"
 
 /**
  * What's connected to this workspace (HAL-3466), read-only: the MCP keys agents use, how the webhook
- * endpoints are doing, the Hermes lane, and sibling apps. Sibling apps talk to Mailyard through MCP
+ * endpoints are doing, the Hermes mail-events lane, and sibling apps. Sibling apps talk to Mailyard through MCP
  * (Support Inbox) and the mail-events queue (Hermes), so this reports on those links rather than
  * owning them. Keys are still made and revoked on `/v1/api-keys` (`purpose: mcp`) and `/v1/agents`.
  */
@@ -56,6 +57,7 @@ export const describeIntegrations = Effect.fn("integrations.describe")(function*
       .all(),
   )
   const endpoints = yield* listEndpoints()
+  const lane = yield* describeLane()
   const lastUsed = keys.reduce<number | null>(
     (latest, k) =>
       k.lastUsedAt !== null && (latest === null || k.lastUsedAt > latest) ? k.lastUsedAt : latest,
@@ -102,8 +104,15 @@ export const describeIntegrations = Effect.fn("integrations.describe")(function*
         lastSuccessAt: e.lastSuccessAt,
       })),
     },
-    /** The Hermes email lane (HAL-3306): not connected until that queue exists. */
-    hermes: { connected: false, lane: null, mailboxes: [] as Array<string>, since: null },
+    /** The Hermes email lane (HAL-3306). */
+    hermes: {
+      connected: lane.enabled && lane.available,
+      lane: lane.enabled ? lane.queue : null,
+      mailboxes: lane.enabled ? [...(lane.mailboxIds ?? [])] : [],
+      allMailboxes: lane.enabled && lane.mailboxIds === null,
+      since: lane.enabled ? lane.since : null,
+      available: lane.available,
+    },
     siblings: SIBLINGS.map((s) => {
       const key = keys.find((k) => s.match.test(k.name))
       return {

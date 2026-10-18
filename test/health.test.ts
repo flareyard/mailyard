@@ -272,6 +272,7 @@ describe("GET /openapi.json", () => {
       "/v1/settings/brand",
       "/v1/settings/compliance",
       "/v1/settings/compliance/tracking-check",
+      "/v1/settings/mail-events",
       "/v1/settings/sending",
       "/v1/stats/audience",
       "/v1/stats/deferrals",

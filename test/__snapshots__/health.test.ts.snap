@@ -48981,6 +48981,12 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                     "hermes": {
                       "additionalProperties": false,
                       "properties": {
+                        "allMailboxes": {
+                          "type": "boolean",
+                        },
+                        "available": {
+                          "type": "boolean",
+                        },
                         "connected": {
                           "type": "boolean",
                         },
@@ -49027,7 +49033,9 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                         "connected",
                         "lane",
                         "mailboxes",
+                        "allMailboxes",
                         "since",
+                        "available",
                       ],
                       "type": "object",
                     },
@@ -85705,6 +85713,358 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         ],
         "tags": [
           "campaigns",
+        ],
+      },
+    },
+    "/v1/settings/mail-events": {
+      "get": {
+        "operationId": "settings.getMailEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "available": {
+                      "type": "boolean",
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                    },
+                    "mailboxIds": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "queue": {
+                      "type": "string",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "types": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "enum": [
+                              "message.received",
+                              "message.sent",
+                              "thread.assigned",
+                              "delivery",
+                            ],
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "version": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "enabled",
+                    "mailboxIds",
+                    "types",
+                    "since",
+                    "queue",
+                    "version",
+                    "available",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "settings",
+        ],
+      },
+      "put": {
+        "operationId": "settings.putMailEvents",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                  },
+                  "mailboxIds": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "type": "string",
+                        },
+                        "maxItems": 500,
+                        "type": "array",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                  "types": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "enum": [
+                            "message.received",
+                            "message.sent",
+                            "thread.assigned",
+                            "delivery",
+                          ],
+                          "type": "string",
+                        },
+                        "type": "array",
+                      },
+                      {
+                        "type": "null",
+                      },
+                    ],
+                  },
+                },
+                "required": [
+                  "enabled",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "available": {
+                      "type": "boolean",
+                    },
+                    "enabled": {
+                      "type": "boolean",
+                    },
+                    "mailboxIds": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "queue": {
+                      "type": "string",
+                    },
+                    "since": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                            },
+                            {
+                              "enum": [
+                                "Infinity",
+                                "-Infinity",
+                                "NaN",
+                              ],
+                              "type": "string",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "types": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "enum": [
+                              "message.received",
+                              "message.sent",
+                              "thread.assigned",
+                              "delivery",
+                            ],
+                            "type": "string",
+                          },
+                          "type": "array",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                    },
+                    "version": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                        },
+                        {
+                          "enum": [
+                            "Infinity",
+                            "-Infinity",
+                            "NaN",
+                          ],
+                          "type": "string",
+                        },
+                      ],
+                    },
+                  },
+                  "required": [
+                    "enabled",
+                    "mailboxIds",
+                    "types",
+                    "since",
+                    "queue",
+                    "version",
+                    "available",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded",
+                },
+              },
+            },
+            "description": "Unauthorized",
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded",
+                },
+              },
+            },
+            "description": "Forbidden",
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitedEncoded",
+                },
+              },
+            },
+            "description": "RateLimited",
+          },
+        },
+        "security": [
+          {
+            "bearer": [],
+          },
+        ],
+        "tags": [
+          "settings",
         ],
       },
     },

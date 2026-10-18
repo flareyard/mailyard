@@ -23,11 +23,13 @@ describe("wrangler.jsonc queues", () => {
     expect([...consumers.keys()].sort()).toEqual([...CONSUMED_QUEUES].sort())
   })
 
-  it("produces to every queue the Worker sends to itself", () => {
+  it("produces to every queue the Worker sends to itself, and the mail-events lane", () => {
     expect(wrangler.queues.producers.map((p) => p.queue).sort()).toEqual(
       [
         "mailyard-automation-triggers",
         "mailyard-inbound",
+        // Produced for Hermes to consume (HAL-3306); Mailyard has no consumer of its own.
+        "mailyard-mail-events",
         "mailyard-mailbox-send",
         "mailyard-send",
         "mailyard-webhooks",
