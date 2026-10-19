@@ -62,6 +62,13 @@ import {
   RAW_PATH,
   UPLOAD_PATH,
 } from "./files.ts"
+import {
+  FLAREYARD_CALLBACK_PATH,
+  FLAREYARD_START_PATH,
+  flareyardSignIn,
+  handleFlareyardCallback,
+  handleFlareyardStart,
+} from "./flareyardSignIn.ts"
 import { handleEmail, runtimeFor } from "./inbound.ts"
 import { handleLive, LIVE_PATH } from "./live.ts"
 import { handleOAuth, OAUTH_PATH } from "./oauth.ts"
@@ -148,6 +155,20 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
 // Built once per isolate; Workers reuse an isolate across requests.
 const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
 
+/** /openapi.json without the Flareyard handoff's paths, for installs Flareyard didn't make. */
+const withoutFlareyardSignIn = async (pending: Response | Promise<Response>) => {
+  const response = await pending
+  if (!response.ok) return response
+  const doc = (await response.json()) as { paths?: Record<string, unknown> }
+  if (doc.paths) {
+    delete doc.paths[FLAREYARD_START_PATH]
+    delete doc.paths[FLAREYARD_CALLBACK_PATH]
+  }
+  const headers = new Headers(response.headers)
+  headers.delete("content-length")
+  return new Response(JSON.stringify(doc), { status: response.status, headers })
+}
+
 /** The Worker's routes: bytes and sockets beside the schema-first API. */
 const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> => {
   // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
@@ -201,6 +222,10 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   if (view) return handleView(request, env, d(view[1]))
   const signInLink = SIGN_IN_LINK_PATH.exec(path)
   if (signInLink) return handleSignInLink(request, env, d(signInLink[1]))
+  if (path === FLAREYARD_START_PATH) return handleFlareyardStart(request, env)
+  if (path === FLAREYARD_CALLBACK_PATH) return handleFlareyardCallback(request, env)
+  // The Flareyard handoff is documented only where it works, so the web app offers it only there.
+  if (path === "/openapi.json" && !flareyardSignIn(env)) return withoutFlareyardSignIn(handler(request))
   const formPage = FORM_PAGE_PATH.exec(path)
   if (formPage) return handleFormPage(request, env, d(formPage[1]))
   const form = FORM_SUBMIT_PATH.exec(path)

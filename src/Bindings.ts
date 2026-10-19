@@ -99,6 +99,12 @@ export interface Env {
    */
   readonly FLAREYARD_CF_API?: string
   readonly FLAREYARD_CF_TOKEN?: string
+  /**
+   * Set by the Flareyard platform on installs it made (contract v1.3 `signIn`, HAL-3360): its URL and
+   * this install's id, so "Open Mailyard" signs the owner in. Unset when self-deployed.
+   */
+  readonly FLAREYARD_URL?: string
+  readonly FLAREYARD_INSTALL_ID?: string
   /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
   readonly CLOUDFLARE_ACCOUNT_ID?: string
   readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string

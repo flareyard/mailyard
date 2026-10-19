@@ -426,6 +426,48 @@ export const claimWorkspace = Effect.fn("people.claim")(function* (
   return { member: memberView(member), signInLinkSent: linkSent }
 })
 
+/**
+ * Who someone signing in through Flareyard is here (HAL-3360). The platform has checked they own this
+ * install, so they hold its Cloudflare account and could reach everything anyway:
+ * - a current member with that email signs in as themselves;
+ * - an unclaimed workspace is claimed by them, as owner;
+ * - otherwise they join as an admin (or come back, if they were removed).
+ * Each change is audited, so nobody gains access silently.
+ */
+export const signInFromFlareyard = Effect.fn("people.flareyard")(function* (
+  user: { readonly id: string; readonly email: string; readonly name: string | null },
+  now = Date.now(),
+) {
+  const email = normalizeEmail(user.email)
+  if (!EMAIL.test(email))
+    return yield* new PeopleInvalid({ field: "email", message: "Flareyard didn't give an email address." })
+  const name = (user.name ?? "").trim() || email.split("@")[0] || email
+  const database = yield* Database
+  const existing = yield* findByEmail(email)
+  if (existing && existing.removedAt === null) return { member: existing, joined: null }
+  const setting = yield* workspaceSetting()
+  const claiming = setting.claimedAt === undefined
+  const role = claiming ? ("owner" as const) : ("admin" as const)
+  const id = existing?.id ?? `mem_${yield* (yield* Ids).next}`
+  if (existing)
+    yield* database.query("members.flareyardReturn", (db) =>
+      db.update(members).set({ role, removedAt: null }).where(eq(members.id, id)).run(),
+    )
+  else
+    yield* database.query("members.flareyardJoin", (db) =>
+      db.insert(members).values({ id, email, name, role, createdAt: now }).run(),
+    )
+  if (claiming) yield* putWorkspaceSetting({ ...setting, claimedBy: id, claimedAt: now })
+  yield* recordAudit({
+    actor: `flareyard:${user.id}`,
+    action: claiming ? "workspace.claim" : "member.join",
+    target: id,
+    after: { email, role, via: "flareyard-install-owner", returning: existing !== undefined },
+  })
+  const member = yield* findMember(id).pipe(Effect.catchTag("MemberNotFound", Effect.die))
+  return { member, joined: claiming ? ("claimed" as const) : ("admin" as const) }
+})
+
 /** `POST /v1/workspace/transfer { memberId }`: the owner hands ownership on and becomes an admin. */
 export const transferOwnership = Effect.fn("people.transfer")(function* (caller: Caller, memberId: string) {
   if (caller.member?.role !== "owner")

@@ -108,6 +108,28 @@ export const crossFieldProblems = (m: Manifest): ReadonlyArray<string> => {
     }
   }
 
+  // v1.3 sign-in: two vars of its own and two distinct paths.
+  if (m.signIn) {
+    const s = m.signIn
+    if (s.platformUrl === s.installId) problems.push(`signIn names ${s.platformUrl} twice.`)
+    if (s.start === s.callback) problems.push("signIn.start and signIn.callback must be different paths.")
+    const taken = [
+      ...secrets,
+      ...settingNames,
+      ...(m.cloudflareApi
+        ? [
+            m.cloudflareApi.url,
+            m.cloudflareApi.token,
+            ...(m.cloudflareApi.accountId ? [m.cloudflareApi.accountId] : []),
+          ]
+        : []),
+    ]
+    for (const name of new Set([s.platformUrl, s.installId])) {
+      if (taken.includes(name))
+        problems.push(`signIn's ${name} is already a secret, setting or cloudflareApi binding.`)
+    }
+  }
+
   if (m.domain.suggest && !m.domain.supported)
     problems.push("domain.suggest is set but domain.supported is false.")
   return problems

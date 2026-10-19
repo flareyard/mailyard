@@ -130,6 +130,21 @@ export const CloudflareApi = Schema.Struct({
 })
 export type CloudflareApi = typeof CloudflareApi.Type
 
+const AppPath = Schema.String.check(Schema.isPattern(/^(?:\/[A-Za-z0-9_.-]+)+$/))
+
+/**
+ * Contract v1.3 (HAL-3573): signing in to the installed app with the Flareyard account, instead of a
+ * pasted key. `start` begins the hand-off (PKCE) and `callback` receives the one-time code; the platform
+ * sets `platformUrl` and `installId` as vars on the main Worker, and its "Open" button goes to `start`.
+ */
+export const SignIn = Schema.Struct({
+  start: AppPath,
+  callback: AppPath,
+  platformUrl: SecretName,
+  installId: SecretName,
+})
+export type SignIn = typeof SignIn.Type
+
 export const Manifest = Schema.Struct({
   $schema: Schema.optionalKey(Schema.String),
   manifestVersion: Schema.Literal(1),
@@ -160,6 +175,8 @@ export const Manifest = Schema.Struct({
   settings: Schema.optionalKey(Schema.Array(Setting)),
   /** v1.3: Cloudflare API calls made at runtime with the user's grant, through the platform. */
   cloudflareApi: Schema.optionalKey(CloudflareApi),
+  /** v1.3: people sign in to the app with their Flareyard account. */
+  signIn: Schema.optionalKey(SignIn),
   cost: Schema.Struct({
     /** Plain words, not a number we invented: "0–1 above the $5 plan" or "unmeasured". */
     typicalMonthlyUsd: Schema.NonEmptyString,
