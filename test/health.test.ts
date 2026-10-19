@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
+import pkg from "../package.json" with { type: "json" }
 
 const call = (path: string) => exports.default.fetch(new Request(`https://mailyard.test${path}`))
 
@@ -10,7 +11,7 @@ describe("GET /healthz", () => {
     expect(await response.json()).toEqual({
       status: "ok",
       app: "mailyard",
-      version: "0.1.0",
+      version: pkg.version,
       database: "ok",
     })
   })

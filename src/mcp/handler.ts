@@ -2,6 +2,7 @@ import * as Cause from "effect/Cause"
 import type * as Effect from "effect/Effect"
 import * as Exit from "effect/Exit"
 import * as Schema from "effect/Schema"
+import pkg from "../../package.json" with { type: "json" }
 import type { Env } from "../Bindings.ts"
 import type { Caller } from "../domain/apiKeys.ts"
 import { recordAudit } from "../domain/audit.ts"
@@ -187,7 +188,7 @@ const answer = async (
         result: {
           protocolVersion,
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "mailyard", title: "Mailyard", version: "0.1.0" },
+          serverInfo: { name: "mailyard", title: "Mailyard", version: pkg.version },
           instructions:
             "Mailyard is this workspace's email: mailboxes, transactional sending, contacts and campaigns. Start with list_mailboxes or search_mail; read_thread lists attachments and read_attachment reads them. Write with compose_message or draft_reply, and tidy with mark_read, archive, label, snooze and move. Drafting never sends; send_draft and send_email need confirm: true, so show the user what will go out first. A key may have send limits or need a person's approval: a held send says so.",
         },
