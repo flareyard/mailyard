@@ -3,7 +3,7 @@
   "id": "mailyard",
   "name": "Mailyard",
   "description": "Inboxes, transactional email, contacts, campaigns and automations on your own Cloudflare account.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": "https://github.com/flareyard/mailyard",
   "stack": "wrangler.jsonc",
   "plan": "workers-paid",
