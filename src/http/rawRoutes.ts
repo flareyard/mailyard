@@ -397,6 +397,48 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
       responses: { "200": { description: "Done." } },
     },
   },
+  "/v1/session/flareyard/start": {
+    get: {
+      tags: ["session"],
+      operationId: "session.flareyardStart",
+      summary: "Sign in through Flareyard (HAL-3360)",
+      description:
+        "Only on installs Flareyard made (FLAREYARD_URL and FLAREYARD_INSTALL_ID set); elsewhere this path isn't listed and answers 404. Keeps a PKCE verifier and state in a ten-minute cookie and redirects to Flareyard, which checks the person owns this install. `return` is a path on this site to land on afterwards.",
+      parameters: [
+        {
+          name: "return",
+          in: "query",
+          required: false,
+          schema: { type: "string" },
+          description: "A path on this site, e.g. /mail.",
+        },
+      ],
+      responses: {
+        "302": { description: "To Flareyard's /auth/app." },
+        "404": { description: "This install wasn't made by Flareyard." },
+      },
+    },
+  },
+  "/v1/session/flareyard/callback": {
+    get: {
+      tags: ["session"],
+      operationId: "session.flareyardCallback",
+      summary: "Where Flareyard sends the person back",
+      description:
+        "Checks the state against the flow cookie, exchanges the single-use code with the verifier, checks the answer names this install, and opens a session for that person: a member with their email, or, the platform having checked they own the install, the owner of an unclaimed workspace or a new admin. Failures go to /sign-in?error=flareyard_state, flareyard_session_expired, flareyard_wrong_install, flareyard_denied, flareyard_refused or flareyard_unreachable.",
+      parameters: [
+        { name: "code", in: "query", required: false, schema: { type: "string" } },
+        { name: "state", in: "query", required: false, schema: { type: "string" } },
+      ],
+      responses: {
+        "303": {
+          description:
+            "Signed in (Set-Cookie carries the session), to the return path; or to /sign-in with an error.",
+        },
+        "404": { description: "This install wasn't made by Flareyard." },
+      },
+    },
+  },
   "/v1/mailboxes/{id}/wait": {
     get: {
       tags: ["mail"],

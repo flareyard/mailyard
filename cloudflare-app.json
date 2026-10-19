@@ -545,5 +545,11 @@
   "upgrade": {
     "migrations": "drizzle",
     "notes": "CHANGELOG.md"
+  },
+  "signIn": {
+    "start": "/v1/session/flareyard/start",
+    "callback": "/v1/session/flareyard/callback",
+    "platformUrl": "FLAREYARD_URL",
+    "installId": "FLAREYARD_INSTALL_ID"
   }
 }
