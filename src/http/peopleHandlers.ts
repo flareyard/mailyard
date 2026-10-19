@@ -4,6 +4,7 @@ import { Bindings } from "../Bindings.ts"
 import {
   acceptInvite,
   callerFor,
+  claimWithLink,
   claimWorkspace,
   createInvite,
   describeInvite,
@@ -124,6 +125,17 @@ export const SignInLinkHandlers = HttpApiBuilder.group(
           if (request.headers.origin && !sameOrigin(request, MAILYARD_PUBLIC_ORIGIN))
             return yield* crossSite()
           const member = yield* redeemSignInLink(payload.token).pipe(
+            Effect.tapError(() => throttle.pipe(Effect.ignore)),
+          )
+          return yield* startSession(callerFor(member), request)
+        }).pipe(peopleErrors),
+      ),
+      claimWithLink: p(({ payload, request }) =>
+        Effect.gen(function* () {
+          const { MAILYARD_PUBLIC_ORIGIN } = yield* Bindings
+          if (request.headers.origin && !sameOrigin(request, MAILYARD_PUBLIC_ORIGIN))
+            return yield* crossSite()
+          const member = yield* claimWithLink(payload, linkBase(request)).pipe(
             Effect.tapError(() => throttle.pipe(Effect.ignore)),
           )
           return yield* startSession(callerFor(member), request)

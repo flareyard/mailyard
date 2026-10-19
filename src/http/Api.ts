@@ -5702,6 +5702,21 @@ export class SignInLinkApi extends HttpApiGroup.make("signInLink").add(
     success: Me,
     error: [InvalidRequest, Gone, RateLimited, Forbidden],
   }),
+  /**
+   * Claims a self-deployed workspace with the one-time claim link `bun run deploy` printed
+   * (`/claim#token=…`, HAL-3587), as its owner, and signs them in. No admin key needed. `400` with
+   * `field: "claimToken"` when the link was replaced or used; `409 already-claimed` once claimed.
+   */
+  HttpApiEndpoint.post("claimWithLink", "/v1/workspace/claim/link", {
+    payload: Schema.Struct({
+      claimToken: Schema.NonEmptyString.check(Schema.isMaxLength(256)),
+      workspaceName: Schema.String.check(Schema.isMaxLength(120)),
+      name: Schema.String.check(Schema.isMaxLength(120)),
+      email: Schema.String.check(Schema.isMaxLength(254)),
+    }),
+    success: Me,
+    error: [InvalidRequest, Conflict, RateLimited, Forbidden],
+  }),
 ) {}
 
 /** An invitation, seen and accepted by the person invited: the token is the credential. */
