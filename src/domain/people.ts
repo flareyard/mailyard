@@ -494,9 +494,8 @@ export const claimWithLink = Effect.fn("people.claimWithLink")(function* (
   if (setting.claimedAt !== undefined)
     return yield* new PeopleConflict({
       reason: "already-claimed",
+      // Anyone can call this, so it says only that: not who claimed it, or when.
       message: "This workspace has already been claimed. Sign in instead.",
-      ...(setting.claimedBy ? { claimedBy: setting.claimedBy } : {}),
-      claimedAt: setting.claimedAt,
     })
   // The same checks claimWorkspace makes, first: a typo mustn't spend the link.
   if (!EMAIL.test(normalizeEmail(input.email)))
