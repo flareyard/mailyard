@@ -50,7 +50,7 @@ export function useSessionActions() {
 
 /** The refusal screens the sign-in page has a design for, keyed by the API's typed reasons (HAL-3359). */
 export type SignInError =
-  | { kind: "format" | "unknown" | "public-key" | "unreachable" | "session-expired" | "flareyard-expired" }
+  | { kind: "format" | "unknown" | "public-key" | "unreachable" | "session-expired" }
   | { kind: "revoked"; revokedAt?: string }
   | { kind: "insufficient-scope"; required: string; scopes: string[] }
   | { kind: "rate-limited"; retryAfter: number }

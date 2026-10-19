@@ -1,0 +1,19 @@
+/* "Other ways to sign in": on installs with Flareyard sign-in, the email link and access key fold under it. */
+.other-ways {
+  border-top: 1px solid var(--my-border);
+  padding-top: 12px;
+}
+.other-ways > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font: var(--text-label-14);
+  color: var(--my-muted);
+}
+.other-ways > summary:hover {
+  color: var(--my-fg);
+}
+.other-ways[open] > summary {
+  margin-bottom: 12px;
+}
