@@ -323,7 +323,7 @@ function Sheet({ ended, kept, onDone }: { ended: Ended; kept: ReactNode; onDone:
 function message(e: SignInError): string | null {
   switch (e.kind) {
     case "format":
-      return "That isn’t a key Mailyard recognises. Secret keys start with sk_; the admin key is the whole value on your Flareyard install page."
+      return "That isn’t a key Mailyard recognises. Secret keys start with sk_; the admin key is the whole value this Mailyard was deployed with."
     case "unknown":
       return "No key with that value exists in this workspace. It may belong to another Mailyard, or it was deleted."
     case "revoked":

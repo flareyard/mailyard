@@ -4,14 +4,19 @@
  * owner; the admin key stays as break-glass. `POST /v1/workspace/claim { workspaceName, name, email }` answers
  * `{ member, signInLinkSent }`; a second claim gets `409 { reason: "already-claimed", claimedBy, claimedAt }`.
  * On a deploy older than HAL-3361 the route isn't in its OpenAPI, and the form says so instead of failing.
+ *
+ * Self-deployed installs have no admin key by default (HAL-3587): `bun run deploy` (or `bun run claim-link`) prints
+ * `/claim#token=…`. The token lives in the fragment so it never reaches logs or a Referer; the page reads it once,
+ * clears it from the address bar, and claims with `POST /v1/workspace/claim/link`, which signs the owner in.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useRef, useState } from "react"
 import { ApiError, api, unwrap } from "../api/client.ts"
 import { useCapabilities } from "../auth/capabilities.ts"
+import { takeClaimToken } from "../auth/claimLink.ts"
 import { Gated } from "../auth/NoPermission.tsx"
-import { meQuery, useMe } from "../auth/session.ts"
+import { type Me, meQuery, useMe } from "../auth/session.ts"
 import { describe, FieldError } from "../first-run/ui.tsx"
 import { toDate } from "../lib/format.ts"
 import { AuthLayout } from "../ui/AuthLayout.tsx"
@@ -23,12 +28,38 @@ export const Route = createFileRoute("/claim")({ component: Claim })
 
 type Claimed = { claimedBy: string | null; claimedAt: string | number | null }
 
+/**
+ * The claim-link exchange. It's called by path until the route is in this build's generated types (HAL-3587); the
+ * answer is the `/v1/me` body, and the session cookie is set.
+ */
+async function claimWithLink(body: {
+  claimToken: string
+  workspaceName: string
+  name: string
+  email: string
+}) {
+  const res = await fetch("/v1/workspace/claim/link", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+  if (!res.ok) throw new ApiError(res.status, json)
+  return json as Me
+}
+
 function Claim() {
   const me = useMe()
   const caps = useCapabilities()
   const qc = useQueryClient()
   const navigate = useNavigate()
-  const live = caps.has("POST", "/v1/workspace/claim")
+  const [claimToken] = useState(takeClaimToken)
+  const viaLink = claimToken !== null
+  const live = viaLink
+    ? caps.has("POST", "/v1/workspace/claim/link")
+    : caps.has("POST", "/v1/workspace/claim")
+  const [linkSpent, setLinkSpent] = useState(false)
   const workspace = me.data?.workspace.name ?? ""
   const [wsName, setWsName] = useState<string | null>(null)
   const [name, setName] = useState("")
@@ -44,14 +75,31 @@ function Claim() {
   const workspaceName = wsName ?? workspace
 
   const claim = useMutation({
-    mutationFn: (body: { workspaceName: string; name: string; email: string }) =>
-      unwrap(api.POST("/v1/workspace/claim", { body })),
+    mutationFn: async (body: { workspaceName: string; name: string; email: string }) => {
+      if (claimToken) {
+        const me = await claimWithLink({ claimToken, ...body })
+        return { me, member: null, signInLinkSent: false }
+      }
+      const res = await unwrap(api.POST("/v1/workspace/claim", { body }))
+      return { me: null, member: res.member, signInLinkSent: res.signInLinkSent }
+    },
     onSuccess: async (res, body) => {
+      if (res.me) {
+        // Signed in as the owner by the same request: straight into setup.
+        qc.setQueryData(meQuery.queryKey, res.me)
+        navigate({ to: "/", search: { step: "domain" } })
+        return
+      }
       await qc.invalidateQueries({ queryKey: meQuery.queryKey })
-      setDone({ email: res.member.email, workspace: body.workspaceName, linkSent: res.signInLinkSent })
+      setDone({
+        email: res.member?.email ?? body.email,
+        workspace: body.workspaceName,
+        linkSent: res.signInLinkSent,
+      })
     },
     onError: (e) => {
-      if (e instanceof ApiError && e.status === 409 && e.reason === "already-claimed")
+      if (e instanceof ApiError && e.status === 400 && e.body.field === "claimToken") setLinkSpent(true)
+      else if (e instanceof ApiError && e.status === 409 && e.reason === "already-claimed")
         setClaimed({
           claimedBy: typeof e.body.claimedBy === "string" ? e.body.claimedBy : null,
           claimedAt:
@@ -67,6 +115,8 @@ function Claim() {
   if (claimed) return <AlreadyClaimed claimed={claimed} workspace={workspace} />
   if (done)
     return <ClaimedNow done={done} onContinue={() => navigate({ to: "/", search: { step: "domain" } })} />
+
+  if (linkSpent) return <LinkSpent />
 
   const adminKey = me.data?.via === "admin-key"
   const signedOut = me.error instanceof ApiError && me.error.status === 401
@@ -84,33 +134,45 @@ function Claim() {
     claim.mutate({ workspaceName: workspaceName.trim(), name: name.trim(), email: email.trim() })
   }
 
-  const blocked = !live
-    ? {
-        reason: "This Mailyard can’t be claimed yet",
-        who: "Update the deploy to a release with people and roles (HAL-3361).",
-      }
-    : signedOut || !me.data
+  const blocked = viaLink
+    ? caps.ready && !live
       ? {
-          reason: "Sign in with the admin key first",
-          who: "Only the deploy’s admin key can claim a workspace.",
+          reason: "This Mailyard can’t take a claim link",
+          who: "Update the deploy to a release with claim links.",
         }
-      : !adminKey
+      : null
+    : !live
+      ? {
+          reason: "This Mailyard can’t be claimed yet",
+          who: "Update the deploy to a release with people and roles (HAL-3361).",
+        }
+      : signedOut || !me.data
         ? {
-            reason: "Only the admin key can claim",
-            who: "You’re signed in with a scoped key. Sign in with the admin key from your Flareyard install page.",
+            reason: "Sign in with the admin key first",
+            who: "Only the deploy’s admin key can claim a workspace.",
           }
-        : null
+        : !adminKey
+          ? {
+              reason: "Only the admin key can claim",
+              who: "You’re signed in with a scoped key. Sign in with the admin key this Mailyard was deployed with.",
+            }
+          : null
 
   return (
     <AuthLayout>
       <div>
-        {adminKey ? (
+        {viaLink ? (
+          <span className="pill pill-role">
+            <Icon name="link" />
+            Opened from your claim link
+          </span>
+        ) : adminKey ? (
           <span className="pill pill-role">
             <Icon name="key" />
             Signed in with the admin key
           </span>
         ) : null}
-        <h1 style={adminKey ? { marginTop: 12 } : undefined}>Claim this workspace</h1>
+        <h1 style={adminKey || viaLink ? { marginTop: 12 } : undefined}>Claim this workspace</h1>
         <p className="lede">
           This Mailyard has no owner yet. Claim it and you become the owner; the admin key stays as a
           break-glass key. Next comes a short setup checklist.
@@ -129,7 +191,7 @@ function Claim() {
           </div>
         </div>
       ) : null}
-      {live && signedOut ? (
+      {!viaLink && live && signedOut ? (
         <div className="callout callout-warn" role="alert">
           <Icon name="lock" />
           <span>
@@ -141,12 +203,12 @@ function Claim() {
           </span>
         </div>
       ) : null}
-      {live && me.data && !adminKey ? (
+      {!viaLink && live && me.data && !adminKey ? (
         <div className="callout callout-warn" role="alert">
           <Icon name="key" />
           <span>
             You’re signed in with {me.data.key ? <b>{me.data.key.name}</b> : "a scoped key"}. Claiming needs
-            the admin key from your Flareyard install page.
+            the admin key this Mailyard was deployed with, or the claim link the deploy printed.
           </span>
         </div>
       ) : null}
@@ -155,7 +217,9 @@ function Claim() {
         className="stack stack-16"
         onSubmit={submit}
         noValidate
-        data-endpoint="POST /v1/workspace/claim (built, HAL-3361)"
+        data-endpoint={
+          viaLink ? "POST /v1/workspace/claim/link (HAL-3587)" : "POST /v1/workspace/claim (built, HAL-3361)"
+        }
       >
         <div className="field">
           <label className="label" htmlFor="ws-name">
@@ -208,7 +272,7 @@ function Claim() {
           />
           {errors.email ? <FieldError id="mail-err">{errors.email}</FieldError> : null}
           <p className="hint" id="mail-hint">
-            For alerts, and to match your Flareyard account next time you sign in.
+            For alerts and sign-in links. If you installed from Flareyard, use the same email there.
           </p>
         </div>
         {claim.isError &&
@@ -271,16 +335,11 @@ function AlreadyClaimed({ claimed, workspace }: { claimed: Claimed; workspace: s
           belongs to its owner now.
         </p>
       </div>
-      <div className="cluster cluster-12">
-        <Gated
-          allowed={flareyard}
-          reason="Flareyard sign-in isn’t live yet"
-          who="It arrives with HAL-3360. Ask the owner for an invite meanwhile."
-          block
-        >
+      <div className="stack stack-8">
+        {flareyard ? (
           <a
             className="btn btn-primary btn-lg btn-block fy-btn"
-            href="/v1/session/flareyard/start"
+            href="/v1/session/flareyard/start?return=%2F"
             data-od-id="continue-with-flareyard"
           >
             <span
@@ -299,7 +358,14 @@ function AlreadyClaimed({ claimed, workspace }: { claimed: Claimed; workspace: s
             </span>
             Continue with Flareyard
           </a>
-        </Gated>
+        ) : null}
+        <Link className={`btn btn-lg btn-block ${flareyard ? "btn-secondary" : "btn-primary"}`} to="/sign-in">
+          <Icon name="mail" />
+          Sign in with an email link
+        </Link>
+        <p className="hint">
+          If you're a member, a link goes to your inbox. If you're not, ask the owner for an invite.
+        </p>
       </div>
       <Link className="link" to="/sign-in">
         Back to sign in
@@ -344,6 +410,32 @@ function ClaimedNow({
         Continue to the setup checklist
         <Icon name="arrow-right" />
       </button>
+    </AuthLayout>
+  )
+}
+
+/** The claim link was used or replaced by a newer one: say how to get a fresh one, and offer email sign-in. */
+function LinkSpent() {
+  const host = typeof window === "undefined" ? "" : window.location.origin
+  return (
+    <AuthLayout>
+      <div>
+        <h1>This claim link has been used</h1>
+        <p className="lede">
+          Claim links work once, and a newer one replaces older ones. Make a new link where you deployed
+          Mailyard:
+        </p>
+      </div>
+      <pre className="input mono" style={{ whiteSpace: "pre-wrap", height: "auto", padding: 12 }}>
+        bun run claim-link {host}
+      </pre>
+      <p className="hint">
+        Already claimed it?{" "}
+        <Link className="link" to="/sign-in">
+          Sign in with an email link
+        </Link>
+        .
+      </p>
     </AuthLayout>
   )
 }
