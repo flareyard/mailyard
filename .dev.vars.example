@@ -1,0 +1,13 @@
+# Optional settings for a self-deployed Mailyard. Leave any of them empty: `bun run deploy` generates
+# the signing secrets itself, and you claim the workspace with the link it prints, so nothing here is
+# required. Each token below turns on one extra screen; see the README.
+
+# Quota and reputation on the Overview (Email Sending: Read; Queues: Read for delivery-event checks).
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_EMAIL_READ_TOKEN=
+# Push suppressions to Cloudflare's list (Email Sending: Edit).
+CLOUDFLARE_EMAIL_WRITE_TOKEN=
+# Zone status, DNS fixes and routing-rule checks (Zone, DNS, Email Routing and Email Sending).
+CLOUDFLARE_DNS_TOKEN=
+# Mail Email Routing rejected before Mailyard saw it (Analytics: Read).
+CLOUDFLARE_ANALYTICS_TOKEN=

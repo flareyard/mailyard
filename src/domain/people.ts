@@ -2,12 +2,12 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { invites, mailboxes, mailboxPeople, members, sessions, signInLinks } from "../db/schema.ts"
+import { invites, mailboxes, mailboxPeople, members, sessions, settings, signInLinks } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database, queryIn } from "../services/Database.ts"
 import { type Caller, ROOT } from "./apiKeys.ts"
 import { recordAudit } from "./audit.ts"
-import { randomToken, sha256 } from "./crypto.ts"
+import { randomToken, sha256, timingSafeEqual } from "./crypto.ts"
 import { HOLDS_MAIL } from "./mailboxes.ts"
 import { parseParty, sendBulkMessage } from "./outbox.ts"
 import type { Role } from "./permissions.ts"
@@ -466,6 +466,65 @@ export const signInFromFlareyard = Effect.fn("people.flareyard")(function* (
   })
   const member = yield* findMember(id).pipe(Effect.catchTag("MemberNotFound", Effect.die))
   return { member, joined: claiming ? ("claimed" as const) : ("admin" as const) }
+})
+
+/**
+ * The one-time claim link a self-deployed install starts with (HAL-3587): `bun run deploy` (or
+ * `bun run claim-link`) stores the SHA-256 of a fresh token under this settings key and prints
+ * `<origin>/claim#token=<token>` in the deploy output, which only whoever deployed it sees. No
+ * ADMIN_KEY is pasted anywhere. Minting again replaces it; claiming spends it.
+ */
+export const CLAIM_SETTING = "claim"
+
+/**
+ * `POST /v1/workspace/claim/link`: claims an unclaimed workspace with the claim link's token, as
+ * its owner, and signs them in. The token is checked and spent before anything else is written, so
+ * two tabs can't both claim.
+ */
+export const claimWithLink = Effect.fn("people.claimWithLink")(function* (
+  input: {
+    readonly claimToken: string
+    readonly workspaceName: string
+    readonly name: string
+    readonly email: string
+  },
+  origin: string,
+) {
+  const setting = yield* workspaceSetting()
+  if (setting.claimedAt !== undefined)
+    return yield* new PeopleConflict({
+      reason: "already-claimed",
+      message: "This workspace has already been claimed. Sign in instead.",
+      ...(setting.claimedBy ? { claimedBy: setting.claimedBy } : {}),
+      claimedAt: setting.claimedAt,
+    })
+  // The same checks claimWorkspace makes, first: a typo mustn't spend the link.
+  if (!EMAIL.test(normalizeEmail(input.email)))
+    return yield* new PeopleInvalid({ field: "email", message: "Enter an email address." })
+  if (!input.name.trim()) return yield* new PeopleInvalid({ field: "name", message: "Enter your name." })
+  if (!input.workspaceName.trim())
+    return yield* new PeopleInvalid({ field: "workspaceName", message: "Name the workspace." })
+  const database = yield* Database
+  const row = yield* database.query("settings.claim", (db) =>
+    db.select().from(settings).where(eq(settings.key, CLAIM_SETTING)).get(),
+  )
+  const stored = (row?.value as { tokenHash?: unknown } | undefined)?.tokenHash
+  const presented = yield* hashOf(input.claimToken)
+  const invalid = new PeopleInvalid({
+    field: "claimToken",
+    message:
+      "This claim link isn't valid any more. Run `bun run claim-link` where you deployed for a new one.",
+  })
+  if (typeof stored !== "string" || !timingSafeEqual(presented, stored)) return yield* invalid
+  const spent = yield* database.query("settings.claimSpend", (db) =>
+    db
+      .delete(settings)
+      .where(and(eq(settings.key, CLAIM_SETTING), eq(settings.updatedAt, row?.updatedAt ?? -1)))
+      .run(),
+  )
+  if ((spent.meta.changes ?? 0) === 0) return yield* invalid
+  const claimed = yield* claimWorkspace(ROOT, input, origin)
+  return yield* findMember(claimed.member.id).pipe(Effect.catchTag("MemberNotFound", Effect.die))
 })
 
 /** `POST /v1/workspace/transfer { memberId }`: the owner hands ownership on and becomes an admin. */
