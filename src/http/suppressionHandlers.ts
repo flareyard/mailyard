@@ -14,6 +14,7 @@ import {
   listSuppressionImports,
   startSuppressionImport,
 } from "../imports/suppressionImport.ts"
+import { withRelay } from "../services/cloudflareApi.ts"
 import {
   CloudflareNotConnected,
   CloudflareRefused,
@@ -117,8 +118,10 @@ export const SuppressionsHandlers = HttpApiBuilder.group(
             SuppressionRefused: (e) => Effect.fail(new Conflict({ reason: e.reason, message: e.message })),
             CloudflareUnavailable: (e) =>
               e.reason === "not-connected"
-                ? Effect.fail(new CloudflareNotConnected({ message: e.message }))
-                : Effect.fail(new CloudflareRefused({ status: e.status, message: e.message })),
+                ? Effect.fail(new CloudflareNotConnected({ message: e.message, ...withRelay(e.relay) }))
+                : Effect.fail(
+                    new CloudflareRefused({ status: e.status, message: e.message, ...withRelay(e.relay) }),
+                  ),
             DatabaseError: Effect.die,
           }),
         ),

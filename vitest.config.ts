@@ -12,6 +12,9 @@ const UNIT = [
   "test/automations/triggerData.test.ts",
   "test/live/**/*.test.ts",
   "test/contracts/**/*.test.ts",
+  "test/mail/invite.test.ts",
+  "test/push/webPush.test.ts",
+  "test/dmarc/parse.test.ts",
 ]
 
 /**
@@ -64,6 +67,17 @@ export default defineConfig({
                 MAILYARD_PUBLIC_ORIGIN: "https://mailyard.test",
                 // Who sign-in links and invitations come from (HAL-3361).
                 MAILYARD_SYSTEM_FROM: "Mailyard <hello@people.mailyard.test>",
+                // The helpers answer from a table (HAL-3305); each is still off until a test turns it on.
+                MAILYARD_ASSISTANT: "fixed",
+                ASSISTANT_FIXED: JSON.stringify({
+                  summary:
+                    '{"summary":"Ada asks for a refund because order #42 arrived broken.","bullets":["Order #42 arrived broken","Wants a refund"]}',
+                  draft:
+                    "Hi Ada,\n\nSorry your order arrived broken. I've started a refund; you'll see it in 3 to 5 days.\n\nSam",
+                  category: '{"category":"updates"}',
+                  segment:
+                    '{"rule":{"type":"all","rules":[{"type":"field","field":"plan","op":"eq","value":"pro"},{"type":"status","in":["subscribed"]}]},"explanation":"Subscribed contacts on the pro plan."}',
+                }),
               },
             },
           })),

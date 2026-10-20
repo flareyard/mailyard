@@ -81,6 +81,70 @@ export const CostUnit = Schema.Struct({
 })
 export type CostUnit = typeof CostUnit.Type
 
+/**
+ * Contract v1.3 (HAL-3507): the Cloudflare API calls the app makes while it runs, through the platform.
+ * Flareyard sets `url` (a var) to a relay that takes the same paths, bodies and answers as
+ * `https://api.cloudflare.com/client/v4`, and `token` (a secret) to a key for it. The relay makes each call
+ * with the user's own OAuth grant, so nobody pastes an API token. It forwards only the routes listed here,
+ * only while their `scope` is granted, and only inside the account the app is installed in.
+ *
+ * Path segments are literal or a placeholder: `{account}` must be the install's account, `{zone}` a zone
+ * in that account, `{id}` any one segment. The query string passes through, except that `GET /zones` is
+ * always narrowed to the install's account.
+ */
+export const ApiMethod = Schema.Literals(["GET", "POST", "PUT", "PATCH", "DELETE"])
+export const ApiRoute = Schema.Struct({
+  method: ApiMethod,
+  path: Schema.String.check(
+    Schema.isPattern(/^(?:\/(?:(?!\.{1,2}(?:\/|$))[A-Za-z0-9_.-]+|\{account\}|\{zone\}|\{id\}))+$/),
+  ),
+  scope: Schema.String,
+  why: Reason,
+})
+export type ApiRoute = typeof ApiRoute.Type
+
+/**
+ * A GraphQL analytics query the relay may send to `POST /graphql`, word for word (HAL-3570). Only the
+ * variables change between calls, and `zoneVariable` must name a zone in the install's account. The
+ * query may read `viewer.zones` filtered by that variable alone; `crossFieldProblems` checks the text.
+ */
+export const GraphqlQuery = Schema.Struct({
+  name: Schema.String.check(Schema.isPattern(/^[A-Za-z][A-Za-z0-9_]{0,63}$/)),
+  query: Schema.NonEmptyString.check(Schema.isMaxLength(8000)),
+  zoneVariable: Schema.String.check(Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]{0,63}$/)),
+  scope: Schema.String,
+  why: Reason,
+})
+export type GraphqlQuery = typeof GraphqlQuery.Type
+
+export const CloudflareApi = Schema.Struct({
+  /** A var the platform sets to the install's Cloudflare account id. */
+  accountId: Schema.optionalKey(SecretName),
+  /** A var the platform sets to the relay's base URL, used in place of api.cloudflare.com/client/v4. */
+  url: SecretName,
+  /** A secret the platform sets to this install's key for the relay. */
+  token: SecretName,
+  routes: Schema.NonEmptyArray(ApiRoute),
+  /** Analytics queries for `POST /graphql`, each bound to one of the install's zones. */
+  graphql: Schema.optionalKey(Schema.Array(GraphqlQuery)),
+})
+export type CloudflareApi = typeof CloudflareApi.Type
+
+const AppPath = Schema.String.check(Schema.isPattern(/^(?:\/[A-Za-z0-9_.-]+)+$/))
+
+/**
+ * Contract v1.3 (HAL-3573): signing in to the installed app with the Flareyard account, instead of a
+ * pasted key. `start` begins the hand-off (PKCE) and `callback` receives the one-time code; the platform
+ * sets `platformUrl` and `installId` as vars on the main Worker, and its "Open" button goes to `start`.
+ */
+export const SignIn = Schema.Struct({
+  start: AppPath,
+  callback: AppPath,
+  platformUrl: SecretName,
+  installId: SecretName,
+})
+export type SignIn = typeof SignIn.Type
+
 export const Manifest = Schema.Struct({
   $schema: Schema.optionalKey(Schema.String),
   manifestVersion: Schema.Literal(1),
@@ -109,6 +173,10 @@ export const Manifest = Schema.Struct({
   ),
   /** v1.2: settings the user picks at install and can change later. */
   settings: Schema.optionalKey(Schema.Array(Setting)),
+  /** v1.3: Cloudflare API calls made at runtime with the user's grant, through the platform. */
+  cloudflareApi: Schema.optionalKey(CloudflareApi),
+  /** v1.3: people sign in to the app with their Flareyard account. */
+  signIn: Schema.optionalKey(SignIn),
   cost: Schema.Struct({
     /** Plain words, not a number we invented: "0–1 above the $5 plan" or "unmeasured". */
     typicalMonthlyUsd: Schema.NonEmptyString,

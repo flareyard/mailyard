@@ -38,7 +38,18 @@ export const linkOrigin = (requestUrl: string) => configured ?? originOfUrl(requ
  * Paths the Worker serves itself. Everything else belongs to the web app (Workers Static Assets);
  * keep this in step with `assets.run_worker_first` in wrangler.jsonc.
  */
-const WORKER_PREFIXES = ["/v1/", "/t/", "/u/", "/p/", "/c/", "/f/", "/v/", "/brand/"]
+const WORKER_PREFIXES = [
+  "/v1/",
+  "/t/",
+  "/u/",
+  "/p/",
+  "/c/",
+  "/f/",
+  "/v/",
+  "/brand/",
+  "/oauth/",
+  "/.well-known/oauth-",
+]
 const WORKER_PATHS = new Set(["/v1", "/mcp", "/healthz", "/openapi.json"])
 
 export const isWorkerPath = (path: string) =>

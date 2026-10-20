@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // A copy of the Flareyard platform's manifest validator (flareyard/flareyard packages/manifest, contract
-// v1.2, synced 2026-10-17 at a8845d9), kept here so Mailyard can check its own cloudflare-app.json without
+// v1.3 with GraphQL and signIn, synced 2026-10-19 from flareyard#26 at fb2c437), kept here so Mailyard can check its own cloudflare-app.json without
 // depending on the platform repo. Mailyard adds the wrangler.jsonc check (resources.ts).
 import { Exit } from "effect"
 import { crossFieldProblems } from "./check.ts"

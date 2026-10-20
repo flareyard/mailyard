@@ -196,7 +196,11 @@ describe("the reader (HAL-3407)", () => {
       sql.exec(
         "INSERT INTO labels (id, name, color, created_at) VALUES ('lbl_a', 'A', '#0ea5e9', 1), ('lbl_b', 'B', 'navy', 1)",
       )
-      sql.exec("UPDATE _schema SET version = ?", MAILBOX_MIGRATIONS.length - 1)
+      // Back to just before the palette migration, wherever it sits in the list.
+      sql.exec(
+        "UPDATE _schema SET version = ?",
+        MAILBOX_MIGRATIONS.findIndex((m) => m.after === "paletteLabels"),
+      )
       sql.exec("DROP TABLE thread_notes")
       new MailboxStore(sql, (fn) => state.storage.transactionSync(fn)).migrate()
       const colors = sql.exec("SELECT id, color FROM labels ORDER BY id").toArray()

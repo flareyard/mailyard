@@ -346,13 +346,16 @@ export const writeDataPart = Effect.fn("workspaceExport.data")(function* (
       Effect.orElseSucceed(() => null),
     )
     const data = {
-      settings: Object.fromEntries(rows.map((r) => [r.key, r.value])),
+      // Credentials stay home: the push signing key (sealed) and an open claim link (HAL-3587).
+      settings: Object.fromEntries(
+        rows.filter((r) => !PRIVATE_SETTINGS.has(r.key)).map((r) => [r.key, r.value]),
+      ),
       sending,
       webhookEndpoints: webhooks,
       apiKeys: keys,
       note: "Webhook signing secrets and API key hashes are left out: create new ones after an import.",
     }
-    items = rows.length + webhooks.length + keys.length
+    items = rows.filter((r) => !PRIVATE_SETTINGS.has(r.key)).length + webhooks.length + keys.length
     bytes = yield* put(key, JSON.stringify(data, null, 2), "application/json")
   } else {
     const result = yield* auditCsv({}, 1_000_000)
@@ -361,6 +364,9 @@ export const writeDataPart = Effect.fn("workspaceExport.data")(function* (
   }
   yield* updatePart(row, (p) => p.kind === kind, { status: "complete", key, items, bytes })
 })
+
+/** Settings that are credentials, never exported: the VAPID key pair and the claim link's hash. */
+export const PRIVATE_SETTINGS: ReadonlySet<string> = new Set(["vapid", "claim"])
 
 /** The last step: the manifest, the export marked completed, and the alert that it's ready. */
 export const finishWorkspaceExport = Effect.fn("workspaceExport.finish")(function* (id: string) {

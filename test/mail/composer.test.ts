@@ -2,6 +2,7 @@ import { env, exports } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 import { RAW_PATHS } from "../../src/http/rawRoutes.ts"
 import { planAttachments } from "../../src/mail/attachmentPlan.ts"
+import { PLATFORM_ONLY_PATHS } from "../../src/workers/flareyardSignIn.ts"
 import { installDohFixture } from "../dns.ts"
 import { ADMIN, call, json } from "../helpers.ts"
 import { delivery } from "../mailbox/deliveries.ts"
@@ -146,7 +147,9 @@ describe("the raw routes in the OpenAPI document", () => {
     const doc = await json<{ paths: Record<string, Record<string, { operationId: string }>> }>(
       await call("/openapi.json"),
     )
-    for (const path of Object.keys(RAW_PATHS)) expect(doc.paths[path], path).toBeDefined()
+    // The Flareyard hand-off is listed only on installs Flareyard made (HAL-3360); it's still routed below.
+    for (const path of Object.keys(RAW_PATHS))
+      if (!PLATFORM_ONLY_PATHS.has(path)) expect(doc.paths[path], path).toBeDefined()
     expect(doc.paths["/v1/uploads"]?.post?.operationId).toBe("uploads.create")
     // Each answers its own refusal, not the API router's 404: they're routed.
     const concrete = (path: string) =>

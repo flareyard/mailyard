@@ -2,7 +2,7 @@
  * Answers DNS-over-HTTPS queries to cloudflare-dns.com from a table, so tests exercise the real DoH
  * client (src/services/Dns.ts) without the network. Keys are `"<TYPE> <name>"`.
  */
-const TYPES: Record<string, number> = { MX: 15, TXT: 16, CNAME: 5, NS: 2 }
+const TYPES: Record<string, number> = { MX: 15, TXT: 16, CNAME: 5, NS: 2, PTR: 12 }
 const table = new Map<string, ReadonlyArray<string>>()
 let installed = false
 
