@@ -293,6 +293,152 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
       },
     },
   },
+  "/.well-known/oauth-protected-resource": {
+    get: {
+      tags: ["oauth"],
+      operationId: "oauth.protectedResource",
+      summary: "Protected-resource metadata for /mcp (RFC 9728, HAL-3462)",
+      description:
+        "Names /mcp as the resource, this origin as its authorization server, and the scopes a client asks for by default (read, send). /mcp's 401 points here in WWW-Authenticate's resource_metadata.",
+      responses: { "200": { description: "The metadata document (JSON)." } },
+    },
+  },
+  "/.well-known/oauth-protected-resource/mcp": {
+    get: {
+      tags: ["oauth"],
+      operationId: "oauth.protectedResourceMcp",
+      summary: "The same metadata, at the path-specific address for /mcp",
+      responses: { "200": { description: "The metadata document (JSON)." } },
+    },
+  },
+  "/.well-known/oauth-authorization-server": {
+    get: {
+      tags: ["oauth"],
+      operationId: "oauth.serverMetadata",
+      summary: "Authorization-server metadata (RFC 8414)",
+      description:
+        "The authorize, token, registration and revocation endpoints. Codes only, PKCE S256 only, public clients only. Client ID metadata documents are supported, and so is iss in the authorization response (RFC 9207).",
+      responses: { "200": { description: "The metadata document (JSON)." } },
+    },
+  },
+  "/oauth/authorize": {
+    get: {
+      tags: ["oauth"],
+      operationId: "oauth.authorize",
+      summary: "Ask a person to connect an MCP client",
+      description:
+        "response_type=code, client_id (an https URL to the client's metadata document, or an id from /oauth/register), redirect_uri, state, code_challenge with code_challenge_method=S256, resource (this origin's /mcp) and optionally scope (read, send, admin). Shows a consent page where the person picks scopes and mailboxes, or a sign-in page first. A request whose client or redirect_uri can't be trusted is shown as an error page; any other problem is sent back to redirect_uri as error.",
+      responses: {
+        "200": bytes("The consent or sign-in page.", "text/html"),
+        "303": { description: "Sent back to redirect_uri with error, state and iss." },
+        "400": bytes("The client or redirect_uri can't be used.", "text/html"),
+      },
+    },
+    post: {
+      tags: ["oauth"],
+      operationId: "oauth.consent",
+      summary: "The consent page's answer",
+      description:
+        "From the consent page only (this site's Origin, with the session cookie). decision=allow with the ticked grant_scope and grant_mailbox values issues a ten-minute, single-use code; anything else denies.",
+      responses: {
+        "303": { description: "Back to redirect_uri with code, state and iss, or error=access_denied." },
+        "403": bytes("The answer didn't come from this site.", "text/html"),
+      },
+    },
+  },
+  "/oauth/authorize/sign-in": {
+    post: {
+      tags: ["oauth"],
+      operationId: "oauth.signIn",
+      summary: "Email a sign-in link that comes back to the authorization",
+      description:
+        "From the sign-in page: email and return (the /oauth/authorize URL). The link signs the person in and lands them back on the consent page. The answer is the same whether or not the address belongs to someone.",
+      responses: {
+        "200": bytes("The check-your-email page.", "text/html"),
+        "403": bytes("The request didn't come from this site.", "text/html"),
+        "429": bytes("Too many tries from this address.", "text/html"),
+      },
+    },
+  },
+  "/oauth/token": {
+    post: {
+      tags: ["oauth"],
+      operationId: "oauth.token",
+      summary: "Exchange a code, or refresh",
+      description:
+        "Form body. grant_type=authorization_code with code, redirect_uri, code_verifier, client_id and resource; or grant_type=refresh_token with refresh_token and client_id. Answers an access token (one hour, only for /mcp) and a refresh token. Each refresh token works once: using a used one revokes the whole grant.",
+      responses: {
+        "200": { description: "access_token, token_type Bearer, expires_in, refresh_token, scope." },
+        "400": { description: "error and error_description (RFC 6749 §5.2)." },
+        "401": { description: "invalid_client." },
+      },
+    },
+  },
+  "/oauth/register": {
+    post: {
+      tags: ["oauth"],
+      operationId: "oauth.register",
+      summary: "Register a public client (RFC 7591)",
+      description:
+        "For clients without a metadata document. JSON with redirect_uris (https, http on a loopback address, or a private-use scheme) and client_name. Public clients only. A client unused within a day is dropped.",
+      responses: {
+        "201": { description: "The client, with its client_id." },
+        "400": { description: "invalid_client_metadata or invalid_redirect_uri." },
+      },
+    },
+  },
+  "/oauth/revoke": {
+    post: {
+      tags: ["oauth"],
+      operationId: "oauth.revoke",
+      summary: "Revoke a token (RFC 7009)",
+      description:
+        "Form body with token (access or refresh) and client_id. Ends the whole grant and its key. Answers 200 whether or not the token existed.",
+      responses: { "200": { description: "Done." } },
+    },
+  },
+  "/v1/session/flareyard/start": {
+    get: {
+      tags: ["session"],
+      operationId: "session.flareyardStart",
+      summary: "Sign in through Flareyard (HAL-3360)",
+      description:
+        "Only on installs Flareyard made (FLAREYARD_URL and FLAREYARD_INSTALL_ID set); elsewhere this path isn't listed and answers 404. Keeps a PKCE verifier and state in a ten-minute cookie and redirects to Flareyard, which checks the person owns this install. `return` is a path on this site to land on afterwards.",
+      parameters: [
+        {
+          name: "return",
+          in: "query",
+          required: false,
+          schema: { type: "string" },
+          description: "A path on this site, e.g. /mail.",
+        },
+      ],
+      responses: {
+        "302": { description: "To Flareyard's /auth/app." },
+        "404": { description: "This install wasn't made by Flareyard." },
+      },
+    },
+  },
+  "/v1/session/flareyard/callback": {
+    get: {
+      tags: ["session"],
+      operationId: "session.flareyardCallback",
+      summary: "Where Flareyard sends the person back",
+      description:
+        "Checks the state against the flow cookie, exchanges the single-use code with the verifier, checks the answer names this install, and opens a session for that person: a member with their email, or, the platform having checked they own the install, the owner of an unclaimed workspace or a new admin. Failures go to /sign-in?error=flareyard_state, flareyard_session_expired, flareyard_wrong_install, flareyard_denied, flareyard_refused or flareyard_unreachable.",
+      parameters: [
+        { name: "code", in: "query", required: false, schema: { type: "string" } },
+        { name: "state", in: "query", required: false, schema: { type: "string" } },
+      ],
+      responses: {
+        "303": {
+          description:
+            "Signed in (Set-Cookie carries the session), to the return path; or to /sign-in with an error.",
+        },
+        "404": { description: "This install wasn't made by Flareyard." },
+      },
+    },
+  },
   "/v1/mailboxes/{id}/wait": {
     get: {
       tags: ["mail"],

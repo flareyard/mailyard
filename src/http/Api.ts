@@ -20,6 +20,7 @@ import { SendBlocked } from "../mail/send.ts"
 import { LABEL_COLORS } from "../mailbox/types.ts"
 import { Action as RuleAction, Condition as RuleCondition } from "../rules/engine.ts"
 import { Rule as SegmentRule } from "../segments/rules.ts"
+import { RelayRefusalSchema } from "../services/cloudflareApi.ts"
 import { BlocksDocument } from "../templates/document.ts"
 import { ApiKeyAuth, Forbidden, RateLimited, Unauthorized } from "./Auth.ts"
 import { withRawRoutes } from "./rawRoutes.ts"
@@ -127,6 +128,8 @@ export class InvalidRequest extends Schema.TaggedError<InvalidRequest>()(
     ),
     field: Schema.String,
     message: Schema.String,
+    /** Set when Flareyard's Cloudflare relay refused a call the request needed (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 400 },
 ) {}
@@ -142,6 +145,8 @@ export class FixRefused extends Schema.TaggedError<FixRefused>()(
     ),
     reason: Schema.Literals(["no_dns_token", "zone_not_found", "nothing_to_fix"]),
     message: Schema.String,
+    /** With `zone_not_found`: set when Flareyard's relay refused the zone lookup (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -153,6 +158,8 @@ export class DmarcRefused extends Schema.TaggedError<DmarcRefused>()(
     requestId: Schema.optionalKey(Schema.String),
     reason: Schema.Literals(["no_dns_token", "zone_not_found", "several_records", "write_failed"]),
     message: Schema.String,
+    /** Set when Flareyard's relay, not Cloudflare, refused the lookup or the write (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -1426,6 +1433,8 @@ export const DomainDetailSchema = Schema.Struct({
   returnPath: Schema.NullOr(Schema.String),
   /** When the zone fields were read: the last recheck. */
   zoneCheckedAt: Schema.NullOr(Schema.Number),
+  /** Set when Flareyard's relay refused the zone lookup at the last recheck, so the zone fields are null. */
+  zoneRelay: Schema.optionalKey(RelayRefusalSchema),
   checks: Schema.Array(RecordCheckSchema),
   expectedRecords: Schema.Array(
     Schema.Struct({
@@ -1640,6 +1649,9 @@ export class DomainsApi extends HttpApiGroup.make("domains")
             existingMx: Schema.Array(Schema.String),
           }),
         ),
+        /** Why the zones couldn't be listed, when Flareyard's relay refused (HAL-3558). */
+        message: Schema.optionalKey(Schema.String),
+        relay: Schema.optionalKey(RelayRefusalSchema),
       }),
       error: Forbidden,
     }),
@@ -1679,6 +1691,7 @@ export class DomainsApi extends HttpApiGroup.make("domains")
             action: Schema.Literals(["enable_routing", "fix_sending", "add_dmarc", "manual"]),
             ok: Schema.Boolean,
             detail: Schema.String,
+            relay: Schema.optionalKey(RelayRefusalSchema),
           }),
         ),
       }),
@@ -1773,6 +1786,8 @@ export class MailboxesApi extends HttpApiGroup.make("mailboxes")
          * was repointed here) or `unchecked` (no zone token, or a catch-all, which no rule shadows).
          */
         routing: Schema.Literals(["clear", "replaced", "unchecked"]),
+        /** With `unchecked`: set when Flareyard's relay refused the zone or rule lookup (HAL-3558). */
+        routingRelay: Schema.optionalKey(RelayRefusalSchema),
       }),
       error: [Forbidden, NotFound, InvalidRequest, Conflict],
     }),
@@ -1953,8 +1968,52 @@ export const MessageSchema = Schema.Struct({
   rulesMatched: Schema.Array(Schema.String),
 })
 
+const PartStatSchema = Schema.Literals(["NEEDS-ACTION", "ACCEPTED", "DECLINED", "TENTATIVE", "DELEGATED"])
+
+/** A calendar invitation read from the message's text/calendar part (HAL-3369). */
+const ImageSenderSchema = Schema.Struct({
+  value: Schema.String,
+  createdBy: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+})
+
+export const CalendarInviteSchema = Schema.Struct({
+  /** REQUEST (an invitation), CANCEL, REPLY, PUBLISH … */
+  method: Schema.String,
+  uid: Schema.String,
+  sequence: Schema.Number,
+  summary: Schema.NullOr(Schema.String),
+  description: Schema.NullOr(Schema.String),
+  location: Schema.NullOr(Schema.String),
+  /** ISO 8601: a date for all-day events; a time without `Z` is in `timeZone`. */
+  start: Schema.NullOr(Schema.String),
+  end: Schema.NullOr(Schema.String),
+  allDay: Schema.Boolean,
+  timeZone: Schema.NullOr(Schema.String),
+  organizer: Schema.NullOr(Schema.Struct({ address: Schema.String, name: Schema.NullOr(Schema.String) })),
+  attendees: Schema.Array(
+    Schema.Struct({
+      address: Schema.String,
+      name: Schema.NullOr(Schema.String),
+      partstat: PartStatSchema,
+      role: Schema.NullOr(Schema.String),
+    }),
+  ),
+  /** This mailbox's own answer as the invitation lists it, when it's an attendee. */
+  myStatus: Schema.NullOr(PartStatSchema),
+  /** Whether an RSVP can be sent: an invitation (REQUEST) that lists this mailbox. */
+  canRespond: Schema.Boolean,
+})
+
 export const MessageDetailSchema = Schema.Struct({
   ...MessageSchema.fields,
+  /** The calendar invitation in the message, if it has one (HAL-3369). */
+  invite: Schema.optionalKey(Schema.NullOr(CalendarInviteSchema)),
+  /**
+   * `show` when the sender is on the mailbox's always-show-images list; `ask` otherwise, and the reader
+   * keeps remote images blocked until the person chooses (HAL-3369).
+   */
+  remoteImages: Schema.optionalKey(Schema.Literals(["show", "ask"])),
   headers: Schema.optionalKey(
     Schema.Array(Schema.Struct({ name: Schema.String, value: Schema.String })).annotate({
       description: "With ?include=headers: every header in the order it arrived, newest hop first.",
@@ -2320,6 +2379,45 @@ export class MailApiGroup extends HttpApiGroup.make("mail")
         ),
       },
       success: MessageDetailSchema,
+      error: MailErrors,
+    }),
+    /**
+     * Answers a calendar invitation (HAL-3369): sends the iTIP REPLY from the mailbox to the organizer,
+     * as a normal send (the undo window, the key's limits and approvals apply). One message, only when
+     * the person chooses.
+     */
+    HttpApiEndpoint.post("rsvp", "/v1/mailboxes/:id/messages/:messageId/rsvp", {
+      params: { id: Schema.String, messageId: Schema.String },
+      payload: Schema.Struct({
+        response: Schema.Literals(["accepted", "tentative", "declined"]),
+        /** A line for the organizer, added to the reply's text. */
+        comment: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(1_000))),
+      }),
+      success: Schema.Struct({
+        response: Schema.Literals(["accepted", "tentative", "declined"]),
+        draft: DraftSchema,
+        sendAt: Schema.NullOr(Schema.Number),
+        undoUntil: Schema.NullOr(Schema.Number),
+        approval: Schema.optionalKey(Schema.NullOr(Schema.Unknown)),
+      }),
+      error: [...MailErrors, SendBlocked],
+    }),
+    /** Senders whose remote images this mailbox always shows (HAL-3369). */
+    HttpApiEndpoint.get("imageSenders", "/v1/mailboxes/:id/image-senders", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ senders: Schema.Array(ImageSenderSchema) }),
+      error: MailErrors,
+    }),
+    /** "Always show images from …": an address or `@domain`. */
+    HttpApiEndpoint.post("addImageSender", "/v1/mailboxes/:id/image-senders", {
+      params: { id: Schema.String },
+      payload: Schema.Struct({ value: Schema.String.check(Schema.isMaxLength(320)) }),
+      success: ImageSenderSchema,
+      error: MailErrors,
+    }),
+    HttpApiEndpoint.delete("removeImageSender", "/v1/mailboxes/:id/image-senders/:value", {
+      params: { id: Schema.String, value: Schema.String },
+      success: Schema.Struct({ removed: Schema.String }),
       error: MailErrors,
     }),
     HttpApiEndpoint.patch("updateMessage", "/v1/mailboxes/:id/messages/:messageId", {
@@ -3666,7 +3764,11 @@ export class SendingApi extends HttpApiGroup.make("sending")
           available: Schema.Literal(true),
           addresses: Schema.Array(Schema.Struct({ email: Schema.String, verifiedAt: Schema.Number })),
         }),
-        Schema.Struct({ available: Schema.Literal(false), reason: Schema.String }),
+        Schema.Struct({
+          available: Schema.Literal(false),
+          reason: Schema.String,
+          relay: Schema.optionalKey(RelayRefusalSchema),
+        }),
       ]),
       error: Forbidden,
     }),
@@ -4900,6 +5002,7 @@ const SuppressionSchema = Schema.Struct({
 const CloudflareRemovalSchema = Schema.Struct({
   state: Schema.Literals(["removed", "not-listed", "read-only", "not-connected", "failed"]),
   message: Schema.NullOr(Schema.String),
+  relay: Schema.optionalKey(RelayRefusalSchema),
 }).annotate({
   description:
     "What happened on Cloudflare's list. removed: its entries for the address are gone. not-listed: it had none. read-only: Cloudflare keeps an entry nobody can delete, until it expires. not-connected: no write token, so Cloudflare may still refuse the address. failed: Cloudflare said no.",
@@ -4943,10 +5046,12 @@ const SyncSchema = Schema.Struct({
   }),
   complete: Schema.Boolean,
   error: Schema.NullOr(Schema.String),
+  /** Set when the sync failed because Flareyard's relay refused the read (HAL-3558). */
+  relay: Schema.optionalKey(RelayRefusalSchema),
   matched: Schema.optionalKey(Schema.Number),
 })
 
-/** Cloudflare's list can't be changed from here: no CLOUDFLARE_EMAIL_WRITE_TOKEN. */
+/** Cloudflare's list can't be changed from here: not installed through Flareyard, and no CLOUDFLARE_EMAIL_WRITE_TOKEN. */
 export class CloudflareNotConnected extends Schema.TaggedError<CloudflareNotConnected>()(
   "CloudflareNotConnected",
   {
@@ -4956,6 +5061,8 @@ export class CloudflareNotConnected extends Schema.TaggedError<CloudflareNotConn
       }),
     ),
     message: Schema.String,
+    /** Set when Flareyard's relay, not Cloudflare, refused (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 409 },
 ) {}
@@ -4970,6 +5077,8 @@ export class CloudflareRefused extends Schema.TaggedError<CloudflareRefused>()(
     ),
     status: Schema.Number,
     message: Schema.String,
+    /** Set when Flareyard's relay, not Cloudflare, refused (HAL-3558). */
+    relay: Schema.optionalKey(RelayRefusalSchema),
   },
   { httpApiStatus: 502 },
 ) {}
@@ -5006,6 +5115,7 @@ export class SuppressionsApi extends HttpApiGroup.make("suppressions")
           checkedAt: Schema.NullOr(Schema.Number),
           cloudflareOnly: Schema.Number,
           error: Schema.NullOr(Schema.String),
+          relay: Schema.optionalKey(RelayRefusalSchema),
         }),
         nextCursor: Schema.NullOr(Schema.String),
       }),
@@ -5028,7 +5138,11 @@ export class SuppressionsApi extends HttpApiGroup.make("suppressions")
             "False when the address was already on the list: its reason is kept, and a new note is taken.",
         }),
         cloudflare: Schema.NullOr(
-          Schema.Struct({ state: Schema.String, message: Schema.NullOr(Schema.String) }),
+          Schema.Struct({
+            state: Schema.String,
+            message: Schema.NullOr(Schema.String),
+            relay: Schema.optionalKey(RelayRefusalSchema),
+          }),
         ),
       }),
       error: [Forbidden, InvalidRequest],
@@ -5221,10 +5335,12 @@ export class OverviewApi extends HttpApiGroup.make("overview")
             zones: Schema.Number,
             /** The first day counted: Cloudflare keeps 31 days. */
             from: Schema.NullOr(Schema.String),
+            /** Set when Flareyard's relay refused the lookup or the query (HAL-3558). */
+            relay: Schema.optionalKey(RelayRefusalSchema),
           }),
         }).annotate({
           description:
-            "`total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN.",
+            "`total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics through Flareyard's relay (account-analytics.read) or, self-hosted, with CLOUDFLARE_ANALYTICS_TOKEN.",
         }),
         held: Schema.Number,
         spam: Schema.Number,
@@ -5586,6 +5702,21 @@ export class SignInLinkApi extends HttpApiGroup.make("signInLink").add(
     success: Me,
     error: [InvalidRequest, Gone, RateLimited, Forbidden],
   }),
+  /**
+   * Claims a self-deployed workspace with the one-time claim link `bun run deploy` printed
+   * (`/claim#token=…`, HAL-3587), as its owner, and signs them in. No admin key needed. `400` with
+   * `field: "claimToken"` when the link was replaced or used; `409 already-claimed` once claimed.
+   */
+  HttpApiEndpoint.post("claimWithLink", "/v1/workspace/claim/link", {
+    payload: Schema.Struct({
+      claimToken: Schema.NonEmptyString.check(Schema.isMaxLength(256)),
+      workspaceName: Schema.String.check(Schema.isMaxLength(120)),
+      name: Schema.String.check(Schema.isMaxLength(120)),
+      email: Schema.String.check(Schema.isMaxLength(254)),
+    }),
+    success: Me,
+    error: [InvalidRequest, Conflict, RateLimited, Forbidden],
+  }),
 ) {}
 
 /** An invitation, seen and accepted by the person invited: the token is the credential. */
@@ -5804,6 +5935,23 @@ const NullableTime = Schema.NullOr(Schema.Number)
  * belongs to) for callers who manage keys, and is null for everyone else, who still see the counts.
  * Keys are made and revoked on `/v1/api-keys` and `/v1/agents`.
  */
+export const OAuthGrantSchema = Schema.Struct({
+  id: Schema.String,
+  client: Schema.Struct({
+    id: Schema.String,
+    name: Schema.String,
+    /** The client's host (from its metadata document's URL, or its home page), shown beside its name. */
+    host: Schema.NullOr(Schema.String),
+    registration: Schema.NullOr(Schema.Literals(["cimd", "dcr"])),
+  }),
+  grantedBy: Schema.Struct({ id: Schema.String, name: Schema.String, email: Schema.NullOr(Schema.String) }),
+  apiKeyId: Schema.String,
+  scopes: Schema.Array(Schema.String),
+  mailboxIds: Schema.Array(Schema.String),
+  createdAt: Schema.Number,
+  lastUsedAt: NullableTime,
+}).annotate({ identifier: "OAuthGrant" })
+
 export class IntegrationsApi extends HttpApiGroup.make("integrations")
   .add(
     HttpApiEndpoint.get("get", "/v1/integrations", {
@@ -5834,6 +5982,14 @@ export class IntegrationsApi extends HttpApiGroup.make("integrations")
               }),
             ),
           ),
+        }),
+        /**
+         * MCP clients connected by OAuth (HAL-3462): every grant for someone with `keys.manage`, else
+         * the ones the caller approved. Each is backed by a `purpose: mcp` key (`apiKeyId`).
+         */
+        oauth: Schema.Struct({
+          authorizationServer: Schema.NullOr(Schema.String),
+          grants: Schema.Array(OAuthGrantSchema),
         }),
         webhooks: Schema.Struct({
           count: Schema.Number,
@@ -5877,6 +6033,79 @@ export class IntegrationsApi extends HttpApiGroup.make("integrations")
           }),
         ),
       }),
+      error: Forbidden,
+    }),
+    /**
+     * Disconnects an OAuth client: the grant, its key and every token stop working at once. Anyone
+     * with `keys.manage`, or the person who approved it.
+     */
+    HttpApiEndpoint.delete("revokeOAuthGrant", "/v1/integrations/oauth-grants/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ id: Schema.String, revoked: Schema.Literal(true) }),
+      error: [Forbidden, NotFound],
+    }),
+  )
+  .middleware(ApiKeyAuth) {}
+
+const PushSubscriptionSchema = Schema.Struct({
+  id: Schema.String,
+  device: Schema.NullOr(Schema.String),
+  /** The push service's host; the endpoint itself is a capability and isn't returned. */
+  service: Schema.String,
+  createdAt: Schema.Number,
+  lastSentAt: Schema.NullOr(Schema.Number),
+})
+const PushPreferencesSchema = Schema.Struct({
+  mailboxes: Schema.Array(
+    Schema.Struct({ mailboxId: Schema.String, notify: Schema.Literals(["all", "assigned", "off"]) }),
+  ).check(Schema.isMaxLength(500)),
+  alerts: Schema.Boolean,
+  hideContent: Schema.Boolean,
+})
+
+/**
+ * Web Push (HAL-3369): a browser subscribes with its push service's endpoint and keys, and its person
+ * (or key) gets new mail in the mailboxes they read, conversations handed to them, and, for managers,
+ * alerts. Per mailbox `all` (default), `assigned` or `off`; `hideContent` sends only "New mail".
+ */
+export class PushApi extends HttpApiGroup.make("push")
+  .add(
+    /** The VAPID public key a browser subscribes with (`applicationServerKey`), base64url. */
+    HttpApiEndpoint.get("vapidKey", "/v1/push/vapid-key", {
+      success: Schema.Struct({ publicKey: Schema.String }),
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.get("subscriptions", "/v1/push/subscriptions", {
+      success: Schema.Struct({ subscriptions: Schema.Array(PushSubscriptionSchema) }),
+      error: Forbidden,
+    }),
+    /** A PushSubscription's JSON (`subscription.toJSON()`), with a name for the device. */
+    HttpApiEndpoint.post("subscribe", "/v1/push/subscriptions", {
+      payload: Schema.Struct({
+        endpoint: Schema.String,
+        keys: Schema.Struct({ p256dh: Schema.String, auth: Schema.String }),
+        device: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
+      success: PushSubscriptionSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    HttpApiEndpoint.delete("unsubscribe", "/v1/push/subscriptions/:id", {
+      params: { id: Schema.String },
+      success: Schema.Struct({ deleted: Schema.String }),
+      error: [Forbidden, NotFound],
+    }),
+    HttpApiEndpoint.get("preferences", "/v1/push/preferences", {
+      success: PushPreferencesSchema,
+      error: Forbidden,
+    }),
+    HttpApiEndpoint.put("putPreferences", "/v1/push/preferences", {
+      payload: PushPreferencesSchema,
+      success: PushPreferencesSchema,
+      error: [Forbidden, InvalidRequest],
+    }),
+    /** Sends "Notifications work." to each of the caller's subscriptions, and says how it went. */
+    HttpApiEndpoint.post("test", "/v1/push/test", {
+      success: Schema.Struct({ sent: Schema.Number, failed: Schema.Number, gone: Schema.Number }),
       error: Forbidden,
     }),
   )
@@ -6045,4 +6274,5 @@ export class MailApi extends HttpApi.make("mailyard")
   .add(AgentsApi)
   .add(ApprovalsApi)
   .add(IntegrationsApi)
+  .add(PushApi)
   .annotateMerge(OpenApi.annotations({ title: "Mailyard API", transform: withRawRoutes })) {}

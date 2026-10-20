@@ -15,6 +15,7 @@ import {
 import { Ids } from "../kit/index.ts"
 import { SPAM_THRESHOLD } from "../rules/spam.ts"
 import { CloudflareZones, type RoutingRule } from "../services/CloudflareZones.ts"
+import { type RelayRefusal, RelayRefusalSchema, withRelay } from "../services/cloudflareApi.ts"
 import { Database, queryIn } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import type { Caller } from "./apiKeys.ts"
@@ -28,6 +29,7 @@ export class MailboxNotFound extends Schema.TaggedError<MailboxNotFound>()("Mail
 export class MailboxInvalid extends Schema.TaggedError<MailboxInvalid>()("MailboxInvalid", {
   field: Schema.String,
   message: Schema.String,
+  relay: Schema.optionalKey(RelayRefusalSchema),
 }) {}
 export class MailboxConflict extends Schema.TaggedError<MailboxConflict>()("MailboxConflict", {
   message: Schema.String,
@@ -339,8 +341,9 @@ export interface MailboxInput {
 }
 
 /**
- * Checks Cloudflare routes `address` to Mailyard. Without a zone token it can't look: "unchecked".
- * A rule sending it elsewhere fails with RoutingRuleExists, unless `replace`, which repoints it.
+ * Checks Cloudflare routes `address` to Mailyard. Without a zone token it can't look: "unchecked",
+ * with the relay's refusal when that's why. A rule sending it elsewhere fails with
+ * RoutingRuleExists, unless `replace`, which repoints it.
  */
 const ensureRouted = Effect.fn("mailboxes.ensureRouted")(function* (
   address: string,
@@ -348,14 +351,20 @@ const ensureRouted = Effect.fn("mailboxes.ensureRouted")(function* (
   replace: boolean,
 ) {
   const zones = yield* CloudflareZones
-  if (!zones.connected) return "unchecked" as const
-  const zoneId = domain.zoneId ?? Option.getOrNull(Option.map(yield* zones.zoneFor(domain.name), (z) => z.id))
-  if (!zoneId) return "unchecked" as const
-  const rules = yield* zones.routingRules(zoneId)
-  if (Option.isNone(rules)) return "unchecked" as const
+  const unchecked = (relay: RelayRefusal | null) => ({ routing: "unchecked" as const, relay })
+  if (!zones.connected) return unchecked(null)
+  let zoneId = domain.zoneId
+  if (!zoneId) {
+    const found = yield* zones.findZone(domain.name)
+    if (Option.isNone(found.value)) return unchecked(found.relay)
+    zoneId = found.value.value.id
+  }
+  const listed = yield* zones.routingRules(zoneId)
+  const rules = listed.value
+  if (Option.isNone(rules)) return unchecked(listed.relay)
   const worker = workerNameOf(yield* Bindings)
   const rule = conflictingRule(rules.value, address, worker)
-  if (!rule) return "clear" as const
+  if (!rule) return { routing: "clear" as const, relay: null }
   const action = rule.actions[0]
   const destination = action?.type === "drop" ? "drop" : (action?.value?.[0] ?? action?.type ?? "unknown")
   if (!replace)
@@ -370,8 +379,9 @@ const ensureRouted = Effect.fn("mailboxes.ensureRouted")(function* (
     return yield* new MailboxInvalid({
       field: "replaceRoutingRule",
       message: `Couldn't repoint the routing rule: ${done.message}`,
+      ...withRelay(done.relay),
     })
-  return "replaced" as const
+  return { routing: "replaced" as const, relay: null }
 })
 
 export const createMailbox = Effect.fn("mailboxes.create")(function* (input: MailboxInput, actor: string) {
@@ -421,9 +431,9 @@ export const createMailbox = Effect.fn("mailboxes.create")(function* (input: Mai
   const forwarding = yield* checkForwarding(input.forwarding, address)
   const spamThreshold = input.spamThreshold === undefined ? null : yield* checkThreshold(input.spamThreshold)
   // A catch-all takes what no rule claims; only a named address can be shadowed by a rule.
-  const routing =
+  const { routing, relay: routingRelay } =
     input.kind === "catch_all"
-      ? ("unchecked" as const)
+      ? { routing: "unchecked" as const, relay: null }
       : yield* ensureRouted(address, domain, input.replaceRoutingRule === true)
   const id = `mbx_${yield* (yield* Ids).next}`
   const now = Date.now()
@@ -452,7 +462,7 @@ export const createMailbox = Effect.fn("mailboxes.create")(function* (input: Mai
     target: id,
     after: { address, kind: input.kind, targets, routing },
   })
-  return { ...(yield* getMailbox(id)), routing }
+  return { ...(yield* getMailbox(id)), routing, ...(routingRelay ? { routingRelay } : {}) }
 })
 
 export type MailboxPatch = Omit<MailboxInput, "address" | "kind">

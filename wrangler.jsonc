@@ -25,7 +25,11 @@
       "/c/*",
       "/f/*",
       "/v/*",
-      "/brand/*"
+      "/brand/*",
+      "/oauth/*",
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/*",
+      "/.well-known/oauth-authorization-server"
     ]
   },
   // No resource ids: `wrangler deploy` provisions D1, R2 and the queues in whichever account deploys, and

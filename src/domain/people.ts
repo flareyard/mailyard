@@ -2,12 +2,12 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { Bindings } from "../Bindings.ts"
-import { invites, mailboxes, mailboxPeople, members, sessions, signInLinks } from "../db/schema.ts"
+import { invites, mailboxes, mailboxPeople, members, sessions, settings, signInLinks } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database, queryIn } from "../services/Database.ts"
 import { type Caller, ROOT } from "./apiKeys.ts"
 import { recordAudit } from "./audit.ts"
-import { randomToken, sha256 } from "./crypto.ts"
+import { randomToken, sha256, timingSafeEqual } from "./crypto.ts"
 import { HOLDS_MAIL } from "./mailboxes.ts"
 import { parseParty, sendBulkMessage } from "./outbox.ts"
 import type { Role } from "./permissions.ts"
@@ -262,6 +262,7 @@ const signInMail = (input: { name: string; workspace: string; url: string }) => 
 const mailSignInLink = Effect.fn("people.mailSignInLink")(function* (
   member: typeof members.$inferSelect,
   origin: string,
+  returnTo: string | null = null,
   now = Date.now(),
 ) {
   const database = yield* Database
@@ -271,7 +272,14 @@ const mailSignInLink = Effect.fn("people.mailSignInLink")(function* (
   yield* database.query("signInLinks.create", (db) =>
     db
       .insert(signInLinks)
-      .values({ id, memberId: member.id, tokenHash, createdAt: now, expiresAt: now + SIGN_IN_LINK_MS })
+      .values({
+        id,
+        memberId: member.id,
+        tokenHash,
+        createdAt: now,
+        expiresAt: now + SIGN_IN_LINK_MS,
+        returnTo: safeReturn(returnTo),
+      })
       .run(),
   )
   const url = `${origin}/v1/session/link/${token}`
@@ -280,24 +288,36 @@ const mailSignInLink = Effect.fn("people.mailSignInLink")(function* (
 })
 
 /**
+ * Where a sign-in link may send someone afterwards: only back to an OAuth authorization on this site
+ * (HAL-3462), so a link can't be turned into an open redirect.
+ */
+export const safeReturn = (returnTo: string | null | undefined) =>
+  returnTo && /^\/oauth\/authorize\?[^\s]*$/.test(returnTo) && returnTo.length <= 4000 ? returnTo : null
+
+/**
  * `POST /v1/session/link { email }`: mails a sign-in link to a current member. The answer is the same
  * whether or not the address belongs to someone, so it can't be used to learn who's in the workspace.
  */
 export const requestSignInLink = Effect.fn("people.requestSignInLink")(function* (
   email: string,
   origin: string,
+  returnTo: string | null = null,
 ) {
   const address = normalizeEmail(email)
   if (!EMAIL.test(address) || address.length > 254) return { sent: true }
   const member = yield* findByEmail(address)
   if (!member || member.removedAt !== null) return { sent: true }
   yield* systemFrom()
-  yield* mailSignInLink(member, origin)
+  yield* mailSignInLink(member, origin, returnTo)
   return { sent: true }
 })
 
 /** Uses a sign-in link: once, within 15 minutes, for a member who's still in the workspace. */
-export const redeemSignInLink = Effect.fn("people.redeemSignInLink")(function* (
+export const redeemSignInLink = (token: string, now = Date.now()) =>
+  redeemSignInLinkFor(token, now).pipe(Effect.map((r) => r.member))
+
+/** `redeemSignInLink`, with where the link was asked to land afterwards. */
+export const redeemSignInLinkFor = Effect.fn("people.redeemSignInLink")(function* (
   token: string,
   now = Date.now(),
 ) {
@@ -336,7 +356,7 @@ export const redeemSignInLink = Effect.fn("people.redeemSignInLink")(function* (
       Effect.fail(new SignInLinkInvalid({ reason: "unknown", message: "This sign-in link isn't valid." })),
     ),
   )
-  return member
+  return { member, returnTo: safeReturn(link.returnTo) }
 })
 
 /** A member as a caller, for opening their session. */
@@ -404,6 +424,106 @@ export const claimWorkspace = Effect.fn("people.claim")(function* (
     Effect.catchTag("SystemSenderMissing", () => Effect.succeed(false)),
   )
   return { member: memberView(member), signInLinkSent: linkSent }
+})
+
+/**
+ * Who someone signing in through Flareyard is here (HAL-3360). The platform has checked they own this
+ * install, so they hold its Cloudflare account and could reach everything anyway:
+ * - a current member with that email signs in as themselves;
+ * - an unclaimed workspace is claimed by them, as owner;
+ * - otherwise they join as an admin (or come back, if they were removed).
+ * Each change is audited, so nobody gains access silently.
+ */
+export const signInFromFlareyard = Effect.fn("people.flareyard")(function* (
+  user: { readonly id: string; readonly email: string; readonly name: string | null },
+  now = Date.now(),
+) {
+  const email = normalizeEmail(user.email)
+  if (!EMAIL.test(email))
+    return yield* new PeopleInvalid({ field: "email", message: "Flareyard didn't give an email address." })
+  const name = (user.name ?? "").trim() || email.split("@")[0] || email
+  const database = yield* Database
+  const existing = yield* findByEmail(email)
+  if (existing && existing.removedAt === null) return { member: existing, joined: null }
+  const setting = yield* workspaceSetting()
+  const claiming = setting.claimedAt === undefined
+  const role = claiming ? ("owner" as const) : ("admin" as const)
+  const id = existing?.id ?? `mem_${yield* (yield* Ids).next}`
+  if (existing)
+    yield* database.query("members.flareyardReturn", (db) =>
+      db.update(members).set({ role, removedAt: null }).where(eq(members.id, id)).run(),
+    )
+  else
+    yield* database.query("members.flareyardJoin", (db) =>
+      db.insert(members).values({ id, email, name, role, createdAt: now }).run(),
+    )
+  if (claiming) yield* putWorkspaceSetting({ ...setting, claimedBy: id, claimedAt: now })
+  yield* recordAudit({
+    actor: `flareyard:${user.id}`,
+    action: claiming ? "workspace.claim" : "member.join",
+    target: id,
+    after: { email, role, via: "flareyard-install-owner", returning: existing !== undefined },
+  })
+  const member = yield* findMember(id).pipe(Effect.catchTag("MemberNotFound", Effect.die))
+  return { member, joined: claiming ? ("claimed" as const) : ("admin" as const) }
+})
+
+/**
+ * The one-time claim link a self-deployed install starts with (HAL-3587): `bun run deploy` (or
+ * `bun run claim-link`) stores the SHA-256 of a fresh token under this settings key and prints
+ * `<origin>/claim#token=<token>` in the deploy output, which only whoever deployed it sees. No
+ * ADMIN_KEY is pasted anywhere. Minting again replaces it; claiming spends it.
+ */
+export const CLAIM_SETTING = "claim"
+
+/**
+ * `POST /v1/workspace/claim/link`: claims an unclaimed workspace with the claim link's token, as
+ * its owner, and signs them in. The token is checked and spent before anything else is written, so
+ * two tabs can't both claim.
+ */
+export const claimWithLink = Effect.fn("people.claimWithLink")(function* (
+  input: {
+    readonly claimToken: string
+    readonly workspaceName: string
+    readonly name: string
+    readonly email: string
+  },
+  origin: string,
+) {
+  const setting = yield* workspaceSetting()
+  if (setting.claimedAt !== undefined)
+    return yield* new PeopleConflict({
+      reason: "already-claimed",
+      // Anyone can call this, so it says only that: not who claimed it, or when.
+      message: "This workspace has already been claimed. Sign in instead.",
+    })
+  // The same checks claimWorkspace makes, first: a typo mustn't spend the link.
+  if (!EMAIL.test(normalizeEmail(input.email)))
+    return yield* new PeopleInvalid({ field: "email", message: "Enter an email address." })
+  if (!input.name.trim()) return yield* new PeopleInvalid({ field: "name", message: "Enter your name." })
+  if (!input.workspaceName.trim())
+    return yield* new PeopleInvalid({ field: "workspaceName", message: "Name the workspace." })
+  const database = yield* Database
+  const row = yield* database.query("settings.claim", (db) =>
+    db.select().from(settings).where(eq(settings.key, CLAIM_SETTING)).get(),
+  )
+  const stored = (row?.value as { tokenHash?: unknown } | undefined)?.tokenHash
+  const presented = yield* hashOf(input.claimToken)
+  const invalid = new PeopleInvalid({
+    field: "claimToken",
+    message:
+      "This claim link isn't valid any more. Run `bun run claim-link` where you deployed for a new one.",
+  })
+  if (typeof stored !== "string" || !timingSafeEqual(presented, stored)) return yield* invalid
+  const spent = yield* database.query("settings.claimSpend", (db) =>
+    db
+      .delete(settings)
+      .where(and(eq(settings.key, CLAIM_SETTING), eq(settings.updatedAt, row?.updatedAt ?? -1)))
+      .run(),
+  )
+  if ((spent.meta.changes ?? 0) === 0) return yield* invalid
+  const claimed = yield* claimWorkspace(ROOT, input, origin)
+  return yield* findMember(claimed.member.id).pipe(Effect.catchTag("MemberNotFound", Effect.die))
 })
 
 /** `POST /v1/workspace/transfer { memberId }`: the owner hands ownership on and becomes an admin. */

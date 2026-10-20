@@ -908,8 +908,103 @@ export const signInLinks = sqliteTable(
     createdAt: integer("created_at").notNull(),
     expiresAt: integer("expires_at").notNull(),
     usedAt: integer("used_at"),
+    /** Where to land after signing in: an `/oauth/authorize?…` URL path (HAL-3462), else the app. */
+    returnTo: text("return_to"),
   },
   (t) => [uniqueIndex("sign_in_links_token").on(t.tokenHash), index("sign_in_links_member").on(t.memberId)],
+)
+
+// ---------------------------------------------------------------------------------------------
+// OAuth for MCP clients (HAL-3462): Mailyard is the authorization server for its own /mcp.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Clients that asked to connect. `cimd`: the client id is an HTTPS URL to its metadata document,
+ * fetched and cached here. `dcr`: registered at `POST /oauth/register`; dropped if never used within
+ * a day of registering.
+ */
+export const oauthClients = sqliteTable(
+  "oauth_clients",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: ["cimd", "dcr"] }).notNull(),
+    name: text("name").notNull(),
+    /** The client's home page, shown with its host on the consent screen. */
+    uri: text("uri"),
+    logoUri: text("logo_uri"),
+    redirectUris: text("redirect_uris", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    /** For `cimd`: when the document was last fetched; it's fetched again after a day. */
+    fetchedAt: integer("fetched_at"),
+    createdAt: integer("created_at").notNull(),
+    lastUsedAt: integer("last_used_at"),
+  },
+  (t) => [index("oauth_clients_unused").on(t.kind, t.lastUsedAt, t.createdAt)],
+)
+
+/** Authorization codes: SHA-256 of the code, ten minutes, used once. */
+export const oauthCodes = sqliteTable(
+  "oauth_codes",
+  {
+    hash: text("hash").primaryKey(),
+    clientId: text("client_id").notNull(),
+    /** The person who consented (a member id), or `root` for the admin key's session. */
+    principal: text("principal").notNull(),
+    redirectUri: text("redirect_uri").notNull(),
+    codeChallenge: text("code_challenge").notNull(),
+    resource: text("resource").notNull(),
+    scopes: text("scopes", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    mailboxIds: text("mailbox_ids", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    usedAt: integer("used_at"),
+    /** The grant the code became, so a replayed code can revoke it (RFC 6749 §4.1.2). */
+    grantId: text("grant_id"),
+  },
+  (t) => [index("oauth_codes_expiry").on(t.expiresAt)],
+)
+
+/**
+ * What a person let a client do: a `purpose: mcp` key holding the scopes and mailbox memberships
+ * they chose, so every existing check applies to the client unchanged. Revoking the grant revokes
+ * the key, and revoking the key ends the grant.
+ */
+export const oauthGrants = sqliteTable(
+  "oauth_grants",
+  {
+    id: text("id").primaryKey(),
+    clientId: text("client_id").notNull(),
+    principal: text("principal").notNull(),
+    apiKeyId: text("api_key_id").notNull(),
+    resource: text("resource").notNull(),
+    scopes: text("scopes", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    mailboxIds: text("mailbox_ids", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    createdAt: integer("created_at").notNull(),
+    lastUsedAt: integer("last_used_at"),
+    revokedAt: integer("revoked_at"),
+    revokedReason: text("revoked_reason"),
+  },
+  (t) => [
+    index("oauth_grants_key").on(t.apiKeyId),
+    index("oauth_grants_principal").on(t.principal),
+    index("oauth_grants_live").on(t.revokedAt, t.createdAt),
+  ],
+)
+
+/**
+ * Access and refresh tokens, as SHA-256. Access tokens last an hour. A refresh token is used once:
+ * using it issues the next pair, and using a used one again revokes the whole grant.
+ */
+export const oauthTokens = sqliteTable(
+  "oauth_tokens",
+  {
+    hash: text("hash").primaryKey(),
+    grantId: text("grant_id").notNull(),
+    kind: text("kind", { enum: ["access", "refresh"] }).notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    usedAt: integer("used_at"),
+  },
+  (t) => [index("oauth_tokens_grant").on(t.grantId), index("oauth_tokens_expiry").on(t.expiresAt)],
 )
 
 /**
@@ -1801,6 +1896,54 @@ export const dmarcSources = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.domainId, t.ip] })],
 )
+
+/** Senders (an address or `@domain`) whose remote images a mailbox always shows (HAL-3369). */
+export const mailboxImageSenders = sqliteTable(
+  "mailbox_image_senders",
+  {
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    value: text("value").notNull(),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.value] })],
+)
+
+/**
+ * Browsers and devices that asked for Web Push (HAL-3369), each owned by the person (member id) or
+ * key that subscribed. `endpoint` is the push service's URL for that browser.
+ */
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    owner: text("owner").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    device: text("device"),
+    createdAt: integer("created_at").notNull(),
+    lastSentAt: integer("last_sent_at"),
+    failures: integer("failures").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("push_subscriptions_endpoint").on(t.endpoint),
+    index("push_subscriptions_owner").on(t.owner),
+  ],
+)
+
+/** What each person wants pushed: per mailbox all, assigned or off; alerts; and whether to hide content. */
+export const pushPreferences = sqliteTable("push_preferences", {
+  owner: text("owner").primaryKey(),
+  mailboxes: text("mailboxes", { mode: "json" })
+    .$type<ReadonlyArray<{ readonly mailboxId: string; readonly notify: "all" | "assigned" | "off" }>>()
+    .notNull(),
+  alerts: integer("alerts", { mode: "boolean" }).notNull().default(true),
+  hideContent: integer("hide_content", { mode: "boolean" }).notNull().default(false),
+  updatedAt: integer("updated_at").notNull(),
+})
 
 /**
  * Language-model calls per UTC day, mailbox (`""` for the workspace: segments) and helper (HAL-3305):

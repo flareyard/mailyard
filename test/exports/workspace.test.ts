@@ -37,6 +37,15 @@ type Export = {
 
 describe("workspace export", () => {
   it("writes mail, contacts, templates, lists, settings and the audit log, with a manifest", async () => {
+    // Credentials kept in settings: the push key pair and an open claim link (HAL-3587).
+    await env.DB.prepare(
+      "insert into settings (key, value, updated_at) values ('vapid', ?, 1), ('claim', ?, 1) on conflict(key) do nothing",
+    )
+      .bind(
+        JSON.stringify({ sealed: "vapid-sealed-private-key" }),
+        JSON.stringify({ tokenHash: "claim-hash-value" }),
+      )
+      .run()
     const tag = uid()
     // Something in every part: a mailbox holding mail, a contact, a template, a topic, a webhook
     // with a secret, and an automation whose step holds a secret.
@@ -130,6 +139,9 @@ describe("workspace export", () => {
     // Nothing secret: no signing secret, no key hash.
     if (hook.secret) expect(settingsText).not.toContain(hook.secret)
     expect(settingsText).not.toMatch(/secret_?ciphertext|"hash"/i)
+    expect(settingsText).not.toContain("vapid-sealed-private-key")
+    expect(settingsText).not.toContain("claim-hash-value")
+    expect(Object.keys(settings.settings)).not.toEqual(expect.arrayContaining(["vapid"]))
     expect((await text("audit")).split("\n")[0]).toContain("at,actor_type")
     const manifest = JSON.parse(await text("manifest"))
     expect(manifest).toMatchObject({ app: "mailyard", export: created.id })

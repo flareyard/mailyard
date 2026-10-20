@@ -92,6 +92,19 @@ export interface Env {
   readonly ADMIN_KEY?: string
   /** `memory` swaps Email Service for the in-memory sender: tests and local development only. */
   readonly MAILYARD_SENDER?: "cloudflare" | "memory"
+  /**
+   * Set by Flareyard at install (contract v1.3, HAL-3558): the relay that makes Mailyard's Cloudflare
+   * calls with the user's OAuth grant, and this install's key for it. When set, they take the place of
+   * every pasted Cloudflare token below (src/services/cloudflareApi.ts).
+   */
+  readonly FLAREYARD_CF_API?: string
+  readonly FLAREYARD_CF_TOKEN?: string
+  /**
+   * Set by the Flareyard platform on installs it made (contract v1.3 `signIn`, HAL-3360): its URL and
+   * this install's id, so "Open Mailyard" signs the owner in. Unset when self-deployed.
+   */
+  readonly FLAREYARD_URL?: string
+  readonly FLAREYARD_INSTALL_ID?: string
   /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
   readonly CLOUDFLARE_ACCOUNT_ID?: string
   readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string
