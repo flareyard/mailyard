@@ -338,7 +338,7 @@
 .devframe .df-head .df-subj{font-weight:600}
 .devframe .df-head .df-pre{color:var(--my-muted)}
 .devframe .df-body{padding:16px 0;background:var(--background-100)}
-.devframe.is-phone{width:300px;justify-self:center;border-radius:28px;border-width:6px;border-color:var(--gray-1000)}
+.devframe.is-phone{width:300px;max-width:100%;justify-self:center;border-radius:28px;border-width:6px;border-color:var(--gray-1000)}
 .devframe.is-phone .df-body{padding:8px 0}
 .devframe.is-phone .eblock{padding:10px 14px}
 .devframe.is-phone .em-h{font-size:21px;line-height:26px}
@@ -891,4 +891,11 @@ details.raw pre{white-space:pre-wrap;overflow-wrap:anywhere}
   .outline ul{grid-column:1 / -1;padding-left:10px}
   .outline ul li{grid-template-columns:24px minmax(0,1fr);gap:4px 8px}
   .outline ul .o-ic{width:24px;height:24px}
+}
+/* A very narrow email preview gives its blocks and cards the width instead of the gutters. */
+@media (max-width:340px){.paper{padding:12px 6px}}
+@container (max-width:300px){
+  .eblock{padding:10px 8px;margin:0 4px}
+  .em-card{padding:10px}
+  .footer-lock{padding:12px 8px}
 }

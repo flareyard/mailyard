@@ -865,3 +865,10 @@ a.att:hover{background:var(--gray-100);border-color:var(--my-border-strong)}
   .fchip button{min-width:24px}
   .crumbs a,.panel-title a,.cell-link,.row-title,.link,.link-quiet,.fy-byline{display:inline-flex;align-items:center;min-height:24px}
 }
+/* Funnel on very narrow screens: the label takes the whole first row; bar, count and share share the second. */
+@media (max-width:340px){
+  .funnel-row .f-label{grid-column:1 / -1;grid-row:1}
+  .funnel-row .f-bar{grid-column:1;grid-row:2}
+  .funnel-row .f-count{grid-column:2;grid-row:2}
+  .funnel-row .f-pct{grid-column:3;grid-row:2}
+}

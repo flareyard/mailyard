@@ -298,6 +298,8 @@ a.fig:hover{border-color:var(--my-border-strong);background:var(--gray-100)}
 .rule-line{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font:var(--text-label-12);color:var(--my-muted)}
 .tok{display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:2px 8px;border-radius:4px;border:1px solid var(--my-border);background:var(--gray-100);color:var(--my-fg);font:var(--text-label-12);font-weight:500;max-width:100%;overflow-wrap:anywhere}
 .tok code{font-size:11px;line-height:14px}
+/* On a very narrow screen a token's value drops under its label instead of squeezing beside it (zoom audit). */
+@media (max-width:340px){.tok{flex-wrap:wrap;row-gap:2px}.tok code{flex:1 1 100%;min-width:0}}
 .tok.is-act{background:var(--my-surface);border-color:var(--my-border-strong)}
 .rule-stats{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font:var(--text-label-12);color:var(--my-muted);text-align:right}
 .rule-stats b{color:var(--my-fg);font-weight:600;font-variant-numeric:tabular-nums}
@@ -866,3 +868,25 @@ tr.is-rotating td{background:color-mix(in oklch,var(--amber-100) 55%,transparent
 @media (min-width:1280px){.lk-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:599px){.lk-grid{grid-template-columns:minmax(0,1fr)}}
 .consent-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.consent-head .consent-brand{margin:0}
+
+/* ───────── Zoom-audit fixes (HAL-3735, 2026-10-20) ───────── */
+/* A table that grows past its panel (readable column widths) scrolls inside the panel, never the page; and
+   an absolutely positioned label inside it (.sr-only headers) resolves against the table. */
+.rtable{position:relative}
+.panel-body:has(> table.rtable),.panel-body:has(> table.table){overflow-x:auto}
+/* Numbers and dates in right-aligned cells don't break mid-figure. Phone cards keep wrapping. */
+.table td.r,.rtable td.r{white-space:nowrap}
+@media (max-width:767px){.rtable td.r{white-space:normal}}
+/* Usage forecast: the form and its answer sit side by side only while each has room. */
+.forecast{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.forecast-out .kv{grid-template-columns:minmax(0,auto) minmax(0,1fr)}
+/* Very narrow screens (a phone zoomed past 120%): a card's status drops under its title, and labels sit
+   above their values, so neither squeezes the other. */
+@media (max-width:340px){
+  .rtable tr{grid-template-columns:minmax(0,1fr)}
+  .rtable td.is-aside{grid-column:1;grid-row:auto;justify-content:flex-start}
+  .rtable td[data-label]{flex-direction:column;align-items:flex-start;gap:0}
+  .rtable td[data-label]::before{width:auto}
+  .forecast-out .kv{grid-template-columns:minmax(0,1fr)}
+  .forecast-out .kv dd{padding-top:0}
+}
