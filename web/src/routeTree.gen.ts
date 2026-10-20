@@ -42,7 +42,9 @@ import { Route as AppDomainsIdRouteImport } from './routes/_app/domains/$id'
 import { Route as AppDomainsDmarcRouteImport } from './routes/_app/domains/dmarc'
 import { Route as AppDomainsImportRouteImport } from './routes/_app/domains/import'
 import { Route as AppDomainsReputationRouteImport } from './routes/_app/domains/reputation'
+import { Route as AppMailIndexRouteImport } from './routes/_app/mail/index'
 import { Route as AppMailMailboxIdRouteImport } from './routes/_app/mail/$mailboxId'
+import { Route as AppMailSearchRouteImport } from './routes/_app/mail/search'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAiRouteImport } from './routes/_app/settings/ai'
 import { Route as AppSettingsAlertsRouteImport } from './routes/_app/settings/alerts'
@@ -77,6 +79,14 @@ import { Route as AppCampaignsCampaignIdContentRouteImport } from './routes/_app
 import { Route as AppCampaignsCampaignIdPreviewRouteImport } from './routes/_app/campaigns/$campaignId/preview'
 import { Route as AppCampaignsCampaignIdReportRouteImport } from './routes/_app/campaigns/$campaignId/report'
 import { Route as AppCampaignsCampaignIdScheduleRouteImport } from './routes/_app/campaigns/$campaignId/schedule'
+import { Route as AppMailMailboxIdIndexRouteImport } from './routes/_app/mail/$mailboxId/index'
+import { Route as AppMailMailboxIdDraftsRouteImport } from './routes/_app/mail/$mailboxId/drafts'
+import { Route as AppMailMailboxIdExportRouteImport } from './routes/_app/mail/$mailboxId/export'
+import { Route as AppMailMailboxIdFoldersRouteImport } from './routes/_app/mail/$mailboxId/folders'
+import { Route as AppMailMailboxIdRulesRouteImport } from './routes/_app/mail/$mailboxId/rules'
+import { Route as AppMailMailboxIdScheduledRouteImport } from './routes/_app/mail/$mailboxId/scheduled'
+import { Route as AppMailMailboxIdSearchRouteImport } from './routes/_app/mail/$mailboxId/search'
+import { Route as AppMailMailboxIdSendersRouteImport } from './routes/_app/mail/$mailboxId/senders'
 import { Route as AppSettingsIntegrationsIndexRouteImport } from './routes/_app/settings/integrations.index'
 import { Route as AppSettingsIntegrationsApprovalsRouteImport } from './routes/_app/settings/integrations.approvals'
 import { Route as AppSettingsMailboxesIdRouteImport } from './routes/_app/settings/mailboxes_.$id'
@@ -88,6 +98,9 @@ import { Route as AppTransactionalSuppressionsImportRouteImport } from './routes
 import { Route as AppTransactionalTemplatesIndexRouteImport } from './routes/_app/transactional/templates.index'
 import { Route as AppTransactionalWebhooksIndexRouteImport } from './routes/_app/transactional/webhooks.index'
 import { Route as AppTransactionalWebhooksIdRouteImport } from './routes/_app/transactional/webhooks.$id'
+import { Route as AppMailMailboxIdImportsIndexRouteImport } from './routes/_app/mail/$mailboxId/imports.index'
+import { Route as AppMailMailboxIdImportsImportIdRouteImport } from './routes/_app/mail/$mailboxId/imports.$importId'
+import { Route as AppMailMailboxIdThreadsThreadIdRouteImport } from './routes/_app/mail/$mailboxId/threads.$threadId'
 import { Route as AppSettingsIntegrationsAgentsIdRouteImport } from './routes/_app/settings/integrations.agents.$id'
 import { Route as AppTransactionalTemplatesIdIndexRouteImport } from './routes/_app/transactional/templates.$id.index'
 import { Route as AppTransactionalTemplatesIdPreviewRouteImport } from './routes/_app/transactional/templates.$id.preview'
@@ -258,9 +271,19 @@ const AppDomainsReputationRoute = AppDomainsReputationRouteImport.update({
   path: '/reputation',
   getParentRoute: () => AppDomainsRoute,
 } as any)
+const AppMailIndexRoute = AppMailIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppMailRoute,
+} as any)
 const AppMailMailboxIdRoute = AppMailMailboxIdRouteImport.update({
   id: '/$mailboxId',
   path: '/$mailboxId',
+  getParentRoute: () => AppMailRoute,
+} as any)
+const AppMailSearchRoute = AppMailSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => AppMailRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
@@ -447,6 +470,47 @@ const AppCampaignsCampaignIdScheduleRoute =
     path: '/schedule',
     getParentRoute: () => AppCampaignsCampaignIdRoute,
   } as any)
+const AppMailMailboxIdIndexRoute = AppMailMailboxIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppMailMailboxIdRoute,
+} as any)
+const AppMailMailboxIdDraftsRoute = AppMailMailboxIdDraftsRouteImport.update({
+  id: '/drafts',
+  path: '/drafts',
+  getParentRoute: () => AppMailMailboxIdRoute,
+} as any)
+const AppMailMailboxIdExportRoute = AppMailMailboxIdExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => AppMailMailboxIdRoute,
+} as any)
+const AppMailMailboxIdFoldersRoute = AppMailMailboxIdFoldersRouteImport.update({
+  id: '/folders',
+  path: '/folders',
+  getParentRoute: () => AppMailMailboxIdRoute,
+} as any)
+const AppMailMailboxIdRulesRoute = AppMailMailboxIdRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => AppMailMailboxIdRoute,
+} as any)
+const AppMailMailboxIdScheduledRoute =
+  AppMailMailboxIdScheduledRouteImport.update({
+    id: '/scheduled',
+    path: '/scheduled',
+    getParentRoute: () => AppMailMailboxIdRoute,
+  } as any)
+const AppMailMailboxIdSearchRoute = AppMailMailboxIdSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AppMailMailboxIdRoute,
+} as any)
+const AppMailMailboxIdSendersRoute = AppMailMailboxIdSendersRouteImport.update({
+  id: '/senders',
+  path: '/senders',
+  getParentRoute: () => AppMailMailboxIdRoute,
+} as any)
 const AppSettingsIntegrationsIndexRoute =
   AppSettingsIntegrationsIndexRouteImport.update({
     id: '/integrations/',
@@ -512,6 +576,24 @@ const AppTransactionalWebhooksIdRoute =
     path: '/webhooks/$id',
     getParentRoute: () => AppTransactionalRoute,
   } as any)
+const AppMailMailboxIdImportsIndexRoute =
+  AppMailMailboxIdImportsIndexRouteImport.update({
+    id: '/imports/',
+    path: '/imports/',
+    getParentRoute: () => AppMailMailboxIdRoute,
+  } as any)
+const AppMailMailboxIdImportsImportIdRoute =
+  AppMailMailboxIdImportsImportIdRouteImport.update({
+    id: '/imports/$importId',
+    path: '/imports/$importId',
+    getParentRoute: () => AppMailMailboxIdRoute,
+  } as any)
+const AppMailMailboxIdThreadsThreadIdRoute =
+  AppMailMailboxIdThreadsThreadIdRouteImport.update({
+    id: '/threads/$threadId',
+    path: '/threads/$threadId',
+    getParentRoute: () => AppMailMailboxIdRoute,
+  } as any)
 const AppSettingsIntegrationsAgentsIdRoute =
   AppSettingsIntegrationsAgentsIdRouteImport.update({
     id: '/integrations/agents/$id',
@@ -565,7 +647,8 @@ export interface FileRoutesByFullPath {
   '/domains/dmarc': typeof AppDomainsDmarcRoute
   '/domains/import': typeof AppDomainsImportRoute
   '/domains/reputation': typeof AppDomainsReputationRoute
-  '/mail/$mailboxId': typeof AppMailMailboxIdRoute
+  '/mail/$mailboxId': typeof AppMailMailboxIdRouteWithChildren
+  '/mail/search': typeof AppMailSearchRoute
   '/settings/ai': typeof AppSettingsAiRoute
   '/settings/alerts': typeof AppSettingsAlertsRoute
   '/settings/audit': typeof AppSettingsAuditRoute
@@ -586,6 +669,7 @@ export interface FileRoutesByFullPath {
   '/automations/': typeof AppAutomationsIndexRoute
   '/campaigns/': typeof AppCampaignsIndexRoute
   '/domains/': typeof AppDomainsIndexRoute
+  '/mail/': typeof AppMailIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/transactional/': typeof AppTransactionalIndexRoute
   '/audience/contacts/$contactId': typeof AppAudienceContactsContactIdRoute
@@ -600,6 +684,13 @@ export interface FileRoutesByFullPath {
   '/campaigns/$campaignId/preview': typeof AppCampaignsCampaignIdPreviewRoute
   '/campaigns/$campaignId/report': typeof AppCampaignsCampaignIdReportRoute
   '/campaigns/$campaignId/schedule': typeof AppCampaignsCampaignIdScheduleRoute
+  '/mail/$mailboxId/drafts': typeof AppMailMailboxIdDraftsRoute
+  '/mail/$mailboxId/export': typeof AppMailMailboxIdExportRoute
+  '/mail/$mailboxId/folders': typeof AppMailMailboxIdFoldersRoute
+  '/mail/$mailboxId/rules': typeof AppMailMailboxIdRulesRoute
+  '/mail/$mailboxId/scheduled': typeof AppMailMailboxIdScheduledRoute
+  '/mail/$mailboxId/search': typeof AppMailMailboxIdSearchRoute
+  '/mail/$mailboxId/senders': typeof AppMailMailboxIdSendersRoute
   '/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
   '/settings/mailboxes/$id': typeof AppSettingsMailboxesIdRoute
   '/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
@@ -611,21 +702,24 @@ export interface FileRoutesByFullPath {
   '/audience/imports/': typeof AppAudienceImportsIndexRoute
   '/audience/segments/': typeof AppAudienceSegmentsIndexRoute
   '/campaigns/$campaignId/': typeof AppCampaignsCampaignIdIndexRoute
+  '/mail/$mailboxId/': typeof AppMailMailboxIdIndexRoute
   '/settings/integrations/': typeof AppSettingsIntegrationsIndexRoute
   '/transactional/messages/': typeof AppTransactionalMessagesIndexRoute
   '/transactional/suppressions/': typeof AppTransactionalSuppressionsIndexRoute
   '/transactional/templates/': typeof AppTransactionalTemplatesIndexRoute
   '/transactional/webhooks/': typeof AppTransactionalWebhooksIndexRoute
+  '/mail/$mailboxId/imports/$importId': typeof AppMailMailboxIdImportsImportIdRoute
+  '/mail/$mailboxId/threads/$threadId': typeof AppMailMailboxIdThreadsThreadIdRoute
   '/settings/integrations/agents/$id': typeof AppSettingsIntegrationsAgentsIdRoute
   '/transactional/templates/$id/preview': typeof AppTransactionalTemplatesIdPreviewRoute
   '/transactional/templates/$id/versions': typeof AppTransactionalTemplatesIdVersionsRoute
+  '/mail/$mailboxId/imports/': typeof AppMailMailboxIdImportsIndexRoute
   '/transactional/templates/$id/': typeof AppTransactionalTemplatesIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/claim': typeof ClaimRoute
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
-  '/mail': typeof AppMailRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/': typeof AppIndexRoute
   '/analytics/audience': typeof AppAnalyticsAudienceRoute
@@ -641,7 +735,7 @@ export interface FileRoutesByTo {
   '/domains/dmarc': typeof AppDomainsDmarcRoute
   '/domains/import': typeof AppDomainsImportRoute
   '/domains/reputation': typeof AppDomainsReputationRoute
-  '/mail/$mailboxId': typeof AppMailMailboxIdRoute
+  '/mail/search': typeof AppMailSearchRoute
   '/settings/ai': typeof AppSettingsAiRoute
   '/settings/alerts': typeof AppSettingsAlertsRoute
   '/settings/audit': typeof AppSettingsAuditRoute
@@ -662,6 +756,7 @@ export interface FileRoutesByTo {
   '/automations': typeof AppAutomationsIndexRoute
   '/campaigns': typeof AppCampaignsIndexRoute
   '/domains': typeof AppDomainsIndexRoute
+  '/mail': typeof AppMailIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/transactional': typeof AppTransactionalIndexRoute
   '/audience/contacts/$contactId': typeof AppAudienceContactsContactIdRoute
@@ -676,6 +771,13 @@ export interface FileRoutesByTo {
   '/campaigns/$campaignId/preview': typeof AppCampaignsCampaignIdPreviewRoute
   '/campaigns/$campaignId/report': typeof AppCampaignsCampaignIdReportRoute
   '/campaigns/$campaignId/schedule': typeof AppCampaignsCampaignIdScheduleRoute
+  '/mail/$mailboxId/drafts': typeof AppMailMailboxIdDraftsRoute
+  '/mail/$mailboxId/export': typeof AppMailMailboxIdExportRoute
+  '/mail/$mailboxId/folders': typeof AppMailMailboxIdFoldersRoute
+  '/mail/$mailboxId/rules': typeof AppMailMailboxIdRulesRoute
+  '/mail/$mailboxId/scheduled': typeof AppMailMailboxIdScheduledRoute
+  '/mail/$mailboxId/search': typeof AppMailMailboxIdSearchRoute
+  '/mail/$mailboxId/senders': typeof AppMailMailboxIdSendersRoute
   '/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
   '/settings/mailboxes/$id': typeof AppSettingsMailboxesIdRoute
   '/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
@@ -687,14 +789,18 @@ export interface FileRoutesByTo {
   '/audience/imports': typeof AppAudienceImportsIndexRoute
   '/audience/segments': typeof AppAudienceSegmentsIndexRoute
   '/campaigns/$campaignId': typeof AppCampaignsCampaignIdIndexRoute
+  '/mail/$mailboxId': typeof AppMailMailboxIdIndexRoute
   '/settings/integrations': typeof AppSettingsIntegrationsIndexRoute
   '/transactional/messages': typeof AppTransactionalMessagesIndexRoute
   '/transactional/suppressions': typeof AppTransactionalSuppressionsIndexRoute
   '/transactional/templates': typeof AppTransactionalTemplatesIndexRoute
   '/transactional/webhooks': typeof AppTransactionalWebhooksIndexRoute
+  '/mail/$mailboxId/imports/$importId': typeof AppMailMailboxIdImportsImportIdRoute
+  '/mail/$mailboxId/threads/$threadId': typeof AppMailMailboxIdThreadsThreadIdRoute
   '/settings/integrations/agents/$id': typeof AppSettingsIntegrationsAgentsIdRoute
   '/transactional/templates/$id/preview': typeof AppTransactionalTemplatesIdPreviewRoute
   '/transactional/templates/$id/versions': typeof AppTransactionalTemplatesIdVersionsRoute
+  '/mail/$mailboxId/imports': typeof AppMailMailboxIdImportsIndexRoute
   '/transactional/templates/$id': typeof AppTransactionalTemplatesIdIndexRoute
 }
 export interface FileRoutesById {
@@ -727,7 +833,8 @@ export interface FileRoutesById {
   '/_app/domains/dmarc': typeof AppDomainsDmarcRoute
   '/_app/domains/import': typeof AppDomainsImportRoute
   '/_app/domains/reputation': typeof AppDomainsReputationRoute
-  '/_app/mail/$mailboxId': typeof AppMailMailboxIdRoute
+  '/_app/mail/$mailboxId': typeof AppMailMailboxIdRouteWithChildren
+  '/_app/mail/search': typeof AppMailSearchRoute
   '/_app/settings/ai': typeof AppSettingsAiRoute
   '/_app/settings/alerts': typeof AppSettingsAlertsRoute
   '/_app/settings/audit': typeof AppSettingsAuditRoute
@@ -748,6 +855,7 @@ export interface FileRoutesById {
   '/_app/automations/': typeof AppAutomationsIndexRoute
   '/_app/campaigns/': typeof AppCampaignsIndexRoute
   '/_app/domains/': typeof AppDomainsIndexRoute
+  '/_app/mail/': typeof AppMailIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/transactional/': typeof AppTransactionalIndexRoute
   '/_app/audience/contacts/$contactId': typeof AppAudienceContactsContactIdRoute
@@ -762,6 +870,13 @@ export interface FileRoutesById {
   '/_app/campaigns/$campaignId/preview': typeof AppCampaignsCampaignIdPreviewRoute
   '/_app/campaigns/$campaignId/report': typeof AppCampaignsCampaignIdReportRoute
   '/_app/campaigns/$campaignId/schedule': typeof AppCampaignsCampaignIdScheduleRoute
+  '/_app/mail/$mailboxId/drafts': typeof AppMailMailboxIdDraftsRoute
+  '/_app/mail/$mailboxId/export': typeof AppMailMailboxIdExportRoute
+  '/_app/mail/$mailboxId/folders': typeof AppMailMailboxIdFoldersRoute
+  '/_app/mail/$mailboxId/rules': typeof AppMailMailboxIdRulesRoute
+  '/_app/mail/$mailboxId/scheduled': typeof AppMailMailboxIdScheduledRoute
+  '/_app/mail/$mailboxId/search': typeof AppMailMailboxIdSearchRoute
+  '/_app/mail/$mailboxId/senders': typeof AppMailMailboxIdSendersRoute
   '/_app/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
   '/_app/settings/mailboxes_/$id': typeof AppSettingsMailboxesIdRoute
   '/_app/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
@@ -773,14 +888,18 @@ export interface FileRoutesById {
   '/_app/audience/imports/': typeof AppAudienceImportsIndexRoute
   '/_app/audience/segments/': typeof AppAudienceSegmentsIndexRoute
   '/_app/campaigns/$campaignId/': typeof AppCampaignsCampaignIdIndexRoute
+  '/_app/mail/$mailboxId/': typeof AppMailMailboxIdIndexRoute
   '/_app/settings/integrations/': typeof AppSettingsIntegrationsIndexRoute
   '/_app/transactional/messages/': typeof AppTransactionalMessagesIndexRoute
   '/_app/transactional/suppressions/': typeof AppTransactionalSuppressionsIndexRoute
   '/_app/transactional/templates/': typeof AppTransactionalTemplatesIndexRoute
   '/_app/transactional/webhooks/': typeof AppTransactionalWebhooksIndexRoute
+  '/_app/mail/$mailboxId/imports/$importId': typeof AppMailMailboxIdImportsImportIdRoute
+  '/_app/mail/$mailboxId/threads/$threadId': typeof AppMailMailboxIdThreadsThreadIdRoute
   '/_app/settings/integrations/agents/$id': typeof AppSettingsIntegrationsAgentsIdRoute
   '/_app/transactional/templates/$id/preview': typeof AppTransactionalTemplatesIdPreviewRoute
   '/_app/transactional/templates/$id/versions': typeof AppTransactionalTemplatesIdVersionsRoute
+  '/_app/mail/$mailboxId/imports/': typeof AppMailMailboxIdImportsIndexRoute
   '/_app/transactional/templates/$id/': typeof AppTransactionalTemplatesIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -814,6 +933,7 @@ export interface FileRouteTypes {
     | '/domains/import'
     | '/domains/reputation'
     | '/mail/$mailboxId'
+    | '/mail/search'
     | '/settings/ai'
     | '/settings/alerts'
     | '/settings/audit'
@@ -834,6 +954,7 @@ export interface FileRouteTypes {
     | '/automations/'
     | '/campaigns/'
     | '/domains/'
+    | '/mail/'
     | '/settings/'
     | '/transactional/'
     | '/audience/contacts/$contactId'
@@ -848,6 +969,13 @@ export interface FileRouteTypes {
     | '/campaigns/$campaignId/preview'
     | '/campaigns/$campaignId/report'
     | '/campaigns/$campaignId/schedule'
+    | '/mail/$mailboxId/drafts'
+    | '/mail/$mailboxId/export'
+    | '/mail/$mailboxId/folders'
+    | '/mail/$mailboxId/rules'
+    | '/mail/$mailboxId/scheduled'
+    | '/mail/$mailboxId/search'
+    | '/mail/$mailboxId/senders'
     | '/settings/integrations/approvals'
     | '/settings/mailboxes/$id'
     | '/transactional/messages/$id'
@@ -859,21 +987,24 @@ export interface FileRouteTypes {
     | '/audience/imports/'
     | '/audience/segments/'
     | '/campaigns/$campaignId/'
+    | '/mail/$mailboxId/'
     | '/settings/integrations/'
     | '/transactional/messages/'
     | '/transactional/suppressions/'
     | '/transactional/templates/'
     | '/transactional/webhooks/'
+    | '/mail/$mailboxId/imports/$importId'
+    | '/mail/$mailboxId/threads/$threadId'
     | '/settings/integrations/agents/$id'
     | '/transactional/templates/$id/preview'
     | '/transactional/templates/$id/versions'
+    | '/mail/$mailboxId/imports/'
     | '/transactional/templates/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/claim'
     | '/sign-in'
     | '/signed-out'
-    | '/mail'
     | '/invite/$token'
     | '/'
     | '/analytics/audience'
@@ -889,7 +1020,7 @@ export interface FileRouteTypes {
     | '/domains/dmarc'
     | '/domains/import'
     | '/domains/reputation'
-    | '/mail/$mailboxId'
+    | '/mail/search'
     | '/settings/ai'
     | '/settings/alerts'
     | '/settings/audit'
@@ -910,6 +1041,7 @@ export interface FileRouteTypes {
     | '/automations'
     | '/campaigns'
     | '/domains'
+    | '/mail'
     | '/settings'
     | '/transactional'
     | '/audience/contacts/$contactId'
@@ -924,6 +1056,13 @@ export interface FileRouteTypes {
     | '/campaigns/$campaignId/preview'
     | '/campaigns/$campaignId/report'
     | '/campaigns/$campaignId/schedule'
+    | '/mail/$mailboxId/drafts'
+    | '/mail/$mailboxId/export'
+    | '/mail/$mailboxId/folders'
+    | '/mail/$mailboxId/rules'
+    | '/mail/$mailboxId/scheduled'
+    | '/mail/$mailboxId/search'
+    | '/mail/$mailboxId/senders'
     | '/settings/integrations/approvals'
     | '/settings/mailboxes/$id'
     | '/transactional/messages/$id'
@@ -935,14 +1074,18 @@ export interface FileRouteTypes {
     | '/audience/imports'
     | '/audience/segments'
     | '/campaigns/$campaignId'
+    | '/mail/$mailboxId'
     | '/settings/integrations'
     | '/transactional/messages'
     | '/transactional/suppressions'
     | '/transactional/templates'
     | '/transactional/webhooks'
+    | '/mail/$mailboxId/imports/$importId'
+    | '/mail/$mailboxId/threads/$threadId'
     | '/settings/integrations/agents/$id'
     | '/transactional/templates/$id/preview'
     | '/transactional/templates/$id/versions'
+    | '/mail/$mailboxId/imports'
     | '/transactional/templates/$id'
   id:
     | '__root__'
@@ -975,6 +1118,7 @@ export interface FileRouteTypes {
     | '/_app/domains/import'
     | '/_app/domains/reputation'
     | '/_app/mail/$mailboxId'
+    | '/_app/mail/search'
     | '/_app/settings/ai'
     | '/_app/settings/alerts'
     | '/_app/settings/audit'
@@ -995,6 +1139,7 @@ export interface FileRouteTypes {
     | '/_app/automations/'
     | '/_app/campaigns/'
     | '/_app/domains/'
+    | '/_app/mail/'
     | '/_app/settings/'
     | '/_app/transactional/'
     | '/_app/audience/contacts/$contactId'
@@ -1009,6 +1154,13 @@ export interface FileRouteTypes {
     | '/_app/campaigns/$campaignId/preview'
     | '/_app/campaigns/$campaignId/report'
     | '/_app/campaigns/$campaignId/schedule'
+    | '/_app/mail/$mailboxId/drafts'
+    | '/_app/mail/$mailboxId/export'
+    | '/_app/mail/$mailboxId/folders'
+    | '/_app/mail/$mailboxId/rules'
+    | '/_app/mail/$mailboxId/scheduled'
+    | '/_app/mail/$mailboxId/search'
+    | '/_app/mail/$mailboxId/senders'
     | '/_app/settings/integrations/approvals'
     | '/_app/settings/mailboxes_/$id'
     | '/_app/transactional/messages/$id'
@@ -1020,14 +1172,18 @@ export interface FileRouteTypes {
     | '/_app/audience/imports/'
     | '/_app/audience/segments/'
     | '/_app/campaigns/$campaignId/'
+    | '/_app/mail/$mailboxId/'
     | '/_app/settings/integrations/'
     | '/_app/transactional/messages/'
     | '/_app/transactional/suppressions/'
     | '/_app/transactional/templates/'
     | '/_app/transactional/webhooks/'
+    | '/_app/mail/$mailboxId/imports/$importId'
+    | '/_app/mail/$mailboxId/threads/$threadId'
     | '/_app/settings/integrations/agents/$id'
     | '/_app/transactional/templates/$id/preview'
     | '/_app/transactional/templates/$id/versions'
+    | '/_app/mail/$mailboxId/imports/'
     | '/_app/transactional/templates/$id/'
   fileRoutesById: FileRoutesById
 }
@@ -1272,11 +1428,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDomainsReputationRouteImport
       parentRoute: typeof AppDomainsRoute
     }
+    '/_app/mail/': {
+      id: '/_app/mail/'
+      path: '/'
+      fullPath: '/mail/'
+      preLoaderRoute: typeof AppMailIndexRouteImport
+      parentRoute: typeof AppMailRoute
+    }
     '/_app/mail/$mailboxId': {
       id: '/_app/mail/$mailboxId'
       path: '/$mailboxId'
       fullPath: '/mail/$mailboxId'
       preLoaderRoute: typeof AppMailMailboxIdRouteImport
+      parentRoute: typeof AppMailRoute
+    }
+    '/_app/mail/search': {
+      id: '/_app/mail/search'
+      path: '/search'
+      fullPath: '/mail/search'
+      preLoaderRoute: typeof AppMailSearchRouteImport
       parentRoute: typeof AppMailRoute
     }
     '/_app/settings/': {
@@ -1517,6 +1687,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampaignsCampaignIdScheduleRouteImport
       parentRoute: typeof AppCampaignsCampaignIdRoute
     }
+    '/_app/mail/$mailboxId/': {
+      id: '/_app/mail/$mailboxId/'
+      path: '/'
+      fullPath: '/mail/$mailboxId/'
+      preLoaderRoute: typeof AppMailMailboxIdIndexRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/drafts': {
+      id: '/_app/mail/$mailboxId/drafts'
+      path: '/drafts'
+      fullPath: '/mail/$mailboxId/drafts'
+      preLoaderRoute: typeof AppMailMailboxIdDraftsRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/export': {
+      id: '/_app/mail/$mailboxId/export'
+      path: '/export'
+      fullPath: '/mail/$mailboxId/export'
+      preLoaderRoute: typeof AppMailMailboxIdExportRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/folders': {
+      id: '/_app/mail/$mailboxId/folders'
+      path: '/folders'
+      fullPath: '/mail/$mailboxId/folders'
+      preLoaderRoute: typeof AppMailMailboxIdFoldersRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/rules': {
+      id: '/_app/mail/$mailboxId/rules'
+      path: '/rules'
+      fullPath: '/mail/$mailboxId/rules'
+      preLoaderRoute: typeof AppMailMailboxIdRulesRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/scheduled': {
+      id: '/_app/mail/$mailboxId/scheduled'
+      path: '/scheduled'
+      fullPath: '/mail/$mailboxId/scheduled'
+      preLoaderRoute: typeof AppMailMailboxIdScheduledRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/search': {
+      id: '/_app/mail/$mailboxId/search'
+      path: '/search'
+      fullPath: '/mail/$mailboxId/search'
+      preLoaderRoute: typeof AppMailMailboxIdSearchRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/senders': {
+      id: '/_app/mail/$mailboxId/senders'
+      path: '/senders'
+      fullPath: '/mail/$mailboxId/senders'
+      preLoaderRoute: typeof AppMailMailboxIdSendersRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
     '/_app/settings/integrations/': {
       id: '/_app/settings/integrations/'
       path: '/integrations'
@@ -1593,6 +1819,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/transactional/webhooks/$id'
       preLoaderRoute: typeof AppTransactionalWebhooksIdRouteImport
       parentRoute: typeof AppTransactionalRoute
+    }
+    '/_app/mail/$mailboxId/imports/': {
+      id: '/_app/mail/$mailboxId/imports/'
+      path: '/imports'
+      fullPath: '/mail/$mailboxId/imports/'
+      preLoaderRoute: typeof AppMailMailboxIdImportsIndexRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/imports/$importId': {
+      id: '/_app/mail/$mailboxId/imports/$importId'
+      path: '/imports/$importId'
+      fullPath: '/mail/$mailboxId/imports/$importId'
+      preLoaderRoute: typeof AppMailMailboxIdImportsImportIdRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
+    }
+    '/_app/mail/$mailboxId/threads/$threadId': {
+      id: '/_app/mail/$mailboxId/threads/$threadId'
+      path: '/threads/$threadId'
+      fullPath: '/mail/$mailboxId/threads/$threadId'
+      preLoaderRoute: typeof AppMailMailboxIdThreadsThreadIdRouteImport
+      parentRoute: typeof AppMailMailboxIdRoute
     }
     '/_app/settings/integrations/agents/$id': {
       id: '/_app/settings/integrations/agents/$id'
@@ -1759,12 +2006,47 @@ const AppDomainsRouteWithChildren = AppDomainsRoute._addFileChildren(
   AppDomainsRouteChildren,
 )
 
+interface AppMailMailboxIdRouteChildren {
+  AppMailMailboxIdDraftsRoute: typeof AppMailMailboxIdDraftsRoute
+  AppMailMailboxIdExportRoute: typeof AppMailMailboxIdExportRoute
+  AppMailMailboxIdFoldersRoute: typeof AppMailMailboxIdFoldersRoute
+  AppMailMailboxIdRulesRoute: typeof AppMailMailboxIdRulesRoute
+  AppMailMailboxIdScheduledRoute: typeof AppMailMailboxIdScheduledRoute
+  AppMailMailboxIdSearchRoute: typeof AppMailMailboxIdSearchRoute
+  AppMailMailboxIdSendersRoute: typeof AppMailMailboxIdSendersRoute
+  AppMailMailboxIdIndexRoute: typeof AppMailMailboxIdIndexRoute
+  AppMailMailboxIdImportsImportIdRoute: typeof AppMailMailboxIdImportsImportIdRoute
+  AppMailMailboxIdThreadsThreadIdRoute: typeof AppMailMailboxIdThreadsThreadIdRoute
+  AppMailMailboxIdImportsIndexRoute: typeof AppMailMailboxIdImportsIndexRoute
+}
+
+const AppMailMailboxIdRouteChildren: AppMailMailboxIdRouteChildren = {
+  AppMailMailboxIdDraftsRoute: AppMailMailboxIdDraftsRoute,
+  AppMailMailboxIdExportRoute: AppMailMailboxIdExportRoute,
+  AppMailMailboxIdFoldersRoute: AppMailMailboxIdFoldersRoute,
+  AppMailMailboxIdRulesRoute: AppMailMailboxIdRulesRoute,
+  AppMailMailboxIdScheduledRoute: AppMailMailboxIdScheduledRoute,
+  AppMailMailboxIdSearchRoute: AppMailMailboxIdSearchRoute,
+  AppMailMailboxIdSendersRoute: AppMailMailboxIdSendersRoute,
+  AppMailMailboxIdIndexRoute: AppMailMailboxIdIndexRoute,
+  AppMailMailboxIdImportsImportIdRoute: AppMailMailboxIdImportsImportIdRoute,
+  AppMailMailboxIdThreadsThreadIdRoute: AppMailMailboxIdThreadsThreadIdRoute,
+  AppMailMailboxIdImportsIndexRoute: AppMailMailboxIdImportsIndexRoute,
+}
+
+const AppMailMailboxIdRouteWithChildren =
+  AppMailMailboxIdRoute._addFileChildren(AppMailMailboxIdRouteChildren)
+
 interface AppMailRouteChildren {
-  AppMailMailboxIdRoute: typeof AppMailMailboxIdRoute
+  AppMailMailboxIdRoute: typeof AppMailMailboxIdRouteWithChildren
+  AppMailSearchRoute: typeof AppMailSearchRoute
+  AppMailIndexRoute: typeof AppMailIndexRoute
 }
 
 const AppMailRouteChildren: AppMailRouteChildren = {
-  AppMailMailboxIdRoute: AppMailMailboxIdRoute,
+  AppMailMailboxIdRoute: AppMailMailboxIdRouteWithChildren,
+  AppMailSearchRoute: AppMailSearchRoute,
+  AppMailIndexRoute: AppMailIndexRoute,
 }
 
 const AppMailRouteWithChildren =

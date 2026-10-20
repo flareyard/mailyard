@@ -12,6 +12,7 @@
  *   sign-in link to …@rate-limited.example           → 429
  */
 import { screenFixture } from "../audience/kit/fixtureScreens.ts"
+import { MAIL_OVERRIDES } from "../mail/fixtures.ts"
 
 import { ANALYTICS_OVERRIDES } from "../analytics/fixtures.ts"
 import type { paths } from "../api/schema"
@@ -186,6 +187,21 @@ export async function findOverride(request: Request): Promise<Answer | undefined
   const screen = await screenFixture(request)
   if (screen) return screen
   const url = new URL(request.url)
+  // ── Mail (HAL-3308): mail/fixtures.ts answers first; an answer of undefined falls through to the designs.
+  for (const o of MAIL_OVERRIDES) {
+    if (o.method !== request.method) continue
+    const m = url.pathname.match(o.path)
+    if (!m) continue
+    let body: unknown = null
+    if (request.method !== "GET") {
+      try {
+        body = await request.clone().json()
+      } catch {}
+    }
+    const answer = await o.answer(m, body, url)
+    if (answer) return answer
+  }
+  // ── end Mail
   for (const o of [...OVERRIDES, ...OPS_OVERRIDES]) {
     if (o.method !== request.method) continue
     const m = url.pathname.match(o.path)
