@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
+import { requestEvidence } from "../domain/consentEvidence.ts"
 import { type FormOutcome, findForm, formPage, recordFormOutcome, submitForm } from "../domain/forms.ts"
 import { confirmSubscription } from "../domain/subscriptions.ts"
 import { type Filled, pageCsp, renderFormPage } from "../forms/page.ts"
@@ -75,8 +76,9 @@ const esc = (s: string) =>
 const page = async (env: Env, status: number, title: string, message: string, extra?: ResultExtra) =>
   resultPage(await runtimeFor(env).runPromise(publicLook), status, title, message, extra)
 
-export const handleConfirm = async (env: Env, token: string) => {
-  const result = await runtimeFor(env).runPromise(Effect.result(confirmSubscription(token)))
+export const handleConfirm = async (env: Env, token: string, request?: Request) => {
+  const evidence = request ? requestEvidence(request, "/c") : undefined
+  const result = await runtimeFor(env).runPromise(Effect.result(confirmSubscription(token, evidence)))
   if (result._tag === "Success") {
     if (result.success.blocked) {
       return await page(
@@ -232,6 +234,7 @@ export const handleFormSubmit = async (request: Request, env: Env, formId: strin
               : [],
         },
         origin,
+        requestEvidence(request, `/f/${formId}`, { referer: true }),
       ),
     ),
   )

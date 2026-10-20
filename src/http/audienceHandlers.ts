@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
+import { segmentFromText } from "../domain/assistant.ts"
 import { bulkByFilter, getBulkJob } from "../domain/contactBulk.ts"
 import { filterCondition } from "../domain/contactFilters.ts"
 import {
@@ -51,7 +52,7 @@ import {
 } from "../domain/topics.ts"
 import { unsubscribeToken, unsubscribeUrl } from "../domain/unsubscribe.ts"
 import { embedSnippet, iframeSnippet } from "../forms/page.ts"
-import { Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
+import { AssistantRefused, Conflict, InvalidRequest, MailApi, NotFound } from "./Api.ts"
 import { appContext, provideTo, requireScope } from "./handlers.ts"
 import { originOf } from "./mailHandlers.ts"
 
@@ -349,6 +350,19 @@ export const SegmentsHandlers = HttpApiBuilder.group(
           Effect.andThen(listSegments()),
           Effect.map((segments) => ({ segments })),
           audienceErrors,
+        ),
+      ),
+      fromText: p(({ payload }) =>
+        requireScope("read", "contacts.read").pipe(
+          Effect.andThen(segmentFromText(payload.text)),
+          Effect.catchTag(
+            "AssistantUnavailable",
+            (e: {
+              readonly reason: "off" | "disabled" | "cap" | "no_answer" | "invalid"
+              readonly message: string
+            }) => Effect.fail(new AssistantRefused({ reason: e.reason, message: e.message })),
+          ),
+          Effect.catchTag("DatabaseError", Effect.die),
         ),
       ),
       preview: p(({ payload }) =>

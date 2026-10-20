@@ -1,24 +1,33 @@
 {
   "name": "mailyard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
+  "exports": {
+    "./contracts/mail-events": "./src/contracts/mailEvents.ts"
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tools/manifest",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tools/manifest && tsc --noEmit -p scripts",
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
     "check": "bun run typecheck && bun run lint && bun run manifest && bun run test && bun run web:check",
     "manifest": "bun tools/manifest/cli.ts cloudflare-app.json",
+    "contracts": "bun tools/contracts/mailEventsSchema.ts",
     "templates:install": "bun tools/templates/install.ts",
     "release": "bun run web:build && bun \"${FLAREYARD_DIR:-../flareyard}/packages/manifest/src/release-cli.ts\" release . --out flareyard-release.json",
     "dev": "wrangler dev",
+    "deploy": "bun scripts/deploy.ts",
+    "claim-link": "bun scripts/deploy.ts --claim-link",
     "build": "bun run web:build && wrangler deploy --dry-run --outdir dist",
     "db:generate": "drizzle-kit generate",
     "smoke:prod": "bun tools/smoke/prod.ts",
     "web:build": "cd web && bun run build",
     "web:check": "cd web && bun run typecheck && bun run test",
-    "check:ui": "cd web && bun run audit"
+    "check:ui": "cd web && bun run audit",
+    "site:deploy": "wrangler deploy --config site/wrangler.jsonc",
+    "site:audit": "cd web && node e2e/responsive-audit.mjs --base ${SITE_BASE:-http://127.0.0.1:4401} --pages \"\" --anon --assert --out test-results/audit/site"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",

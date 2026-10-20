@@ -30,6 +30,8 @@ export interface Caller {
         readonly name: string
       }
     | undefined
+  /** Set when an MCP client connected with OAuth (HAL-3462): the grant behind its key. */
+  readonly oauth?: { readonly grantId: string; readonly clientId: string } | undefined
 }
 
 /** The deploy-time ADMIN_KEY: everything, and the only way to mint the first API key. */
@@ -63,6 +65,11 @@ export const authenticate = Effect.fn("apiKeys.authenticate")(function* (token: 
     return yield* new InvalidKey({
       code: "missing",
       reason: "Send your API key as Authorization: Bearer <key>.",
+    })
+  if (token.startsWith("oat_"))
+    return yield* new InvalidKey({
+      code: "format",
+      reason: "OAuth access tokens only work on /mcp, the resource they were issued for.",
     })
   const kind = token.startsWith("sk_") ? "secret" : token.startsWith("pk_") ? "public" : undefined
   if (!kind)

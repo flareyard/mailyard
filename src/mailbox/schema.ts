@@ -10,6 +10,7 @@ export interface MailboxMigration {
     | "rebuildFolderCounts"
     | "rebuildCorrespondents"
     | "paletteLabels"
+    | "threadColumns"
 }
 
 /**
@@ -238,5 +239,11 @@ export const MAILBOX_MIGRATIONS: ReadonlyArray<MailboxMigration> = [
     ],
     // Label colours become the palette's names.
     after: "paletteLabels",
+  },
+  {
+    // When a conversation was resolved (HAL-3392). Added by a step, not a statement: the v2 back-fill
+    // rebuilds threads with today's columns, so on an old mailbox the column already exists by here.
+    statements: [],
+    after: "threadColumns",
   },
 ]

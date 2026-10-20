@@ -4,7 +4,9 @@ import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import { domains, mailboxes } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
+import type { WriteOutcome } from "../services/CloudflareEmail.ts"
 import { CloudflareZones } from "../services/CloudflareZones.ts"
+import { type RelayRefusal, RelayRefusalSchema, relayMessage, withRelay } from "../services/cloudflareApi.ts"
 import { Database } from "../services/Database.ts"
 import { Dns } from "../services/Dns.ts"
 import { clearAlert, raiseAlert } from "./alerts.ts"
@@ -115,6 +117,7 @@ export const getDomain = Effect.fn("domains.get")(function* (id: string) {
     complaints30d: zone?.complaints30d ?? null,
     returnPath: zone?.returnPath ?? (d.sendingEnabled ? `cf-bounce.${d.name}` : null),
     zoneCheckedAt: zone?.checkedAt ?? null,
+    ...(zone?.relay ? { zoneRelay: zone.relay } : {}),
     checks: d.checks ?? [],
     expectedRecords: expectedRecords(d.name, purposesOf(d)),
     mailboxes: addresses,
@@ -342,6 +345,7 @@ export const deleteDomain = Effect.fn("domains.delete")(function* (id: string, a
 export class DomainFixRefused extends Schema.TaggedError<DomainFixRefused>()("DomainFixRefused", {
   reason: Schema.Literals(["no_dns_token", "zone_not_found", "nothing_to_fix"]),
   message: Schema.String,
+  relay: Schema.optionalKey(RelayRefusalSchema),
 }) {}
 
 export interface FixAction {
@@ -349,7 +353,23 @@ export interface FixAction {
   readonly action: "enable_routing" | "fix_sending" | "add_dmarc" | "manual"
   readonly ok: boolean
   readonly detail: string
+  /** Set when Flareyard's relay refused the change (HAL-3558). */
+  readonly relay?: RelayRefusal
 }
+
+/** A fix's outcome as an action: what it did, or Cloudflare's (or the relay's) words and code. */
+const actionOf = (
+  checks: ReadonlyArray<RecordCheck["id"]>,
+  action: FixAction["action"],
+  out: WriteOutcome<unknown>,
+  done: string,
+): FixAction => ({
+  checks,
+  action,
+  ok: out.ok,
+  detail: out.ok ? done : out.message,
+  ...(out.ok ? {} : withRelay(out.relay)),
+})
 
 const RECEIVING_CHECKS = new Set<RecordCheck["id"]>(["mx", "spf", "dkim"])
 const SENDING_CHECKS = new Set<RecordCheck["id"]>(["bounce-mx", "bounce-spf", "bounce-dkim"])
@@ -367,7 +387,7 @@ export const fixDomain = Effect.fn("domains.fix")(function* (id: string, actor: 
     return yield* new DomainFixRefused({
       reason: "no_dns_token",
       message:
-        "Mailyard has no CLOUDFLARE_DNS_TOKEN, so it can't change DNS. Add the records shown, or give it a zone token.",
+        "Mailyard can't reach Cloudflare to change DNS: install it through Flareyard, or set CLOUDFLARE_DNS_TOKEN. Until then, add the records shown by hand.",
     })
   const d = yield* findDomain(id)
   const failing = (d.checks ?? []).filter((c) => c.status === "fail" || c.status === "warn")
@@ -376,33 +396,29 @@ export const fixDomain = Effect.fn("domains.fix")(function* (id: string, actor: 
       reason: "nothing_to_fix",
       message: "Every record passed at the last check. Recheck first if DNS changed since.",
     })
-  const zone = yield* zones.zoneFor(d.name)
+  const found = yield* zones.findZone(d.name)
+  const zone = found.value
   if (Option.isNone(zone))
     return yield* new DomainFixRefused({
       reason: "zone_not_found",
-      message: `The token can't see a zone for ${d.name}. Is the domain on this Cloudflare account?`,
+      message: found.relay
+        ? relayMessage(found.relay)
+        : `Mailyard can't see a zone for ${d.name}. Is the domain on this Cloudflare account?`,
+      ...withRelay(found.relay),
     })
   const zoneId = zone.value.id
   const actions: Array<FixAction> = []
   const receiving = failing.filter((c) => RECEIVING_CHECKS.has(c.id)).map((c) => c.id)
   if (receiving.length > 0) {
     const out = yield* zones.enableRouting(zoneId, d.name)
-    actions.push({
-      checks: receiving,
-      action: "enable_routing",
-      ok: out.ok,
-      detail: out.ok ? "Email Routing re-added its MX, SPF and DKIM records." : out.message,
-    })
+    actions.push(
+      actionOf(receiving, "enable_routing", out, "Email Routing re-added its MX, SPF and DKIM records."),
+    )
   }
   const sending = failing.filter((c) => SENDING_CHECKS.has(c.id)).map((c) => c.id)
   if (sending.length > 0) {
     const out = yield* zones.fixSending(zoneId, d.name)
-    actions.push({
-      checks: sending,
-      action: "fix_sending",
-      ok: out.ok,
-      detail: out.ok ? "Email Sending re-applied the cf-bounce records." : out.message,
-    })
+    actions.push(actionOf(sending, "fix_sending", out, "Email Sending re-applied the cf-bounce records."))
   }
   const dmarc = failing.find((c) => c.id === "dmarc")
   if (dmarc) {
@@ -412,12 +428,7 @@ export const fixDomain = Effect.fn("domains.fix")(function* (id: string, actor: 
         `_dmarc.${d.name}`,
         `v=DMARC1; p=quarantine; rua=mailto:dmarc@${d.name}`,
       )
-      actions.push({
-        checks: ["dmarc"],
-        action: "add_dmarc",
-        ok: out.ok,
-        detail: out.ok ? "Added a DMARC record with p=quarantine." : out.message,
-      })
+      actions.push(actionOf(["dmarc"], "add_dmarc", out, "Added a DMARC record with p=quarantine."))
     } else
       actions.push({
         checks: ["dmarc"],
@@ -438,8 +449,14 @@ export const fixDomain = Effect.fn("domains.fix")(function* (id: string, actor: 
 export const domainCandidates = Effect.fn("domains.candidates")(function* () {
   const zones = yield* CloudflareZones
   if (!zones.connected) return { connected: false, candidates: [] }
-  const all = yield* zones.zones
-  if (Option.isNone(all)) return { connected: false, candidates: [] }
+  const listed = yield* zones.zones
+  const all = listed.value
+  if (Option.isNone(all))
+    return {
+      connected: false,
+      candidates: [],
+      ...(listed.relay ? { message: relayMessage(listed.relay), relay: listed.relay } : {}),
+    }
   const database = yield* Database
   const names = (yield* database.query("domains.names", (db) =>
     db.select({ name: domains.name }).from(domains).all(),

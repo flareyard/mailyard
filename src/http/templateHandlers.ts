@@ -2,6 +2,8 @@ import * as Effect from "effect/Effect"
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Schema from "effect/Schema"
 import { checkSend } from "../domain/agents.ts"
+import { describeAlertSettings, getAlertSettings, putAlertSettings } from "../domain/alertChannels.ts"
+import { describeAssistant, getAssistantSettings, putAssistantSettings } from "../domain/assistant.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { listAudit } from "../domain/auditLog.ts"
 import {
@@ -12,6 +14,7 @@ import {
   putBrandSettings,
   storeLogo,
 } from "../domain/brand.ts"
+import { describeLane, putLane } from "../domain/mailEvents.ts"
 import {
   archiveTemplate,
   createTemplate,
@@ -219,6 +222,67 @@ export const SettingsHandlers = HttpApiBuilder.group(
   Effect.fn(function* (handlers) {
     const p = provideTo(yield* appContext)
     return handlers.handleAll({
+      getMailEvents: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(describeLane()), dbDies),
+      ),
+      putMailEvents: p(({ payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "settings.write")
+          const { before, after } = yield* putLane(payload).pipe(
+            Effect.catchTag("LaneInvalid", (e) =>
+              Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            ),
+          )
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "settings.mail_events",
+            target: "mail_events",
+            before,
+            after: { enabled: after.enabled, mailboxIds: after.mailboxIds, types: after.types },
+          })
+          return after
+        }).pipe(dbDies),
+      ),
+      getAssistant: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(describeAssistant()), dbDies),
+      ),
+      putAssistant: p(({ payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "settings.write")
+          const before = yield* getAssistantSettings()
+          const saved = yield* putAssistantSettings(payload)
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "settings.assistant",
+            target: "assistant",
+            before,
+            after: payload,
+          })
+          return saved
+        }).pipe(dbDies),
+      ),
+      getAlertSettings: p(() =>
+        requireScope("read", "settings.read").pipe(Effect.andThen(describeAlertSettings()), dbDies),
+      ),
+      putAlertSettings: p(({ payload }) =>
+        Effect.gen(function* () {
+          const caller = yield* requireScope("admin", "settings.write")
+          const before = yield* getAlertSettings()
+          const saved = yield* putAlertSettings(payload).pipe(
+            Effect.catchTag("AlertSettingsInvalid", (e) =>
+              Effect.fail(new InvalidRequest({ field: e.field, message: e.message })),
+            ),
+          )
+          yield* recordAudit({
+            actor: caller.keyId,
+            action: "settings.alerts",
+            target: "alerts",
+            before,
+            after: { channels: saved.channels, defaultEmail: saved.defaultEmail },
+          })
+          return saved
+        }).pipe(dbDies),
+      ),
       getBrand: p(() =>
         requireScope("read", "settings.read").pipe(Effect.andThen(getBrandSettings()), dbDies),
       ),

@@ -18,6 +18,7 @@ import { Database } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
 import { raiseAlert } from "./alerts.ts"
 import { isBlocked } from "./contacts.ts"
+import { publishMailEvent } from "./mailEvents.ts"
 import { emitSafely } from "./webhooks.ts"
 
 /**
@@ -435,6 +436,18 @@ export const applyEvent = Effect.fn("deliveryEvents.apply")(function* (event: Em
     campaignId: row?.campaignId ?? null,
     mailboxId: row?.mailboxId ?? null,
   })
+  if (row?.mailboxId)
+    yield* publishMailEvent({
+      type: "delivery",
+      kind,
+      mailboxId: row.mailboxId,
+      outId: row.id,
+      recipient,
+      subject: payload.subject ?? row.subject ?? null,
+      bounce: payload.bounce?.type ?? null,
+      smtpResponse: payload.delivery.smtpResponse ?? null,
+      at,
+    })
   if (hardBounce || kind === "complained") {
     yield* emitSafely("contact.suppressed", {
       email: recipient,

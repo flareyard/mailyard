@@ -24,7 +24,7 @@ import { Database } from "../services/Database.ts"
 import { Governor } from "../services/Governor.ts"
 import { publishedVersion } from "./automations.ts"
 import { entryTriggerData } from "./entryData.ts"
-import { type Graph, nextNode, type Port, type Settings, triggerOf } from "./graph.ts"
+import { type Graph, nextNode, type Port, type Settings, type TriggerConfig, triggerOf } from "./graph.ts"
 import { missingDetail, renderAutomationMail } from "./mail.ts"
 import {
   runStep,
@@ -60,7 +60,7 @@ export class RunInvalid extends Schema.TaggedError<RunInvalid>()("RunInvalid", {
 export const AUTOMATION_QUEUE_NAME = "mailyard-automation-triggers"
 
 export const AutomationTriggerJob = Schema.Struct({
-  kind: Schema.Literals(["event", "created", "topic", "segment", "enter"]),
+  kind: Schema.Literals(["event", "created", "topic", "segment", "enter", "mail_received"]),
   contactId: Schema.String,
   /** The event name, the topic id, or (for `enter`) the automation id. */
   key: Schema.optionalKey(Schema.String),
@@ -101,6 +101,31 @@ export const fireTrigger = (job: Omit<AutomationTriggerJob, "at">) =>
     const env = yield* Bindings
     yield* Effect.promise(() => env.AUTOMATION_QUEUE.send({ ...job, at: Date.now() }))
   }).pipe(Effect.catchCause((cause) => Effect.logWarning("automations: could not queue a trigger", cause)))
+
+/**
+ * Whether a message matches a mail_received trigger's filters (HAL-3467): its mailbox, its sender's
+ * domain (or a subdomain of it), and words in its subject, each only when the trigger names them.
+ */
+export const mailMatches = (
+  trigger: Extract<TriggerConfig, { kind: "mail_received" }>,
+  data: Readonly<Record<string, unknown>> | null,
+) => {
+  if (!data) return false
+  const mailboxId = typeof data.mailboxId === "string" ? data.mailboxId : ""
+  const domain = typeof data.senderDomain === "string" ? data.senderDomain.toLowerCase() : ""
+  const subject = typeof data.subject === "string" ? data.subject.toLowerCase() : ""
+  if (trigger.mailboxIds?.length && !trigger.mailboxIds.includes(mailboxId)) return false
+  if (
+    trigger.senderDomains?.length &&
+    !trigger.senderDomains.some((d) => {
+      const want = d.trim().toLowerCase().replace(/^@/, "")
+      return domain === want || domain.endsWith(`.${want}`)
+    })
+  )
+    return false
+  if (trigger.subjectContains && !subject.includes(trigger.subjectContains.toLowerCase())) return false
+  return true
+}
 
 /** Whether a contact matches a rule tree right now. */
 export const contactMatches = (contactId: string, rule: Rule) =>
@@ -157,6 +182,8 @@ export const enterAutomation = Effect.fn("automations.enter")(function* (
   const trigger = triggerOf(graph)?.config
   if (trigger?.kind === "event" && trigger.filter && !(yield* contactMatches(contactId, trigger.filter)))
     return "skipped: filter not matched"
+  if (trigger?.kind === "mail_received" && !mailMatches(trigger, data))
+    return "skipped: the mail doesn't match the trigger"
   if (trigger?.kind === "segment") {
     const seg = yield* database.query("automations.enterSegment", (db) =>
       db.select({ filter: segments.filter }).from(segments).where(eq(segments.id, trigger.segmentId)).get(),
@@ -336,7 +363,11 @@ const recordStep = (
   nodeId: string,
   outcome: "passed" | "waiting" | "sent" | "skipped" | "exited" | "failed",
   detail: string,
-  extra: { readonly port?: Port | undefined; readonly messageId?: string | undefined } = {},
+  extra: {
+    readonly port?: Port | undefined
+    readonly messageId?: string | undefined
+    readonly missing?: ReadonlyArray<string> | undefined
+  } = {},
 ) =>
   Effect.gen(function* () {
     const database = yield* Database
@@ -352,6 +383,7 @@ const recordStep = (
           port: extra.port ?? null,
           detail: detail.slice(0, 500),
           messageId: extra.messageId ?? null,
+          missing: extra.missing && extra.missing.length > 0 ? [...extra.missing] : null,
           at: Date.now(),
         })
         .onConflictDoNothing()
@@ -470,6 +502,7 @@ export const executeNode = Effect.fn("runs.execute")(function* (runId: string, n
   yield* recordStep(run, seq, nodeId, sent ? "sent" : skipped ? "skipped" : "passed", outcome.detail, {
     port: outcome.port,
     messageId: outcome.messageId,
+    missing: outcome.missing,
   })
   yield* setRun(runId, {
     state: "running",
@@ -641,6 +674,70 @@ export const holdRun = Effect.fn("runs.hold")(function* (runId: string, until: n
 const enc = new TextEncoder()
 const b64 = (bytes: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(bytes)))
 
+/**
+ * One signed POST to a webhook step's URL (Standard Webhooks headers, the automation's secret), with
+ * a 10-second timeout. Never throws: a network failure or timeout answers status 0 with `error` set.
+ * The run uses it, and so does the inspector's "Send a test request" (HAL-3417).
+ */
+export const postAutomationWebhook = Effect.fn("automations.postWebhook")(function* (input: {
+  readonly automationId: string
+  readonly deliveryId: string
+  readonly url: string
+  readonly body: Record<string, unknown>
+  readonly test?: boolean
+}) {
+  const secret = yield* automationWebhookSecret(input.automationId)
+  const body = JSON.stringify(input.body)
+  const timestamp = Math.floor(Date.now() / 1000)
+  const key = yield* Effect.promise(() =>
+    crypto.subtle.importKey(
+      "raw",
+      Uint8Array.from(atob(secret.slice(6)), (c) => c.charCodeAt(0)),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    ),
+  )
+  const signature = b64(
+    yield* Effect.promise(() =>
+      crypto.subtle.sign("HMAC", key, enc.encode(`${input.deliveryId}.${timestamp}.${body}`)),
+    ),
+  )
+  const started = Date.now()
+  return yield* Effect.promise(async () => {
+    try {
+      const response = await fetch(input.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "webhook-id": input.deliveryId,
+          "webhook-timestamp": String(timestamp),
+          "webhook-signature": `v1,${signature}`,
+          ...(input.test ? { "x-mailyard-test": "true" } : {}),
+        },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      })
+      const text = input.test ? await response.text().catch(() => "") : ""
+      return {
+        status: response.status,
+        tookMs: Date.now() - started,
+        error: null,
+        response: input.test ? text.slice(0, 500) : null,
+      }
+    } catch (cause) {
+      const timedOut =
+        cause instanceof Error && (cause.name === "TimeoutError" || cause.name === "AbortError")
+      return {
+        status: 0,
+        tookMs: Date.now() - started,
+        error: timedOut ? ("timeout" as const) : ("network" as const),
+        response: null,
+      }
+    }
+  })
+})
+
 /** The secret automation webhooks are signed with (Standard Webhooks), derived per automation. */
 export const automationWebhookSecret = Effect.fn("automations.webhookSecret")(function* (
   automationId: string,
@@ -711,50 +808,17 @@ const makeContext = (
         ),
       webhook: (url, payload) =>
         run$(
-          Effect.gen(function* () {
-            const secret = yield* automationWebhookSecret(run.automationId)
-            const body = JSON.stringify({
+          postAutomationWebhook({
+            automationId: run.automationId,
+            deliveryId: `${run.id}:${nodeId}`,
+            url,
+            body: {
               type: "automation.webhook",
               automationId: run.automationId,
               runId: run.id,
               step: nodeId,
               ...payload,
-            })
-            const id = `${run.id}:${nodeId}`
-            const timestamp = Math.floor(Date.now() / 1000)
-            const key = yield* Effect.promise(() =>
-              crypto.subtle.importKey(
-                "raw",
-                Uint8Array.from(atob(secret.slice(6)), (c) => c.charCodeAt(0)),
-                { name: "HMAC", hash: "SHA-256" },
-                false,
-                ["sign"],
-              ),
-            )
-            const signature = b64(
-              yield* Effect.promise(() =>
-                crypto.subtle.sign("HMAC", key, enc.encode(`${id}.${timestamp}.${body}`)),
-              ),
-            )
-            const status = yield* Effect.promise(async () => {
-              try {
-                const response = await fetch(url, {
-                  method: "POST",
-                  headers: {
-                    "content-type": "application/json",
-                    "webhook-id": id,
-                    "webhook-timestamp": String(timestamp),
-                    "webhook-signature": `v1,${signature}`,
-                  },
-                  body,
-                  signal: AbortSignal.timeout(10_000),
-                })
-                return response.status
-              } catch {
-                return 0
-              }
-            })
-            return { status }
+            },
           }),
         ),
     }
@@ -828,6 +892,7 @@ const sendForRun = (
           status: "skipped",
           reason: "missing_data",
           detail: missingDetail(e.missing),
+          missing: e.missing,
         } satisfies SendResult),
       ),
     )
@@ -1105,6 +1170,8 @@ export const getRun = Effect.fn("runs.getView")(function* (runId: string) {
       port: s.port,
       detail: s.detail,
       messageId: s.messageId,
+      /** A send skipped for missing merge data: the fields it needed; empty otherwise. */
+      missing: s.missing ?? [],
       at: s.at,
     })),
   }

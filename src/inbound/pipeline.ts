@@ -6,15 +6,23 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import { fireMailReceived } from "../automations/mailTrigger.ts"
 import { Bindings } from "../Bindings.ts"
 import { inboundDeliveries, inboundMessages, mailboxes, mailboxRules } from "../db/schema.ts"
+import { looksLikeReport, parseReport, unpack } from "../dmarc/parse.ts"
+import { domainForReportAddress, storeReport } from "../dmarc/reports.ts"
+import { CATEGORY_LABELS, categorize } from "../domain/assistant.ts"
+import { publishMailEvent } from "../domain/mailEvents.ts"
 import { PROBE_LOCAL, recordProbeArrival } from "../domain/testSend.ts"
 import { oneClickUnsubscribe, tokenFromSubject, UNSUBSCRIBE_LOCAL } from "../domain/unsubscribe.ts"
 import { emitSafely } from "../domain/webhooks.ts"
 import { BlobStore, Ids } from "../kit/index.ts"
+import { callMailbox } from "../mail/rpc.ts"
 import { BODY_TEXT_LIMIT, type InboundDelivery } from "../mailbox/types.ts"
+import { notifyNewMail } from "../push/notifications.ts"
 import { runEffects } from "../rules/effects.ts"
 import { type FilingPlan, planFiling } from "../rules/filing.ts"
+import { Assistant } from "../services/Assistant.ts"
 import { chunksOf, Database } from "../services/Database.ts"
 import { Mailboxes } from "../services/Mailboxes.ts"
 import { type ParsedMessage, parseMessage, sha256Hex } from "./parse.ts"
@@ -290,11 +298,46 @@ const probeArrival = (row: InboundRow) =>
     return { outcome: "consumed", id: row.id } as const
   })
 
+/**
+ * A DMARC aggregate report arriving at `dmarc@<domain>` (HAL-3375): read, stored for the domain's
+ * DMARC screen, and consumed, never filed. Checked before the recipient is resolved, so a catch-all
+ * mailbox doesn't fill with XML. Mail there that isn't a report carries on as usual.
+ */
+const dmarcArrival = (row: InboundRow) =>
+  Effect.gen(function* () {
+    const domain = yield* domainForReportAddress(row.envelopeTo)
+    if (!domain) return null
+    const raw = yield* (yield* BlobStore).get(row.rawKey)
+    if (Option.isNone(raw)) return null
+    const parsed = yield* parseMessage(raw.value.body).pipe(Effect.option)
+    if (Option.isNone(parsed)) return null
+    const candidates = parsed.value.attachments.filter(looksLikeReport)
+    let stored = 0
+    for (const attachment of candidates.slice(0, 5)) {
+      const report = yield* Effect.tryPromise(async () => parseReport(await unpack(attachment.content))).pipe(
+        Effect.option,
+      )
+      if (Option.isNone(report)) continue
+      yield* storeReport({ domainId: domain.id, report: report.value, inboundId: row.id })
+      stored += 1
+    }
+    if (stored === 0) return null
+    yield* update(row.id, {
+      status: "consumed",
+      error: null,
+      subject: parsed.value.subject.slice(0, 998),
+      fromAddress: parsed.value.from?.address ?? null,
+    })
+    return { outcome: "consumed", id: row.id } as const
+  })
+
 const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boolean) {
   yield* update(row.id, { attempts: sql`${inboundMessages.attempts} + 1` })
   if (!row.resolution) {
     const probe = yield* probeArrival(row)
     if (probe) return probe
+    const report = yield* dmarcArrival(row)
+    if (report) return report
   }
 
   let resolution = row.resolution
@@ -350,7 +393,14 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
     yield* (yield* Database).query("inbound.deliveryRow", (db) =>
       db
         .insert(inboundDeliveries)
-        .values({ inboundId: row.id, mailboxId, folder: plan.filing.folder, at: Date.now() })
+        .values({
+          inboundId: row.id,
+          mailboxId,
+          folder: plan.filing.folder,
+          messageId: result.id,
+          threadId: result.threadId,
+          at: Date.now(),
+        })
         .onConflictDoNothing()
         .run(),
     )
@@ -388,11 +438,78 @@ const file = Effect.fn("inbound.file")(function* (row: InboundRow, atDoor: boole
       // Forwards, auto-replies and rule webhooks run once: only for a newly stored copy, so a retried
       // filing never sends them twice. Their failures are logged, never raised.
       yield* effectsFor(mailboxId, plan, parsed, row, result.threadId)
+      // The mail-events lane (HAL-3306), for Hermes: the message, and a rule's handover if any.
+      yield* publishMailEvent({
+        type: "message.received",
+        mailboxId,
+        threadId: result.threadId,
+        messageId: result.id,
+        internetMessageId: parsed.messageId,
+        from: parsed.from ? { email: parsed.from.address, name: parsed.from.name } : null,
+        to: row.envelopeTo,
+        subject: parsed.subject,
+        snippet: parsed.snippet,
+        folder: plan.filing.folder,
+        spam: plan.spam.isSpam,
+        automated: parsed.automated || parsed.listId !== null,
+        attachments: parsed.attachments.filter((a) => !a.related).length,
+        at: row.receivedAt,
+      })
+      if (plan.filing.assignee)
+        yield* publishMailEvent({
+          type: "thread.assigned",
+          mailboxId,
+          threadId: result.threadId,
+          assignee: plan.filing.assignee,
+          by: "rule",
+        })
+      // Automations that start on mail (HAL-3467): never for automated, list or spam mail.
+      // Web Push to the people who read this mailbox (HAL-3369), never for spam.
+      if (!plan.spam.isSpam && plan.filing.folder !== "spam")
+        yield* notifyNewMail({
+          mailboxId,
+          threadId: result.threadId,
+          messageId: result.id,
+          from: parsed.from ? (parsed.from.name ?? parsed.from.address) : "(unknown sender)",
+          subject: parsed.subject,
+          assignee: plan.filing.assignee ?? null,
+        })
+      yield* fireMailReceived({
+        mailboxId,
+        mailboxAddress: row.envelopeTo,
+        threadId: result.threadId,
+        messageId: result.id,
+        from: parsed.from,
+        subject: parsed.subject,
+        automated: parsed.automated || parsed.listId !== null,
+        spam: plan.spam.isSpam || plan.filing.folder === "spam",
+      })
+      // A category label (HAL-3305), when the helper is on: after filing, so a slow model never
+      // holds mail back, and never for spam.
+      if (!plan.spam.isSpam && plan.filing.folder !== "spam")
+        yield* categorizeFiled(mailboxId, result.id, parsed)
     }
   }
   yield* update(row.id, { status: "filed", error: null, filedAt: Date.now() })
   return { outcome: "filed", id: row.id, mailboxIds: resolution.mailboxIds } as const
 })
+
+/** Labels a filed message with its category, if the categories helper is on. Never fails the filing. */
+const categorizeFiled = (mailboxId: string, messageId: string, parsed: ParsedMessage) =>
+  Effect.gen(function* () {
+    const assistant = yield* Assistant
+    if (assistant.source === "off") return
+    const category = yield* categorize({
+      mailboxId,
+      from: parsed.from ? `${parsed.from.name ?? ""} <${parsed.from.address}>`.trim() : "(unknown)",
+      subject: parsed.subject,
+      text: parsed.text || parsed.snippet,
+      listUnsubscribe: parsed.listUnsubscribe !== null,
+    })
+    if (!category) return
+    const label = yield* callMailbox(mailboxId, (s) => s.ensureLabel(CATEGORY_LABELS[category]))
+    yield* callMailbox(mailboxId, (s) => s.updateMessages([messageId], { addLabels: [label.id] }))
+  }).pipe(Effect.catchCause((cause) => Effect.logWarning("inbound: could not categorize", cause)))
 
 const effectsFor = (
   mailboxId: string,

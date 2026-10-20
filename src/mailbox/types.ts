@@ -122,6 +122,8 @@ export interface ThreadSummary {
   /** What lists sort by: the last arrival, or the moment a snooze ended if later. */
   readonly sortAt: number
   readonly snoozedUntil: number | null
+  /** When the conversation was resolved (its last open message archived); null while open (HAL-3392). */
+  readonly resolvedAt: number | null
   /** The API key handling this conversation in a shared inbox, or null. */
   readonly assignee: string | null
   /** The earliest scheduled send of a reply in this conversation (HAL-3405), or null. */

@@ -40,12 +40,27 @@ export interface Env {
   readonly CLASSIFIER_URL?: string
   readonly CLASSIFIER_MODEL?: string
   readonly CLASSIFIER_API_KEY?: string
+  /**
+   * The mailbox and audience helpers (HAL-3305): `off` (default), `workers-ai` (needs AI; through
+   * AI_GATEWAY_ID when set), `openai` (ASSISTANT_URL and ASSISTANT_MODEL), or `fixed` (answers from
+   * ASSISTANT_FIXED, for tests). Each helper is also off until turned on in Settings.
+   */
+  readonly MAILYARD_ASSISTANT?: "off" | "workers-ai" | "openai" | "fixed"
+  readonly ASSISTANT_MODEL?: string
+  readonly ASSISTANT_URL?: string
+  readonly ASSISTANT_API_KEY?: string
+  /** A JSON object of answers by helper (summary, draft, category, segment), for MAILYARD_ASSISTANT=fixed. */
+  readonly ASSISTANT_FIXED?: string
+  /** An AI Gateway to route Workers AI calls through, for caching, logs and spend limits. */
+  readonly AI_GATEWAY_ID?: string
   /** Imports a mailbox from IMAP or an mbox (src/workflows/mailbox.ts). */
   readonly IMPORT_WORKFLOW: Workflow<{ readonly importId: string }>
   /** Sends a campaign: snapshot, then governor-paced chunks (src/workflows/campaign.ts). */
   readonly CAMPAIGN_WORKFLOW: Workflow<{ readonly campaignId: string; readonly origin: string }>
   /** Automation triggers, fanned out to runs (src/automations/runs.ts). */
   readonly AUTOMATION_QUEUE: Queue<import("./automations/runs.ts").AutomationTriggerJob>
+  /** The mail-events lane Hermes reads (HAL-3306, src/contracts/mailEvents.ts); absent off Cloudflare. */
+  readonly MAIL_EVENTS_QUEUE?: Queue<import("./contracts/mailEvents.ts").MailEvent>
   /** One automation run: walks a published graph for one contact (src/workflows/automation.ts). */
   readonly AUTOMATION_WORKFLOW: Workflow<{ readonly runId: string }>
   /** Imports a contact CSV in 5,000-row steps (src/workflows/contactImport.ts). */
@@ -77,6 +92,19 @@ export interface Env {
   readonly ADMIN_KEY?: string
   /** `memory` swaps Email Service for the in-memory sender: tests and local development only. */
   readonly MAILYARD_SENDER?: "cloudflare" | "memory"
+  /**
+   * Set by Flareyard at install (contract v1.3, HAL-3558): the relay that makes Mailyard's Cloudflare
+   * calls with the user's OAuth grant, and this install's key for it. When set, they take the place of
+   * every pasted Cloudflare token below (src/services/cloudflareApi.ts).
+   */
+  readonly FLAREYARD_CF_API?: string
+  readonly FLAREYARD_CF_TOKEN?: string
+  /**
+   * Set by the Flareyard platform on installs it made (contract v1.3 `signIn`, HAL-3360): its URL and
+   * this install's id, so "Open Mailyard" signs the owner in. Unset when self-deployed.
+   */
+  readonly FLAREYARD_URL?: string
+  readonly FLAREYARD_INSTALL_ID?: string
   /** Optional, read-only: lets the Overview show the account's Email Sending quota and reputation. */
   readonly CLOUDFLARE_ACCOUNT_ID?: string
   readonly CLOUDFLARE_EMAIL_READ_TOKEN?: string
@@ -93,6 +121,8 @@ export interface Env {
    * Fix records button. Without it those fields are null and fixing is refused with a reason.
    */
   readonly CLOUDFLARE_DNS_TOKEN?: string
+  /** Analytics Read on the receiving zones: what Email Routing rejects upstream (HAL-3393). Optional. */
+  readonly CLOUDFLARE_ANALYTICS_TOKEN?: string
   /** The Worker Email Routing hands mail to, when it isn't "mailyard-api": a rule pointing at it is ours. */
   readonly MAILYARD_WORKER_NAME?: string
   /** Hours a conversation may wait for a reply before the Overview counts it as waiting; 24 by default. */

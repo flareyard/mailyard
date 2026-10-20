@@ -12,6 +12,7 @@ export const TRIGGER_DATA_KEYS: { readonly [K in TriggerConfig["kind"]]: Readonl
   topic: ["topicId", "topicName"],
   segment: ["segmentId", "segmentName"],
   date: ["field", "date", "offsetDays", "years"],
+  mail_received: ["mailboxId", "threadId", "messageId", "from", "fromName", "subject", "senderDomain"],
 }
 
 const DAY = 86_400_000

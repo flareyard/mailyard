@@ -244,14 +244,15 @@ export const notice = (kind: NoticeKind, html: string) =>
   `<div class="notice ${kind}" role="${kind === "danger" ? "alert" : "status"}">${html}</div>`
 
 /** The CSP for these pages: inline styles, the fonts' own hosts, images from anywhere https. */
-export const shellCsp = (fontsHref: string | undefined) => {
+export const shellCsp = (fontsHref: string | undefined, formAction: ReadonlyArray<string> = []) => {
   const fonts = fontsHref ? new URL(fontsHref).origin : ""
   return [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${fonts}`.trim(),
     `font-src ${fonts ? "https://fonts.gstatic.com" : "'none'"}`,
     "img-src https: data:",
-    "form-action 'self'",
+    // A form's redirect counts too: a consent page lists where it may send the person (HAL-3462).
+    ["form-action 'self'", ...formAction].join(" "),
     "base-uri 'none'",
     "frame-ancestors 'none'",
   ].join("; ")
@@ -270,6 +271,8 @@ export const shellPage = (input: {
   readonly privacyUrl?: string | null
   /** Seconds, then a redirect: the `Refresh` header and a meta refresh, so it works without JavaScript. */
   readonly redirect?: { readonly url: string; readonly after: number } | null
+  /** Extra `form-action` sources: where a form on the page may redirect after posting. */
+  readonly formAction?: ReadonlyArray<string>
 }) => {
   const { theme } = input
   const html = `<!doctype html>
@@ -297,7 +300,7 @@ ${input.body}
       "cache-control": "no-store",
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
-      "content-security-policy": shellCsp(theme.fontsHref),
+      "content-security-policy": shellCsp(theme.fontsHref, input.formAction),
       ...(input.redirect ? { refresh: `${input.redirect.after};url=${input.redirect.url}` } : {}),
     },
   })

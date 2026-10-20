@@ -25,7 +25,11 @@
       "/c/*",
       "/f/*",
       "/v/*",
-      "/brand/*"
+      "/brand/*",
+      "/oauth/*",
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/*",
+      "/.well-known/oauth-authorization-server"
     ]
   },
   // No resource ids: `wrangler deploy` provisions D1, R2 and the queues in whichever account deploys, and
@@ -115,7 +119,10 @@
       { "binding": "WEBHOOK_QUEUE", "queue": "mailyard-webhooks" },
       { "binding": "INBOUND_QUEUE", "queue": "mailyard-inbound" },
       { "binding": "MAILBOX_SEND_QUEUE", "queue": "mailyard-mailbox-send" },
-      { "binding": "AUTOMATION_QUEUE", "queue": "mailyard-automation-triggers" }
+      { "binding": "AUTOMATION_QUEUE", "queue": "mailyard-automation-triggers" },
+      // The mail-events lane (HAL-3306): Mailyard only produces; Hermes consumes it, with
+      // mailyard-mail-events-dlq as its dead-letter queue. Nothing is sent until the lane is turned on.
+      { "binding": "MAIL_EVENTS_QUEUE", "queue": "mailyard-mail-events" }
     ],
     "consumers": [
       {

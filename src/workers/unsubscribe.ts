@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import type { Env } from "../Bindings.ts"
+import { requestEvidence } from "../domain/consentEvidence.ts"
 import {
   oneClickUnsubscribe,
   preferences,
@@ -51,7 +52,9 @@ export const handleUnsubscribe = async (request: Request, env: Env, token: strin
   } else {
     const all = action === "all"
     const subscribed = form.getAll("topic").filter((v): v is string => typeof v === "string")
-    const saved = await run.runPromise(Effect.result(savePreferences(token, { subscribed, all })))
+    const saved = await run.runPromise(
+      Effect.result(savePreferences(token, { subscribed, all }, requestEvidence(request, "/u"))),
+    )
     if (saved._tag === "Failure") return invalidLinkPage(look)
     message = all
       ? {

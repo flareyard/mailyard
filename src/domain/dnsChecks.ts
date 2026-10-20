@@ -19,7 +19,7 @@ export const SENDING_SUBDOMAIN = "cf-bounce"
 export type CheckStatus = "pass" | "warn" | "fail" | "error" | "checking"
 
 /** The record types the checks read; NS is looked up for the zone, never checked. */
-export type CheckedType = Exclude<RecordType, "NS">
+export type CheckedType = Exclude<RecordType, "NS" | "PTR">
 
 export interface RecordCheck {
   readonly id: "mx" | "spf" | "dkim" | "dmarc" | "bounce-mx" | "bounce-spf" | "bounce-dkim"

@@ -158,6 +158,26 @@ export const campaignLinks = sqliteTable(
 )
 
 /** Every change to a contact's subscription to a topic, for the timeline and for consent records. */
+/**
+ * The evidence behind a subscription change, for a GDPR or CASL request: an import's attestation
+ * (HAL-3371), or, when the person acted themselves (a signup form, a confirmation link, the
+ * preference page), where from and what they saw (HAL-3426).
+ */
+export interface ConsentEvidence {
+  readonly importId?: string
+  readonly attestedBy?: string
+  readonly attestedAt?: number
+  readonly statement?: string
+  /** The client's IP (`cf-connecting-ip`) and browser, when the person acted themselves. */
+  readonly ip?: string
+  readonly userAgent?: string
+  /** The page they acted on. */
+  readonly page?: string
+  /** The form they signed up through, and a hash of what it showed them then. */
+  readonly formId?: string
+  readonly formVersion?: string
+}
+
 export const subscriptionChanges = sqliteTable(
   "subscription_changes",
   {
@@ -172,12 +192,7 @@ export const subscriptionChanges = sqliteTable(
     to: text("to", { enum: ["subscribed", "unconfirmed", "unsubscribed"] }).notNull(),
     source: text("source").notNull(),
     /** The consent behind a change made for the person, such as an import's attestation (HAL-3371). */
-    evidence: text("evidence", { mode: "json" }).$type<{
-      readonly importId?: string
-      readonly attestedBy?: string
-      readonly attestedAt?: number
-      readonly statement?: string
-    }>(),
+    evidence: text("evidence", { mode: "json" }).$type<ConsentEvidence>(),
     at: integer("at").notNull(),
   },
   (t) => [
@@ -683,6 +698,8 @@ export const automationRunSteps = sqliteTable(
     port: text("port"),
     detail: text("detail").notNull(),
     messageId: text("message_id"),
+    /** A send skipped for missing merge data: the fields it needed (HAL-3417). */
+    missing: text("missing", { mode: "json" }).$type<ReadonlyArray<string>>(),
     at: integer("at").notNull(),
   },
   (t) => [
@@ -891,8 +908,103 @@ export const signInLinks = sqliteTable(
     createdAt: integer("created_at").notNull(),
     expiresAt: integer("expires_at").notNull(),
     usedAt: integer("used_at"),
+    /** Where to land after signing in: an `/oauth/authorize?…` URL path (HAL-3462), else the app. */
+    returnTo: text("return_to"),
   },
   (t) => [uniqueIndex("sign_in_links_token").on(t.tokenHash), index("sign_in_links_member").on(t.memberId)],
+)
+
+// ---------------------------------------------------------------------------------------------
+// OAuth for MCP clients (HAL-3462): Mailyard is the authorization server for its own /mcp.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Clients that asked to connect. `cimd`: the client id is an HTTPS URL to its metadata document,
+ * fetched and cached here. `dcr`: registered at `POST /oauth/register`; dropped if never used within
+ * a day of registering.
+ */
+export const oauthClients = sqliteTable(
+  "oauth_clients",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: ["cimd", "dcr"] }).notNull(),
+    name: text("name").notNull(),
+    /** The client's home page, shown with its host on the consent screen. */
+    uri: text("uri"),
+    logoUri: text("logo_uri"),
+    redirectUris: text("redirect_uris", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    /** For `cimd`: when the document was last fetched; it's fetched again after a day. */
+    fetchedAt: integer("fetched_at"),
+    createdAt: integer("created_at").notNull(),
+    lastUsedAt: integer("last_used_at"),
+  },
+  (t) => [index("oauth_clients_unused").on(t.kind, t.lastUsedAt, t.createdAt)],
+)
+
+/** Authorization codes: SHA-256 of the code, ten minutes, used once. */
+export const oauthCodes = sqliteTable(
+  "oauth_codes",
+  {
+    hash: text("hash").primaryKey(),
+    clientId: text("client_id").notNull(),
+    /** The person who consented (a member id), or `root` for the admin key's session. */
+    principal: text("principal").notNull(),
+    redirectUri: text("redirect_uri").notNull(),
+    codeChallenge: text("code_challenge").notNull(),
+    resource: text("resource").notNull(),
+    scopes: text("scopes", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    mailboxIds: text("mailbox_ids", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    usedAt: integer("used_at"),
+    /** The grant the code became, so a replayed code can revoke it (RFC 6749 §4.1.2). */
+    grantId: text("grant_id"),
+  },
+  (t) => [index("oauth_codes_expiry").on(t.expiresAt)],
+)
+
+/**
+ * What a person let a client do: a `purpose: mcp` key holding the scopes and mailbox memberships
+ * they chose, so every existing check applies to the client unchanged. Revoking the grant revokes
+ * the key, and revoking the key ends the grant.
+ */
+export const oauthGrants = sqliteTable(
+  "oauth_grants",
+  {
+    id: text("id").primaryKey(),
+    clientId: text("client_id").notNull(),
+    principal: text("principal").notNull(),
+    apiKeyId: text("api_key_id").notNull(),
+    resource: text("resource").notNull(),
+    scopes: text("scopes", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    mailboxIds: text("mailbox_ids", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    createdAt: integer("created_at").notNull(),
+    lastUsedAt: integer("last_used_at"),
+    revokedAt: integer("revoked_at"),
+    revokedReason: text("revoked_reason"),
+  },
+  (t) => [
+    index("oauth_grants_key").on(t.apiKeyId),
+    index("oauth_grants_principal").on(t.principal),
+    index("oauth_grants_live").on(t.revokedAt, t.createdAt),
+  ],
+)
+
+/**
+ * Access and refresh tokens, as SHA-256. Access tokens last an hour. A refresh token is used once:
+ * using it issues the next pair, and using a used one again revokes the whole grant.
+ */
+export const oauthTokens = sqliteTable(
+  "oauth_tokens",
+  {
+    hash: text("hash").primaryKey(),
+    grantId: text("grant_id").notNull(),
+    kind: text("kind", { enum: ["access", "refresh"] }).notNull(),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    usedAt: integer("used_at"),
+  },
+  (t) => [index("oauth_tokens_grant").on(t.grantId), index("oauth_tokens_expiry").on(t.expiresAt)],
 )
 
 /**
@@ -1584,6 +1696,9 @@ export const inboundDeliveries = sqliteTable(
     inboundId: text("inbound_id").notNull(),
     mailboxId: text("mailbox_id").notNull(),
     folder: text("folder"),
+    /** The filed copy and its conversation, so the contact timeline can open it (HAL-3426). */
+    messageId: text("message_id"),
+    threadId: text("thread_id"),
     at: integer("at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.inboundId, t.mailboxId] }), index("inbound_deliveries_at").on(t.at)],
@@ -1704,3 +1819,162 @@ export const testSends = sqliteTable("test_sends", {
   }>(),
   createdBy: text("created_by"),
 })
+
+/**
+ * DMARC aggregate reports received at `dmarc@<domain>` (HAL-3375): one row per report, so a report
+ * sent twice counts once. The report itself stays in R2 with its inbound message.
+ */
+export const dmarcReports = sqliteTable(
+  "dmarc_reports",
+  {
+    id: text("id").primaryKey(),
+    domainId: text("domain_id")
+      .notNull()
+      .references(() => domains.id, { onDelete: "cascade" }),
+    orgName: text("org_name").notNull(),
+    email: text("email"),
+    reportId: text("report_id").notNull(),
+    /** The period it covers, in milliseconds. */
+    begin: integer("begin").notNull(),
+    end: integer("end").notNull(),
+    /** The policy the receiver saw published. */
+    policy: text("policy", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    records: integer("records").notNull(),
+    messages: integer("messages").notNull(),
+    inboundId: text("inbound_id"),
+    receivedAt: integer("received_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("dmarc_reports_unique").on(t.domainId, t.orgName, t.reportId),
+    index("dmarc_reports_domain").on(t.domainId, t.end),
+  ],
+)
+
+/**
+ * Reported mail per domain, day (UTC) and sending IP, added to as reports arrive: what the DMARC
+ * screen reads, days times sources whatever the reports' size.
+ */
+export const dmarcDaily = sqliteTable(
+  "dmarc_daily",
+  {
+    domainId: text("domain_id")
+      .notNull()
+      .references(() => domains.id, { onDelete: "cascade" }),
+    day: text("day").notNull(),
+    sourceIp: text("source_ip").notNull(),
+    messages: integer("messages").notNull(),
+    dkimAligned: integer("dkim_aligned").notNull(),
+    spfAligned: integer("spf_aligned").notNull(),
+    dmarcPass: integer("dmarc_pass").notNull(),
+    quarantined: integer("quarantined").notNull(),
+    rejected: integer("rejected").notNull(),
+    /** The domains that signed (DKIM) and were checked (SPF) for this IP's mail, with their results. */
+    dkimDomains: text("dkim_domains", { mode: "json" }).$type<Record<string, string>>().notNull(),
+    spfDomains: text("spf_domains", { mode: "json" }).$type<Record<string, string>>().notNull(),
+    /** Receivers' overrides seen (forwarded, mailing_list …). */
+    overrides: text("overrides", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.domainId, t.day, t.sourceIp] })],
+)
+
+/** Every IP that has sent as a domain, its reverse name, and whether someone vouched for it. */
+export const dmarcSources = sqliteTable(
+  "dmarc_sources",
+  {
+    domainId: text("domain_id")
+      .notNull()
+      .references(() => domains.id, { onDelete: "cascade" }),
+    ip: text("ip").notNull(),
+    ptr: text("ptr"),
+    provider: text("provider"),
+    known: integer("known", { mode: "boolean" }).notNull().default(false),
+    label: text("label"),
+    markedBy: text("marked_by"),
+    markedAt: integer("marked_at"),
+    firstSeen: integer("first_seen").notNull(),
+    lastSeen: integer("last_seen").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.domainId, t.ip] })],
+)
+
+/** Senders (an address or `@domain`) whose remote images a mailbox always shows (HAL-3369). */
+export const mailboxImageSenders = sqliteTable(
+  "mailbox_image_senders",
+  {
+    mailboxId: text("mailbox_id")
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: "cascade" }),
+    value: text("value").notNull(),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.value] })],
+)
+
+/**
+ * Browsers and devices that asked for Web Push (HAL-3369), each owned by the person (member id) or
+ * key that subscribed. `endpoint` is the push service's URL for that browser.
+ */
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    owner: text("owner").notNull(),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    device: text("device"),
+    createdAt: integer("created_at").notNull(),
+    lastSentAt: integer("last_sent_at"),
+    failures: integer("failures").notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex("push_subscriptions_endpoint").on(t.endpoint),
+    index("push_subscriptions_owner").on(t.owner),
+  ],
+)
+
+/** What each person wants pushed: per mailbox all, assigned or off; alerts; and whether to hide content. */
+export const pushPreferences = sqliteTable("push_preferences", {
+  owner: text("owner").primaryKey(),
+  mailboxes: text("mailboxes", { mode: "json" })
+    .$type<ReadonlyArray<{ readonly mailboxId: string; readonly notify: "all" | "assigned" | "off" }>>()
+    .notNull(),
+  alerts: integer("alerts", { mode: "boolean" }).notNull().default(true),
+  hideContent: integer("hide_content", { mode: "boolean" }).notNull().default(false),
+  updatedAt: integer("updated_at").notNull(),
+})
+
+/**
+ * Language-model calls per UTC day, mailbox (`""` for the workspace: segments) and helper (HAL-3305):
+ * the per-mailbox daily cap is taken from here, and the tokens are what it cost.
+ */
+export const assistantUsage = sqliteTable(
+  "assistant_usage",
+  {
+    day: text("day").notNull(),
+    mailboxId: text("mailbox_id").notNull(),
+    feature: text("feature", { enum: ["summary", "draft", "category", "segment"] }).notNull(),
+    calls: integer("calls").notNull().default(0),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    /** Workers AI neurons, in thousandths, when it reports them. */
+    milliNeurons: integer("milli_neurons").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.mailboxId, t.feature] })],
+)
+
+/** A thread's summary, kept until the thread changes (its version is its latest message and count). */
+export const assistantSummaries = sqliteTable(
+  "assistant_summaries",
+  {
+    mailboxId: text("mailbox_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    version: text("version").notNull(),
+    summary: text("summary").notNull(),
+    bullets: text("bullets", { mode: "json" }).$type<ReadonlyArray<string>>().notNull(),
+    model: text("model"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.mailboxId, t.threadId] })],
+)

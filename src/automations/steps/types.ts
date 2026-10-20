@@ -49,13 +49,22 @@ export type SendResult =
       readonly status: "skipped"
       readonly reason: "cadence" | "suppressed" | "unsubscribed" | "missing_data"
       readonly detail: string
+      /** For `missing_data`: the merge fields with no value, as the template names them. */
+      readonly missing?: ReadonlyArray<string>
     }
   /** The governor can't send it yet (pacing or the daily quota): try this step again at `retryAt`. */
   | { readonly status: "deferred"; readonly retryAt: number; readonly detail: string }
 
 /** Where a run goes after a step. */
 export type StepOutcome =
-  | { readonly kind: "next"; readonly port?: Port; readonly detail: string; readonly messageId?: string }
+  | {
+      readonly kind: "next"
+      readonly port?: Port
+      readonly detail: string
+      readonly messageId?: string
+      /** A send skipped for missing merge data: the fields it needed (HAL-3417). */
+      readonly missing?: ReadonlyArray<string>
+    }
   | { readonly kind: "sleep"; readonly until: number; readonly detail: string }
   | { readonly kind: "wait_event"; readonly event: string; readonly until: number; readonly detail: string }
   | { readonly kind: "exit"; readonly detail: string }

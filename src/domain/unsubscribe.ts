@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { stopRunsFor } from "../automations/runs.ts"
 import { Bindings } from "../Bindings.ts"
+import type { ConsentEvidence } from "../db/schema.ts"
 import { contacts, events, subscriptions, topics } from "../db/schema.ts"
 import { Ids } from "../kit/index.ts"
 import { Database } from "../services/Database.ts"
@@ -222,6 +223,8 @@ export const preferences = Effect.fn("unsubscribe.preferences")(function* (token
 export const savePreferences = Effect.fn("unsubscribe.save")(function* (
   token: string,
   choice: { readonly subscribed: ReadonlyArray<string>; readonly all: boolean },
+  /** The request that saved the page (HAL-3426), kept with each opt-in. */
+  evidence?: ConsentEvidence | undefined,
 ) {
   const payload = yield* decode(token)
   const contact = yield* findContact(payload.contactId)
@@ -252,7 +255,7 @@ export const savePreferences = Effect.fn("unsubscribe.save")(function* (
   for (const t of live) {
     const want = wanted.has(t.id)
     if (want && t.state !== "subscribed" && !isBlocked(contact.status)) {
-      yield* writeSubscription(contact, t.id, "subscribed", "preference page")
+      yield* writeSubscription(contact, t.id, "subscribed", "preference page", evidence)
     } else if (!want && t.state === "subscribed") {
       yield* writeSubscription(contact, t.id, "unsubscribed", "preference page")
       dropped = true
