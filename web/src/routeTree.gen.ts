@@ -30,6 +30,13 @@ import { Route as AppAnalyticsInboundRouteImport } from './routes/_app/analytics
 import { Route as AppAnalyticsReputationRouteImport } from './routes/_app/analytics/reputation'
 import { Route as AppAnalyticsSendingRouteImport } from './routes/_app/analytics/sending'
 import { Route as AppAnalyticsUsageRouteImport } from './routes/_app/analytics/usage'
+import { Route as AppAudienceIndexRouteImport } from './routes/_app/audience/index'
+import { Route as AppAudienceFieldsRouteImport } from './routes/_app/audience/fields'
+import { Route as AppAudienceTopicsRouteImport } from './routes/_app/audience/topics'
+import { Route as AppAutomationsIndexRouteImport } from './routes/_app/automations/index'
+import { Route as AppAutomationsAutomationIdRouteImport } from './routes/_app/automations/$automationId'
+import { Route as AppCampaignsIndexRouteImport } from './routes/_app/campaigns/index'
+import { Route as AppCampaignsCampaignIdRouteImport } from './routes/_app/campaigns/$campaignId'
 import { Route as AppDomainsIndexRouteImport } from './routes/_app/domains/index'
 import { Route as AppDomainsIdRouteImport } from './routes/_app/domains/$id'
 import { Route as AppDomainsDmarcRouteImport } from './routes/_app/domains/dmarc'
@@ -53,6 +60,23 @@ import { Route as AppSettingsTrackingRouteImport } from './routes/_app/settings/
 import { Route as AppTransactionalIndexRouteImport } from './routes/_app/transactional/index'
 import { Route as AppTransactionalKeysRouteImport } from './routes/_app/transactional/keys'
 import { Route as AppTransactionalQuickstartRouteImport } from './routes/_app/transactional/quickstart'
+import { Route as AppAudienceContactsIndexRouteImport } from './routes/_app/audience/contacts.index'
+import { Route as AppAudienceContactsContactIdRouteImport } from './routes/_app/audience/contacts.$contactId'
+import { Route as AppAudienceFormsIndexRouteImport } from './routes/_app/audience/forms.index'
+import { Route as AppAudienceFormsFormIdRouteImport } from './routes/_app/audience/forms.$formId'
+import { Route as AppAudienceImportsIndexRouteImport } from './routes/_app/audience/imports.index'
+import { Route as AppAudienceImportsImportIdRouteImport } from './routes/_app/audience/imports.$importId'
+import { Route as AppAudienceSegmentsIndexRouteImport } from './routes/_app/audience/segments.index'
+import { Route as AppAudienceSegmentsSegmentIdRouteImport } from './routes/_app/audience/segments.$segmentId'
+import { Route as AppAudienceSegmentsNewRouteImport } from './routes/_app/audience/segments.new'
+import { Route as AppAutomationsAutomationIdRunsRouteImport } from './routes/_app/automations/$automationId_.runs'
+import { Route as AppCampaignsCampaignIdIndexRouteImport } from './routes/_app/campaigns/$campaignId/index'
+import { Route as AppCampaignsCampaignIdAudienceRouteImport } from './routes/_app/campaigns/$campaignId/audience'
+import { Route as AppCampaignsCampaignIdChecksRouteImport } from './routes/_app/campaigns/$campaignId/checks'
+import { Route as AppCampaignsCampaignIdContentRouteImport } from './routes/_app/campaigns/$campaignId/content'
+import { Route as AppCampaignsCampaignIdPreviewRouteImport } from './routes/_app/campaigns/$campaignId/preview'
+import { Route as AppCampaignsCampaignIdReportRouteImport } from './routes/_app/campaigns/$campaignId/report'
+import { Route as AppCampaignsCampaignIdScheduleRouteImport } from './routes/_app/campaigns/$campaignId/schedule'
 import { Route as AppSettingsIntegrationsIndexRouteImport } from './routes/_app/settings/integrations.index'
 import { Route as AppSettingsIntegrationsApprovalsRouteImport } from './routes/_app/settings/integrations.approvals'
 import { Route as AppSettingsMailboxesIdRouteImport } from './routes/_app/settings/mailboxes_.$id'
@@ -173,6 +197,42 @@ const AppAnalyticsUsageRoute = AppAnalyticsUsageRouteImport.update({
   path: '/usage',
   getParentRoute: () => AppAnalyticsRoute,
 } as any)
+const AppAudienceIndexRoute = AppAudienceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAudienceRoute,
+} as any)
+const AppAudienceFieldsRoute = AppAudienceFieldsRouteImport.update({
+  id: '/fields',
+  path: '/fields',
+  getParentRoute: () => AppAudienceRoute,
+} as any)
+const AppAudienceTopicsRoute = AppAudienceTopicsRouteImport.update({
+  id: '/topics',
+  path: '/topics',
+  getParentRoute: () => AppAudienceRoute,
+} as any)
+const AppAutomationsIndexRoute = AppAutomationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAutomationsRoute,
+} as any)
+const AppAutomationsAutomationIdRoute =
+  AppAutomationsAutomationIdRouteImport.update({
+    id: '/$automationId',
+    path: '/$automationId',
+    getParentRoute: () => AppAutomationsRoute,
+  } as any)
+const AppCampaignsIndexRoute = AppCampaignsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppCampaignsRoute,
+} as any)
+const AppCampaignsCampaignIdRoute = AppCampaignsCampaignIdRouteImport.update({
+  id: '/$campaignId',
+  path: '/$campaignId',
+  getParentRoute: () => AppCampaignsRoute,
+} as any)
 const AppDomainsIndexRoute = AppDomainsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -289,6 +349,104 @@ const AppTransactionalQuickstartRoute =
     path: '/quickstart',
     getParentRoute: () => AppTransactionalRoute,
   } as any)
+const AppAudienceContactsIndexRoute =
+  AppAudienceContactsIndexRouteImport.update({
+    id: '/contacts/',
+    path: '/contacts/',
+    getParentRoute: () => AppAudienceRoute,
+  } as any)
+const AppAudienceContactsContactIdRoute =
+  AppAudienceContactsContactIdRouteImport.update({
+    id: '/contacts/$contactId',
+    path: '/contacts/$contactId',
+    getParentRoute: () => AppAudienceRoute,
+  } as any)
+const AppAudienceFormsIndexRoute = AppAudienceFormsIndexRouteImport.update({
+  id: '/forms/',
+  path: '/forms/',
+  getParentRoute: () => AppAudienceRoute,
+} as any)
+const AppAudienceFormsFormIdRoute = AppAudienceFormsFormIdRouteImport.update({
+  id: '/forms/$formId',
+  path: '/forms/$formId',
+  getParentRoute: () => AppAudienceRoute,
+} as any)
+const AppAudienceImportsIndexRoute = AppAudienceImportsIndexRouteImport.update({
+  id: '/imports/',
+  path: '/imports/',
+  getParentRoute: () => AppAudienceRoute,
+} as any)
+const AppAudienceImportsImportIdRoute =
+  AppAudienceImportsImportIdRouteImport.update({
+    id: '/imports/$importId',
+    path: '/imports/$importId',
+    getParentRoute: () => AppAudienceRoute,
+  } as any)
+const AppAudienceSegmentsIndexRoute =
+  AppAudienceSegmentsIndexRouteImport.update({
+    id: '/segments/',
+    path: '/segments/',
+    getParentRoute: () => AppAudienceRoute,
+  } as any)
+const AppAudienceSegmentsSegmentIdRoute =
+  AppAudienceSegmentsSegmentIdRouteImport.update({
+    id: '/segments/$segmentId',
+    path: '/segments/$segmentId',
+    getParentRoute: () => AppAudienceRoute,
+  } as any)
+const AppAudienceSegmentsNewRoute = AppAudienceSegmentsNewRouteImport.update({
+  id: '/segments/new',
+  path: '/segments/new',
+  getParentRoute: () => AppAudienceRoute,
+} as any)
+const AppAutomationsAutomationIdRunsRoute =
+  AppAutomationsAutomationIdRunsRouteImport.update({
+    id: '/$automationId_/runs',
+    path: '/$automationId/runs',
+    getParentRoute: () => AppAutomationsRoute,
+  } as any)
+const AppCampaignsCampaignIdIndexRoute =
+  AppCampaignsCampaignIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppCampaignsCampaignIdRoute,
+  } as any)
+const AppCampaignsCampaignIdAudienceRoute =
+  AppCampaignsCampaignIdAudienceRouteImport.update({
+    id: '/audience',
+    path: '/audience',
+    getParentRoute: () => AppCampaignsCampaignIdRoute,
+  } as any)
+const AppCampaignsCampaignIdChecksRoute =
+  AppCampaignsCampaignIdChecksRouteImport.update({
+    id: '/checks',
+    path: '/checks',
+    getParentRoute: () => AppCampaignsCampaignIdRoute,
+  } as any)
+const AppCampaignsCampaignIdContentRoute =
+  AppCampaignsCampaignIdContentRouteImport.update({
+    id: '/content',
+    path: '/content',
+    getParentRoute: () => AppCampaignsCampaignIdRoute,
+  } as any)
+const AppCampaignsCampaignIdPreviewRoute =
+  AppCampaignsCampaignIdPreviewRouteImport.update({
+    id: '/preview',
+    path: '/preview',
+    getParentRoute: () => AppCampaignsCampaignIdRoute,
+  } as any)
+const AppCampaignsCampaignIdReportRoute =
+  AppCampaignsCampaignIdReportRouteImport.update({
+    id: '/report',
+    path: '/report',
+    getParentRoute: () => AppCampaignsCampaignIdRoute,
+  } as any)
+const AppCampaignsCampaignIdScheduleRoute =
+  AppCampaignsCampaignIdScheduleRouteImport.update({
+    id: '/schedule',
+    path: '/schedule',
+    getParentRoute: () => AppCampaignsCampaignIdRoute,
+  } as any)
 const AppSettingsIntegrationsIndexRoute =
   AppSettingsIntegrationsIndexRouteImport.update({
     id: '/integrations/',
@@ -385,9 +543,9 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
   '/analytics': typeof AppAnalyticsRouteWithChildren
-  '/audience': typeof AppAudienceRoute
-  '/automations': typeof AppAutomationsRoute
-  '/campaigns': typeof AppCampaignsRoute
+  '/audience': typeof AppAudienceRouteWithChildren
+  '/automations': typeof AppAutomationsRouteWithChildren
+  '/campaigns': typeof AppCampaignsRouteWithChildren
   '/domains': typeof AppDomainsRouteWithChildren
   '/mail': typeof AppMailRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
@@ -399,6 +557,10 @@ export interface FileRoutesByFullPath {
   '/analytics/reputation': typeof AppAnalyticsReputationRoute
   '/analytics/sending': typeof AppAnalyticsSendingRoute
   '/analytics/usage': typeof AppAnalyticsUsageRoute
+  '/audience/fields': typeof AppAudienceFieldsRoute
+  '/audience/topics': typeof AppAudienceTopicsRoute
+  '/automations/$automationId': typeof AppAutomationsAutomationIdRoute
+  '/campaigns/$campaignId': typeof AppCampaignsCampaignIdRouteWithChildren
   '/domains/$id': typeof AppDomainsIdRoute
   '/domains/dmarc': typeof AppDomainsDmarcRoute
   '/domains/import': typeof AppDomainsImportRoute
@@ -420,15 +582,35 @@ export interface FileRoutesByFullPath {
   '/transactional/keys': typeof AppTransactionalKeysRoute
   '/transactional/quickstart': typeof AppTransactionalQuickstartRoute
   '/analytics/': typeof AppAnalyticsIndexRoute
+  '/audience/': typeof AppAudienceIndexRoute
+  '/automations/': typeof AppAutomationsIndexRoute
+  '/campaigns/': typeof AppCampaignsIndexRoute
   '/domains/': typeof AppDomainsIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/transactional/': typeof AppTransactionalIndexRoute
+  '/audience/contacts/$contactId': typeof AppAudienceContactsContactIdRoute
+  '/audience/forms/$formId': typeof AppAudienceFormsFormIdRoute
+  '/audience/imports/$importId': typeof AppAudienceImportsImportIdRoute
+  '/audience/segments/$segmentId': typeof AppAudienceSegmentsSegmentIdRoute
+  '/audience/segments/new': typeof AppAudienceSegmentsNewRoute
+  '/automations/$automationId/runs': typeof AppAutomationsAutomationIdRunsRoute
+  '/campaigns/$campaignId/audience': typeof AppCampaignsCampaignIdAudienceRoute
+  '/campaigns/$campaignId/checks': typeof AppCampaignsCampaignIdChecksRoute
+  '/campaigns/$campaignId/content': typeof AppCampaignsCampaignIdContentRoute
+  '/campaigns/$campaignId/preview': typeof AppCampaignsCampaignIdPreviewRoute
+  '/campaigns/$campaignId/report': typeof AppCampaignsCampaignIdReportRoute
+  '/campaigns/$campaignId/schedule': typeof AppCampaignsCampaignIdScheduleRoute
   '/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
   '/settings/mailboxes/$id': typeof AppSettingsMailboxesIdRoute
   '/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
   '/transactional/suppressions/$email': typeof AppTransactionalSuppressionsEmailRoute
   '/transactional/suppressions/import': typeof AppTransactionalSuppressionsImportRoute
   '/transactional/webhooks/$id': typeof AppTransactionalWebhooksIdRoute
+  '/audience/contacts/': typeof AppAudienceContactsIndexRoute
+  '/audience/forms/': typeof AppAudienceFormsIndexRoute
+  '/audience/imports/': typeof AppAudienceImportsIndexRoute
+  '/audience/segments/': typeof AppAudienceSegmentsIndexRoute
+  '/campaigns/$campaignId/': typeof AppCampaignsCampaignIdIndexRoute
   '/settings/integrations/': typeof AppSettingsIntegrationsIndexRoute
   '/transactional/messages/': typeof AppTransactionalMessagesIndexRoute
   '/transactional/suppressions/': typeof AppTransactionalSuppressionsIndexRoute
@@ -443,9 +625,6 @@ export interface FileRoutesByTo {
   '/claim': typeof ClaimRoute
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
-  '/audience': typeof AppAudienceRoute
-  '/automations': typeof AppAutomationsRoute
-  '/campaigns': typeof AppCampaignsRoute
   '/mail': typeof AppMailRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/': typeof AppIndexRoute
@@ -455,6 +634,9 @@ export interface FileRoutesByTo {
   '/analytics/reputation': typeof AppAnalyticsReputationRoute
   '/analytics/sending': typeof AppAnalyticsSendingRoute
   '/analytics/usage': typeof AppAnalyticsUsageRoute
+  '/audience/fields': typeof AppAudienceFieldsRoute
+  '/audience/topics': typeof AppAudienceTopicsRoute
+  '/automations/$automationId': typeof AppAutomationsAutomationIdRoute
   '/domains/$id': typeof AppDomainsIdRoute
   '/domains/dmarc': typeof AppDomainsDmarcRoute
   '/domains/import': typeof AppDomainsImportRoute
@@ -476,15 +658,35 @@ export interface FileRoutesByTo {
   '/transactional/keys': typeof AppTransactionalKeysRoute
   '/transactional/quickstart': typeof AppTransactionalQuickstartRoute
   '/analytics': typeof AppAnalyticsIndexRoute
+  '/audience': typeof AppAudienceIndexRoute
+  '/automations': typeof AppAutomationsIndexRoute
+  '/campaigns': typeof AppCampaignsIndexRoute
   '/domains': typeof AppDomainsIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/transactional': typeof AppTransactionalIndexRoute
+  '/audience/contacts/$contactId': typeof AppAudienceContactsContactIdRoute
+  '/audience/forms/$formId': typeof AppAudienceFormsFormIdRoute
+  '/audience/imports/$importId': typeof AppAudienceImportsImportIdRoute
+  '/audience/segments/$segmentId': typeof AppAudienceSegmentsSegmentIdRoute
+  '/audience/segments/new': typeof AppAudienceSegmentsNewRoute
+  '/automations/$automationId/runs': typeof AppAutomationsAutomationIdRunsRoute
+  '/campaigns/$campaignId/audience': typeof AppCampaignsCampaignIdAudienceRoute
+  '/campaigns/$campaignId/checks': typeof AppCampaignsCampaignIdChecksRoute
+  '/campaigns/$campaignId/content': typeof AppCampaignsCampaignIdContentRoute
+  '/campaigns/$campaignId/preview': typeof AppCampaignsCampaignIdPreviewRoute
+  '/campaigns/$campaignId/report': typeof AppCampaignsCampaignIdReportRoute
+  '/campaigns/$campaignId/schedule': typeof AppCampaignsCampaignIdScheduleRoute
   '/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
   '/settings/mailboxes/$id': typeof AppSettingsMailboxesIdRoute
   '/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
   '/transactional/suppressions/$email': typeof AppTransactionalSuppressionsEmailRoute
   '/transactional/suppressions/import': typeof AppTransactionalSuppressionsImportRoute
   '/transactional/webhooks/$id': typeof AppTransactionalWebhooksIdRoute
+  '/audience/contacts': typeof AppAudienceContactsIndexRoute
+  '/audience/forms': typeof AppAudienceFormsIndexRoute
+  '/audience/imports': typeof AppAudienceImportsIndexRoute
+  '/audience/segments': typeof AppAudienceSegmentsIndexRoute
+  '/campaigns/$campaignId': typeof AppCampaignsCampaignIdIndexRoute
   '/settings/integrations': typeof AppSettingsIntegrationsIndexRoute
   '/transactional/messages': typeof AppTransactionalMessagesIndexRoute
   '/transactional/suppressions': typeof AppTransactionalSuppressionsIndexRoute
@@ -502,9 +704,9 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
-  '/_app/audience': typeof AppAudienceRoute
-  '/_app/automations': typeof AppAutomationsRoute
-  '/_app/campaigns': typeof AppCampaignsRoute
+  '/_app/audience': typeof AppAudienceRouteWithChildren
+  '/_app/automations': typeof AppAutomationsRouteWithChildren
+  '/_app/campaigns': typeof AppCampaignsRouteWithChildren
   '/_app/domains': typeof AppDomainsRouteWithChildren
   '/_app/mail': typeof AppMailRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
@@ -517,6 +719,10 @@ export interface FileRoutesById {
   '/_app/analytics/reputation': typeof AppAnalyticsReputationRoute
   '/_app/analytics/sending': typeof AppAnalyticsSendingRoute
   '/_app/analytics/usage': typeof AppAnalyticsUsageRoute
+  '/_app/audience/fields': typeof AppAudienceFieldsRoute
+  '/_app/audience/topics': typeof AppAudienceTopicsRoute
+  '/_app/automations/$automationId': typeof AppAutomationsAutomationIdRoute
+  '/_app/campaigns/$campaignId': typeof AppCampaignsCampaignIdRouteWithChildren
   '/_app/domains/$id': typeof AppDomainsIdRoute
   '/_app/domains/dmarc': typeof AppDomainsDmarcRoute
   '/_app/domains/import': typeof AppDomainsImportRoute
@@ -538,15 +744,35 @@ export interface FileRoutesById {
   '/_app/transactional/keys': typeof AppTransactionalKeysRoute
   '/_app/transactional/quickstart': typeof AppTransactionalQuickstartRoute
   '/_app/analytics/': typeof AppAnalyticsIndexRoute
+  '/_app/audience/': typeof AppAudienceIndexRoute
+  '/_app/automations/': typeof AppAutomationsIndexRoute
+  '/_app/campaigns/': typeof AppCampaignsIndexRoute
   '/_app/domains/': typeof AppDomainsIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/transactional/': typeof AppTransactionalIndexRoute
+  '/_app/audience/contacts/$contactId': typeof AppAudienceContactsContactIdRoute
+  '/_app/audience/forms/$formId': typeof AppAudienceFormsFormIdRoute
+  '/_app/audience/imports/$importId': typeof AppAudienceImportsImportIdRoute
+  '/_app/audience/segments/$segmentId': typeof AppAudienceSegmentsSegmentIdRoute
+  '/_app/audience/segments/new': typeof AppAudienceSegmentsNewRoute
+  '/_app/automations/$automationId_/runs': typeof AppAutomationsAutomationIdRunsRoute
+  '/_app/campaigns/$campaignId/audience': typeof AppCampaignsCampaignIdAudienceRoute
+  '/_app/campaigns/$campaignId/checks': typeof AppCampaignsCampaignIdChecksRoute
+  '/_app/campaigns/$campaignId/content': typeof AppCampaignsCampaignIdContentRoute
+  '/_app/campaigns/$campaignId/preview': typeof AppCampaignsCampaignIdPreviewRoute
+  '/_app/campaigns/$campaignId/report': typeof AppCampaignsCampaignIdReportRoute
+  '/_app/campaigns/$campaignId/schedule': typeof AppCampaignsCampaignIdScheduleRoute
   '/_app/settings/integrations/approvals': typeof AppSettingsIntegrationsApprovalsRoute
   '/_app/settings/mailboxes_/$id': typeof AppSettingsMailboxesIdRoute
   '/_app/transactional/messages/$id': typeof AppTransactionalMessagesIdRoute
   '/_app/transactional/suppressions/$email': typeof AppTransactionalSuppressionsEmailRoute
   '/_app/transactional/suppressions/import': typeof AppTransactionalSuppressionsImportRoute
   '/_app/transactional/webhooks/$id': typeof AppTransactionalWebhooksIdRoute
+  '/_app/audience/contacts/': typeof AppAudienceContactsIndexRoute
+  '/_app/audience/forms/': typeof AppAudienceFormsIndexRoute
+  '/_app/audience/imports/': typeof AppAudienceImportsIndexRoute
+  '/_app/audience/segments/': typeof AppAudienceSegmentsIndexRoute
+  '/_app/campaigns/$campaignId/': typeof AppCampaignsCampaignIdIndexRoute
   '/_app/settings/integrations/': typeof AppSettingsIntegrationsIndexRoute
   '/_app/transactional/messages/': typeof AppTransactionalMessagesIndexRoute
   '/_app/transactional/suppressions/': typeof AppTransactionalSuppressionsIndexRoute
@@ -579,6 +805,10 @@ export interface FileRouteTypes {
     | '/analytics/reputation'
     | '/analytics/sending'
     | '/analytics/usage'
+    | '/audience/fields'
+    | '/audience/topics'
+    | '/automations/$automationId'
+    | '/campaigns/$campaignId'
     | '/domains/$id'
     | '/domains/dmarc'
     | '/domains/import'
@@ -600,15 +830,35 @@ export interface FileRouteTypes {
     | '/transactional/keys'
     | '/transactional/quickstart'
     | '/analytics/'
+    | '/audience/'
+    | '/automations/'
+    | '/campaigns/'
     | '/domains/'
     | '/settings/'
     | '/transactional/'
+    | '/audience/contacts/$contactId'
+    | '/audience/forms/$formId'
+    | '/audience/imports/$importId'
+    | '/audience/segments/$segmentId'
+    | '/audience/segments/new'
+    | '/automations/$automationId/runs'
+    | '/campaigns/$campaignId/audience'
+    | '/campaigns/$campaignId/checks'
+    | '/campaigns/$campaignId/content'
+    | '/campaigns/$campaignId/preview'
+    | '/campaigns/$campaignId/report'
+    | '/campaigns/$campaignId/schedule'
     | '/settings/integrations/approvals'
     | '/settings/mailboxes/$id'
     | '/transactional/messages/$id'
     | '/transactional/suppressions/$email'
     | '/transactional/suppressions/import'
     | '/transactional/webhooks/$id'
+    | '/audience/contacts/'
+    | '/audience/forms/'
+    | '/audience/imports/'
+    | '/audience/segments/'
+    | '/campaigns/$campaignId/'
     | '/settings/integrations/'
     | '/transactional/messages/'
     | '/transactional/suppressions/'
@@ -623,9 +873,6 @@ export interface FileRouteTypes {
     | '/claim'
     | '/sign-in'
     | '/signed-out'
-    | '/audience'
-    | '/automations'
-    | '/campaigns'
     | '/mail'
     | '/invite/$token'
     | '/'
@@ -635,6 +882,9 @@ export interface FileRouteTypes {
     | '/analytics/reputation'
     | '/analytics/sending'
     | '/analytics/usage'
+    | '/audience/fields'
+    | '/audience/topics'
+    | '/automations/$automationId'
     | '/domains/$id'
     | '/domains/dmarc'
     | '/domains/import'
@@ -656,15 +906,35 @@ export interface FileRouteTypes {
     | '/transactional/keys'
     | '/transactional/quickstart'
     | '/analytics'
+    | '/audience'
+    | '/automations'
+    | '/campaigns'
     | '/domains'
     | '/settings'
     | '/transactional'
+    | '/audience/contacts/$contactId'
+    | '/audience/forms/$formId'
+    | '/audience/imports/$importId'
+    | '/audience/segments/$segmentId'
+    | '/audience/segments/new'
+    | '/automations/$automationId/runs'
+    | '/campaigns/$campaignId/audience'
+    | '/campaigns/$campaignId/checks'
+    | '/campaigns/$campaignId/content'
+    | '/campaigns/$campaignId/preview'
+    | '/campaigns/$campaignId/report'
+    | '/campaigns/$campaignId/schedule'
     | '/settings/integrations/approvals'
     | '/settings/mailboxes/$id'
     | '/transactional/messages/$id'
     | '/transactional/suppressions/$email'
     | '/transactional/suppressions/import'
     | '/transactional/webhooks/$id'
+    | '/audience/contacts'
+    | '/audience/forms'
+    | '/audience/imports'
+    | '/audience/segments'
+    | '/campaigns/$campaignId'
     | '/settings/integrations'
     | '/transactional/messages'
     | '/transactional/suppressions'
@@ -696,6 +966,10 @@ export interface FileRouteTypes {
     | '/_app/analytics/reputation'
     | '/_app/analytics/sending'
     | '/_app/analytics/usage'
+    | '/_app/audience/fields'
+    | '/_app/audience/topics'
+    | '/_app/automations/$automationId'
+    | '/_app/campaigns/$campaignId'
     | '/_app/domains/$id'
     | '/_app/domains/dmarc'
     | '/_app/domains/import'
@@ -717,15 +991,35 @@ export interface FileRouteTypes {
     | '/_app/transactional/keys'
     | '/_app/transactional/quickstart'
     | '/_app/analytics/'
+    | '/_app/audience/'
+    | '/_app/automations/'
+    | '/_app/campaigns/'
     | '/_app/domains/'
     | '/_app/settings/'
     | '/_app/transactional/'
+    | '/_app/audience/contacts/$contactId'
+    | '/_app/audience/forms/$formId'
+    | '/_app/audience/imports/$importId'
+    | '/_app/audience/segments/$segmentId'
+    | '/_app/audience/segments/new'
+    | '/_app/automations/$automationId_/runs'
+    | '/_app/campaigns/$campaignId/audience'
+    | '/_app/campaigns/$campaignId/checks'
+    | '/_app/campaigns/$campaignId/content'
+    | '/_app/campaigns/$campaignId/preview'
+    | '/_app/campaigns/$campaignId/report'
+    | '/_app/campaigns/$campaignId/schedule'
     | '/_app/settings/integrations/approvals'
     | '/_app/settings/mailboxes_/$id'
     | '/_app/transactional/messages/$id'
     | '/_app/transactional/suppressions/$email'
     | '/_app/transactional/suppressions/import'
     | '/_app/transactional/webhooks/$id'
+    | '/_app/audience/contacts/'
+    | '/_app/audience/forms/'
+    | '/_app/audience/imports/'
+    | '/_app/audience/segments/'
+    | '/_app/campaigns/$campaignId/'
     | '/_app/settings/integrations/'
     | '/_app/transactional/messages/'
     | '/_app/transactional/suppressions/'
@@ -894,6 +1188,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAnalyticsUsageRouteImport
       parentRoute: typeof AppAnalyticsRoute
     }
+    '/_app/audience/': {
+      id: '/_app/audience/'
+      path: '/'
+      fullPath: '/audience/'
+      preLoaderRoute: typeof AppAudienceIndexRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/fields': {
+      id: '/_app/audience/fields'
+      path: '/fields'
+      fullPath: '/audience/fields'
+      preLoaderRoute: typeof AppAudienceFieldsRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/topics': {
+      id: '/_app/audience/topics'
+      path: '/topics'
+      fullPath: '/audience/topics'
+      preLoaderRoute: typeof AppAudienceTopicsRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/automations/': {
+      id: '/_app/automations/'
+      path: '/'
+      fullPath: '/automations/'
+      preLoaderRoute: typeof AppAutomationsIndexRouteImport
+      parentRoute: typeof AppAutomationsRoute
+    }
+    '/_app/automations/$automationId': {
+      id: '/_app/automations/$automationId'
+      path: '/$automationId'
+      fullPath: '/automations/$automationId'
+      preLoaderRoute: typeof AppAutomationsAutomationIdRouteImport
+      parentRoute: typeof AppAutomationsRoute
+    }
+    '/_app/campaigns/': {
+      id: '/_app/campaigns/'
+      path: '/'
+      fullPath: '/campaigns/'
+      preLoaderRoute: typeof AppCampaignsIndexRouteImport
+      parentRoute: typeof AppCampaignsRoute
+    }
+    '/_app/campaigns/$campaignId': {
+      id: '/_app/campaigns/$campaignId'
+      path: '/$campaignId'
+      fullPath: '/campaigns/$campaignId'
+      preLoaderRoute: typeof AppCampaignsCampaignIdRouteImport
+      parentRoute: typeof AppCampaignsRoute
+    }
     '/_app/domains/': {
       id: '/_app/domains/'
       path: '/'
@@ -1055,6 +1398,125 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransactionalQuickstartRouteImport
       parentRoute: typeof AppTransactionalRoute
     }
+    '/_app/audience/contacts/': {
+      id: '/_app/audience/contacts/'
+      path: '/contacts'
+      fullPath: '/audience/contacts/'
+      preLoaderRoute: typeof AppAudienceContactsIndexRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/contacts/$contactId': {
+      id: '/_app/audience/contacts/$contactId'
+      path: '/contacts/$contactId'
+      fullPath: '/audience/contacts/$contactId'
+      preLoaderRoute: typeof AppAudienceContactsContactIdRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/forms/': {
+      id: '/_app/audience/forms/'
+      path: '/forms'
+      fullPath: '/audience/forms/'
+      preLoaderRoute: typeof AppAudienceFormsIndexRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/forms/$formId': {
+      id: '/_app/audience/forms/$formId'
+      path: '/forms/$formId'
+      fullPath: '/audience/forms/$formId'
+      preLoaderRoute: typeof AppAudienceFormsFormIdRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/imports/': {
+      id: '/_app/audience/imports/'
+      path: '/imports'
+      fullPath: '/audience/imports/'
+      preLoaderRoute: typeof AppAudienceImportsIndexRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/imports/$importId': {
+      id: '/_app/audience/imports/$importId'
+      path: '/imports/$importId'
+      fullPath: '/audience/imports/$importId'
+      preLoaderRoute: typeof AppAudienceImportsImportIdRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/segments/': {
+      id: '/_app/audience/segments/'
+      path: '/segments'
+      fullPath: '/audience/segments/'
+      preLoaderRoute: typeof AppAudienceSegmentsIndexRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/segments/$segmentId': {
+      id: '/_app/audience/segments/$segmentId'
+      path: '/segments/$segmentId'
+      fullPath: '/audience/segments/$segmentId'
+      preLoaderRoute: typeof AppAudienceSegmentsSegmentIdRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/audience/segments/new': {
+      id: '/_app/audience/segments/new'
+      path: '/segments/new'
+      fullPath: '/audience/segments/new'
+      preLoaderRoute: typeof AppAudienceSegmentsNewRouteImport
+      parentRoute: typeof AppAudienceRoute
+    }
+    '/_app/automations/$automationId_/runs': {
+      id: '/_app/automations/$automationId_/runs'
+      path: '/$automationId/runs'
+      fullPath: '/automations/$automationId/runs'
+      preLoaderRoute: typeof AppAutomationsAutomationIdRunsRouteImport
+      parentRoute: typeof AppAutomationsRoute
+    }
+    '/_app/campaigns/$campaignId/': {
+      id: '/_app/campaigns/$campaignId/'
+      path: '/'
+      fullPath: '/campaigns/$campaignId/'
+      preLoaderRoute: typeof AppCampaignsCampaignIdIndexRouteImport
+      parentRoute: typeof AppCampaignsCampaignIdRoute
+    }
+    '/_app/campaigns/$campaignId/audience': {
+      id: '/_app/campaigns/$campaignId/audience'
+      path: '/audience'
+      fullPath: '/campaigns/$campaignId/audience'
+      preLoaderRoute: typeof AppCampaignsCampaignIdAudienceRouteImport
+      parentRoute: typeof AppCampaignsCampaignIdRoute
+    }
+    '/_app/campaigns/$campaignId/checks': {
+      id: '/_app/campaigns/$campaignId/checks'
+      path: '/checks'
+      fullPath: '/campaigns/$campaignId/checks'
+      preLoaderRoute: typeof AppCampaignsCampaignIdChecksRouteImport
+      parentRoute: typeof AppCampaignsCampaignIdRoute
+    }
+    '/_app/campaigns/$campaignId/content': {
+      id: '/_app/campaigns/$campaignId/content'
+      path: '/content'
+      fullPath: '/campaigns/$campaignId/content'
+      preLoaderRoute: typeof AppCampaignsCampaignIdContentRouteImport
+      parentRoute: typeof AppCampaignsCampaignIdRoute
+    }
+    '/_app/campaigns/$campaignId/preview': {
+      id: '/_app/campaigns/$campaignId/preview'
+      path: '/preview'
+      fullPath: '/campaigns/$campaignId/preview'
+      preLoaderRoute: typeof AppCampaignsCampaignIdPreviewRouteImport
+      parentRoute: typeof AppCampaignsCampaignIdRoute
+    }
+    '/_app/campaigns/$campaignId/report': {
+      id: '/_app/campaigns/$campaignId/report'
+      path: '/report'
+      fullPath: '/campaigns/$campaignId/report'
+      preLoaderRoute: typeof AppCampaignsCampaignIdReportRouteImport
+      parentRoute: typeof AppCampaignsCampaignIdRoute
+    }
+    '/_app/campaigns/$campaignId/schedule': {
+      id: '/_app/campaigns/$campaignId/schedule'
+      path: '/schedule'
+      fullPath: '/campaigns/$campaignId/schedule'
+      preLoaderRoute: typeof AppCampaignsCampaignIdScheduleRouteImport
+      parentRoute: typeof AppCampaignsCampaignIdRoute
+    }
     '/_app/settings/integrations/': {
       id: '/_app/settings/integrations/'
       path: '/integrations'
@@ -1187,6 +1649,96 @@ const AppAnalyticsRouteWithChildren = AppAnalyticsRoute._addFileChildren(
   AppAnalyticsRouteChildren,
 )
 
+interface AppAudienceRouteChildren {
+  AppAudienceFieldsRoute: typeof AppAudienceFieldsRoute
+  AppAudienceTopicsRoute: typeof AppAudienceTopicsRoute
+  AppAudienceIndexRoute: typeof AppAudienceIndexRoute
+  AppAudienceContactsContactIdRoute: typeof AppAudienceContactsContactIdRoute
+  AppAudienceFormsFormIdRoute: typeof AppAudienceFormsFormIdRoute
+  AppAudienceImportsImportIdRoute: typeof AppAudienceImportsImportIdRoute
+  AppAudienceSegmentsSegmentIdRoute: typeof AppAudienceSegmentsSegmentIdRoute
+  AppAudienceSegmentsNewRoute: typeof AppAudienceSegmentsNewRoute
+  AppAudienceContactsIndexRoute: typeof AppAudienceContactsIndexRoute
+  AppAudienceFormsIndexRoute: typeof AppAudienceFormsIndexRoute
+  AppAudienceImportsIndexRoute: typeof AppAudienceImportsIndexRoute
+  AppAudienceSegmentsIndexRoute: typeof AppAudienceSegmentsIndexRoute
+}
+
+const AppAudienceRouteChildren: AppAudienceRouteChildren = {
+  AppAudienceFieldsRoute: AppAudienceFieldsRoute,
+  AppAudienceTopicsRoute: AppAudienceTopicsRoute,
+  AppAudienceIndexRoute: AppAudienceIndexRoute,
+  AppAudienceContactsContactIdRoute: AppAudienceContactsContactIdRoute,
+  AppAudienceFormsFormIdRoute: AppAudienceFormsFormIdRoute,
+  AppAudienceImportsImportIdRoute: AppAudienceImportsImportIdRoute,
+  AppAudienceSegmentsSegmentIdRoute: AppAudienceSegmentsSegmentIdRoute,
+  AppAudienceSegmentsNewRoute: AppAudienceSegmentsNewRoute,
+  AppAudienceContactsIndexRoute: AppAudienceContactsIndexRoute,
+  AppAudienceFormsIndexRoute: AppAudienceFormsIndexRoute,
+  AppAudienceImportsIndexRoute: AppAudienceImportsIndexRoute,
+  AppAudienceSegmentsIndexRoute: AppAudienceSegmentsIndexRoute,
+}
+
+const AppAudienceRouteWithChildren = AppAudienceRoute._addFileChildren(
+  AppAudienceRouteChildren,
+)
+
+interface AppAutomationsRouteChildren {
+  AppAutomationsAutomationIdRoute: typeof AppAutomationsAutomationIdRoute
+  AppAutomationsIndexRoute: typeof AppAutomationsIndexRoute
+  AppAutomationsAutomationIdRunsRoute: typeof AppAutomationsAutomationIdRunsRoute
+}
+
+const AppAutomationsRouteChildren: AppAutomationsRouteChildren = {
+  AppAutomationsAutomationIdRoute: AppAutomationsAutomationIdRoute,
+  AppAutomationsIndexRoute: AppAutomationsIndexRoute,
+  AppAutomationsAutomationIdRunsRoute: AppAutomationsAutomationIdRunsRoute,
+}
+
+const AppAutomationsRouteWithChildren = AppAutomationsRoute._addFileChildren(
+  AppAutomationsRouteChildren,
+)
+
+interface AppCampaignsCampaignIdRouteChildren {
+  AppCampaignsCampaignIdAudienceRoute: typeof AppCampaignsCampaignIdAudienceRoute
+  AppCampaignsCampaignIdChecksRoute: typeof AppCampaignsCampaignIdChecksRoute
+  AppCampaignsCampaignIdContentRoute: typeof AppCampaignsCampaignIdContentRoute
+  AppCampaignsCampaignIdPreviewRoute: typeof AppCampaignsCampaignIdPreviewRoute
+  AppCampaignsCampaignIdReportRoute: typeof AppCampaignsCampaignIdReportRoute
+  AppCampaignsCampaignIdScheduleRoute: typeof AppCampaignsCampaignIdScheduleRoute
+  AppCampaignsCampaignIdIndexRoute: typeof AppCampaignsCampaignIdIndexRoute
+}
+
+const AppCampaignsCampaignIdRouteChildren: AppCampaignsCampaignIdRouteChildren =
+  {
+    AppCampaignsCampaignIdAudienceRoute: AppCampaignsCampaignIdAudienceRoute,
+    AppCampaignsCampaignIdChecksRoute: AppCampaignsCampaignIdChecksRoute,
+    AppCampaignsCampaignIdContentRoute: AppCampaignsCampaignIdContentRoute,
+    AppCampaignsCampaignIdPreviewRoute: AppCampaignsCampaignIdPreviewRoute,
+    AppCampaignsCampaignIdReportRoute: AppCampaignsCampaignIdReportRoute,
+    AppCampaignsCampaignIdScheduleRoute: AppCampaignsCampaignIdScheduleRoute,
+    AppCampaignsCampaignIdIndexRoute: AppCampaignsCampaignIdIndexRoute,
+  }
+
+const AppCampaignsCampaignIdRouteWithChildren =
+  AppCampaignsCampaignIdRoute._addFileChildren(
+    AppCampaignsCampaignIdRouteChildren,
+  )
+
+interface AppCampaignsRouteChildren {
+  AppCampaignsCampaignIdRoute: typeof AppCampaignsCampaignIdRouteWithChildren
+  AppCampaignsIndexRoute: typeof AppCampaignsIndexRoute
+}
+
+const AppCampaignsRouteChildren: AppCampaignsRouteChildren = {
+  AppCampaignsCampaignIdRoute: AppCampaignsCampaignIdRouteWithChildren,
+  AppCampaignsIndexRoute: AppCampaignsIndexRoute,
+}
+
+const AppCampaignsRouteWithChildren = AppCampaignsRoute._addFileChildren(
+  AppCampaignsRouteChildren,
+)
+
 interface AppDomainsRouteChildren {
   AppDomainsIdRoute: typeof AppDomainsIdRoute
   AppDomainsDmarcRoute: typeof AppDomainsDmarcRoute
@@ -1308,9 +1860,9 @@ const AppTransactionalRouteWithChildren =
 
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRouteWithChildren
-  AppAudienceRoute: typeof AppAudienceRoute
-  AppAutomationsRoute: typeof AppAutomationsRoute
-  AppCampaignsRoute: typeof AppCampaignsRoute
+  AppAudienceRoute: typeof AppAudienceRouteWithChildren
+  AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
+  AppCampaignsRoute: typeof AppCampaignsRouteWithChildren
   AppDomainsRoute: typeof AppDomainsRouteWithChildren
   AppMailRoute: typeof AppMailRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
@@ -1320,9 +1872,9 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAnalyticsRoute: AppAnalyticsRouteWithChildren,
-  AppAudienceRoute: AppAudienceRoute,
-  AppAutomationsRoute: AppAutomationsRoute,
-  AppCampaignsRoute: AppCampaignsRoute,
+  AppAudienceRoute: AppAudienceRouteWithChildren,
+  AppAutomationsRoute: AppAutomationsRouteWithChildren,
+  AppCampaignsRoute: AppCampaignsRouteWithChildren,
   AppDomainsRoute: AppDomainsRouteWithChildren,
   AppMailRoute: AppMailRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,

@@ -1,15 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { SectionPending } from "../../ui/SectionPending.tsx"
+import { createFileRoute, Outlet } from "@tanstack/react-router"
 
-// TEMPORARY until HAL-3310 lands (see SectionPending).
+/** Automations (HAL-3310): the list, the builder and the runs are nested under this pass-through layout. */
 export const Route = createFileRoute("/_app/automations")({
   staticData: { title: "Automations" },
-  component: () => (
-    <SectionPending
-      title="Automations"
-      issue="HAL-3310"
-      icon="automations"
-      what="Flows that send on triggers, with waits and branches."
-    />
-  ),
+  component: Outlet,
 })

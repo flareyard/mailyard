@@ -1,0 +1,10 @@
+/* Topics on a tablet: the nine columns keep readable widths and the table scrolls inside its own box. */
+.au-topics table.dt {
+  min-width: 920px;
+}
+.au-topics table.dt td:first-child {
+  min-width: 220px;
+}
+.au-topics .not-enough {
+  min-width: 150px;
+}

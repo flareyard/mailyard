@@ -1,15 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { SectionPending } from "../../ui/SectionPending.tsx"
+import { createFileRoute, Outlet } from "@tanstack/react-router"
 
-// TEMPORARY until HAL-3310 lands (see SectionPending).
+/** Campaigns (HAL-3310): the list, the five-step editor, the sending view and the report. */
 export const Route = createFileRoute("/_app/campaigns")({
   staticData: { title: "Campaigns" },
-  component: () => (
-    <SectionPending
-      title="Campaigns"
-      issue="HAL-3310"
-      icon="campaigns"
-      what="Write, schedule and report on campaigns."
-    />
-  ),
+  component: Outlet,
 })

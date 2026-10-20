@@ -11,6 +11,7 @@
  *   sign-in link to …@no-sender.example              → 503 NoSystemSender
  *   sign-in link to …@rate-limited.example           → 429
  */
+import { screenFixture } from "../audience/kit/fixtureScreens.ts"
 
 import { ANALYTICS_OVERRIDES } from "../analytics/fixtures.ts"
 import type { paths } from "../api/schema"
@@ -181,6 +182,9 @@ const OPS_OVERRIDES: readonly Override[] = [
 
 /** The override answering this request, if any. */
 export async function findOverride(request: Request): Promise<Answer | undefined> {
+  // Audience, campaigns and automations (HAL-3310): `?fx=<design screen>` answers from that screen's fixtures.
+  const screen = await screenFixture(request)
+  if (screen) return screen
   const url = new URL(request.url)
   for (const o of [...OVERRIDES, ...OPS_OVERRIDES]) {
     if (o.method !== request.method) continue

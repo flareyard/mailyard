@@ -1,0 +1,18 @@
+/*
+ * Shared by Audience, Campaigns and Automations (HAL-3310). Tokens only.
+ * Touch screens (tablets count): links inside data tables are the row's target, so they take 44 px.
+ */
+@media (pointer: coarse) {
+  .dt td a.cell-link,
+  .dt td a.link,
+  .dt td a.link-quiet,
+  .sumstrip .link-quiet {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .dt td a.link {
+    min-width: 44px;
+    justify-content: flex-end;
+  }
+}
