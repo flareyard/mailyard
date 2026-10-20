@@ -99,7 +99,7 @@ export function GmailModePage() {
           </h2>
           <div className="cluster">
             <span className="panel-meta">
-              {live ? "checks tick on their own" : "checks start when HAL-3314 ships"}
+              {live ? "checks tick on their own" : "checks start once this Mailyard can run them"}
             </span>
           </div>
         </header>

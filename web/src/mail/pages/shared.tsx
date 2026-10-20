@@ -13,6 +13,7 @@ import "./pages.css"
 export const pageKeys = {
   rules: (id: string) => ["mailboxes", id, "rules"] as const,
   senders: (id: string) => ["mailboxes", id, "senders"] as const,
+  imageSenders: (id: string) => ["mailboxes", id, "image-senders"] as const,
   imports: (id: string) => ["mailboxes", id, "imports"] as const,
   import: (id: string, importId: string) => ["mailboxes", id, "imports", importId] as const,
   exports: (id: string) => ["mailboxes", id, "exports"] as const,

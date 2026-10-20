@@ -194,54 +194,56 @@ export function Inbound() {
                         For <span className="mono">{m.address}</span>.
                         {resolution
                           ? ""
-                          : " Resolution time: coming (HAL-3392); the column appears once it has values."}
+                          : " Resolution time shows here once conversations have been resolved."}
                       </p>
-                      <table className="rtable">
-                        <thead>
-                          <tr>
-                            <th>Assignee</th>
-                            <th className="r">Threads</th>
-                            <th className="r">Answered</th>
-                            <th className="r">First response, median</th>
-                            <th className="r">p90</th>
-                            {resolution ? <th className="r">Resolution, median</th> : null}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {m.assignees.map((a) => (
-                            <tr key={a.assigneeId ?? "unassigned"}>
-                              <td className="is-head">
-                                {a.assigneeId === null ? (
-                                  <span className="muted">Unassigned</span>
-                                ) : (
-                                  (a.name ?? a.assigneeId)
-                                )}
-                              </td>
-                              <td className="r" data-label="Threads">
-                                {fmtInt(a.threads)}
-                              </td>
-                              <td className="r" data-label="Answered">
-                                {fmtInt(a.answered)}
-                              </td>
-                              <td className="r" data-label="First response, median">
-                                {minutes(a.firstResponseMedianMin) ?? <span className="muted">—</span>}
-                              </td>
-                              <td className="r" data-label="First response, p90">
-                                {minutes(a.firstResponseP90Min) ?? <span className="muted">—</span>}
-                              </td>
-                              {resolution ? (
-                                <td className="r" data-label="Resolution, median">
-                                  {num(a.resolutionMedianHours) === null ? (
-                                    <span className="muted">—</span>
+                      <div className="table-wrap rtable-wrap">
+                        <table className="rtable">
+                          <thead>
+                            <tr>
+                              <th>Assignee</th>
+                              <th className="r">Threads</th>
+                              <th className="r">Answered</th>
+                              <th className="r">First response, median</th>
+                              <th className="r">p90</th>
+                              {resolution ? <th className="r">Resolution, median</th> : null}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {m.assignees.map((a) => (
+                              <tr key={a.assigneeId ?? "unassigned"}>
+                                <td className="is-head">
+                                  {a.assigneeId === null ? (
+                                    <span className="muted">Unassigned</span>
                                   ) : (
-                                    `${num(a.resolutionMedianHours)} h`
+                                    (a.name ?? a.assigneeId)
                                   )}
                                 </td>
-                              ) : null}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                <td className="r" data-label="Threads">
+                                  {fmtInt(a.threads)}
+                                </td>
+                                <td className="r" data-label="Answered">
+                                  {fmtInt(a.answered)}
+                                </td>
+                                <td className="r" data-label="First response, median">
+                                  {minutes(a.firstResponseMedianMin) ?? <span className="muted">—</span>}
+                                </td>
+                                <td className="r" data-label="First response, p90">
+                                  {minutes(a.firstResponseP90Min) ?? <span className="muted">—</span>}
+                                </td>
+                                {resolution ? (
+                                  <td className="r" data-label="Resolution, median">
+                                    {num(a.resolutionMedianHours) === null ? (
+                                      <span className="muted">—</span>
+                                    ) : (
+                                      `${num(a.resolutionMedianHours)} h`
+                                    )}
+                                  </td>
+                                ) : null}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )
                 })}

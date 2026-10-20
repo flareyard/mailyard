@@ -431,7 +431,7 @@ function MeMenu({ me }: { me: Me | undefined }) {
           </div>
           {!me?.user ? (
             <p className="t-small muted" style={{ padding: "0 12px 8px" }}>
-              Access comes from your key’s scopes. People and roles arrive with HAL-3361.
+              Access comes from your key’s scopes.
             </p>
           ) : null}
           <div className="menu-sep" />

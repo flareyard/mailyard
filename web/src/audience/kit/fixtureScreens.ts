@@ -52,6 +52,19 @@ export const err = (
 })
 export const down = err(503, "Unavailable", "The database didn’t answer in time.")
 
+/** `GET /v1/settings/assistant` in the live shape: Workers AI with segments on, or no provider at all. */
+const assistantSettings = (on: boolean) => ({
+  summaries: on,
+  drafts: on,
+  categories: false,
+  segments: on,
+  dailyCallsPerMailbox: 200,
+  provider: on ? "workers-ai" : "off",
+  model: on ? "@cf/meta/llama-3.3-70b-instruct-fp8-fast" : null,
+  available: on,
+  today: { day: new Date().toISOString().slice(0, 10), byFeature: [] },
+})
+
 export const SCREEN_RULES: Record<string, Rule[]> = {
   // ── Audience ──
   "contact-error": [{ path: /^\/v1\/contacts\/[^/]+\/timeline$/, answer: down }],
@@ -60,6 +73,23 @@ export const SCREEN_RULES: Record<string, Rule[]> = {
   // The builder's segment loads as usual; only the preview answers the 400 (or nothing matches).
   "segment-preview-error": [{ method: "GET", path: /^\/v1\//, answer: "pass" }],
   "segment-zero": [{ method: "GET", path: /^\/v1\/segments(\/[^/]+)?$/, answer: "pass" }],
+  // The sentence box's states: no AI provider configured, and today's segment calls used up.
+  "segment-ai-off": [
+    {
+      method: "GET",
+      path: /^\/v1\/settings\/assistant$/,
+      answer: { status: 200, body: assistantSettings(false) },
+    },
+    { path: /^\/v1\/segments(\/|$)/, answer: "pass" },
+  ],
+  "segment-ai-cap": [
+    {
+      method: "POST",
+      path: /^\/v1\/segments\/from-text$/,
+      answer: err(409, "AssistantRefused", "Today’s segment calls are used up.", { reason: "cap" }),
+    },
+    { path: /^\/v1\/segments(\/|$)/, answer: "pass" },
+  ],
   "segments-empty": [
     { method: "GET", path: /^\/v1\/segments$/, answer: { status: 200, body: { segments: [] } } },
   ],
@@ -391,6 +421,34 @@ export async function screenFixture(request: Request): Promise<Answer | undefine
  */
 async function actionFixture(request: Request): Promise<Answer | undefined> {
   const url = new URL(request.url)
+  // A sentence to rules (POST /v1/segments/from-text): a checked tree over the sample audience's fields.
+  if (request.method === "POST" && url.pathname === "/v1/segments/from-text") {
+    const text = String(
+      (
+        (await request
+          .clone()
+          .json()
+          .catch(() => ({}))) as { text?: unknown }
+      ).text ?? "",
+    ).trim()
+    if (!text) return err(400, "InvalidRequest", "Describe the segment in a sentence.", { field: "text" })
+    return {
+      status: 200,
+      body: {
+        rule: {
+          type: "all",
+          rules: [
+            { type: "engagement", in: ["active"] },
+            { type: "field", field: "country", op: "in", value: ["NG", "GH", "KE"] },
+            { type: "campaign", activity: "opened", withinDays: 30 },
+          ],
+        },
+        explanation: "Active contacts in Nigeria, Ghana or Kenya who opened a campaign in the last 30 days.",
+        count: 412,
+        model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      },
+    }
+  }
   // HAL-3417's reads and the one-step test, which no design screen embeds: sample answers in the live shapes.
   const keys = /^\/v1\/events\/([^/]+)\/keys$/.exec(url.pathname)
   if (request.method === "GET" && keys)

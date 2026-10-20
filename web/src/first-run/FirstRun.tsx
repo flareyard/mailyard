@@ -277,7 +277,7 @@ function Complete() {
               <Gated
                 allowed={false}
                 reason="Invites aren’t live yet"
-                who="Members and invites arrive with HAL-3361."
+                who="Update this Mailyard to a release with members and invites."
               >
                 <button className="btn btn-secondary" type="button">
                   <Icon name="user-plus" />
@@ -285,10 +285,8 @@ function Complete() {
                 </button>
               </Gated>
               <span className="pill pill-proposal" data-od-id="proposed-marker">
-                Planned · HAL-3361
-                <span className="sr-only">
-                  . Members and invites are planned (HAL-3361); the role matrix needs founder sign-off.
-                </span>
+                Not available yet
+                <span className="sr-only">. This Mailyard is on a release without members and invites.</span>
               </span>
             </>
           )}

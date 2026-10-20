@@ -197,6 +197,7 @@ settings/tracking?fx=privacy-invalid
 settings/sending
 settings/sending?fx=unreachable
 settings/ai
+settings/ai?fx=ai-off
 settings/integrations
 settings/integrations?fx=empty
 settings/integrations?fx=error
@@ -371,6 +372,8 @@ audience/segments/seg_01JA4?sql=1
 audience/segments/seg_01JA4?fx=segment-zero
 audience/segments/seg_01JA4?fx=segment-counting
 audience/segments/seg_01JA4?fx=segment-preview-error
+audience/segments/seg_01JA4?fx=segment-ai-off
+audience/segments/seg_01JA4?fx=segment-ai-cap
 audience/forms
 audience/forms?fx=forms-empty
 audience/forms?fx=forms-loading
@@ -440,6 +443,7 @@ mail/mbx_support/rules?new=1
 mail/mbx_support/rules?apply=rul_02
 mail/mbx_support/senders
 mail/mbx_support/senders?list=block
+mail/mbx_support/senders?list=images
 mail/mbx_support/imports
 mail/mbx_new/imports
 mail/mbx_support/imports/imp_01JAF9

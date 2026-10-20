@@ -90,7 +90,15 @@ export function PageTabs({ label, tabs }: { label: string; tabs: Tab[] }) {
   )
 }
 
+/**
+ * Design-review markers (HAL-3737): which tracked issue built a panel, or which one a missing piece waits
+ * on. They show in sample-data mode and dev builds, where the design is being reviewed; people using
+ * Mailyard never see a ticket number.
+ */
+const reviewing = () => fixturesEnabled() || import.meta.env.DEV
+
 export function BuiltPill({ issue }: { issue: string }) {
+  if (!reviewing()) return null
   return (
     <span className="pill pill-built" data-od-id="built-marker">
       <Icon name="check" className="icon-12" />
@@ -99,7 +107,14 @@ export function BuiltPill({ issue }: { issue: string }) {
   )
 }
 
+/** Something not available on this Mailyard yet. Users read "Not available yet"; reviewers also see the issue. */
 export function PlannedPill({ issue, label = "Planned" }: { issue: string; label?: string }) {
+  if (!reviewing())
+    return (
+      <span className="pill pill-proposal" data-od-id="proposed-marker" data-issue={issue}>
+        Not available yet
+      </span>
+    )
   return (
     <span className="pill pill-proposal" data-od-id="proposed-marker">
       {label} · {issue}
@@ -224,8 +239,12 @@ export function NeedsRoute({
   return (
     <Gated
       allowed={live}
-      reason={`${what} isn’t built yet`}
-      who={`Planned · ${issue}. It turns on when ${method} ${path} ships.`}
+      reason={`${what} isn’t available on this Mailyard yet`}
+      who={
+        reviewing()
+          ? `Planned · ${issue}. It turns on when ${method} ${path} ships.`
+          : "It turns on by itself once this Mailyard is updated to a release that has it."
+      }
       {...(side ? { side } : {})}
     >
       {children}

@@ -206,8 +206,9 @@ export function Runs({ id, search }: { id: string; search: Search }) {
               )
             ) : (
               <>
-                <div className="table-wrap">
-                  <table className="table dt" data-od-id="runs-table">
+                <div className="table-wrap rtable-wrap">
+                  {/* rtable: a card per run on phones, where seven columns can't fit (audit, 2026-10-20). */}
+                  <table className="rtable" data-od-id="runs-table">
                     <thead>
                       <tr>
                         <th>Contact</th>
@@ -228,41 +229,50 @@ export function Runs({ id, search }: { id: string; search: Search }) {
                         const node = r.nodeId ? byId.get(r.nodeId) : undefined
                         return (
                           <tr key={r.id}>
-                            <td>
-                              <AppLink
-                                className="cell-link mono-cell"
-                                href={`/audience/contacts/${encodeURIComponent(r.contactId)}`}
-                              >
-                                {r.email ?? r.contactId}
-                              </AppLink>
-                              <span className="cell-sub mono">{r.id}</span>
+                            <td className="is-head">
+                              <span className="cell-main">
+                                <AppLink
+                                  className="cell-link mono-cell"
+                                  href={`/audience/contacts/${encodeURIComponent(r.contactId)}`}
+                                >
+                                  {r.email ?? r.contactId}
+                                </AppLink>
+                                <span className="cell-sub mono">{r.id}</span>
+                              </span>
                             </td>
-                            <td>
+                            <td data-label="Version">
                               v{v}
                               {st && st !== "live" ? ` · ${st}` : ""}
                             </td>
-                            <td>
-                              {r.waitingFor ? (
-                                <>
-                                  Waiting for <span className="mono">{r.waitingFor}</span>
-                                </>
-                              ) : (
-                                runStepNow(r, node, names)
-                              )}
-                              {r.error ? (
-                                <span className="cell-sub" style={{ color: "var(--red-900)" }}>
-                                  {r.error}
-                                </span>
-                              ) : null}
+                            <td data-label="Step now">
+                              <span>
+                                {r.waitingFor ? (
+                                  <>
+                                    Waiting for <span className="mono">{r.waitingFor}</span>
+                                  </>
+                                ) : (
+                                  runStepNow(r, node, names)
+                                )}
+                                {r.error ? (
+                                  <span
+                                    className="cell-sub"
+                                    style={{ display: "block", color: "var(--red-900)" }}
+                                  >
+                                    {r.error}
+                                  </span>
+                                ) : null}
+                              </span>
                             </td>
-                            <td>
+                            <td className="is-aside">
                               <StatusPill status={r.status} />
                             </td>
-                            <td className="r">{fmtAgoShort(r.enteredAt)}</td>
-                            <td className="r">
+                            <td className="r" data-label="Entered">
+                              {fmtAgoShort(r.enteredAt)}
+                            </td>
+                            <td className="r" data-label="Next step at">
                               {r.nextAt ? `${fmtWeekday(r.nextAt).split(" ")[0]} ${fmtTime(r.nextAt)}` : "—"}
                             </td>
-                            <td className="r">
+                            <td className="r actions">
                               <Link
                                 className="btn btn-ghost btn-sm"
                                 to="/automations/$automationId/runs"

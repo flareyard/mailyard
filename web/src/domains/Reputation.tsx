@@ -62,15 +62,8 @@ export function ReputationPage() {
               <h2 className="panel-title" id="h-drivers">
                 What drove each rate
               </h2>
-              <div className="cluster">
-                <span className="pill pill-proposal" data-od-id="proposed-marker">
-                  Proposed · not filed
-                  <span className="sr-only">
-                    . GET /v1/reputation/drivers isn’t in the live API and has no issue: HAL-3366 shipped
-                    analytics without it.
-                  </span>
-                </span>
-              </div>
+              {/* GET /v1/reputation/drivers isn't in the live API (2026-10-20); filed as HAL-3740. */}
+              <div className="cluster" />
             </header>
             <div className="panel-body">
               <p className="muted">

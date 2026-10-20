@@ -5,7 +5,7 @@
  * action bar. Opening a thread marks it read.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ApiError, api, unwrap } from "../api/client.ts"
 import { useCapabilities } from "../auth/capabilities.ts"
@@ -16,6 +16,7 @@ import { num } from "../lib/format.ts"
 import { Icon } from "../ui/icons.tsx"
 import { RequestId } from "../ui/Panel.tsx"
 import { useBulk } from "./actions.ts"
+import { assistantQuery, type Helper, helperOff, refusalOf, refusalText } from "./assistant.ts"
 import { InlineReply } from "./compose/InlineReply.tsx"
 import { openReply, useComposeState } from "./compose/store.ts"
 import { useMail } from "./context.tsx"
@@ -26,8 +27,16 @@ import type { PickerKind } from "./Pickers.tsx"
 import { mailKeys, threadQuery } from "./queries.ts"
 import { DetailsDrawer, Lightbox, RawView, SmtpDrawer } from "./ReaderOverlays.tsx"
 import { toast } from "./toasts.tsx"
-import type { ListQuery, MessageSummary, Note, Thread, ThreadDetail } from "./types.ts"
-import { AgentBadge, LabelTag, PlannedPill, SampleMarker, ToolBtn, Who } from "./ui.tsx"
+import type {
+  DraftedReply,
+  ListQuery,
+  MessageSummary,
+  Note,
+  Thread,
+  ThreadDetail,
+  ThreadSummary,
+} from "./types.ts"
+import { AgentBadge, LabelTag, SampleMarker, ToolBtn, Who } from "./ui.tsx"
 
 export type ReaderActions = {
   act: (
@@ -249,7 +258,7 @@ export function Reader({
       <div className="pane-scroll rd-scroll">
         <div className="rd-inner">
           <Head d={d} />
-          <AiSummary />
+          <AiSummary key={t.id} threadId={t.id} lastMessageId={last?.id} />
           <Messages
             d={d}
             onReply={(id) => replyTo("reply", id)}
@@ -561,39 +570,169 @@ function Head({ d }: { d: ThreadDetail }) {
   )
 }
 
-/** The AI summary's slot (HAL-3305): visible, disabled with the reason, lit when the route deploys. */
-function AiSummary() {
+/**
+ * The thread's summary and a drafted reply (the mailbox helpers). Shown when the summary route is live;
+ * when the helpers are off it says so and who can turn them on. A summary is only ever beside the thread,
+ * and a drafted reply opens as an ordinary draft under it for a person to edit and send.
+ */
+function AiSummary({ threadId, lastMessageId }: { threadId: string; lastMessageId: string | undefined }) {
   const caps = useCapabilities()
-  if (!caps.ready) return null
-  const live = caps.has("post", "/v1/mailboxes/{id}/threads/{threadId}/summary") && !fixturesEnabled()
-  if (live) return null
+  const { mailboxId, access } = useMail()
+  const settings = useQuery({
+    ...assistantQuery,
+    enabled: caps.has("post", "/v1/mailboxes/{id}/threads/{threadId}/summary"),
+  })
+  const [summary, setSummary] = useState<ThreadSummary | null>(null)
+  const [busy, setBusy] = useState<"summary" | "draft" | null>(null)
+  const [refused, setRefused] = useState<{ helper: Helper; reason: string | undefined } | null>(null)
+  if (!caps.ready || !caps.has("post", "/v1/mailboxes/{id}/threads/{threadId}/summary")) return null
+  // A key without the settings' read access gets a refusal; the reader then simply leaves the slot out.
+  if (settings.isError || !settings.data) return null
+  const s = settings.data
+  const summaryOff = helperOff(s, "summaries")
+  const draftOff = helperOff(s, "drafts")
+  if (summaryOff && draftOff)
+    return (
+      <section className="ai-sum" aria-label="Summary" data-od-id="ai-summary-off">
+        <div className="ai-head">
+          <MIcon name="sparkles" />
+          Summary
+          <span className="grow" />
+        </div>
+        <span className="ai-foot">
+          {refusalText(summaryOff, "summaries")}{" "}
+          <Link className="link" to="/settings/ai">
+            Settings → AI
+          </Link>
+        </span>
+      </section>
+    )
+
+  const summarize = async (refresh: boolean) => {
+    setBusy("summary")
+    setRefused(null)
+    try {
+      const r = await unwrap(
+        api.POST("/v1/mailboxes/{id}/threads/{threadId}/summary", {
+          params: { path: { id: mailboxId, threadId } },
+          body: refresh ? { refresh: true } : {},
+        }),
+      )
+      setSummary(r as ThreadSummary)
+    } catch (e) {
+      const reason = refusalOf(e)
+      if (reason) setRefused({ helper: "summaries", reason })
+      else
+        toast({
+          title: "The summary didn’t load",
+          sub:
+            e instanceof ApiError
+              ? `${e.message}${e.requestId ? ` · ${e.requestId}` : ""}`
+              : "Mailyard couldn’t be reached.",
+          tone: "error",
+        })
+    } finally {
+      setBusy(null)
+    }
+  }
+  const draftReply = async () => {
+    if (!lastMessageId) return
+    setBusy("draft")
+    setRefused(null)
+    try {
+      const r = (await unwrap(
+        api.POST("/v1/mailboxes/{id}/threads/{threadId}/draft", {
+          params: { path: { id: mailboxId, threadId } },
+          body: {},
+        }),
+      )) as DraftedReply
+      openReply({ mailboxId, threadId, messageId: lastMessageId, mode: "reply", draftId: r.draft.id })
+      toast({ title: "Reply drafted", sub: "Check it and edit before you send. Nothing was sent." })
+    } catch (e) {
+      const reason = refusalOf(e)
+      if (reason) setRefused({ helper: "drafts", reason })
+      else
+        toast({
+          title: "The reply wasn’t drafted",
+          sub:
+            e instanceof ApiError
+              ? `${e.message}${e.requestId ? ` · ${e.requestId}` : ""}`
+              : "Mailyard couldn’t be reached.",
+          tone: "error",
+        })
+    } finally {
+      setBusy(null)
+    }
+  }
+  const generated = summary ? num(summary.generatedAt) : null
   return (
-    <section
-      className="ai-sum"
-      aria-label="Summary"
-      data-endpoint="POST /v1/mailboxes/{id}/threads/{threadId}/summary (planned, HAL-3305)"
-    >
+    <section className="ai-sum" aria-label="Summary" aria-busy={busy !== null} data-od-id="ai-summary">
       <div className="ai-head">
         <MIcon name="sparkles" />
         Summary
-        <span className="t-small">Not available yet</span>
+        {summary ? (
+          <span className="t-small">
+            {summary.cached ? "Saved" : "New"}
+            {generated ? ` · ${rowTime(generated)}` : ""}
+          </span>
+        ) : null}
         <span className="grow" />
-        <Gated
-          allowed={false}
-          side="right"
-          reason="Thread summaries aren’t built yet"
-          who="Planned · HAL-3305: Workers AI on your own Cloudflare account, off unless an admin turns it on."
-        >
-          <button className="icon-btn" type="button" aria-label="Summarise">
+        {draftOff ? null : (
+          <Gated allowed={access.write} reason={access.writeReason} who={access.writeWho} side="right">
+            <button
+              className="btn btn-ghost btn-sm"
+              type="button"
+              disabled={busy !== null || !lastMessageId}
+              onClick={() => void draftReply()}
+            >
+              <Icon name="reply" />
+              {busy === "draft" ? "Drafting…" : "Draft a reply"}
+            </button>
+          </Gated>
+        )}
+        {summaryOff ? null : (
+          <button
+            className="btn btn-secondary btn-sm"
+            type="button"
+            disabled={busy !== null}
+            onClick={() => void summarize(Boolean(summary))}
+          >
             <MIcon name="sparkles" />
+            {busy === "summary" ? "Summarizing…" : summary ? "Refresh" : "Summarize"}
           </button>
-        </Gated>
+        )}
       </div>
-      <span className="ai-foot">
-        When it ships, the thread’s text goes to Workers AI on your Cloudflare account, and an admin can turn
-        summaries off in Settings → AI.
-        <PlannedPill issue="HAL-3305" what="AI summaries" />
-      </span>
+      {summary ? (
+        <>
+          <p>{summary.summary}</p>
+          {summary.bullets.length ? (
+            <ul className="ai-bullets">
+              {summary.bullets.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      ) : null}
+      {refused ? (
+        <span className="ai-foot" role="status">
+          {refusalText(refused.reason, refused.helper, s)}
+          {refused.reason === "off" || refused.reason === "disabled" ? (
+            <>
+              {" "}
+              <Link className="link" to="/settings/ai">
+                Settings → AI
+              </Link>
+            </>
+          ) : null}
+        </span>
+      ) : (
+        <span className="ai-foot">
+          {summary?.model || s.model ? `Written by ${summary?.model ?? s.model}. ` : ""}A suggestion from the
+          thread’s text; check it against the messages.
+          {summaryOff ? ` ${refusalText(summaryOff, "summaries")}` : ""}
+        </span>
+      )}
     </section>
   )
 }

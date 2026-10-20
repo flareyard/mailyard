@@ -157,7 +157,7 @@ function Sheet({ ended, kept, onDone }: { ended: Ended; kept: ReactNode; onDone:
   const blocked = !sessionsLive
     ? {
         reason: "Browser sign-in isn’t live yet",
-        who: "It arrives with sessions (HAL-3358). Reload and sign in from the sign-in page.",
+        who: "This Mailyard is on a release without browser sessions. Reload and sign in from the sign-in page.",
       }
     : limited
       ? {
@@ -190,10 +190,8 @@ function Sheet({ ended, kept, onDone }: { ended: Ended; kept: ReactNode; onDone:
               </span>
               {caps.ready && !sessionsLive ? (
                 <span className="pill pill-proposal" data-od-id="proposed-marker">
-                  Planned · HAL-3358
-                  <span className="sr-only">
-                    . Signing in from the browser is part of sessions (HAL-3358).
-                  </span>
+                  Not available yet
+                  <span className="sr-only">. This Mailyard is on a release without browser sessions.</span>
                 </span>
               ) : null}
             </span>
@@ -217,7 +215,7 @@ function Sheet({ ended, kept, onDone }: { ended: Ended; kept: ReactNode; onDone:
             <Gated
               allowed={flareyardLive}
               reason="Flareyard sign-in isn’t live yet"
-              who="It arrives with HAL-3360. Use an access key for now."
+              who="This Mailyard wasn’t installed from Flareyard. Use an access key or an emailed link."
               block
             >
               <a

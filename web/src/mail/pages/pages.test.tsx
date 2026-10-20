@@ -57,6 +57,7 @@ import { RULES } from "./fixtures.ts"
 import { RetrySheet } from "./ImportPage.tsx"
 import { RuleSheet } from "./RuleSheet.tsx"
 import { RuleRows } from "./RulesPage.tsx"
+import { SendersPanel } from "./SendersPanel.tsx"
 import type { MailImport } from "./types.ts"
 
 const calls: { method: string; path: string; body: unknown }[] = []
@@ -149,6 +150,15 @@ beforeEach(() => {
         people: [],
       })
     if (path === "/v1/webhooks") return Response.json({ webhooks: [] })
+    if (path.endsWith("/image-senders") && req.method === "GET")
+      return Response.json({ senders: [{ value: "@coursified.app", createdBy: "Ada Okafor", createdAt: 1 }] })
+    if (path.endsWith("/image-senders") && req.method === "POST")
+      return Response.json({
+        value: (body as { value: string }).value,
+        createdBy: "Ada Okafor",
+        createdAt: 2,
+      })
+    if (path.endsWith("/senders") && req.method === "GET") return Response.json({ senders: [] })
     if (path.endsWith("/retry-failed"))
       return Response.json({ ...failed, id: "imp_retry", status: "running", retryOf: failed.id })
     return Response.json({}, { status: 404 })
@@ -296,5 +306,36 @@ describe("retry failed", () => {
     const post = calls.find((c) => c.path.endsWith("/imports/imp_failed/retry-failed"))
     expect(post?.body).toEqual({ password: "abcdabcdabcdabcd" })
     expect(navigate.mock.calls[0]?.[0]).toMatchObject({ params: { importId: "imp_retry" } })
+  })
+})
+
+describe("images always shown (HAL-3369)", () => {
+  it("lists the trusted senders and adds a domain as @domain", async () => {
+    wrap(<SendersPanel list="images" onList={() => {}} withImages />)
+    expect(await screen.findByText("@coursified.app")).toBeTruthy()
+    expect(screen.getByRole("tab", { name: "Images" }).getAttribute("aria-selected")).toBe("true")
+    fireEvent.change(screen.getByLabelText("Address or domain whose images always show"), {
+      target: { value: "Example.com" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Always show" }))
+    expect(await screen.findByText("@example.com")).toBeTruthy()
+    const post = calls.find((c) => c.method === "POST" && c.path.endsWith("/image-senders"))
+    expect(post?.body).toEqual({ value: "@example.com" })
+  })
+
+  it("refuses a value that's neither an address nor a domain, without calling the API", async () => {
+    wrap(<SendersPanel list="images" onList={() => {}} withImages />)
+    await screen.findByText("@coursified.app")
+    fireEvent.change(screen.getByLabelText("Address or domain whose images always show"), {
+      target: { value: "not a domain" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Always show" }))
+    expect(screen.getByRole("alert").textContent).toMatch(/address like name@example.com/)
+    expect(calls.some((c) => c.method === "POST")).toBe(false)
+  })
+
+  it("isn't offered on the Rules page's panel", () => {
+    wrap(<SendersPanel list="allow" onList={() => {}} />)
+    expect(screen.queryByRole("tab", { name: "Images" })).toBeNull()
   })
 })

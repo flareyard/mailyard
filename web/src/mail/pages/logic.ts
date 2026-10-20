@@ -285,6 +285,16 @@ export function senderValue(raw: string): string | null {
   return null
 }
 
+/**
+ * A trusted image sender as the API stores it: an address, or a whole domain written `@example.com`
+ * (`SENDER_VALUE` in the backend). Accepts `example.com` or `@example.com` for a domain.
+ */
+export function imageSenderValue(raw: string): string | null {
+  const v = senderValue(raw)
+  if (!v) return null
+  return v.includes("@") ? v : `@${v}`
+}
+
 /* ───────────── Import arithmetic ───────────── */
 
 export function importProgress(imp: Pick<MailImport, "totals">) {

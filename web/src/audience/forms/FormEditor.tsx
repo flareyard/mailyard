@@ -909,8 +909,8 @@ function StatsSection({ id }: { id: string }) {
               <Icon name="info" />
               <span>
                 <b>Counting since {fmtDay(Date.parse(`${STATS_SINCE}T00:00:00Z`), 0)}.</b> Submissions are
-                counted from the day form stats shipped (HAL-3424), so every earlier day reads 0. The bars
-                fill in as people sign up.
+                counted from the day this Mailyard started recording form stats, so every earlier day reads 0.
+                The bars fill in as people sign up.
               </span>
             </div>
           ) : (

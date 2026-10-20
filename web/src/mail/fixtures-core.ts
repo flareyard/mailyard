@@ -169,9 +169,44 @@ const attachmentUrl = (name: string, mime: string) =>
     ? `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400"><rect width="640" height="400" fill="#eee"/><text x="320" y="200" font-family="sans-serif" font-size="20" text-anchor="middle" fill="#555">${name} (sample)</text></svg>`)}`
     : `/v1/files/fixture-${encodeURIComponent(name)}`
 
+/** Parsed calendar invites by message (HAL-3369), as GET …/messages/{id} returns them. RSVPs update `myStatus`. */
+const INVITES: Record<string, NonNullable<MsgDetail["invite"]>> = {
+  msg_08_1: {
+    method: "REQUEST",
+    uid: "partner-sync-20261020@kumasitech.edu.gh",
+    sequence: 0,
+    summary: "Partner sync",
+    description: "Monthly check-in on the Coursified rollout.",
+    location: "https://meet.example.com/partner-sync",
+    start: "2026-10-20T14:00:00Z",
+    end: "2026-10-20T14:45:00Z",
+    allDay: false,
+    timeZone: "UTC",
+    organizer: { address: "t.mensah@kumasitech.edu.gh", name: "Tunde Mensah" },
+    attendees: [
+      {
+        address: "support@coursified.app",
+        name: "Coursified Support",
+        partstat: "NEEDS-ACTION",
+        role: "REQ-PARTICIPANT",
+      },
+      { address: "ada@coursified.app", name: "Ada Okafor", partstat: "ACCEPTED", role: "REQ-PARTICIPANT" },
+      {
+        address: "kemi@kumasitech.edu.gh",
+        name: "Kemi Bello",
+        partstat: "TENTATIVE",
+        role: "OPT-PARTICIPANT",
+      },
+    ],
+    myStatus: "NEEDS-ACTION",
+    canRespond: true,
+  },
+}
+
 function messageDetail(m: Msg, _mailboxId: string, extra: Partial<MsgDetail> = {}): MsgDetail {
   return {
     ...m,
+    invite: INVITES[m.id] ?? null,
     body: { text: bodyText(m), html: RICH_HTML[m.id] ?? null },
     rawUrl: `/v1/files/fixture-${m.id}.eml`,
     attachmentUrls: Object.fromEntries(
@@ -434,6 +469,20 @@ export const CORE_OVERRIDES: readonly MailOverride[] = [
       const delivery =
         exact && !(exact.body as { id?: string }).id ? (exact.body as MsgDetail["delivery"]) : undefined
       return { status: 200, body: messageDetail(m, id, delivery ? { delivery } : {}) }
+    },
+  },
+  {
+    method: "POST",
+    path: /^\/v1\/mailboxes\/([^/]+)\/messages\/([^/]+)\/rsvp$/,
+    answer: async ([, , messageId = ""], body) => {
+      const invite = INVITES[messageId]
+      const response = (body as { response?: string } | null)?.response
+      if (!invite || !invite.canRespond) return fail(409, "This message has no invite that asks for a reply.")
+      if (response !== "accepted" && response !== "tentative" && response !== "declined")
+        return fail(400, "response must be accepted, tentative or declined")
+      invite.myStatus =
+        response === "accepted" ? "ACCEPTED" : response === "tentative" ? "TENTATIVE" : "DECLINED"
+      return { status: 200, body: { response } }
     },
   },
   {

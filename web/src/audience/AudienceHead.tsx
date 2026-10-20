@@ -67,7 +67,7 @@ export function AudienceTabs({ current }: { current: AudienceTab }) {
       <Link
         className="au-tab"
         to="/transactional"
-        data-tip="In Transactional · HAL-3372"
+        data-tip="In Transactional"
         data-od-id="au-tab-suppressions"
       >
         Suppressions

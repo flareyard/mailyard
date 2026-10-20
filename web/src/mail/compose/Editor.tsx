@@ -6,10 +6,9 @@
 import { useQuery } from "@tanstack/react-query"
 import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { api, unwrap } from "../../api/client.ts"
-import { useCapabilities } from "../../auth/capabilities.ts"
 import { Gated } from "../../auth/NoPermission.tsx"
-import { fixturesEnabled } from "../../fixtures/mode.ts"
 import { Icon } from "../../ui/icons.tsx"
+import { assistantQuery, helperOff, refusalOf, refusalText } from "../assistant.ts"
 import { toast } from "../toasts.tsx"
 import { CIcon } from "./icons.tsx"
 import { sanitizeHtml, textToHtml } from "./logic.ts"
@@ -232,8 +231,10 @@ function TemplateMenu({ onPick }: { onPick: (r: { subject: string; text: string 
 }
 
 /**
- * Draft with AI (`POST /v1/ai/draft`, HAL-3305): visible, off with the reason until the route deploys. The
- * route isn't in the schema yet, so the call uses the shape GAPS-mail M5.8 agreed and reads it defensively.
+ * Draft with AI (HAL-3305) in a reply: `POST /v1/mailboxes/{id}/threads/{threadId}/draft` with optional
+ * instructions writes a reply for this thread. Its text goes into the editor, and the separate draft the
+ * endpoint saved is deleted, so Drafts doesn't fill with copies. Only in replies (the API needs a thread),
+ * and only when Settings → AI has drafted replies on; otherwise the button says why.
  */
 function AiDraft({
   ctx,
@@ -242,45 +243,83 @@ function AiDraft({
   ctx?: { mailboxId: string; threadId?: string }
   onInsert: (text: string) => void
 }) {
-  const caps = useCapabilities()
-  const live = !fixturesEnabled() && caps.has("post", "/v1/ai/draft") && Boolean(ctx)
+  const settings = useQuery(assistantQuery)
+  const [open, setOpen] = useState(false)
+  const [instructions, setInstructions] = useState("")
   const [busy, setBusy] = useState(false)
+  if (!ctx?.threadId) return null
+  const off = helperOff(settings.data, "drafts")
+  const write = async () => {
+    setBusy(true)
+    try {
+      const r = await unwrap(
+        api.POST("/v1/mailboxes/{id}/threads/{threadId}/draft", {
+          params: { path: { id: ctx.mailboxId, threadId: ctx.threadId as string } },
+          body: instructions.trim() ? { instructions: instructions.trim() } : {},
+        }),
+      )
+      onInsert(r.draft.bodyText ?? "")
+      // The text now lives in this reply; the copy the endpoint saved would be a stray draft.
+      await api
+        .DELETE("/v1/mailboxes/{id}/drafts/{draftId}", {
+          params: { path: { id: ctx.mailboxId, draftId: r.draft.id } },
+        })
+        .catch(() => {})
+      setOpen(false)
+      setInstructions("")
+    } catch (e) {
+      toast({
+        title: "No draft came back",
+        sub: refusalText(refusalOf(e), "drafts", settings.data),
+        tone: "error",
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
-    <Gated
-      allowed={live}
-      reason="Draft with AI isn’t built yet"
-      who="It arrives with HAL-3305 (Workers AI on your account)."
-    >
-      <button
-        className="btn btn-ghost btn-sm"
-        type="button"
-        disabled={busy}
-        data-endpoint="POST /v1/ai/draft (planned, HAL-3305)"
-        onClick={async () => {
-          if (!ctx) return
-          const instruction = window.prompt("What should the draft say?")
-          if (!instruction) return
-          setBusy(true)
-          try {
-            const r = await fetch("/v1/ai/draft", {
-              method: "POST",
-              credentials: "same-origin",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ ...ctx, instruction }),
-            })
-            const body = (await r.json()) as { bodyText?: string; message?: string }
-            if (!r.ok || typeof body.bodyText !== "string")
-              throw new Error(body.message ?? `The API answered ${r.status}`)
-            onInsert(body.bodyText)
-          } catch (e) {
-            toast({ title: "No draft came back", sub: (e as Error).message, tone: "error" })
-          } finally {
-            setBusy(false)
-          }
-        }}
+    <span className="ai-draft">
+      <Gated
+        allowed={!off && settings.isSuccess}
+        reason={off ? refusalText(off, "drafts", settings.data) : "Checking AI settings…"}
       >
-        Draft with AI
-      </button>
-    </Gated>
+        <button
+          className="btn btn-ghost btn-sm"
+          type="button"
+          aria-expanded={open}
+          disabled={busy}
+          data-endpoint="POST /v1/mailboxes/{id}/threads/{threadId}/draft (built, HAL-3305)"
+          onClick={() => setOpen(!open)}
+        >
+          Draft with AI
+        </button>
+      </Gated>
+      {open ? (
+        <span className="ai-draft-row">
+          <input
+            className="input"
+            aria-label="What should the draft say? (optional)"
+            placeholder="What should it say? (optional)"
+            maxLength={1000}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                void write()
+              }
+            }}
+          />
+          <button
+            className="btn btn-secondary btn-sm"
+            type="button"
+            disabled={busy}
+            onClick={() => void write()}
+          >
+            {busy ? "Writing…" : "Write"}
+          </button>
+        </span>
+      ) : null}
+    </span>
   )
 }

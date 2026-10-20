@@ -4,7 +4,7 @@ import { Link, useLocation } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { SampleMarker } from "../ops/kit.tsx"
 import { Icon, type IconName } from "../ui/icons.tsx"
-import { type State, TOKEN_ISSUE, TOKEN_PERMISSIONS, TOKEN_SECRET, type Tone } from "./logic.ts"
+import { type State, TOKEN_PERMISSIONS, TOKEN_SECRET, type Tone } from "./logic.ts"
 
 const PILL: Record<Tone, string> = {
   pass: "pill-pass",
@@ -65,7 +65,7 @@ export function TokenNote({
           <p className="t-small muted" style={{ margin: "6px 0 0" }}>
             It’s an optional Worker secret, <span className="mono">{TOKEN_SECRET}</span>, with{" "}
             {TOKEN_PERMISSIONS}. Until it’s set, Mailyard checks every record against public DNS, as it does
-            now. <span className="tag">Owner step · {TOKEN_ISSUE}</span>
+            now. <span className="tag">Owner step</span>
           </p>
         ) : null}
       </div>

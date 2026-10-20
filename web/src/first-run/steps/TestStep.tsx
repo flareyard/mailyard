@@ -577,8 +577,8 @@ function SendForm({
                 <Icon name="info" />
                 <div className="stack stack-4">
                   <span>
-                    Can’t list your verified addresses until Mailyard has a read token (HAL-3318). Type the
-                    address instead.
+                    Can’t list your verified addresses until Mailyard can read your Cloudflare account. Type
+                    the address instead.
                   </span>
                   <span className="t-small muted">{v.reason}</span>
                 </div>

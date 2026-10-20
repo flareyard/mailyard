@@ -22,6 +22,19 @@ export const previewQuery = (filter: Rule) =>
     retry: false,
   })
 
+/**
+ * Whether the assistant may turn a sentence into rules: a provider is configured (`available`) and an owner
+ * turned segments on (`segments`). Settings → AI changes it, so it's re-read when the builder opens.
+ */
+export const assistantQuery = queryOptions({
+  queryKey: ["settings", "assistant"],
+  queryFn: () => unwrap(api.GET("/v1/settings/assistant")),
+  staleTime: 60_000,
+  retry: false,
+})
+
+export type FromText = Json<"/v1/segments/from-text", "post">
+
 export const campaignNamesQuery = queryOptions({
   queryKey: ["campaigns", "names"],
   queryFn: async () =>

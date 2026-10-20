@@ -108,17 +108,6 @@ export function DeliveryPill({ status, n, small }: { status: string; n?: number;
   )
 }
 
-export function PlannedPill({ issue, what }: { issue: string; what: string }) {
-  return (
-    <span className="pill pill-proposal">
-      Planned · {issue}
-      <span className="sr-only">
-        . Not built yet: {what} is planned in {issue}.
-      </span>
-    </span>
-  )
-}
-
 /** A popover menu's open state, closed by Escape or a click outside. */
 export function useMenu<T extends HTMLElement = HTMLDivElement>() {
   const [open, setOpen] = useState(false)

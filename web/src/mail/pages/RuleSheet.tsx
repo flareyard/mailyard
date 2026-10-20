@@ -691,7 +691,7 @@ function ActionDetail({
         <>
           <select
             className="select"
-            aria-label="Key"
+            aria-label="Assign to"
             value={a.assignee}
             onChange={(e) => onChange({ ...a, assignee: e.target.value })}
           >
@@ -705,7 +705,7 @@ function ActionDetail({
               <option value={a.assignee}>{a.assignee}</option>
             ) : null}
           </select>
-          <span className="t-small muted">A key until people arrive (HAL-3361)</span>
+          <span className="t-small muted">A person or an API key with access to this mailbox</span>
         </>
       )
     default:

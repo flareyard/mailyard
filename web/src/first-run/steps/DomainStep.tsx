@@ -36,7 +36,7 @@ function ImportButton({ name }: { name?: string }) {
     <Gated
       allowed={false}
       reason="Importing a domain isn’t live yet"
-      who="It’s a Flareyard platform flow (HAL-3124): it copies the DNS into Cloudflare and moves the nameservers. Until then, add the zone in Cloudflare first."
+      who="It’s a Flareyard platform flow: it copies the DNS into Cloudflare and moves the nameservers. Until then, add the zone in Cloudflare first."
     >
       <button className="btn btn-secondary" type="button">
         <Icon name="inbound" />

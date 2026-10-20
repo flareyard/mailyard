@@ -9,12 +9,14 @@
  * The composer's and the mailbox pages' own states live in compose/fixtures.ts and pages/fixtures.ts.
  */
 
+import { ASSISTANT_OVERRIDES } from "./assistant-fixtures.ts"
 import { COMPOSE_OVERRIDES } from "./compose/fixtures.ts"
 import type { MailOverride } from "./fixtures-core.ts"
 import { CORE_OVERRIDES } from "./fixtures-core.ts"
 import { PAGES_OVERRIDES } from "./pages/fixtures.ts"
 
 export const MAIL_OVERRIDES: readonly MailOverride[] = [
+  ...ASSISTANT_OVERRIDES,
   ...COMPOSE_OVERRIDES,
   ...PAGES_OVERRIDES,
   ...CORE_OVERRIDES,

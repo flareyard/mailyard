@@ -25,6 +25,10 @@ export type ApplyFolder = NonNullable<Body<"/v1/mailboxes/{id}/rules/{ruleId}/ap
 export type SenderList = Json<"/v1/mailboxes/{id}/senders", "get">
 export type Sender = SenderList["senders"][number]
 export type SenderListName = Sender["list"]
+/** The Senders page's tabs: the two filing lists, and the senders whose remote images always show (HAL-3369). */
+export type SendersTab = SenderListName | "images"
+export type ImageSenderList = Json<"/v1/mailboxes/{id}/image-senders", "get">
+export type ImageSender = ImageSenderList["senders"][number]
 
 export type ImportList = Json<"/v1/mailboxes/{id}/imports", "get">
 export type MailImport = ImportList["imports"][number]

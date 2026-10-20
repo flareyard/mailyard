@@ -553,7 +553,7 @@ export function exportFilter(
   for (const k of ["status", "engagement"] as const) {
     if (splitList(s[k]).length > 1)
       return {
-        refused: `An export takes one ${k} at a time, and this view has ${splitList(s[k]).length}. Pick one ${k}, or save the view as a segment and export that (HAL-3504).`,
+        refused: `An export takes one ${k} at a time, and this view has ${splitList(s[k]).length}. Pick one ${k}, or save the view as a segment and export that.`,
       }
   }
   return { filter: viewFilter(s) }

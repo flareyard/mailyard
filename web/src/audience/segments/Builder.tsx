@@ -5,16 +5,22 @@
  * kept while it re-counts). A bad rule, found locally with the API's own message or named by a 400's `field`
  * path, is outlined and holds Save. Saving is `POST /v1/segments` or `PATCH /v1/segments/{id}`.
  */
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  type UseQueryResult,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useRef, useState } from "react"
 import { ApiError, api, unwrap } from "../../api/client.ts"
-import { useCapabilities } from "../../auth/capabilities.ts"
 import { Gated } from "../../auth/NoPermission.tsx"
 import { fmtInt, num } from "../../lib/format.ts"
 import { Icon } from "../../ui/icons.tsx"
 import { PanelError, RequestId } from "../../ui/Panel.tsx"
 import { errorField, fieldError, fmtAgoShort, initialsOf } from "../kit/format.ts"
+import type { Json } from "../kit/queries.ts"
 import { allTopicsQuery, fieldLabel, fieldsQuery } from "../kit/queries.ts"
 import { ApiErrorCallout, BackLink, FieldError, SampleMarker, Sheet, useCan } from "../kit/ui.tsx"
 import { DeleteBlockedSheet, DeleteConfirmSheet, usedByHref } from "./DeleteBlocked.tsx"
@@ -33,7 +39,17 @@ import {
   validate,
   withoutLast,
 } from "./logic.ts"
-import { campaignNamesQuery, type Preview, previewQuery, type SegmentFull, segmentQuery } from "./queries.ts"
+import {
+  assistantQuery,
+  campaignNamesQuery,
+  type Preview,
+  previewQuery,
+  type SegmentFull,
+  segmentQuery,
+} from "./queries.ts"
+
+type AssistantSettings = Json<"/v1/settings/assistant", "get">
+
 import { RuleSentence } from "./RuleSentence.tsx"
 import { RuleTree, type TreeCtx } from "./RuleTree.tsx"
 import "./segments.css"
@@ -106,7 +122,6 @@ const asGroup = (r: Rule | undefined): Group =>
 
 function Editor({ segment, sql, onSql, onSaved, onDeleted }: Props & { segment: SegmentFull | null }) {
   const qc = useQueryClient()
-  const caps = useCapabilities()
   const write = useCan("contacts.write", "build and save segments")
   const topics = useQuery(allTopicsQuery)
   const campaigns = useQuery(campaignNamesQuery)
@@ -210,7 +225,7 @@ function Editor({ segment, sql, onSql, onSaved, onDeleted }: Props & { segment: 
         : segment && !dirty
           ? { reason: "Nothing to save", who: "Change a rule or the name first." }
           : null
-  const nlLive = caps.has("POST", "/v1/segments/compile")
+  const assistant = useQuery(assistantQuery)
 
   return (
     <div className="au-seg">
@@ -345,7 +360,7 @@ function Editor({ segment, sql, onSql, onSaved, onDeleted }: Props & { segment: 
                   />
                   {nameErr ? <FieldError id="seg-name-err">{nameErr}</FieldError> : null}
                 </div>
-                <NlEntry live={nlLive} tree={tree} onRules={setTree} />
+                <NlEntry assistant={assistant} tree={tree} onRules={setTree} />
                 <div className="edit-only">
                   <RuleTree root={tree} onChange={setTree} ctx={ctx} />
                 </div>
@@ -392,79 +407,100 @@ function Editor({ segment, sql, onSql, onSaved, onDeleted }: Props & { segment: 
   )
 }
 
-function NlEntry({ live, tree, onRules }: { live: boolean; tree: Group; onRules: (g: Group) => void }) {
+/** What `POST /v1/segments/from-text` refusing with `AssistantRefused` means, in words a person can act on. */
+const REFUSED: Record<string, string> = {
+  off: "AI is off for this Mailyard. An owner can turn it on in Settings → AI.",
+  disabled: "Turning a sentence into rules is switched off. An owner can turn it on in Settings → AI.",
+  cap: "This Mailyard has used today’s AI calls for segments. They reset at midnight UTC; build the rules below meanwhile.",
+  no_answer: "The model didn’t come back with rules. Try putting it another way, or build the rules below.",
+  invalid:
+    "The model’s rules didn’t check out, so nothing changed. Try putting it another way, or build the rules below.",
+}
+
+/**
+ * "Describe it": a sentence becomes a rule tree through `POST /v1/segments/from-text`, checked by the segment
+ * code before it comes back. The rules replace the tree below for review; nothing is saved until Save.
+ * Offered when the assistant is configured and segments are turned on (`GET /v1/settings/assistant`). If that
+ * can't be read, the box still works and the API's own refusal says why.
+ */
+function NlEntry({
+  assistant,
+  tree,
+  onRules,
+}: {
+  assistant: UseQueryResult<AssistantSettings>
+  tree: Group
+  onRules: (g: Group) => void
+}) {
   const [text, setText] = useState("")
   const compile = useMutation({
-    mutationFn: async () => {
-      // The route isn't in the typed schema yet (HAL-3305); this lights up the moment it deploys.
-      const r = await fetch("/v1/segments/compile", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text }),
-      })
-      const body = (await r.json()) as {
-        filter?: Rule
-        explanation?: string
-        message?: string
-        requestId?: string
-      }
-      if (!r.ok) throw new ApiError(r.status, body)
-      return body
-    },
-    onSuccess: (b) => {
-      if (b.filter) onRules(asGroup(b.filter))
-    },
+    mutationFn: () => unwrap(api.POST("/v1/segments/from-text", { body: { text: text.trim() } })),
+    onSuccess: (b) => onRules(asGroup(b.rule)),
   })
+  const a = assistant.data
+  const off = a ? (!a.available ? REFUSED.off : !a.segments ? REFUSED.disabled : null) : null
+  const usable = !off && !assistant.isPending
+  const refused =
+    compile.error instanceof ApiError && compile.error.status === 409 && compile.error.reason
+      ? (REFUSED[compile.error.reason] ?? null)
+      : null
+  const done = compile.data
+  const count = done ? num(done.count) : null
   return (
     <div className="field edit-only" data-od-id="nl-entry">
       <span className="spread">
         <label className="label" htmlFor="nl">
           Describe it <span className="opt">optional</span>
         </label>
-        {live ? null : <PlannedPill />}
+        {a?.model && usable ? <span className="hint mono">{a.model}</span> : null}
       </span>
-      <div className="input-group">
+      <form
+        className="input-group"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (usable && text.trim() && !compile.isPending) compile.mutate()
+        }}
+      >
         <input
           className="input"
           id="nl"
           placeholder="e.g. active learners in West Africa who opened October’s update"
-          disabled={!live}
+          disabled={!usable}
           value={text}
+          maxLength={1000}
           onChange={(e) => setText(e.target.value)}
         />
         <button
           className="btn btn-secondary btn-sm"
-          type="button"
-          disabled={!live || !text.trim() || compile.isPending}
-          onClick={() => compile.mutate()}
+          type="submit"
+          disabled={!usable || !text.trim() || compile.isPending}
           style={{ border: 0, borderLeft: "1px solid var(--my-border)", borderRadius: 0, height: "auto" }}
         >
-          Write rules
+          {compile.isPending ? "Writing…" : "Write rules"}
         </button>
-      </div>
-      <span className="hint">
-        {live
-          ? compile.data?.explanation
-            ? `${compile.data.explanation} Review the rules below; nothing is saved until you save.`
-            : `The rules land below for review, replacing the ${tree.rules.length ? "current ones" : "empty tree"}; nothing is saved.`
-          : "Turning a sentence into rules is planned (HAL-3305). Build the rules below for now."}
+      </form>
+      <span className="hint" aria-live="polite">
+        {off
+          ? off
+          : done
+            ? `${done.explanation ? `${done.explanation} ` : ""}${
+                count !== null
+                  ? `${fmtInt(count)} ${count === 1 ? "contact matches" : "contacts match"} now. `
+                  : ""
+              }Review the rules below; nothing is saved until you save.`
+            : `The rules land below for review, replacing the ${tree.rules.length ? "current ones" : "empty tree"}; nothing is saved.`}
       </span>
-      {compile.isError ? (
+      {refused ? (
+        <p className="hint" role="alert" style={{ color: "var(--red-900)" }}>
+          {refused}
+          {compile.error instanceof ApiError && compile.error.requestId ? (
+            <span className="mono"> · {compile.error.requestId}</span>
+          ) : null}
+        </p>
+      ) : compile.isError ? (
         <ApiErrorCallout error={compile.error} what="That couldn’t be turned into rules." />
       ) : null}
     </div>
-  )
-}
-
-function PlannedPill() {
-  return (
-    <span className="pill pill-ahead" data-od-id="ahead-marker">
-      Planned · HAL-3305
-      <span className="sr-only">
-        : turning a sentence into rules needs POST /v1/segments/compile, which isn’t built yet.
-      </span>
-    </span>
   )
 }
 

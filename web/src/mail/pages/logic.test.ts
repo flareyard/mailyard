@@ -11,6 +11,7 @@ import {
   exportPct,
   folderProgress,
   folderState,
+  imageSenderValue,
   importProgress,
   keyword,
   matchWords,
@@ -191,6 +192,11 @@ describe("senders", () => {
   it("takes an address or a domain and refuses anything else", () => {
     expect(senderValue(" Ada@Gmail.com ")).toBe("ada@gmail.com")
     expect(senderValue("@example.co.uk")).toBe("example.co.uk")
+    // Image senders store a whole domain as @domain (the backend's SENDER_VALUE).
+    expect(imageSenderValue("Example.co.uk")).toBe("@example.co.uk")
+    expect(imageSenderValue("@example.co.uk")).toBe("@example.co.uk")
+    expect(imageSenderValue(" Ada@Gmail.com ")).toBe("ada@gmail.com")
+    expect(imageSenderValue("not a domain")).toBeNull()
     expect(senderValue("not a sender")).toBeNull()
     expect(senderValue("localhost")).toBeNull()
   })

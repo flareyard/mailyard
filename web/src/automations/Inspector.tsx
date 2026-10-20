@@ -1186,7 +1186,7 @@ function WebhookForm({ node, ctx }: { node: Extract<GNode, { type: "webhook" }>;
             who={
               testLive
                 ? ctx.who
-                : "A dry run counts the webhook as answered 200 without calling it. Deploy the latest Mailyard (HAL-3417) to send a real test request."
+                : "A dry run counts the webhook as answered 200 without calling it. Update this Mailyard to send a real test request."
             }
           >
             <button
@@ -1539,7 +1539,7 @@ function EventKeys({
           ? ` These are the keys on the last ${fmtInt(q.data.sampled)} ${event} events.`
           : live
             ? ""
-            : " This deploy can’t list the keys recent events carried yet (HAL-3417), so type the one you send."}
+            : " This Mailyard can’t list the keys recent events carried yet, so type the one you send."}
       </p>
       {!live ? <Planned issue="HAL-3417" what="this deploy doesn't list an event's data keys yet." /> : null}
       {q.isPending && live ? <span className="sk sk-text" aria-hidden="true" /> : null}

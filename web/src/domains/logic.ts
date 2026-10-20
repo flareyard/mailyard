@@ -33,7 +33,6 @@ export const TOKEN_SECRET = "CLOUDFLARE_DNS_TOKEN"
 /** From the README: what the zone token needs. */
 export const TOKEN_PERMISSIONS =
   "Zone, DNS and Email Sending: Read, plus Email Routing and Email Sending: Edit for fixing"
-export const TOKEN_ISSUE = "HAL-3418"
 
 export function recordCounts(checks: readonly Pick<Check, "status">[]) {
   return {

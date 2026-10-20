@@ -140,5 +140,5 @@ export function roleAllows(me: Me | undefined, roles: readonly Role[], scope?: s
 
 /** The second line for a refusal by scope rather than role, while roles are still planned. */
 export function scopeWho(scope: string): string {
-  return `Needs a key with the ${scope} scope, or the admin key. Roles arrive with HAL-3361.`
+  return `Needs a key with the ${scope} scope, the admin key, or a role that allows it.`
 }

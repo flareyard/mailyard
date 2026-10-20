@@ -59,6 +59,9 @@
 @media (max-width:767px){.filterbar .input,.filterbar .select,.filterbar .btn{height:44px}.fchip{height:44px;padding-left:12px}.fchip a,.fchip button{width:44px;height:44px}}
 
 /* ───────── 3. Responsive data table: rows become cards on phones ───────── */
+/* Above the phone layout, a text column keeps a readable width and the table scrolls in its wrap instead
+   of squeezing words one a line (zoom audit, 2026-10-20, HAL-3735). */
+@media (min-width:768px){.rtable td:not(.r):not(.actions):not(.is-aside){min-width:8.5rem}}
 .rtable{width:100%;border-collapse:collapse;font:var(--text-label-13)}
 .rtable th{text-align:left;font-weight:500;color:var(--my-muted);padding:8px 12px 8px 0;border-bottom:1px solid var(--my-border);white-space:nowrap}
 .rtable td{padding:10px 12px 10px 0;border-bottom:1px solid var(--gray-300);vertical-align:middle;min-width:0}

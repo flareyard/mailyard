@@ -83,3 +83,8 @@ export type ListQuery = {
   q?: string
   sort?: SearchSort
 }
+
+/** The mailbox helpers (summaries, reply drafts): their settings, a summary, and a drafted reply. */
+export type AssistantSettings = Json<"/v1/settings/assistant", "get">
+export type ThreadSummary = Json<"/v1/mailboxes/{id}/threads/{threadId}/summary", "post">
+export type DraftedReply = Json<"/v1/mailboxes/{id}/threads/{threadId}/draft", "post">

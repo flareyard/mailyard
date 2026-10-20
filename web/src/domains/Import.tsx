@@ -195,7 +195,7 @@ export function ImportPage() {
                 It runs as a Workflow, so it survives restarts and emails you when it’s done.
                 {live
                   ? null
-                  : " The import arrives with HAL-3312; until then, move the nameservers yourself and add the domain once Cloudflare has the zone."}
+                  : " This Mailyard can’t import yet; move the nameservers yourself and add the domain once Cloudflare has the zone."}
               </p>
             </div>
           </section>

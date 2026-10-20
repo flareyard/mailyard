@@ -5,9 +5,11 @@
  * text), attachments through their signed links, a calendar invite card, and for our own sent copies the
  * live delivery block and the per-recipient table.
  */
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { ApiError, api, unwrap } from "../api/client.ts"
+import { Gated } from "../auth/NoPermission.tsx"
 import { num } from "../lib/format.ts"
 import tokensCss from "../styles/tokens.css?raw"
 import { Icon } from "../ui/icons.tsx"
@@ -29,9 +31,10 @@ import {
   textBlocks,
   utcStamp,
 } from "./logic.ts"
-import { messageQuery } from "./queries.ts"
-import type { Delivery, MessageSummary } from "./types.ts"
-import { DeliveryPill, PlannedPill, ToolBtn, Who } from "./ui.tsx"
+import { mailKeys, messageQuery } from "./queries.ts"
+import { toast } from "./toasts.tsx"
+import type { Delivery, MessageDetail, MessageSummary } from "./types.ts"
+import { DeliveryPill, ToolBtn, Who } from "./ui.tsx"
 
 export function CollapsedMessage({ m, onExpand }: { m: MessageSummary; onExpand: () => void }) {
   const mail = useMail()
@@ -87,7 +90,7 @@ export function MessageView({
   const mail = useMail()
   const navigate = useNavigate()
   const detail = useQuery(messageQuery(mail.mailboxId, m.id))
-  const [showImages, setShowImages] = useState(false)
+  const [shownHere, setShowImages] = useState(false)
   const us = Boolean(m.from && mail.ours.has(m.from.address.toLowerCase()))
   const name = partyName(m.from)
   const chips = authChips(m.auth)
@@ -100,6 +103,41 @@ export function MessageView({
   const sentByAgent = us && m.folder === "sent" && mail.agent
   const recipients = [...m.to.map((p) => ({ ...p, kind: "to" })), ...m.cc.map((p) => ({ ...p, kind: "cc" }))]
   const senderDomain = m.from?.address.split("@")[1]
+  // A sender this mailbox trusts (image-senders, HAL-3369) loads its images without asking.
+  const showImages = shownHere || d?.remoteImages === "show"
+  const qcImages = useQueryClient()
+  const [trusting, setTrusting] = useState(false)
+  const trustSender = async () => {
+    if (!senderDomain) return
+    setTrusting(true)
+    try {
+      await unwrap(
+        api.POST("/v1/mailboxes/{id}/image-senders", {
+          params: { path: { id: mail.mailboxId } },
+          // A whole domain is stored as `@domain` (an address would be name@domain).
+          body: { value: `@${senderDomain}` },
+        }),
+      )
+      setShowImages(true)
+      await qcImages.invalidateQueries({ queryKey: mailKeys.message(mail.mailboxId, m.id) })
+      await qcImages.invalidateQueries({ queryKey: ["mailboxes", mail.mailboxId, "image-senders"] })
+      toast({
+        title: `Images from ${senderDomain} will always show`,
+        sub: "Remove it in this mailbox’s Senders → Images.",
+      })
+    } catch (e) {
+      toast({
+        title: "That sender wasn’t saved",
+        sub:
+          e instanceof ApiError
+            ? `${e.message}${e.requestId ? ` · ${e.requestId}` : ""}`
+            : "Mailyard couldn’t be reached.",
+        tone: "error",
+      })
+    } finally {
+      setTrusting(false)
+    }
+  }
   return (
     <article
       className="msg"
@@ -161,7 +199,7 @@ export function MessageView({
         <div style={{ padding: "0 16px 10px 64px" }}>
           <span
             className="sent-by"
-            title={`Sent from ${mail.agent.name}’s mailbox; replies a person sends from it look the same until messages record who sent them (HAL-3502).`}
+            title={`Sent from ${mail.agent.name}’s mailbox; replies a person sends from it look the same, because messages don’t yet record which person sent them.`}
           >
             <MIcon name="bot" />
             Sent by {mail.agent.name}
@@ -206,7 +244,7 @@ export function MessageView({
         <div
           className="remote-bar"
           role="status"
-          data-endpoint="client-side CSP · per-sender preference: planned, HAL-3369"
+          data-endpoint="client-side CSP · POST /v1/mailboxes/{id}/image-senders (built, HAL-3369)"
         >
           <MIcon name="image" />
           <span className="grow">
@@ -216,22 +254,22 @@ export function MessageView({
             Show images
           </button>
           {senderDomain ? (
-            <span className="has-reason">
+            <Gated allowed={mail.access.write} reason={mail.access.writeReason} who={mail.access.writeWho}>
               <button
                 className="btn btn-ghost btn-sm"
                 type="button"
-                aria-disabled="true"
-                aria-describedby={`img-${m.id}`}
+                disabled={trusting}
+                onClick={() => void trustSender()}
               >
-                Always show from <span className="mono">{senderDomain}</span>
+                {trusting ? (
+                  "Saving…"
+                ) : (
+                  <>
+                    Always show from <span className="mono">{senderDomain}</span>
+                  </>
+                )}
               </button>
-              <span className="reason-pop is-right" id={`img-${m.id}`} role="tooltip">
-                <b>Remembering image senders isn’t built yet</b>
-                <span className="reason-who">
-                  Planned · HAL-3369. Show images works for this message now.
-                </span>
-              </span>
-            </span>
+            </Gated>
           ) : null}
         </div>
       ) : null}
@@ -279,7 +317,14 @@ export function MessageView({
           )}
         </div>
       )}
-      {invite ? <InviteCard name={invite.filename ?? "invite.ics"} /> : null}
+      {invite || d?.invite ? (
+        <InviteCard
+          mailboxId={mail.mailboxId}
+          messageId={m.id}
+          invite={d?.invite}
+          filename={invite?.filename ?? "invite.ics"}
+        />
+      ) : null}
       {files.length ? (
         // biome-ignore lint/a11y/useSemanticElements: the design's attachment grid is a div list of cards
         <div className="msg-atts" role="list" aria-label="Attachments">
@@ -413,43 +458,162 @@ function BodyFrame({
   )
 }
 
-/** A text/calendar attachment: the card is designed, parsing it is planned (HAL-3369). */
-function InviteCard({ name }: { name: string }) {
+type Invite = NonNullable<MessageDetail["invite"]>
+type Partstat = NonNullable<Invite["myStatus"]>
+const RSVP = [
+  { label: "Yes", response: "accepted", partstat: "ACCEPTED" },
+  { label: "Maybe", response: "tentative", partstat: "TENTATIVE" },
+  { label: "No", response: "declined", partstat: "DECLINED" },
+] as const
+const REPLIED: Partial<Record<Partstat, string>> = {
+  ACCEPTED: "You said yes.",
+  TENTATIVE: "You said maybe.",
+  DECLINED: "You said no.",
+}
+
+/** When the event is, in the viewer's time: "Tue 21 Oct, 14:00–15:00", or the date alone for all-day. */
+function inviteWhen(inv: Invite): string | null {
+  const start = inv.start ? new Date(inv.start) : null
+  if (!start || Number.isNaN(start.getTime())) return null
+  const day = start.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })
+  if (inv.allDay) return `${day}, all day`
+  const time = (d: Date) => d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+  const end = inv.end ? new Date(inv.end) : null
+  return end && !Number.isNaN(end.getTime())
+    ? `${day}, ${time(start)}–${time(end)}`
+    : `${day}, ${time(start)}`
+}
+
+/**
+ * A text/calendar invite (HAL-3369): what Mailyard parsed from it, and Yes / Maybe / No, which send an iTIP
+ * REPLY from this mailbox through `POST /v1/mailboxes/{id}/messages/{messageId}/rsvp`.
+ */
+function InviteCard({
+  mailboxId,
+  messageId,
+  invite,
+  filename,
+}: {
+  mailboxId: string
+  messageId: string
+  invite: Invite | null | undefined
+  filename: string
+}) {
+  const mail = useMail()
+  const qc = useQueryClient()
+  const [sending, setSending] = useState<string | null>(null)
+  const start = invite?.start ? new Date(invite.start) : null
+  const when = invite ? inviteWhen(invite) : null
+  const reply = async (r: (typeof RSVP)[number]) => {
+    setSending(r.response)
+    try {
+      await unwrap(
+        api.POST("/v1/mailboxes/{id}/messages/{messageId}/rsvp", {
+          params: { path: { id: mailboxId, messageId } },
+          body: { response: r.response },
+        }),
+      )
+      await qc.invalidateQueries({ queryKey: mailKeys.message(mailboxId, messageId) })
+      toast({
+        title: `Replied ${r.label.toLowerCase()}`,
+        ...(invite?.organizer?.address ? { sub: `Sent to ${invite.organizer.address}.` } : {}),
+      })
+    } catch (e) {
+      toast({
+        title: "The reply wasn’t sent",
+        sub:
+          e instanceof ApiError
+            ? `${e.message}${e.requestId ? ` · ${e.requestId}` : ""}`
+            : "Mailyard couldn’t be reached.",
+        tone: "error",
+      })
+    } finally {
+      setSending(null)
+    }
+  }
+  const guests = invite?.attendees ?? []
+  const going = guests.filter((a) => a.partstat === "ACCEPTED").length
   return (
-    <div className="invite" data-endpoint="message.invite (planned, HAL-3369)">
+    <div
+      className="invite"
+      data-endpoint="message.invite · POST /v1/mailboxes/{id}/messages/{messageId}/rsvp"
+    >
       <div className="inv-date" aria-hidden="true">
-        <Icon name="calendar" />
+        {start && !Number.isNaN(start.getTime()) ? (
+          <>
+            <span className="m">{start.toLocaleDateString(undefined, { month: "short" })}</span>
+            <span className="d">{start.getDate()}</span>
+          </>
+        ) : (
+          <Icon name="calendar" />
+        )}
       </div>
       <div className="inv-body">
-        <span className="inv-title">Calendar invite</span>
-        <span className="inv-line">
-          <Icon name="file" />
-          <span className="mono">{name}</span> is attached below; download it to add the event to your
-          calendar.
-        </span>
-        <span className="inv-line">
-          <PlannedPill
-            issue="HAL-3369"
-            what="Reading the invite’s time, place and guests, and replying to it"
-          />
-        </span>
-        <div className="inv-rsvp">
-          {["Yes", "Maybe", "No"].map((r) => (
-            <span key={r} className="has-reason">
-              <button
-                className="btn btn-secondary btn-sm"
-                type="button"
-                aria-disabled="true"
-                aria-describedby="rsvp-why"
-              >
-                {r}
-              </button>
+        <span className="inv-title">{invite?.summary || "Calendar invite"}</span>
+        {when ? (
+          <span className="inv-line">
+            <Icon name="clock" />
+            <span>
+              {when}
+              {invite?.timeZone ? <span className="muted"> · {invite.timeZone}</span> : null}
             </span>
-          ))}
-          <span className="t-small muted" id="rsvp-why">
-            Replying to invites from Mail arrives with HAL-3369.
           </span>
-        </div>
+        ) : null}
+        {invite?.location ? (
+          <span className="inv-line">
+            <Icon name="pin" />
+            <span className="mono">{invite.location}</span>
+          </span>
+        ) : null}
+        {invite?.organizer ? (
+          <span className="inv-line">
+            <Icon name="user" />
+            <span>
+              From {invite.organizer.name || invite.organizer.address}
+              {guests.length
+                ? ` · ${guests.length} guest${guests.length === 1 ? "" : "s"}, ${going} going`
+                : ""}
+            </span>
+          </span>
+        ) : null}
+        {!invite ? (
+          <span className="inv-line">
+            <Icon name="file" />
+            <span>
+              <span className="mono">{filename}</span> is attached below; download it to add the event to your
+              calendar.
+            </span>
+          </span>
+        ) : null}
+        {invite?.canRespond ? (
+          <div className="inv-rsvp">
+            {RSVP.map((r) => (
+              <Gated
+                key={r.response}
+                allowed={mail.access.write}
+                reason={mail.access.writeReason}
+                who={mail.access.writeWho}
+              >
+                <button
+                  className={`btn btn-sm ${invite.myStatus === r.partstat ? "btn-primary" : "btn-secondary"}`}
+                  type="button"
+                  aria-pressed={invite.myStatus === r.partstat}
+                  disabled={sending !== null}
+                  onClick={() => void reply(r)}
+                >
+                  {sending === r.response ? "Sending…" : r.label}
+                </button>
+              </Gated>
+            ))}
+            {invite.myStatus && REPLIED[invite.myStatus] ? (
+              <span className="t-small muted">
+                {REPLIED[invite.myStatus]} Changing it sends the organiser a new reply.
+              </span>
+            ) : null}
+          </div>
+        ) : invite ? (
+          <span className="t-small muted">This invite doesn’t ask for a reply from this mailbox.</span>
+        ) : null}
       </div>
     </div>
   )

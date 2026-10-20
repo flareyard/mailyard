@@ -894,7 +894,7 @@ export function Composer({ request, variant }: { request: ComposeRequest; varian
           <div className="grow">
             <span>
               <b>You’re writing from {agent.name}’s mailbox.</b> {local} belongs to an agent. Messages don’t
-              yet record who sent them, so this reply will show as sent by {agent.name} (HAL-3502).
+              yet record which person sent them, so this reply will show as sent by {agent.name}.
             </span>
           </div>
         </div>

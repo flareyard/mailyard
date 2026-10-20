@@ -185,8 +185,8 @@ function SignIn() {
           <div className="callout callout-info" role="status">
             <Icon name="info" />
             <span>
-              Browser sign-in arrives with HAL-3358 (sessions). Until it deploys, this form can’t exchange a
-              key. The API itself works with Bearer keys today.
+              This Mailyard is on a release without browser sign-in, so this form can’t exchange a key. The
+              API itself works with Bearer keys today.
             </span>
           </div>
         ) : null}

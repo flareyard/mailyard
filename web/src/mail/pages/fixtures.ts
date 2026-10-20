@@ -16,6 +16,7 @@
 import type { MailOverride } from "../fixtures-core.ts"
 import type {
   ExportList,
+  ImageSenderList,
   ImportList,
   LabelBody,
   MailExport,
@@ -123,6 +124,23 @@ export const RULES: RuleList = {
     },
   ],
 }
+
+/** Trusted image senders per mailbox (HAL-3369), shared with a message's "Always show from …" in sample-data mode. */
+const IMAGE_SENDERS = new Map<string, ImageSenderList["senders"]>()
+const imageSendersOf = (mb: string): ImageSenderList["senders"] => {
+  let list = IMAGE_SENDERS.get(mb)
+  if (!list) {
+    list = isNew(mb)
+      ? []
+      : [
+          { value: "@coursified.app", createdBy: "Ada Okafor", createdAt: 1791740880000 },
+          { value: "newsletter@musaanalytics.ng", createdBy: "Ada Okafor", createdAt: 1792165680000 },
+        ]
+    IMAGE_SENDERS.set(mb, list)
+  }
+  return list
+}
+const IMAGE_SENDER_VALUE = /^(?:[^\s@]+@[^\s@]+\.[^\s@]+|@[a-z0-9.-]+\.[a-z]{2,})$/
 
 const SENDERS: SenderList = {
   senders: [
@@ -545,6 +563,46 @@ export const PAGES_OVERRIDES: readonly MailOverride[] = [
     method: "DELETE",
     path: new RegExp(`^/v1/mailboxes/${MB}/senders/([^/]+)$`),
     answer: ([, , v]) => ok({ removed: decodeURIComponent(v ?? "") }),
+  },
+
+  /* ── image senders ── */
+  {
+    method: "GET",
+    path: new RegExp(`^/v1/mailboxes/${MB}/image-senders$`),
+    answer: ([, mb = ""]) => ok({ senders: imageSendersOf(mb) } satisfies ImageSenderList),
+  },
+  {
+    method: "POST",
+    path: new RegExp(`^/v1/mailboxes/${MB}/image-senders$`),
+    answer: ([, mb = ""], body) => {
+      const value = String(obj(body).value ?? "")
+        .trim()
+        .toLowerCase()
+      if (!IMAGE_SENDER_VALUE.test(value))
+        return {
+          status: 400,
+          body: {
+            _tag: "InvalidRequest",
+            field: "value",
+            message: `${value} is neither an address nor @domain.`,
+          },
+        }
+      const sender = { value, createdBy: "Ada Okafor", createdAt: NOW }
+      IMAGE_SENDERS.set(mb, [sender, ...imageSendersOf(mb).filter((x) => x.value !== value)])
+      return ok(sender)
+    },
+  },
+  {
+    method: "DELETE",
+    path: new RegExp(`^/v1/mailboxes/${MB}/image-senders/([^/]+)$`),
+    answer: ([, mb = "", v = ""]) => {
+      const value = decodeURIComponent(v)
+      IMAGE_SENDERS.set(
+        mb,
+        imageSendersOf(mb).filter((x) => x.value !== value),
+      )
+      return ok({ removed: value })
+    },
   },
 
   /* ── imports ── */

@@ -645,8 +645,57 @@ const meOverride: Override = {
   answer: () => ok(meAs(fx() as NonNullable<Me["role"]>)),
 }
 
+// ── AI (HAL-3305) ─────────────────────────────────────────────────────────────────────────────────────────────
+// Answered on every page, not only Settings: Mail's summaries and drafts and the Segments sentence box read it.
+// `?fx=ai-off` is a Mailyard with no provider configured; saving changes what the next read returns.
+type AssistantSettings = Json<"/v1/settings/assistant", "get">
+let assistant: AssistantSettings = {
+  summaries: true,
+  drafts: true,
+  categories: false,
+  segments: true,
+  dailyCallsPerMailbox: 200,
+  provider: "workers-ai",
+  model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  available: true,
+  today: {
+    day: "2026-10-17",
+    byFeature: [
+      { feature: "summary", calls: 14, inputTokens: 21_400, outputTokens: 1_120, neurons: 610 },
+      { feature: "draft", calls: 3, inputTokens: 5_900, outputTokens: 840, neurons: 190 },
+      { feature: "segment", calls: 1, inputTokens: 900, outputTokens: 210, neurons: 40 },
+    ],
+  },
+}
+const assistantNow = (): AssistantSettings =>
+  fx() === "ai-off" ? { ...assistant, provider: "off", model: null, available: false } : assistant
+
 export const SETTINGS_OVERRIDES: readonly Override[] = [
   meOverride,
+  { method: "GET", path: /^\/v1\/settings\/assistant$/, answer: () => ok(assistantNow()) },
+  {
+    method: "PUT",
+    path: /^\/v1\/settings\/assistant$/,
+    answer: (_, b) => {
+      const body = json(b)
+      const cap = Number(body.dailyCallsPerMailbox)
+      if (!Number.isInteger(cap) || cap < 0 || cap > 100_000)
+        return refusal(
+          400,
+          "InvalidRequest",
+          "dailyCallsPerMailbox must be a whole number from 0 to 100,000.",
+        )
+      assistant = {
+        ...assistant,
+        summaries: Boolean(body.summaries),
+        drafts: Boolean(body.drafts),
+        categories: Boolean(body.categories),
+        segments: Boolean(body.segments),
+        dailyCallsPerMailbox: cap,
+      }
+      return ok(assistantNow())
+    },
+  },
   // Mailboxes
   {
     method: "GET",
