@@ -893,6 +893,29 @@ const integrations = (withKeys: boolean): Integrations => ({
         ]
       : null,
   },
+  // MCP clients that signed in with OAuth (HAL-3462): each grant is backed by a key it minted.
+  oauth: {
+    authorizationServer: ORIGIN,
+    grants: withKeys
+      ? [
+          {
+            id: "grt_01JAH7Q2",
+            client: {
+              id: "https://claude.ai/oauth/mcp",
+              name: "Claude",
+              host: "claude.ai",
+              registration: "cimd",
+            },
+            grantedBy: { id: "mem_01JAOWNR", name: "Tolu Adeyemi", email: "tolu@coursified.app" },
+            apiKeyId: "key_01JAG2C5",
+            scopes: ["read", "send"],
+            mailboxIds: ["mbx_support"],
+            createdAt: NOW - 3 * DAY,
+            lastUsedAt: NOW - HOUR,
+          },
+        ]
+      : [],
+  },
   webhooks: {
     count: 3,
     enabled: 3,

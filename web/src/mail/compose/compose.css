@@ -1,0 +1,121 @@
+/* Mail composer (HAL-3308): tokens only; extends .compose, .reply and their rows from styles/mail.css. */
+.compose-scrim {
+  z-index: 54;
+}
+.compose-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compose.is-min {
+  height: auto;
+}
+.compose.is-min .compose-head {
+  border-bottom: 0;
+}
+.compose:not(.is-window) {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+.compose-sig {
+  padding: 0 16px 12px;
+  font: var(--text-copy-14);
+  color: var(--my-muted);
+}
+.compose-quote {
+  padding: 0 16px 12px;
+  max-width: none;
+}
+.compose-quote .quote {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.compose-body:focus-visible {
+  outline: none;
+  box-shadow: inset 2px 0 0 var(--ember-700);
+}
+.compose-body blockquote {
+  margin: 8px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--my-border);
+  color: var(--my-muted);
+}
+.compose-body ul,
+.compose-body ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.compose-body a {
+  color: var(--my-fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.compose-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+.up-row .up-note.is-error {
+  color: var(--red-900);
+}
+.up-row .up-note .link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.compose-resume .btn {
+  flex: none;
+}
+.compose-row .from-btn .icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--my-muted);
+}
+.compose-foot .link-quiet {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.reply-mode .seg button .icon {
+  width: 14px;
+  height: 14px;
+}
+@media (max-width: 767px) {
+  .compose-foot .link-quiet {
+    min-height: 44px;
+  }
+  .reply-mode .seg button {
+    min-height: 44px;
+  }
+  .compose-resume {
+    flex-wrap: wrap;
+  }
+  .compose-resume .btn {
+    min-height: 44px;
+  }
+}
+.compose-row input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.compose-row:focus-within {
+  box-shadow: inset 2px 0 0 var(--ember-700);
+}
+
+/* Touch: a recipient chip's × stays a 24 px target (WCAG 2.2 AA). */
+@media (pointer: coarse) {
+  .rcpts .chip button {
+    min-width: 28px;
+    min-height: 28px;
+  }
+}

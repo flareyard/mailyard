@@ -1,0 +1,26 @@
+/* Audience (HAL-3310): the few things the design's classes don't cover. Tokens only. */
+
+/* A link-styled button inside text (Show all, Select all matching). */
+button.link,
+button.link-quiet {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.bulkbar button.link {
+  color: var(--background-100);
+}
+
+/* Consent evidence under a timeline item (HAL-3426). */
+.tl-evidence {
+  margin-top: 4px;
+}
+.tl-evidence summary {
+  cursor: pointer;
+  min-height: 24px;
+}
+.tl-evidence .kv {
+  margin-top: 4px;
+}

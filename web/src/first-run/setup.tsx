@@ -195,8 +195,7 @@ export function nextAfter(steps: readonly Step[], id: StepId): View {
 }
 
 /** Who may set up, for the second line of a refusal. */
-export const SETUP_WHO =
-  "Owners and admins set up Mailyard. Until roles arrive (HAL-3361), that’s a key with the admin scope or the admin key."
+export const SETUP_WHO = "Owners and admins set up Mailyard, or a key with the admin scope."
 
 /** Marks `id` with `m` while `when` holds, and clears it after. */
 export function useMark(id: StepId, m: Mark, when: boolean) {

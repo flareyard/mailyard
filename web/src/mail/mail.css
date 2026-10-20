@@ -1,0 +1,195 @@
+/* Mail section styles (HAL-3308). Tokens only; extends the design CSS in styles/mail.css. */
+
+/* /mail while it picks a mailbox: the frame's height, so nothing jumps. */
+.mail-boot {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Search all mailboxes: the list and the reader, no folder pane. */
+.mail.mail-search-all {
+  grid-template-columns: var(--mail-list-w) minmax(0, 1fr);
+}
+@media (max-width: 767px) {
+  .mail.mail-search-all {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The auth warning sits under the authentication line, aligned with the body. */
+.msg-warn {
+  margin: 0 16px 12px 64px;
+}
+@media (max-width: 1023px) {
+  .msg-warn {
+    margin-left: 16px;
+  }
+}
+@media (max-width: 767px) {
+  .msg-warn {
+    margin: 0 12px 12px;
+  }
+}
+
+/* The sent-by mark's icon at the design's 12 px. */
+.sent-by .icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* The ? sheet's two columns stack on a phone. */
+.mail-keys-grid {
+  gap: 0 24px;
+}
+@media (max-width: 767px) {
+  .mail-keys-grid .span-6 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The switch rendered as a link (Search all mailboxes) keeps the label's look. */
+a.switch {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Thread rows' attachment icon in the meta line. */
+.tr-meta .icon[role="img"] {
+  color: var(--my-muted);
+}
+
+/* The thumb is a button when it previews. */
+button.att-thumb {
+  border: 1px solid var(--my-border);
+  font: inherit;
+}
+
+@media print {
+  .app .mail-folders,
+  .app .mail-list,
+  .app .rd-bar,
+  .app .rd-actionbar,
+  .app .reply-prompt,
+  .app .note-add,
+  .app .sidebar,
+  .app .topbar,
+  .app .bottombar {
+    display: none;
+  }
+  .mail {
+    display: block;
+  }
+}
+
+/* The undo countdown's bar: a block, so its 2 px height applies. */
+.toast-timer {
+  display: block;
+}
+
+/* "Search all mailboxes" is a link that looks like the design's switch (it changes the page, not a setting). */
+.mail-switch {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--gray-500);
+}
+.mail-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--background-100);
+  box-shadow: var(--shadow-small);
+}
+.mail-switch.is-on {
+  background: var(--gray-1000);
+}
+.mail-switch.is-on::after {
+  transform: translateX(16px);
+}
+a.switch:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+  border-radius: var(--radius-base);
+}
+
+/* Touch: the operator chips' × and the switch-link stay at least 24 px (WCAG 2.2 AA) where the phone rules don't reach (a phone on its side). */
+a.switch {
+  min-height: 32px;
+}
+@media (pointer: coarse) {
+  .op-chip {
+    height: 32px;
+  }
+  .op-chip button {
+    width: 28px;
+    height: 28px;
+  }
+  a.switch {
+    min-height: 44px;
+  }
+}
+
+/* The per-recipient table keeps each cell on one line and scrolls inside its wrap on a narrow screen. */
+.dlv-list .table th,
+.dlv-list .table td {
+  white-space: nowrap;
+}
+
+/* The reader is narrow beside the list on tablets and small laptops (424 px at 1280 with the folders out):
+   when it is, each message's date and actions take their own row, as on a phone, so the sender, the
+   address and the recipients keep the full width. */
+@media (min-width: 768px) {
+  .rd-inner {
+    container-type: inline-size;
+    container-name: reader;
+  }
+}
+@container reader (max-width: 620px) {
+  .msg:not(.is-collapsed) .msg-head {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .msg:not(.is-collapsed) .msg-head .who-lg {
+    grid-row: span 4;
+  }
+  .msg:not(.is-collapsed) .msg-head .msg-side {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+  .msg.is-collapsed .msg-side .pill {
+    display: none;
+  }
+}
+
+/* Touch screens wider than a phone still get 24 px targets (WCAG 2.2 AA), 44 where there's room. */
+@media (pointer: coarse) {
+  .dlv-top .link-quiet,
+  .att-name,
+  .msg-auth .link-quiet {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+  .ltag-lg {
+    height: 32px;
+  }
+  .ltag-lg button {
+    width: 28px;
+    height: 28px;
+  }
+}
+@media (pointer: coarse) {
+  .rd-inner > a.link-quiet {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+}

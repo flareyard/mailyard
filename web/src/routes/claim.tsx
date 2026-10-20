@@ -144,7 +144,7 @@ function Claim() {
     : !live
       ? {
           reason: "This Mailyard can’t be claimed yet",
-          who: "Update the deploy to a release with people and roles (HAL-3361).",
+          who: "Update this Mailyard to a release with members and roles.",
         }
       : signedOut || !me.data
         ? {
@@ -184,7 +184,7 @@ function Claim() {
           <Icon name="info" />
           <div className="stack stack-4">
             <span>
-              <b>This Mailyard can’t be claimed yet.</b> Owners arrive with people and roles (HAL-3361), which
+              <b>This Mailyard can’t be claimed yet.</b> It’s on a release without members and roles, which
               this deploy doesn’t have. Update it from Flareyard; until then the admin key and the keys in
               Settings → API keys are how you get in.
             </span>

@@ -14,7 +14,9 @@
 
 import { ANALYTICS_OVERRIDES } from "../analytics/fixtures.ts"
 import type { paths } from "../api/schema"
+import { screenFixture } from "../audience/kit/fixtureScreens.ts"
 import { DOMAINS_OVERRIDES } from "../domains/fixtures.ts"
+import { MAIL_OVERRIDES } from "../mail/fixtures.ts"
 import { SETTINGS_AGENTS_OVERRIDES } from "../settings/agents-fixtures.ts"
 import { SETTINGS_OVERRIDES } from "../settings/fixtures.ts"
 import { TRANSACTIONAL_OVERRIDES } from "../transactional/fixtures.ts"
@@ -181,7 +183,25 @@ const OPS_OVERRIDES: readonly Override[] = [
 
 /** The override answering this request, if any. */
 export async function findOverride(request: Request): Promise<Answer | undefined> {
+  // Audience, campaigns and automations (HAL-3310): `?fx=<design screen>` answers from that screen's fixtures.
+  const screen = await screenFixture(request)
+  if (screen) return screen
   const url = new URL(request.url)
+  // ── Mail (HAL-3308): mail/fixtures.ts answers first; an answer of undefined falls through to the designs.
+  for (const o of MAIL_OVERRIDES) {
+    if (o.method !== request.method) continue
+    const m = url.pathname.match(o.path)
+    if (!m) continue
+    let body: unknown = null
+    if (request.method !== "GET") {
+      try {
+        body = await request.clone().json()
+      } catch {}
+    }
+    const answer = await o.answer(m, body, url)
+    if (answer) return answer
+  }
+  // ── end Mail
   for (const o of [...OVERRIDES, ...OPS_OVERRIDES]) {
     if (o.method !== request.method) continue
     const m = url.pathname.match(o.path)

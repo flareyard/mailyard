@@ -211,8 +211,8 @@ function Enable({ id }: { id: string }) {
             </Link>
             {!connected ? (
               <p className="hint" style={{ flexBasis: "100%" }}>
-                Fixing records needs a zone token (HAL-3418). Without one, Mailyard answers “connect a zone
-                token” and you set the records above by hand at your DNS host.
+                Fixing records needs access to the zone. Without one, Mailyard answers “connect a zone token”
+                and you set the records above by hand at your DNS host.
               </p>
             ) : null}
           </>

@@ -452,7 +452,7 @@ export function RoutingNote({
           ? "Mailyard never checks routing for a catch-all."
           : "There’s no zone token (CLOUDFLARE_DNS_TOKEN), so Mailyard couldn’t see whether an Email Routing rule already sends this address elsewhere."}{" "}
         If one does, its mail won’t reach this mailbox: check Email Routing → Routing rules in Cloudflare, or
-        send it a test. <span className="tag">Owner step · HAL-3418</span>
+        send it a test. <span className="tag">Owner step</span>
       </span>
     </div>
   )

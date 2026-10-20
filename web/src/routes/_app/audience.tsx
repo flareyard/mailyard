@@ -1,15 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { SectionPending } from "../../ui/SectionPending.tsx"
+import { createFileRoute, Outlet } from "@tanstack/react-router"
 
-// TEMPORARY until HAL-3310 lands (see SectionPending).
+/** Audience (HAL-3310): contacts, segments, topics, forms, fields and imports, each its own route below. */
 export const Route = createFileRoute("/_app/audience")({
   staticData: { title: "Audience" },
-  component: () => (
-    <SectionPending
-      title="Audience"
-      issue="HAL-3310"
-      icon="audience"
-      what="Contacts, topics, segments, forms and imports."
-    />
-  ),
+  component: Outlet,
 })

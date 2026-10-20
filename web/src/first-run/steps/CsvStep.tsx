@@ -5,9 +5,15 @@
  * topicIds, onConflict, defaultStatus, consent }` starts it; `GET /v1/imports/{id}` is polled until it ends.
  * The bar is `bytesRead / size`; cancel is `POST /v1/imports/{id}/cancel`; every row error is in errors.csv.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { type DragEvent, type ReactNode, useId, useRef, useState } from "react"
-import { ApiError, api, unwrap } from "../../api/client.ts"
+import { ApiError } from "../../api/client.ts"
+import {
+  useCancelImport,
+  useContactImport,
+  useStartImport,
+  useUpload,
+} from "../../audience/import/queries.ts"
 import { Gated } from "../../auth/NoPermission.tsx"
 import { fmtInt, num } from "../../lib/format.ts"
 import { Icon } from "../../ui/icons.tsx"
@@ -28,17 +34,9 @@ import {
   progressPct,
   TARGET_LABELS,
   type Target,
-  toImportMapping,
   validateMapping,
 } from "../logic.ts"
-import {
-  type ContactImport,
-  contactFieldsQuery,
-  contactImportQuery,
-  contactImportsQuery,
-  topicsQuery,
-  type Upload,
-} from "../queries.ts"
+import { type ContactImport, contactFieldsQuery, contactImportsQuery, topicsQuery } from "../queries.ts"
 import { SETUP_WHO, useMark, useSetup } from "../setup.tsx"
 import { ApiErrorCallout, ConfirmButton, FieldError, StepPanel, useNow } from "../ui.tsx"
 
@@ -51,7 +49,6 @@ type Picked = { file: File; headers: string[]; firstRow: string[]; rows: number 
 
 export function CsvStep() {
   const s = useSetup()
-  const qc = useQueryClient()
   const imports = useQuery(contactImportsQuery)
   const [picked, setPicked] = useState<Picked | null>(null)
   const [startedId, setStartedId] = useState<string | null>(null)
@@ -85,8 +82,6 @@ export function CsvStep() {
         picked={picked}
         onAnother={another}
         onStarted={(imp) => {
-          qc.setQueryData(contactImportQuery(imp.id).queryKey, imp)
-          qc.invalidateQueries({ queryKey: ["imports"], exact: true })
           s.remember((m) => ({ ...m, started: true }))
           setStartedId(imp.id)
           setPicked(null)
@@ -267,57 +262,36 @@ function MapAndStart({
   } | null>(null)
   const workspace = s.me?.workspace.name ?? "you"
 
-  const upload = useQuery({
-    queryKey: ["upload", picked.file.name, picked.file.size, picked.file.lastModified],
-    queryFn: async () =>
-      unwrap(
-        api.POST("/v1/uploads", {
-          params: { query: { filename: picked.file.name } },
-          body: picked.file as unknown as string,
-          bodySerializer: (b: unknown) => b,
-          headers: { "content-type": picked.file.type || "text/csv" },
-        }),
-      ) as Promise<Upload>,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 30 * 60_000,
-    retry: 1,
-    refetchOnWindowFocus: false,
-  })
+  const upload = useUpload(picked.file)
   const uploaded = upload.data && "id" in upload.data ? upload.data : undefined
   useMark("csv", upload.isError ? "fail" : "running", true)
 
-  const start = useMutation({
-    mutationFn: () => {
-      const st = statement.trim()
-      return unwrap(
-        api.POST("/v1/imports/contacts", {
-          body: {
-            uploadId: uploaded?.id ?? "",
-            mapping: toImportMapping(mapping ?? []),
-            topicIds,
-            onConflict,
-            defaultStatus,
-            ...(consent ? { consent: { attested: true, ...(st ? { statement: st } : {}) } } : {}),
-          },
-        }),
-      )
-    },
-    onSuccess: (imp) => {
-      if (imp && "id" in imp) onStarted(imp)
-    },
-    onError: (e) => {
-      if (
-        e instanceof ApiError &&
-        e.status === 400 &&
-        typeof e.body.field === "string" &&
-        e.body.field.startsWith("mapping")
-      )
-        setServerColumnError({
-          column: e.body.field.startsWith("mapping.") ? e.body.field.slice(8) : null,
-          message: e.message,
-        })
-    },
-  })
+  const start = useStartImport(onStarted)
+  const begin = () =>
+    start.mutate(
+      {
+        uploadId: uploaded?.id ?? "",
+        mapping: mapping ?? [],
+        topicIds,
+        onConflict,
+        defaultStatus,
+        consent: { attested: consent, statement },
+      },
+      {
+        onError: (e) => {
+          if (
+            e instanceof ApiError &&
+            e.status === 400 &&
+            typeof e.body.field === "string" &&
+            e.body.field.startsWith("mapping")
+          )
+            setServerColumnError({
+              column: e.body.field.startsWith("mapping.") ? e.body.field.slice(8) : null,
+              message: e.message,
+            })
+        },
+      },
+    )
 
   const errors = mapping ? validateMapping(mapping) : []
   const general = errors.filter((e) => !e.column)
@@ -352,7 +326,7 @@ function MapAndStart({
             <button
               className={`btn btn-primary${start.isPending ? " is-loading" : ""}`}
               type="button"
-              onClick={() => start.mutate()}
+              onClick={begin}
               disabled={start.isPending}
             >
               {start.isPending ? <span className="spinner" aria-hidden="true" /> : null}
@@ -660,21 +634,10 @@ function ImportView({
   onSkip: () => void
   onFinish: () => void
 }) {
-  const qc = useQueryClient()
-  const q = useQuery({
-    ...contactImportQuery(id),
-    ...(initial ? { initialData: initial } : {}),
-    refetchInterval: (query) => (query.state.data && ACTIVE.has(query.state.data.status) ? 2000 : false),
-  })
+  const q = useContactImport(id, initial)
   const imp = q.data && "status" in q.data ? q.data : undefined
   const now = useNow(1000, Boolean(imp && ACTIVE.has(imp.status)))
-  const cancel = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/imports/{id}/cancel", { params: { path: { id } } })),
-    onSuccess: (res) => {
-      if (res && "id" in res) qc.setQueryData(contactImportQuery(id).queryKey, res)
-      qc.invalidateQueries({ queryKey: ["imports"], exact: true })
-    },
-  })
+  const cancel = useCancelImport(id)
 
   if (!imp)
     return (

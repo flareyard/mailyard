@@ -35,7 +35,6 @@ import {
   nameserverMatch,
   recordCounts,
   STATUS_PILL,
-  TOKEN_ISSUE,
   TOKEN_SECRET,
   toBind,
   zoneState,
@@ -136,7 +135,7 @@ export function DomainDetail() {
           allowed={connected}
           side="right"
           reason="Fixing needs a zone token"
-          who={`Mailyard can only change records with ${TOKEN_SECRET} set (owner step ${TOKEN_ISSUE}). Until then, set the records below by hand; each row has its value to copy.`}
+          who={`Mailyard can only change records with ${TOKEN_SECRET} set. Until then, set the records below by hand; each row has its value to copy.`}
         >
           <button
             className="btn btn-primary"

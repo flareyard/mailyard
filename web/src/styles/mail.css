@@ -153,6 +153,8 @@ mark.hl,.tr mark,.msg mark,.hit mark{background:none;color:var(--my-fg);font-wei
 .ai-sum .ai-head .icon-btn{margin:-6px -6px -6px 0}
 .ai-sum p{font:var(--text-copy-14)}
 .ai-sum .ai-foot{font:var(--text-label-12);color:var(--my-muted)}
+.ai-sum .ai-bullets{margin:0;padding-left:18px;display:grid;gap:4px;font:var(--text-copy-14)}
+.ai-sum .ai-head .btn{margin:-4px 0;flex:none}
 
 /* messages */
 .msg{min-width:0;border:1px solid var(--my-border);border-radius:var(--radius-medium);background:var(--my-surface)}
@@ -585,3 +587,8 @@ mark.hl,.tr mark,.msg mark,.hit mark{background:none;color:var(--my-fg);font-wei
 .skill-hint .grow{display:flex;flex-direction:column;gap:4px;min-width:0}
 .skill-hint b{font-weight:600}
 @media (max-width:767px){.skill-hint{flex-wrap:wrap}}
+
+/* Draft with AI in a reply (HAL-3305): the button, and the optional instruction row it opens. */
+.ai-draft{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.ai-draft-row{display:inline-flex;align-items:center;gap:6px;min-width:0;flex:1 1 220px}
+.ai-draft-row .input{min-width:0;flex:1}

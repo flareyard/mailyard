@@ -161,7 +161,7 @@ export function AgentDetail() {
           <Gated
             allowed={false}
             reason="Pausing isn’t in the API"
-            who="HAL-3460 shipped without a pause. Remove the agent to stop it now, or set its daily cap to 0."
+            who="Agents can’t be paused yet. Remove the agent to stop it now, or set its daily cap to 0."
             side="right"
           >
             <button className="btn btn-secondary" type="button">

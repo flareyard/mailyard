@@ -319,7 +319,7 @@ export function ZoneTokenHint() {
         </span>
         <span className="t-small muted">
           A zone token is a Cloudflare API token with Zone read and DNS edit. Add it as{" "}
-          <code className="mono">CLOUDFLARE_DNS_TOKEN</code> in Flareyard (founder step HAL-3418).
+          <code className="mono">CLOUDFLARE_DNS_TOKEN</code> in Flareyard.
         </span>
       </div>
     </div>

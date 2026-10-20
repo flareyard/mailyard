@@ -414,13 +414,16 @@ a.fy-byline:hover{color:var(--my-fg)}
 .stat{display:flex;flex-direction:column;gap:4px;min-width:0}
 .stat-label{font:var(--text-label-13);color:var(--my-muted);display:flex;align-items:center;gap:6px}
 .stat-value{font:600 24px/30px var(--font-display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.stat-delta{font:var(--text-label-12);color:var(--my-muted)}
+.stat-delta{font:var(--text-label-12);color:var(--my-muted);overflow-wrap:anywhere}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px}
 .tile{padding:14px 16px;border:1px solid var(--my-border);border-radius:var(--radius-medium);background:var(--my-surface)}
 .table-wrap{overflow-x:auto;margin:0 -16px;padding:0 16px}
 .table{width:100%;border-collapse:collapse;font:var(--text-label-13)}
 .table th{text-align:left;font-weight:500;color:var(--my-muted);padding:8px 12px 8px 0;border-bottom:1px solid var(--my-border);white-space:nowrap}
 .table td{padding:10px 12px 10px 0;border-bottom:1px solid var(--gray-300);vertical-align:middle}
+/* A text column never squeezes below a readable width: a dense table scrolls inside .table-wrap instead
+   (data tables are WCAG 1.4.10's two-dimensional exception). Zoom audit, 2026-10-20 (HAL-3735). */
+.table td:not(.r):not(.sel):not(.actions){min-width:8.5rem}
 .table tr:last-child td{border-bottom:0}
 .table .r{text-align:right;font-variant-numeric:tabular-nums}
 .table tbody tr:hover td{background:var(--gray-100)}
@@ -506,7 +509,9 @@ a.list-row:hover{background:var(--gray-100)}
 .funnel{display:flex;flex-direction:column;gap:2px}
 .funnel-row{display:grid;grid-template-columns:minmax(120px,220px) minmax(0,1fr) 64px 56px;gap:12px;align-items:center;min-height:30px;padding:0 6px;margin:0 -6px;border-radius:var(--radius-base);text-decoration:none;color:inherit}
 a.funnel-row:hover{background:var(--gray-100)}
-.funnel-row .f-label{font:var(--text-label-13);display:flex;align-items:center;gap:8px;min-width:0}
+.funnel-row .f-label{font:var(--text-label-13);display:flex;flex-wrap:wrap;align-items:center;gap:0 8px;min-width:0}
+/* The sub-line (people, machine opens, where replies landed) wraps under the label rather than squeezing beside it. */
+.funnel-row .f-label .sub{flex:0 1 auto;min-width:0}
 .funnel-row .f-label .sub{color:var(--my-muted)}
 .funnel-row .f-bar{height:10px;border-radius:2px;background:var(--data-track);position:relative;overflow:hidden}
 .funnel-row .f-bar>span{position:absolute;inset:0 auto 0 0;min-width:2px;border-radius:2px;background:var(--c,var(--data-neutral))}
@@ -849,3 +854,21 @@ a.att:hover{background:var(--gray-100);border-color:var(--my-border-strong)}
 /* Touch: link-only actions in list rows and auth cards get a 44 px hit area (responsive audit: "Open" in
    list rows was 16 px tall, an auth card's mailto link 20 px). */
 @media (pointer:coarse){.list-row a.link-quiet,.auth-card>a.link{min-height:44px;display:inline-flex;align-items:center}}
+
+/*
+ * Touch screens that keep the desktop layout (tablets, a phone on its side) still need targets of at
+ * least 24 px (WCAG 2.2 2.5.8). The phone rules (max-width:767px) give 44 px; this covers coarse pointers
+ * above that width. Found by the responsive audit on 2026-10-20 (HAL-3735).
+ */
+@media (pointer:coarse){
+  .dt .check,.switch,.th-sort,.fchip a,.fchip button,.dead-badge{min-height:24px}
+  .fchip button{min-width:24px}
+  .crumbs a,.panel-title a,.cell-link,.row-title,.link,.link-quiet,.fy-byline{display:inline-flex;align-items:center;min-height:24px}
+}
+/* Funnel on very narrow screens: the label takes the whole first row; bar, count and share share the second. */
+@media (max-width:340px){
+  .funnel-row .f-label{grid-column:1 / -1;grid-row:1}
+  .funnel-row .f-bar{grid-column:1;grid-row:2}
+  .funnel-row .f-count{grid-column:2;grid-row:2}
+  .funnel-row .f-pct{grid-column:3;grid-row:2}
+}

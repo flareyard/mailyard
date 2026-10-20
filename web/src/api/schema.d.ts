@@ -1044,6 +1044,54 @@ export interface paths {
         patch: operations["mail.updateMessage"];
         trace?: never;
     };
+    "/v1/mailboxes/{id}/messages/{messageId}/rsvp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mail.rsvp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mailboxes/{id}/image-senders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mail.imageSenders"];
+        put?: never;
+        post: operations["mail.addImageSender"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mailboxes/{id}/image-senders/{value}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["mail.removeImageSender"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mailboxes/{id}/labels": {
         parameters: {
             query?: never;
@@ -2964,6 +3012,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workspace/claim/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["signInLink.claimWithLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/invites/{token}": {
         parameters: {
             query?: never;
@@ -3300,6 +3364,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/integrations/oauth-grants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["integrations.revokeOAuthGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/vapid-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["push.vapidKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["push.subscriptions"];
+        put?: never;
+        post: operations["push.subscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["push.unsubscribe"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["push.preferences"];
+        put: operations["push.putPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["push.test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/mcp": {
         parameters: {
             query?: never;
@@ -3421,6 +3581,207 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/.well-known/oauth-protected-resource": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Protected-resource metadata for /mcp (RFC 9728, HAL-3462)
+         * @description Names /mcp as the resource, this origin as its authorization server, and the scopes a client asks for by default (read, send). /mcp's 401 points here in WWW-Authenticate's resource_metadata.
+         */
+        get: operations["oauth.protectedResource"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/oauth-protected-resource/mcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The same metadata, at the path-specific address for /mcp */
+        get: operations["oauth.protectedResourceMcp"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/oauth-authorization-server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Authorization-server metadata (RFC 8414)
+         * @description The authorize, token, registration and revocation endpoints. Codes only, PKCE S256 only, public clients only. Client ID metadata documents are supported, and so is iss in the authorization response (RFC 9207).
+         */
+        get: operations["oauth.serverMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ask a person to connect an MCP client
+         * @description response_type=code, client_id (an https URL to the client's metadata document, or an id from /oauth/register), redirect_uri, state, code_challenge with code_challenge_method=S256, resource (this origin's /mcp) and optionally scope (read, send, admin). Shows a consent page where the person picks scopes and mailboxes, or a sign-in page first. A request whose client or redirect_uri can't be trusted is shown as an error page; any other problem is sent back to redirect_uri as error.
+         */
+        get: operations["oauth.authorize"];
+        put?: never;
+        /**
+         * The consent page's answer
+         * @description From the consent page only (this site's Origin, with the session cookie). decision=allow with the ticked grant_scope and grant_mailbox values issues a ten-minute, single-use code; anything else denies.
+         */
+        post: operations["oauth.consent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/authorize/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a sign-in link that comes back to the authorization
+         * @description From the sign-in page: email and return (the /oauth/authorize URL). The link signs the person in and lands them back on the consent page. The answer is the same whether or not the address belongs to someone.
+         */
+        post: operations["oauth.signIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a code, or refresh
+         * @description Form body. grant_type=authorization_code with code, redirect_uri, code_verifier, client_id and resource; or grant_type=refresh_token with refresh_token and client_id. Answers an access token (one hour, only for /mcp) and a refresh token. Each refresh token works once: using a used one revokes the whole grant.
+         */
+        post: operations["oauth.token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register a public client (RFC 7591)
+         * @description For clients without a metadata document. JSON with redirect_uris (https, http on a loopback address, or a private-use scheme) and client_name. Public clients only. A client unused within a day is dropped.
+         */
+        post: operations["oauth.register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a token (RFC 7009)
+         * @description Form body with token (access or refresh) and client_id. Ends the whole grant and its key. Answers 200 whether or not the token existed.
+         */
+        post: operations["oauth.revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/session/flareyard/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sign in through Flareyard (HAL-3360)
+         * @description Only on installs Flareyard made (FLAREYARD_URL and FLAREYARD_INSTALL_ID set); elsewhere this path isn't listed and answers 404. Keeps a PKCE verifier and state in a ten-minute cookie and redirects to Flareyard, which checks the person owns this install. `return` is a path on this site to land on afterwards.
+         */
+        get: operations["session.flareyardStart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/session/flareyard/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where Flareyard sends the person back
+         * @description Checks the state against the flow cookie, exchanges the single-use code with the verifier, checks the answer names this install, and opens a session for that person: a member with their email, or, the platform having checked they own the install, the owner of an unclaimed workspace or a new admin. Failures go to /sign-in?error=flareyard_state, flareyard_session_expired, flareyard_wrong_install, flareyard_denied, flareyard_refused or flareyard_unreachable.
+         */
+        get: operations["session.flareyardCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mailboxes/{id}/wait": {
         parameters: {
             query?: never;
@@ -3478,6 +3839,52 @@ export interface components {
             allowedRoles?: string[];
             owners?: string[];
         };
+        InvalidRequestEncoded: {
+            /** @enum {string} */
+            _tag: "InvalidRequest";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            field: string;
+            message: string;
+            relay?: components["schemas"]["RelayRefusal"];
+        };
+        /** @description Present when Flareyard's Cloudflare relay, not Cloudflare, refused the call (installs through Flareyard only). */
+        RelayRefusal: {
+            /**
+             * @description Why Flareyard's relay refused the Cloudflare call: install_key_invalid (10401, reinstall), relay_disconnected (10402, reconnect Cloudflare in Flareyard), route_undeclared (10403), scope_not_granted (10404, grant `scope` on the app's page in Flareyard), wrong_account (10405), request_too_large (10413), rate_limited (10429), cloudflare_unreachable (10502).
+             * @enum {string}
+             */
+            reason: "install_key_invalid" | "relay_disconnected" | "route_undeclared" | "scope_not_granted" | "wrong_account" | "request_too_large" | "rate_limited" | "cloudflare_unreachable";
+            code: number | ("Infinity" | "-Infinity" | "NaN");
+            /** @description On scope_not_granted: the Cloudflare OAuth scope to grant. */
+            scope?: string;
+        };
+        NotFoundEncoded: {
+            /** @enum {string} */
+            _tag: "NotFound";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+        };
+        OAuthGrant: {
+            id: string;
+            client: {
+                id: string;
+                name: string;
+                host: string | null;
+                registration: ("cimd" | "dcr") | null;
+            };
+            grantedBy: {
+                id: string;
+                name: string;
+                email: string | null;
+            };
+            apiKeyId: string;
+            scopes: string[];
+            mailboxIds: string[];
+            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+        };
         ConflictEncoded: {
             /** @enum {string} */
             _tag: "Conflict";
@@ -3498,21 +3905,6 @@ export interface components {
             deletesAt?: number | ("Infinity" | "-Infinity" | "NaN");
             claimedBy?: string;
             claimedAt?: number | ("Infinity" | "-Infinity" | "NaN");
-        };
-        NotFoundEncoded: {
-            /** @enum {string} */
-            _tag: "NotFound";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            message: string;
-        };
-        InvalidRequestEncoded: {
-            /** @enum {string} */
-            _tag: "InvalidRequest";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            field: string;
-            message: string;
         };
         GoneEncoded: {
             /** @enum {string} */
@@ -3647,6 +4039,7 @@ export interface components {
             requestId?: string;
             status: number | ("Infinity" | "-Infinity" | "NaN");
             message: string;
+            relay?: components["schemas"]["RelayRefusal"];
         };
         CloudflareNotConnectedEncoded: {
             /** @enum {string} */
@@ -3654,6 +4047,7 @@ export interface components {
             /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
             requestId?: string;
             message: string;
+            relay?: components["schemas"]["RelayRefusal"];
         };
         GovernorUnreachableEncoded: {
             /** @enum {string} */
@@ -3695,6 +4089,7 @@ export interface components {
             /** @enum {string} */
             reason: "no_dns_token" | "zone_not_found" | "several_records" | "write_failed";
             message: string;
+            relay?: components["schemas"]["RelayRefusal"];
         };
         FixRefusedEncoded: {
             /** @enum {string} */
@@ -3704,6 +4099,7 @@ export interface components {
             /** @enum {string} */
             reason: "no_dns_token" | "zone_not_found" | "nothing_to_fix";
             message: string;
+            relay?: components["schemas"]["RelayRefusal"];
         };
         UnprocessableEncoded: {
             /** @enum {string} */
@@ -8011,6 +8407,7 @@ export interface operations {
                         complaints30d: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         returnPath: string | null;
                         zoneCheckedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        zoneRelay?: components["schemas"]["RelayRefusal"];
                         checks: {
                             /** @enum {string} */
                             id: "mx" | "spf" | "dkim" | "dmarc" | "bounce-mx" | "bounce-spf" | "bounce-dkim";
@@ -8126,6 +8523,8 @@ export interface operations {
                             workspaceDomains: string[];
                             existingMx: string[];
                         }[];
+                        message?: string;
+                        relay?: components["schemas"]["RelayRefusal"];
                     };
                 };
             };
@@ -8197,6 +8596,7 @@ export interface operations {
                         complaints30d: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         returnPath: string | null;
                         zoneCheckedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        zoneRelay?: components["schemas"]["RelayRefusal"];
                         checks: {
                             /** @enum {string} */
                             id: "mx" | "spf" | "dkim" | "dmarc" | "bounce-mx" | "bounce-spf" | "bounce-dkim";
@@ -8397,6 +8797,7 @@ export interface operations {
                         complaints30d: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         returnPath: string | null;
                         zoneCheckedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        zoneRelay?: components["schemas"]["RelayRefusal"];
                         checks: {
                             /** @enum {string} */
                             id: "mx" | "spf" | "dkim" | "dmarc" | "bounce-mx" | "bounce-spf" | "bounce-dkim";
@@ -8515,6 +8916,7 @@ export interface operations {
                         complaints30d: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         returnPath: string | null;
                         zoneCheckedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        zoneRelay?: components["schemas"]["RelayRefusal"];
                         checks: {
                             /** @enum {string} */
                             id: "mx" | "spf" | "dkim" | "dmarc" | "bounce-mx" | "bounce-spf" | "bounce-dkim";
@@ -8625,6 +9027,7 @@ export interface operations {
                             complaints30d: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             returnPath: string | null;
                             zoneCheckedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            zoneRelay?: components["schemas"]["RelayRefusal"];
                             checks: {
                                 /** @enum {string} */
                                 id: "mx" | "spf" | "dkim" | "dmarc" | "bounce-mx" | "bounce-spf" | "bounce-dkim";
@@ -8661,6 +9064,7 @@ export interface operations {
                             action: "enable_routing" | "fix_sending" | "add_dmarc" | "manual";
                             ok: boolean;
                             detail: string;
+                            relay?: components["schemas"]["RelayRefusal"];
                         }[];
                     };
                 };
@@ -9273,6 +9677,7 @@ export interface operations {
                         } | null;
                         /** @enum {string} */
                         routing: "clear" | "replaced" | "unchecked";
+                        routingRelay?: components["schemas"]["RelayRefusal"];
                     };
                 };
             };
@@ -11503,6 +11908,33 @@ export interface operations {
                             points: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                         rulesMatched: string[];
+                        invite?: {
+                            method: string;
+                            uid: string;
+                            sequence: number | ("Infinity" | "-Infinity" | "NaN");
+                            summary: string | null;
+                            description: string | null;
+                            location: string | null;
+                            start: string | null;
+                            end: string | null;
+                            allDay: boolean;
+                            timeZone: string | null;
+                            organizer: {
+                                address: string;
+                                name: string | null;
+                            } | null;
+                            attendees: {
+                                address: string;
+                                name: string | null;
+                                /** @enum {string} */
+                                partstat: "NEEDS-ACTION" | "ACCEPTED" | "DECLINED" | "TENTATIVE" | "DELEGATED";
+                                role: string | null;
+                            }[];
+                            myStatus: ("NEEDS-ACTION" | "ACCEPTED" | "DECLINED" | "TENTATIVE" | "DELEGATED") | null;
+                            canRespond: boolean;
+                        } | null;
+                        /** @enum {string} */
+                        remoteImages?: "show" | "ask";
                         /** @description With ?include=headers: every header in the order it arrived, newest hop first. */
                         headers?: {
                             name: string;
@@ -11700,6 +12132,392 @@ export interface operations {
                             points: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                         rulesMatched: string[];
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.rsvp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    response: "accepted" | "tentative" | "declined";
+                    comment?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        response: "accepted" | "tentative" | "declined";
+                        draft: {
+                            id: string;
+                            threadId: string | null;
+                            inReplyTo: string | null;
+                            references: string[];
+                            from: string | null;
+                            to: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            cc: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            bcc: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            subject: string;
+                            bodyText: string;
+                            bodyHtml: string | null;
+                            attachments: {
+                                /** @description The `key` POST /v1/mailboxes/{id}/uploads answered with. */
+                                key: string;
+                                filename: string;
+                                mimeType: string;
+                                size: number | ("Infinity" | "-Infinity" | "NaN");
+                                /**
+                                 * @description How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.
+                                 * @enum {string}
+                                 */
+                                delivery?: "inline" | "link";
+                            }[];
+                            /** @enum {string} */
+                            status: "draft" | "scheduled" | "due";
+                            sendAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            replyMode: ("reply" | "replyAll" | "forward") | null;
+                            sourceMessageId: string | null;
+                            lastError: string | null;
+                            /** @description Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited. */
+                            blockedReason: ("quota_exhausted" | "domain_unhealthy" | "all_recipients_suppressed") | null;
+                            track: {
+                                opens: boolean;
+                                clicks: boolean;
+                            } | null;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        };
+                        sendAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        undoUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        approval?: unknown | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict | SendBlocked */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"] | components["schemas"]["SendBlockedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.imageSenders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        senders: {
+                            value: string;
+                            createdBy: string | null;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        }[];
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.addImageSender": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    value: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        value: string;
+                        createdBy: string | null;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.removeImageSender": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                value: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        removed: string;
                     };
                 };
             };
@@ -18896,6 +19714,7 @@ export interface operations {
                         /** @enum {boolean} */
                         available: false;
                         reason: string;
+                        relay?: components["schemas"]["RelayRefusal"];
                     };
                 };
             };
@@ -23605,6 +24424,7 @@ export interface operations {
                             checkedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             cloudflareOnly: number | ("Infinity" | "-Infinity" | "NaN");
                             error: string | null;
+                            relay?: components["schemas"]["RelayRefusal"];
                         };
                         nextCursor: string | null;
                     };
@@ -23704,6 +24524,7 @@ export interface operations {
                         cloudflare: {
                             state: string;
                             message: string | null;
+                            relay?: components["schemas"]["RelayRefusal"];
                         } | null;
                     };
                 };
@@ -24035,6 +24856,7 @@ export interface operations {
                         adopted: number | ("Infinity" | "-Infinity" | "NaN");
                         complete: boolean;
                         error: string | null;
+                        relay?: components["schemas"]["RelayRefusal"];
                         matched?: number | ("Infinity" | "-Infinity" | "NaN");
                     };
                 };
@@ -24194,6 +25016,7 @@ export interface operations {
                             /** @enum {string} */
                             state: "removed" | "not-listed" | "read-only" | "not-connected" | "failed";
                             message: string | null;
+                            relay?: components["schemas"]["RelayRefusal"];
                         };
                     };
                 };
@@ -24307,6 +25130,7 @@ export interface operations {
                             /** @enum {string} */
                             state: "removed" | "not-listed" | "read-only" | "not-connected" | "failed";
                             message: string | null;
+                            relay?: components["schemas"]["RelayRefusal"];
                         } | null;
                     };
                 };
@@ -24555,7 +25379,7 @@ export interface operations {
                     "application/json": {
                         range: string;
                         received: number | ("Infinity" | "-Infinity" | "NaN");
-                        /** @description `total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN. */
+                        /** @description `total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics through Flareyard's relay (account-analytics.read) or, self-hosted, with CLOUDFLARE_ANALYTICS_TOKEN. */
                         rejected: {
                             total: number | ("Infinity" | "-Infinity" | "NaN");
                             noSuchAddress: number | ("Infinity" | "-Infinity" | "NaN");
@@ -24568,6 +25392,7 @@ export interface operations {
                                 reason: string | null;
                                 zones: number | ("Infinity" | "-Infinity" | "NaN");
                                 from: string | null;
+                                relay?: components["schemas"]["RelayRefusal"];
                             };
                         };
                         held: number | ("Infinity" | "-Infinity" | "NaN");
@@ -29195,6 +30020,114 @@ export interface operations {
             };
         };
     };
+    "signInLink.claimWithLink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    claimToken: string;
+                    workspaceName: string;
+                    name: string;
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            timeZone: string;
+                        } | null;
+                        workspace: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        };
+                        role: ("owner" | "admin" | "sender" | "agent" | "viewer") | null;
+                        /** @enum {string} */
+                        via: "session-member" | "session-key" | "admin-key" | "api-key";
+                        key: {
+                            id: string;
+                            name: string;
+                            prefix: string;
+                        } | null;
+                        scopes: ("send" | "track" | "read" | "admin")[];
+                        permissions: string[];
+                        mailboxes: {
+                            id: string;
+                            address: string;
+                            access: ("owner" | "member" | "viewer") | null;
+                        }[] | null;
+                        workspaces: {
+                            id: string;
+                            name: string;
+                            logoUrl: string | null;
+                            url: string;
+                            host: string;
+                            claimed: boolean;
+                        }[];
+                        session: {
+                            id: string;
+                            expiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            absoluteExpiresAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        } | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "inviteLink.describe": {
         parameters: {
             query?: never;
@@ -31525,6 +32458,10 @@ export interface operations {
                                 } | null;
                             }[] | null;
                         };
+                        oauth: {
+                            authorizationServer: string | null;
+                            grants: components["schemas"]["OAuthGrant"][];
+                        };
                         webhooks: {
                             count: number | ("Infinity" | "-Infinity" | "NaN");
                             enabled: number | ("Infinity" | "-Infinity" | "NaN");
@@ -31557,6 +32494,487 @@ export interface operations {
                             keyId: string | null;
                             lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "integrations.revokeOAuthGrant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        /** @enum {boolean} */
+                        revoked: true;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "push.vapidKey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        publicKey: string;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "push.subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        subscriptions: {
+                            id: string;
+                            device: string | null;
+                            service: string;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            lastSentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "push.subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    endpoint: string;
+                    keys: {
+                        p256dh: string;
+                        auth: string;
+                    };
+                    device?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        device: string | null;
+                        service: string;
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        lastSentAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "push.unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        deleted: string;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "push.preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            notify: "all" | "assigned" | "off";
+                        }[];
+                        alerts: boolean;
+                        hideContent: boolean;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "push.putPreferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    mailboxes: {
+                        mailboxId: string;
+                        /** @enum {string} */
+                        notify: "all" | "assigned" | "off";
+                    }[];
+                    alerts: boolean;
+                    hideContent: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        mailboxes: {
+                            mailboxId: string;
+                            /** @enum {string} */
+                            notify: "all" | "assigned" | "off";
+                        }[];
+                        alerts: boolean;
+                        hideContent: boolean;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "push.test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        sent: number | ("Infinity" | "-Infinity" | "NaN");
+                        failed: number | ("Infinity" | "-Infinity" | "NaN");
+                        gone: number | ("Infinity" | "-Infinity" | "NaN");
                     };
                 };
             };
@@ -32025,6 +33443,292 @@ export interface operations {
                 content: {
                     "text/html": string;
                 };
+            };
+        };
+    };
+    "oauth.protectedResource": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The metadata document (JSON). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "oauth.protectedResourceMcp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The metadata document (JSON). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "oauth.serverMetadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The metadata document (JSON). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "oauth.authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The consent or sign-in page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Sent back to redirect_uri with error, state and iss. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The client or redirect_uri can't be used. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+        };
+    };
+    "oauth.consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back to redirect_uri with code, state and iss, or error=access_denied. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The answer didn't come from this site. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+        };
+    };
+    "oauth.signIn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The check-your-email page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description The request didn't come from this site. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Too many tries from this address. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+        };
+    };
+    "oauth.token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description access_token, token_type Bearer, expires_in, refresh_token, scope. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description error and error_description (RFC 6749 §5.2). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalid_client. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "oauth.register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The client, with its client_id. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalid_client_metadata or invalid_redirect_uri. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "oauth.revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "session.flareyardStart": {
+        parameters: {
+            query?: {
+                /** @description A path on this site, e.g. /mail. */
+                return?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To Flareyard's /auth/app. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This install wasn't made by Flareyard. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "session.flareyardCallback": {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed in (Set-Cookie carries the session), to the return path; or to /sign-in with an error. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This install wasn't made by Flareyard. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

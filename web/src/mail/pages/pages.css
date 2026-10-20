@@ -1,0 +1,125 @@
+/* Mailbox pages (HAL-3308): small additions on top of styles/mail.css. Tokens only. */
+/* ops.css (loaded after mail.css) also defines .rule for the Settings rule editor; inside a mailbox page the
+   Mail design's row wins again. */
+.mpage .rule {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--gray-300);
+  border-radius: 0;
+  background: none;
+}
+.mpage .rule:last-child {
+  border-bottom: 0;
+}
+.mpage .rule.is-off {
+  background: none;
+}
+.rule.is-dragging {
+  opacity: 0.5;
+}
+.rule.is-drop-target {
+  box-shadow: inset 0 2px 0 var(--gray-1000);
+}
+.rule .grip:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.rule .r-side .switch input {
+  flex: none;
+}
+.rule-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  width: 220px;
+}
+.rule .r-side {
+  position: relative;
+}
+.lbl-colours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.lbl-colours .check {
+  align-items: center;
+  min-height: 32px;
+  gap: 4px;
+  padding: 0 4px;
+}
+.lbl-colours .label-dot {
+  width: 14px;
+  height: 14px;
+}
+.imp-form {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.imp-form .field-wide {
+  grid-column: 1 / -1;
+}
+.page-tabs {
+  padding: 8px 16px 0;
+}
+@media (max-width: 767px) {
+  .mpage .rule {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+  .imp-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lbl-colours .check {
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+  }
+  .sender-row .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .page-tabs .tab {
+    min-height: 44px;
+  }
+  .rule .r-side > .btn,
+  .rule .r-side > .icon-btn,
+  .rule .r-side .has-reason > .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+.imp-error {
+  color: var(--red-900);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+/* A request or import id shown as a link stays a usable tap target. */
+.mpage .req-id a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+@media (pointer: coarse) {
+  .mpage .req-id a {
+    min-height: 44px;
+  }
+}
+@media (pointer: coarse) {
+  .crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+}
+@media (pointer: coarse) {
+  .mpage .panel-title a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+  }
+}

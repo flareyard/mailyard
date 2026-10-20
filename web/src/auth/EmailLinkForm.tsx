@@ -82,7 +82,7 @@ export function EmailLinkForm() {
   const blocked = !live
     ? {
         reason: "Email sign-in isn’t on this Mailyard",
-        who: "Update the deploy to a release with people and roles (HAL-3361).",
+        who: "Update this Mailyard to a release with members and roles.",
       }
     : outcome?.kind === "no-sender"
       ? {

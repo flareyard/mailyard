@@ -338,7 +338,7 @@
 .devframe .df-head .df-subj{font-weight:600}
 .devframe .df-head .df-pre{color:var(--my-muted)}
 .devframe .df-body{padding:16px 0;background:var(--background-100)}
-.devframe.is-phone{width:300px;justify-self:center;border-radius:28px;border-width:6px;border-color:var(--gray-1000)}
+.devframe.is-phone{width:300px;max-width:100%;justify-self:center;border-radius:28px;border-width:6px;border-color:var(--gray-1000)}
 .devframe.is-phone .df-body{padding:8px 0}
 .devframe.is-phone .eblock{padding:10px 14px}
 .devframe.is-phone .em-h{font-size:21px;line-height:26px}
@@ -869,3 +869,33 @@ details.raw pre{white-space:pre-wrap;overflow-wrap:anywhere}
 .exp-dry .pill{margin-left:auto}
 .has-error > .check input{outline:2px solid var(--red-700);outline-offset:2px}
 .map-row > *{min-width:0}.map-row .select{min-width:0;width:100%;max-width:100%}.map-row code,.map-row .map-note{overflow-wrap:anywhere}
+
+/* ───────── A14. Zoom-audit fixes (HAL-3735, 2026-10-20) ─────────
+   Text that the zoom pass found squeezed under 80px into a letter or a word a line. */
+/* A/B split: the remainder strip takes its own row once its label can't fit beside A and B. */
+.splitline{flex-wrap:wrap;row-gap:2px}
+.splitline .sr{flex:1 1 160px}
+/* Key-value rows lay a pill and its note side by side; the note drops below when there's no room. */
+.kv dd{flex-wrap:wrap}
+/* Email previews: the email's own columns and padding follow the preview's width, not the window's, so a
+   narrow desktop frame (or a zoomed one) stacks the cards like a phone would. */
+.paper-inner,.devframe .df-body{container-type:inline-size}
+@container (max-width:480px){
+  .em-cols{grid-template-columns:1fr}
+  .eblock{padding:12px 16px}
+  .footer-lock{padding:14px 16px}
+}
+/* Automation outline: nested branches use the full width under narrow sizes instead of indenting again
+   past the icon column at every level. */
+@media (max-width:599px){
+  .outline ul{grid-column:1 / -1;padding-left:10px}
+  .outline ul li{grid-template-columns:24px minmax(0,1fr);gap:4px 8px}
+  .outline ul .o-ic{width:24px;height:24px}
+}
+/* A very narrow email preview gives its blocks and cards the width instead of the gutters. */
+@media (max-width:340px){.paper{padding:12px 6px}}
+@container (max-width:300px){
+  .eblock{padding:10px 8px;margin:0 4px}
+  .em-card{padding:10px}
+  .footer-lock{padding:12px 8px}
+}

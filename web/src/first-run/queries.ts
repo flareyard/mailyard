@@ -5,6 +5,14 @@
 import { queryOptions } from "@tanstack/react-query"
 import { api, type paths, unwrap } from "../api/client.ts"
 
+// Contact imports are shared with Audience → Imports.
+export {
+  type ContactImport,
+  contactImportQuery,
+  contactImportsQuery,
+  type Upload,
+} from "../audience/import/queries.ts"
+
 type Json<P extends keyof paths, M extends "get" | "post" | "patch"> = paths[P][M] extends {
   responses: { 200: { content: { "application/json": infer R } } }
 }
@@ -21,10 +29,8 @@ export type TestSend = Json<"/v1/test-send/{id}", "get">
 export type Verified = Json<"/v1/verified-addresses", "get">
 export type Probe = Json<"/v1/mailboxes/{id}/imports/probe", "post">
 export type MailImport = Json<"/v1/mailboxes/{id}/imports/{importId}", "get">
-export type ContactImport = Json<"/v1/imports/{id}", "get">
 export type ContactField = Json<"/v1/contact-fields", "get">["fields"][number]
 export type Topic = Json<"/v1/topics", "get">["topics"][number]
-export type Upload = paths["/v1/uploads"]["post"]["responses"][201]["content"]["application/json"]
 
 /** Some fixture variants and older deploys answer with a different envelope; never let that crash a step. */
 const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : [])
@@ -98,17 +104,6 @@ export const mailImportQuery = (mailboxId: string, importId: string) =>
       unwrap(
         api.GET("/v1/mailboxes/{id}/imports/{importId}", { params: { path: { id: mailboxId, importId } } }),
       ),
-  })
-
-export const contactImportsQuery = queryOptions({
-  queryKey: ["imports"],
-  queryFn: async () => arr<ContactImport>((await unwrap(api.GET("/v1/imports")))?.imports),
-})
-
-export const contactImportQuery = (id: string) =>
-  queryOptions({
-    queryKey: ["imports", id],
-    queryFn: () => unwrap(api.GET("/v1/imports/{id}", { params: { path: { id } } })),
   })
 
 export const contactFieldsQuery = queryOptions({

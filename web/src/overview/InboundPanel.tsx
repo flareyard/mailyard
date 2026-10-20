@@ -92,7 +92,7 @@ function RejectRow({ label, value }: { label: string; value: number | string | n
     return (
       <li className="list-row ov-row-stacked">
         <span className="row-title ov-regular">{label}</span>
-        <span className="row-sub ov-wrap">Not visible to Mailyard yet · HAL-3393</span>
+        <span className="row-sub ov-wrap">Not visible to Mailyard yet</span>
       </li>
     )
   }

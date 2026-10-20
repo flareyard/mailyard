@@ -461,8 +461,8 @@ function Created({
           <span>
             <b>Couldn’t check Cloudflare’s routing (no zone token).</b> If an Email Routing rule already
             forwards or drops {lp}@, its mail won’t reach this mailbox. Look in Cloudflare → Email → Routing
-            rules, or connect a zone token (HAL-3418) and Mailyard checks for you. Catch-all mailboxes are
-            never checked: no single rule covers them.
+            rules, or give Mailyard access to the zone and it checks for you. Catch-all mailboxes are never
+            checked: no single rule covers them.
           </span>
         </div>
       ) : null}

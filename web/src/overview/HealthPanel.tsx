@@ -191,7 +191,7 @@ function DomainRow({
           label="Zone"
           status="off"
           sub="unknown without a zone token"
-          tip="Zone status is unknown without a zone token (HAL-3418)"
+          tip="Zone status is unknown until Mailyard can read the zone"
         />
       ),
     },

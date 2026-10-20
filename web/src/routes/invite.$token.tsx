@@ -429,15 +429,15 @@ function NotLive() {
       <div className="callout callout-info" role="status">
         <Icon name="info" />
         <span>
-          <b>This Mailyard can’t read invites yet.</b> Invites arrive with people and roles (HAL-3361); update
-          the deploy, or ask whoever sent the link for an access key meanwhile.
+          <b>This Mailyard can’t read invites yet.</b> It’s on a release without members and roles; update the
+          deploy, or ask whoever sent the link for an access key meanwhile.
         </span>
       </div>
       <RolesTable />
       <Gated
         allowed={false}
         reason="This Mailyard can’t accept invites yet"
-        who="Update the deploy to a release with people and roles (HAL-3361)."
+        who="Update this Mailyard to a release with members and roles."
         block
       >
         <button className="btn btn-primary btn-lg btn-block" type="button" data-od-id="accept-invite">
