@@ -11,12 +11,12 @@
  *   sign-in link to …@no-sender.example              → 503 NoSystemSender
  *   sign-in link to …@rate-limited.example           → 429
  */
-import { screenFixture } from "../audience/kit/fixtureScreens.ts"
-import { MAIL_OVERRIDES } from "../mail/fixtures.ts"
 
 import { ANALYTICS_OVERRIDES } from "../analytics/fixtures.ts"
 import type { paths } from "../api/schema"
+import { screenFixture } from "../audience/kit/fixtureScreens.ts"
 import { DOMAINS_OVERRIDES } from "../domains/fixtures.ts"
+import { MAIL_OVERRIDES } from "../mail/fixtures.ts"
 import { SETTINGS_AGENTS_OVERRIDES } from "../settings/agents-fixtures.ts"
 import { SETTINGS_OVERRIDES } from "../settings/fixtures.ts"
 import { TRANSACTIONAL_OVERRIDES } from "../transactional/fixtures.ts"

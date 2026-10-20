@@ -900,7 +900,12 @@ const integrations = (withKeys: boolean): Integrations => ({
       ? [
           {
             id: "grt_01JAH7Q2",
-            client: { id: "https://claude.ai/oauth/mcp", name: "Claude", host: "claude.ai", registration: "cimd" },
+            client: {
+              id: "https://claude.ai/oauth/mcp",
+              name: "Claude",
+              host: "claude.ai",
+              registration: "cimd",
+            },
             grantedBy: { id: "mem_01JAOWNR", name: "Tolu Adeyemi", email: "tolu@coursified.app" },
             apiKeyId: "key_01JAG2C5",
             scopes: ["read", "send"],
