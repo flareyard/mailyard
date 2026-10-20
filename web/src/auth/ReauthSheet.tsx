@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react"
 import { type ApiError, onUnauthorized } from "../api/client.ts"
+import { FlareyardMark } from "../ui/FlareyardMark.tsx"
 import { Icon } from "../ui/icons.tsx"
 import { RequestId } from "../ui/Panel.tsx"
 import { useCapabilities } from "./capabilities.ts"
@@ -233,9 +234,10 @@ function Sheet({ ended, kept, onDone }: { ended: Ended; kept: ReactNode; onDone:
                     height: 22,
                     borderRadius: 4,
                     background: "var(--background-100)",
+                    color: "var(--gray-1000)",
                   }}
                 >
-                  <img src="/ui/brand/flareyard-mark.svg" alt="" width={14} height={14} />
+                  <FlareyardMark />
                 </span>
                 Continue with Flareyard
               </a>
@@ -321,7 +323,7 @@ function Sheet({ ended, kept, onDone }: { ended: Ended; kept: ReactNode; onDone:
 function message(e: SignInError): string | null {
   switch (e.kind) {
     case "format":
-      return "That isn’t a key Mailyard recognises. Secret keys start with sk_; the admin key is the whole value on your Flareyard install page."
+      return "That isn’t a key Mailyard recognises. Secret keys start with sk_; the admin key is the whole value this Mailyard was deployed with."
     case "unknown":
       return "No key with that value exists in this workspace. It may belong to another Mailyard, or it was deleted."
     case "revoked":

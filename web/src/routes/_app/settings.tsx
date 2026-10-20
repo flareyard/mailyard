@@ -1,15 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { SectionPending } from "../../ui/SectionPending.tsx"
+import { SettingsLayout } from "../../settings/Layout.tsx"
 
-// TEMPORARY until HAL-3309 lands (see SectionPending).
+export type SettingsSearch = {
+  /** Fixture mode only: picks a designed state (empty, error, a role) on the page's fixtures. */
+  fx?: string
+}
+
 export const Route = createFileRoute("/_app/settings")({
   staticData: { title: "Settings" },
-  component: () => (
-    <SectionPending
-      title="Settings"
-      issue="HAL-3309"
-      icon="settings"
-      what="Mailboxes, people, brand, compliance and integrations."
-    />
-  ),
+  validateSearch: (s: Record<string, unknown>): SettingsSearch =>
+    typeof s.fx === "string" && s.fx ? { fx: s.fx } : {},
+  component: SettingsLayout,
 })

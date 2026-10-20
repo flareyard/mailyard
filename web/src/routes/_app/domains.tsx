@@ -1,15 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { SectionPending } from "../../ui/SectionPending.tsx"
+/**
+ * Domains (HAL-3309, HANDOFF-ops §1, §24): owners and admins only. Senders, agents and viewers get the locked
+ * section on a direct link (design: domains-sender), since a record change affects every mailbox and campaign.
+ */
+import { createFileRoute, Outlet } from "@tanstack/react-router"
+import { DomainsGate } from "../../domains/DomainsGate.tsx"
 
-// TEMPORARY until HAL-3309 lands (see SectionPending).
 export const Route = createFileRoute("/_app/domains")({
   staticData: { title: "Domains" },
   component: () => (
-    <SectionPending
-      title="Domains"
-      issue="HAL-3309"
-      icon="domains"
-      what="Sending and receiving domains, with their DNS checks."
-    />
+    <div className="ops">
+      <DomainsGate>
+        <Outlet />
+      </DomainsGate>
+    </div>
   ),
 })

@@ -7,20 +7,23 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useState } from "react"
 import { useCapabilities } from "../auth/capabilities.ts"
 import { EmailLinkForm } from "../auth/EmailLinkForm.tsx"
+import { FLAREYARD_ERRORS, type FlareyardError, isFlareyardError } from "../auth/flareyard.ts"
 import { keyLooksValid, type SignInError, signInError, useSessionActions } from "../auth/session.ts"
 import { fixturesEnabled } from "../fixtures/mode.ts"
 import { AuthLayout } from "../ui/AuthLayout.tsx"
+import { FlareyardMark } from "../ui/FlareyardMark.tsx"
+import "../auth/auth.css"
 import { Icon } from "../ui/icons.tsx"
 import { RequestId } from "../ui/Panel.tsx"
 
-type Search = { next?: string; error?: "session-expired" | "flareyard_session_expired" }
+type Search = { next?: string; error?: "session-expired" | FlareyardError }
 
 export const Route = createFileRoute("/sign-in")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     ...(typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//")
       ? { next: s.next }
       : {}),
-    ...(s.error === "session-expired" || s.error === "flareyard_session_expired" ? { error: s.error } : {}),
+    ...(s.error === "session-expired" || isFlareyardError(s.error) ? { error: s.error } : {}),
   }),
   component: SignIn,
 })
@@ -36,12 +39,9 @@ function SignIn() {
   const [show, setShow] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<SignInError | null>(
-    initial === "session-expired"
-      ? { kind: "session-expired" }
-      : initial === "flareyard_session_expired"
-        ? { kind: "flareyard-expired" }
-        : null,
+    initial === "session-expired" ? { kind: "session-expired" } : null,
   )
+  const flareyardError = isFlareyardError(initial) ? FLAREYARD_ERRORS[initial] : null
   const [wait, setWait] = useState(0)
 
   useEffect(() => {
@@ -79,54 +79,10 @@ function SignIn() {
   const fieldError = error ? message(error) : null
   const limited = error?.kind === "rate-limited" && wait > 0
 
-  return (
-    <AuthLayout>
-      <div>
-        <h1>Sign in to Mailyard</h1>
-        <p className="lede">Email on your own Cloudflare account.</p>
-      </div>
-
-      {error?.kind === "session-expired" ? (
-        <div className="callout callout-info" role="status">
-          <Icon name="clock" />
-          <span>Your session ended. Sessions last 14 days from your last visit and 30 days at most.</span>
-        </div>
-      ) : null}
-      {error?.kind === "flareyard-expired" ? (
-        <div className="callout callout-warn" role="alert">
-          <Icon name="warn" />
-          <span>Your Flareyard session has expired. Continue with Flareyard to sign in there again.</span>
-        </div>
-      ) : null}
-
-      <div className="stack stack-8">
-        {flareyardLive ? (
-          <a className="btn btn-primary btn-lg btn-block fy-btn" href="/v1/session/flareyard/start">
-            <FlareyardChip />
-            Continue with Flareyard
-          </a>
-        ) : (
-          <span className="has-reason" style={{ display: "flex", width: "100%" }}>
-            <button
-              className="btn btn-primary btn-lg btn-block fy-btn"
-              type="button"
-              aria-disabled="true"
-              aria-describedby="fy-why"
-            >
-              <FlareyardChip />
-              Continue with Flareyard
-            </button>
-            <span className="reason-pop" id="fy-why" role="tooltip">
-              <b>Flareyard sign-in isn’t live yet</b>
-              <span className="reason-who">It arrives with HAL-3360. Use an access key for now.</span>
-            </span>
-          </span>
-        )}
-        <p className="hint">
-          Mailyard was deployed from Flareyard. If you’re signed in there, this is one click.
-        </p>
-      </div>
-
+  // Email sign-in is always offered; the access key is the fallback for the admin key and API keys.
+  const otherWays = (
+    <>
+      <EmailLinkForm />
       <div className="or">or use an access key</div>
 
       <form className="stack stack-12" onSubmit={submit} noValidate>
@@ -168,11 +124,7 @@ function SignIn() {
             </div>
           ) : null}
           <p className="hint" id="key-hint">
-            A secret key from <b>Settings → API keys</b>, or the admin key on your{" "}
-            <a className="link" href="https://app.flareyard.dev/apps">
-              Flareyard install page
-            </a>
-            .
+            A secret key from <b>Settings → API keys</b>, or the admin key this Mailyard was deployed with.
           </p>
         </div>
 
@@ -275,9 +227,52 @@ function SignIn() {
           </span>
         </p>
       </form>
+    </>
+  )
 
-      <div className="or">or get a link by email</div>
-      <EmailLinkForm />
+  return (
+    <AuthLayout>
+      <div>
+        <h1>Sign in to Mailyard</h1>
+        <p className="lede">Email on your own Cloudflare account.</p>
+      </div>
+
+      {error?.kind === "session-expired" ? (
+        <div className="callout callout-info" role="status">
+          <Icon name="clock" />
+          <span>Your session ended. Sessions last 14 days from your last visit and 30 days at most.</span>
+        </div>
+      ) : null}
+      {flareyardError ? (
+        <div className="callout callout-warn" role="alert">
+          <Icon name="warn" />
+          <span>{flareyardError}</span>
+        </div>
+      ) : null}
+
+      {/* Installs Flareyard made list the hand-off in /openapi.json; self-hosted installs never show it (HAL-3360). */}
+      {flareyardLive ? (
+        <div className="stack stack-8">
+          <a
+            className="btn btn-primary btn-lg btn-block fy-btn"
+            href={`/v1/session/flareyard/start?return=${encodeURIComponent(next ?? "/")}`}
+          >
+            <FlareyardChip />
+            Continue with Flareyard
+          </a>
+          <p className="hint">
+            This Mailyard was installed from Flareyard. If you're signed in there, it's one click.
+          </p>
+        </div>
+      ) : null}
+      {flareyardLive ? (
+        <details className="other-ways">
+          <summary>Other ways to sign in</summary>
+          {otherWays}
+        </details>
+      ) : (
+        otherWays
+      )}
       {fixturesEnabled() ? <p className="t-small muted">Fixture mode: any key signs in.</p> : null}
     </AuthLayout>
   )
@@ -286,11 +281,11 @@ function SignIn() {
 function message(e: SignInError): string | null {
   switch (e.kind) {
     case "format":
-      return "That isn’t a key Mailyard recognises. Secret keys start with sk_; the admin key is the whole value on your Flareyard install page, so check none of it was cut off."
+      return "That isn’t a key Mailyard recognises. Secret keys start with sk_; the admin key is the whole value it was deployed with, so check none of it was cut off."
     case "unknown":
       return "No key with that value exists in this workspace. It may belong to another Mailyard, or it was deleted."
     case "revoked":
-      return `This key was revoked${e.revokedAt ? ` on ${new Date(e.revokedAt).toLocaleString("en", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC` : ""}, so it can’t sign in or send. Make a new one in Settings → API keys with a key that has the admin scope, or continue with Flareyard.`
+      return `This key was revoked${e.revokedAt ? ` on ${new Date(e.revokedAt).toLocaleString("en", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC` : ""}, so it can’t sign in or send. Make a new one in Settings → API keys with a key that has the admin scope, or get a sign-in link by email.`
     case "public-key":
       return "That’s a public key (pk_). Public keys can only track events from a website, so they can’t open the app. Use a secret key (sk_) or the admin key."
     default:
@@ -309,9 +304,10 @@ function FlareyardChip() {
         height: 22,
         borderRadius: 4,
         background: "var(--background-100)",
+        color: "var(--gray-1000)",
       }}
     >
-      <img src="/ui/brand/flareyard-mark.svg" alt="" width={14} height={14} />
+      <FlareyardMark />
     </span>
   )
 }

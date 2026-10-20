@@ -1,0 +1,108 @@
+/* Transactional (HAL-3309): only what the design's ops.css doesn't already draw. Tokens only. */
+
+/* The source editor: a transparent textarea laid exactly over the highlighted lines (.src.is-lines). The
+   textarea and the lines share font, line height, wrapping and the 48px gutter, so the caret sits on the text. */
+.tx-src {
+  position: relative;
+}
+.tx-src .src-code {
+  pointer-events: none;
+}
+.tx-src-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 10px 12px 10px 48px;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--my-fg);
+  font: inherit;
+  line-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  resize: none;
+  outline: none;
+  overflow: hidden;
+  tab-size: 2;
+}
+.tx-src-input::selection {
+  background: color-mix(in oklch, var(--blue-700) 30%, transparent);
+  color: transparent;
+}
+.tx-src-input[readonly] {
+  cursor: default;
+}
+.tx-src .src-code {
+  tab-size: 2;
+}
+
+/* A message stored as plain text only. */
+.tx-plain {
+  margin: 0;
+  padding: 20px 24px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: var(--text-copy-14);
+  color: var(--my-fg);
+  background: var(--background-100);
+}
+
+.tx-attachments {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tx-attachments li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.tx-attachments .mono {
+  overflow-wrap: anywhere;
+}
+
+/* Two phones side by side need the full width before they stack. */
+@media (max-width: 1279px) {
+  .tx-phones {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The save line can carry a retry link; keep it a real target. */
+.save-state .link {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  font: inherit;
+}
+/* Highlights may not change a character's width, or the caret drifts from the text it sits over. */
+.tx-src .src-code .v {
+  padding: 0;
+  margin: 0;
+}
+
+/* A failure callout with its action: the action keeps its width and drops under the text on a phone. */
+.tx-callout {
+  flex-wrap: wrap;
+}
+.tx-callout > span {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.tx-callout > .btn {
+  flex: none;
+}

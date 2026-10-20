@@ -1,0 +1,64 @@
+/* Domains (HAL-3309): only what the design CSS doesn't already cover. Tokens only. */
+.dm-callout-action {
+  margin-left: auto;
+  flex: none;
+}
+.dm-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  min-height: 24px;
+}
+.dm-radio {
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+}
+.dm-select {
+  width: auto;
+  height: 36px;
+  max-width: 100%;
+}
+.dm-title-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.dm-steps {
+  list-style: decimal;
+  padding-left: 18px;
+  margin: 0;
+}
+.dm-steps li {
+  margin-bottom: 6px;
+}
+.mono-title {
+  overflow-wrap: anywhere;
+}
+/* audience.css makes every `.kv dd` a flex row; the ops design's key-value values flow as text. */
+.kv.dm-kv dd {
+  display: block;
+}
+.dns-value .actual.dm-asking {
+  color: var(--my-muted);
+}
+/* At phone widths the row becomes a card; let the state words wrap instead of pushing past it. */
+@media (max-width: 767px) {
+  .dm-table .status-word {
+    white-space: normal;
+  }
+}
+.dm-source-name {
+  font-weight: 600;
+  color: var(--my-fg);
+  overflow-wrap: anywhere;
+}
+.dm-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

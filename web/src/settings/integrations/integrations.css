@@ -1,0 +1,51 @@
+/* Settings → Integrations, agents and approvals: only what the design CSS doesn't already cover. Tokens only. */
+
+/* Removing an allowed domain is a tap target of its own: 24 px at least (WCAG 2.2 AA). */
+.sb-limits .chip {
+  height: 28px;
+}
+.sb-limits .chip button {
+  width: 24px;
+  height: 24px;
+}
+
+/* The approval queue's count badge sits inside the "Approval queue" link. */
+.panel-link .nav-count {
+  margin-left: 4px;
+}
+
+/* The new-agent address group: the domain select may be long; let it shrink instead of pushing the row wide. */
+#agent-new-form .input-group .select {
+  min-width: 0;
+  max-width: 60%;
+}
+
+/* The limits fields live in a narrow column on the agent page and a wide sheet when creating: they reflow
+   instead of overflowing. */
+.sb-limits .field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.sb-limits .seg {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  height: auto;
+}
+.sb-limits .seg button {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+/* Tap-target minimums for shared ops classes live in src/ops/ops-kit.css; this one is the limits form's own. */
+.ops .sb-limits .field > .label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+/* The Hermes lane pickers: mailbox addresses are long. */
+.lane-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+}

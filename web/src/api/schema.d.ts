@@ -276,6 +276,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.getAlertSettings"];
+        put: operations["settings.putAlertSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/mail-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.getMailEvents"];
+        put: operations["settings.putMailEvents"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/settings/assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.getAssistant"];
+        put: operations["settings.putAssistant"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/audit": {
         parameters: {
             query?: never;
@@ -692,6 +740,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/domains/{id}/dmarc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["domains.dmarc"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["domains.dmarcPolicy"];
+        trace?: never;
+    };
+    "/v1/domains/{id}/dmarc/sources/{ip}/known": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["domains.dmarcKnown"];
+        delete: operations["domains.dmarcUnknown"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mailboxes": {
         parameters: {
             query?: never;
@@ -814,6 +894,38 @@ export interface paths {
         get: operations["mail.thread"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mailboxes/{id}/threads/{threadId}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mail.summarizeThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mailboxes/{id}/threads/{threadId}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mail.draftReply"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1598,6 +1710,22 @@ export interface paths {
         get: operations["segments.list"];
         put?: never;
         post: operations["segments.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/segments/from-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["segments.fromText"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2596,6 +2724,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/automations/{id}/nodes/{nodeId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["automations.testStep"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/events/{name}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["automations.eventKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/automations/{id}/dry-run": {
         parameters: {
             query?: never;
@@ -3012,6 +3172,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.list"];
+        put?: never;
+        post: operations["agents.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/agents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.get"];
+        put?: never;
+        post?: never;
+        delete: operations["agents.remove"];
+        options?: never;
+        head?: never;
+        patch: operations["agents.update"];
+        trace?: never;
+    };
+    "/v1/api-keys/{id}/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.getLimits"];
+        put: operations["agents.putLimits"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["approvals.list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["approvals.get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approvals.approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approvals.reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["integrations.get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/mcp": {
         parameters: {
             query?: never;
@@ -3133,6 +3421,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mailboxes/{id}/wait": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wait for new mail (long-poll, HAL-3461)
+         * @description Blocks until mail newer than `since` is in the mailbox, at once if it already is, else answers 204 at the timeout. Sent copies don't count. Wait again from the `cursor` (also in `x-mailyard-cursor`). `reset: true` means the cursor was older than the kept log: refetch, then wait from `cursor`. Without `since` it waits for mail from now on. For an agent that can't run a webhook receiver.
+         */
+        get: operations["mail.wait"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3170,14 +3478,6 @@ export interface components {
             allowedRoles?: string[];
             owners?: string[];
         };
-        InvalidRequestEncoded: {
-            /** @enum {string} */
-            _tag: "InvalidRequest";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            field: string;
-            message: string;
-        };
         ConflictEncoded: {
             /** @enum {string} */
             _tag: "Conflict";
@@ -3191,9 +3491,28 @@ export interface components {
             ruleAction?: string;
             ruleId?: string;
             aliasIds?: string[];
+            limit?: number | ("Infinity" | "-Infinity" | "NaN");
+            sentToday?: number | ("Infinity" | "-Infinity" | "NaN");
+            resetsAt?: number | ("Infinity" | "-Infinity" | "NaN");
+            notAllowed?: string[];
             deletesAt?: number | ("Infinity" | "-Infinity" | "NaN");
             claimedBy?: string;
             claimedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+        };
+        NotFoundEncoded: {
+            /** @enum {string} */
+            _tag: "NotFound";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            message: string;
+        };
+        InvalidRequestEncoded: {
+            /** @enum {string} */
+            _tag: "InvalidRequest";
+            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
+            requestId?: string;
+            field: string;
+            message: string;
         };
         GoneEncoded: {
             /** @enum {string} */
@@ -3203,13 +3522,6 @@ export interface components {
             message: string;
             /** @enum {string} */
             reason: "expired" | "used" | "revoked";
-        };
-        NotFoundEncoded: {
-            /** @enum {string} */
-            _tag: "NotFound";
-            /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
-            requestId?: string;
-            message: string;
         };
         NoSystemSenderEncoded: {
             /** @enum {string} */
@@ -3350,6 +3662,14 @@ export interface components {
             requestId?: string;
             message: string;
         };
+        AssistantRefusedEncoded: {
+            /** @enum {string} */
+            _tag: "AssistantRefused";
+            requestId?: string;
+            /** @enum {string} */
+            reason: "off" | "disabled" | "cap" | "no_answer" | "invalid";
+            message: string;
+        };
         SendBlockedEncoded: {
             /** @enum {string} */
             _tag: "SendBlocked";
@@ -3366,6 +3686,14 @@ export interface components {
             _tag: "IdempotencyConflict";
             /** @description The request's id, also in the x-request-id header: quote it when asking for help. */
             requestId?: string;
+            message: string;
+        };
+        DmarcRefusedEncoded: {
+            /** @enum {string} */
+            _tag: "DmarcRefused";
+            requestId?: string;
+            /** @enum {string} */
+            reason: "no_dns_token" | "zone_not_found" | "several_records" | "write_failed";
             message: string;
         };
         FixRefusedEncoded: {
@@ -3505,6 +3833,11 @@ export interface operations {
                                 status: string;
                             }[];
                             timestamp: string;
+                            approval?: {
+                                id: string;
+                                /** @enum {string} */
+                                status: "pending";
+                            };
                         };
                     };
                 };
@@ -5302,6 +5635,433 @@ export interface operations {
             };
         };
     };
+    "settings.getAlertSettings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        channels: {
+                            /** @enum {string} */
+                            kind: "email" | "webhook";
+                            target: string;
+                            kinds?: ("delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending")[];
+                            /** @enum {string} */
+                            minSeverity: "info" | "warning" | "critical";
+                        }[];
+                        defaultEmail: string | null;
+                        effective: {
+                            criticalEmail: string | null;
+                            note: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.putAlertSettings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    channels: {
+                        /** @enum {string} */
+                        kind: "email" | "webhook";
+                        target: string;
+                        kinds?: ("delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending")[];
+                        /** @enum {string} */
+                        minSeverity: "info" | "warning" | "critical";
+                    }[];
+                    defaultEmail?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        channels: {
+                            /** @enum {string} */
+                            kind: "email" | "webhook";
+                            target: string;
+                            kinds?: ("delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending")[];
+                            /** @enum {string} */
+                            minSeverity: "info" | "warning" | "critical";
+                        }[];
+                        defaultEmail: string | null;
+                        effective: {
+                            criticalEmail: string | null;
+                            note: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.getMailEvents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        mailboxIds: string[] | null;
+                        types: ("message.received" | "message.sent" | "thread.assigned" | "delivery")[] | null;
+                        since: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        queue: string;
+                        version: number | ("Infinity" | "-Infinity" | "NaN");
+                        available: boolean;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.putMailEvents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                    mailboxIds?: string[] | null;
+                    types?: ("message.received" | "message.sent" | "thread.assigned" | "delivery")[] | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                        mailboxIds: string[] | null;
+                        types: ("message.received" | "message.sent" | "thread.assigned" | "delivery")[] | null;
+                        since: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        queue: string;
+                        version: number | ("Infinity" | "-Infinity" | "NaN");
+                        available: boolean;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.getAssistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summaries: boolean;
+                        drafts: boolean;
+                        categories: boolean;
+                        segments: boolean;
+                        dailyCallsPerMailbox: number | ("Infinity" | "-Infinity" | "NaN");
+                        /** @enum {string} */
+                        provider: "off" | "workers-ai" | "openai" | "fixed";
+                        model: string | null;
+                        available: boolean;
+                        today: {
+                            day: string;
+                            byFeature: {
+                                /** @enum {string} */
+                                feature: "summary" | "draft" | "category" | "segment";
+                                calls: number | ("Infinity" | "-Infinity" | "NaN");
+                                inputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                outputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                neurons: number | ("Infinity" | "-Infinity" | "NaN");
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "settings.putAssistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    summaries: boolean;
+                    drafts: boolean;
+                    categories: boolean;
+                    segments: boolean;
+                    dailyCallsPerMailbox: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summaries: boolean;
+                        drafts: boolean;
+                        categories: boolean;
+                        segments: boolean;
+                        dailyCallsPerMailbox: number | ("Infinity" | "-Infinity" | "NaN");
+                        /** @enum {string} */
+                        provider: "off" | "workers-ai" | "openai" | "fixed";
+                        model: string | null;
+                        available: boolean;
+                        today: {
+                            day: string;
+                            byFeature: {
+                                /** @enum {string} */
+                                feature: "summary" | "draft" | "category" | "segment";
+                                calls: number | ("Infinity" | "-Infinity" | "NaN");
+                                inputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                outputTokens: number | ("Infinity" | "-Infinity" | "NaN");
+                                neurons: number | ("Infinity" | "-Infinity" | "NaN");
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "settings.audit": {
         parameters: {
             query?: {
@@ -5401,15 +6161,23 @@ export interface operations {
                             id: string;
                             url: string;
                             description: string | null;
-                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised") | "*")[];
                             enabled: boolean;
+                            filter: {
+                                mailboxIds?: string[];
+                                streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                                campaignIds?: string[];
+                                topicIds?: string[];
+                            } | null;
+                            paused: boolean;
+                            held: number | ("Infinity" | "-Infinity" | "NaN");
                             lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
-                        events: ("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched")[];
+                        events: ("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised")[];
                     };
                 };
             };
@@ -5454,9 +6222,21 @@ export interface operations {
                 "application/json": {
                     url: string;
                     description?: string;
-                    events: [
+                    events?: [
                         string
                     ];
+                    filter?: {
+                        mailboxIds?: string[];
+                        streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                        campaignIds?: string[];
+                        topicIds?: string[];
+                    } | null;
+                    preset?: {
+                        /** @enum {string} */
+                        kind: "agent-wake";
+                        mailboxId: string;
+                    };
+                    paused?: boolean;
                 };
             };
         };
@@ -5472,8 +6252,16 @@ export interface operations {
                             id: string;
                             url: string;
                             description: string | null;
-                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised") | "*")[];
                             enabled: boolean;
+                            filter: {
+                                mailboxIds?: string[];
+                                streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                                campaignIds?: string[];
+                                topicIds?: string[];
+                            } | null;
+                            paused: boolean;
+                            held: number | ("Infinity" | "-Infinity" | "NaN");
                             lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5543,8 +6331,16 @@ export interface operations {
                         id: string;
                         url: string;
                         description: string | null;
-                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised") | "*")[];
                         enabled: boolean;
+                        filter: {
+                            mailboxIds?: string[];
+                            streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                            campaignIds?: string[];
+                            topicIds?: string[];
+                        } | null;
+                        paused: boolean;
+                        held: number | ("Infinity" | "-Infinity" | "NaN");
                         lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5612,8 +6408,16 @@ export interface operations {
                         id: string;
                         url: string;
                         description: string | null;
-                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised") | "*")[];
                         enabled: boolean;
+                        filter: {
+                            mailboxIds?: string[];
+                            streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                            campaignIds?: string[];
+                            topicIds?: string[];
+                        } | null;
+                        paused: boolean;
+                        held: number | ("Infinity" | "-Infinity" | "NaN");
                         lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5678,6 +6482,13 @@ export interface operations {
                         string
                     ];
                     enabled?: boolean;
+                    filter?: {
+                        mailboxIds?: string[];
+                        streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                        campaignIds?: string[];
+                        topicIds?: string[];
+                    } | null;
+                    paused?: boolean;
                 };
             };
         };
@@ -5692,8 +6503,16 @@ export interface operations {
                         id: string;
                         url: string;
                         description: string | null;
-                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                        events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised") | "*")[];
                         enabled: boolean;
+                        filter: {
+                            mailboxIds?: string[];
+                            streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                            campaignIds?: string[];
+                            topicIds?: string[];
+                        } | null;
+                        paused: boolean;
+                        held: number | ("Infinity" | "-Infinity" | "NaN");
                         lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5771,8 +6590,16 @@ export interface operations {
                             id: string;
                             url: string;
                             description: string | null;
-                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched") | "*")[];
+                            events: (("message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised") | "*")[];
                             enabled: boolean;
+                            filter: {
+                                mailboxIds?: string[];
+                                streams?: ("transactional" | "campaign" | "automation" | "reply" | "mailbox" | "test" | "system")[];
+                                campaignIds?: string[];
+                                topicIds?: string[];
+                            } | null;
+                            paused: boolean;
+                            held: number | ("Infinity" | "-Infinity" | "NaN");
                             lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
@@ -5824,7 +6651,7 @@ export interface operations {
     "webhooks.deliveries": {
         parameters: {
             query?: {
-                status?: "pending" | "succeeded" | "retrying" | "dead";
+                status?: "pending" | "succeeded" | "retrying" | "dead" | "paused";
                 cursor?: string;
                 limit?: string;
             };
@@ -5848,7 +6675,7 @@ export interface operations {
                             eventId: string;
                             eventType: string;
                             /** @enum {string} */
-                            status: "pending" | "succeeded" | "retrying" | "dead";
+                            status: "pending" | "succeeded" | "retrying" | "dead" | "paused";
                             attempts: number | ("Infinity" | "-Infinity" | "NaN");
                             lastStatusCode: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             lastError: string | null;
@@ -5857,6 +6684,7 @@ export interface operations {
                             nextAttemptAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             payload: unknown;
+                            requestId: string | null;
                         }[];
                         nextCursor: string | null;
                     };
@@ -5989,7 +6817,7 @@ export interface operations {
                     "application/json": {
                         id: string;
                         /** @enum {string} */
-                        status: "pending" | "succeeded" | "retrying" | "dead";
+                        status: "pending" | "succeeded" | "retrying" | "dead" | "paused";
                     };
                 };
             };
@@ -6040,7 +6868,17 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description A webhook event. Deliveries carry Standard Webhooks headers: webhook-id, webhook-timestamp and webhook-signature (v1,<base64 HMAC-SHA256 of "id.timestamp.body"> with the endpoint's whsec_ secret).
+                     * @enum {string}
+                     */
+                    event?: "message.sent" | "message.delivered" | "message.deferred" | "message.bounced" | "message.failed" | "message.rejected" | "message.complained" | "email.opened" | "email.clicked" | "contact.created" | "contact.updated" | "contact.subscribed" | "contact.unsubscribed" | "contact.deleted" | "contact.suppressed" | "contact.unsuppressed" | "event.tracked" | "campaign.paused" | "campaign.sent" | "mail.received" | "mail.rule_matched" | "approval.pending" | "approval.approved" | "approval.rejected" | "alert.raised";
+                } | null;
+            };
+        };
         responses: {
             /** @description Success */
             200: {
@@ -6051,6 +6889,7 @@ export interface operations {
                     "application/json": {
                         deliveryId: string;
                         eventId: string;
+                        eventType: string;
                     };
                 };
             };
@@ -7873,6 +8712,396 @@ export interface operations {
             };
         };
     };
+    "domains.dmarc": {
+        parameters: {
+            query?: {
+                range?: "7d" | "30d" | "90d";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        domain: {
+                            id: string;
+                            name: string;
+                        };
+                        range: {
+                            key: string;
+                            from: number | ("Infinity" | "-Infinity" | "NaN");
+                            to: number | ("Infinity" | "-Infinity" | "NaN");
+                            days: number | ("Infinity" | "-Infinity" | "NaN");
+                        };
+                        receiving: {
+                            address: string;
+                            inRua: boolean;
+                            routed: boolean;
+                        };
+                        reports: number | ("Infinity" | "-Infinity" | "NaN");
+                        reportDays: number | ("Infinity" | "-Infinity" | "NaN");
+                        lastReportAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        reporters: {
+                            org: string;
+                            email: string | null;
+                            reports: number | ("Infinity" | "-Infinity" | "NaN");
+                            messages: number | ("Infinity" | "-Infinity" | "NaN");
+                        }[];
+                        policy: {
+                            record: string | null;
+                            records: string[];
+                            lookupError: string | null;
+                            p: ("none" | "quarantine" | "reject") | null;
+                            sp: string | null;
+                            pct: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            adkim: string | null;
+                            aspf: string | null;
+                            rua: string[];
+                        };
+                        totals: {
+                            messages: number | ("Infinity" | "-Infinity" | "NaN");
+                            dmarcPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            dkimPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            spfPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            quarantined: number | ("Infinity" | "-Infinity" | "NaN");
+                            rejected: number | ("Infinity" | "-Infinity" | "NaN");
+                        };
+                        sources: {
+                            ip: string;
+                            ptr: string | null;
+                            provider: string | null;
+                            messages: number | ("Infinity" | "-Infinity" | "NaN");
+                            spfPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            dkimPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            dmarcPass: number | ("Infinity" | "-Infinity" | "NaN");
+                            quarantined: number | ("Infinity" | "-Infinity" | "NaN");
+                            rejected: number | ("Infinity" | "-Infinity" | "NaN");
+                            known: boolean;
+                            markedKnown: boolean;
+                            label: string | null;
+                            reason: string;
+                            dkimDomains: {
+                                [key: string]: string;
+                            };
+                            spfDomains: {
+                                [key: string]: string;
+                            };
+                            firstSeen: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            lastSeen: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        }[];
+                        recommendation: {
+                            current: ("none" | "quarantine" | "reject") | null;
+                            unknownFailShare: number | ("Infinity" | "-Infinity" | "NaN");
+                            safeToQuarantine: boolean;
+                            safeToReject: boolean;
+                            blockers: {
+                                kind: string;
+                                message: string;
+                                ip?: string;
+                            }[];
+                            next: {
+                                /** @enum {string} */
+                                p: "none" | "quarantine" | "reject";
+                                pct: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            } | null;
+                            nextRecord: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "domains.dmarcPolicy": {
+        parameters: {
+            query?: {
+                dryRun?: "1" | "true" | "0" | "false";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    p: "none" | "quarantine" | "reject";
+                    pct?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        before: string | null;
+                        after: string;
+                        applied: boolean;
+                        changed: boolean;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description DmarcRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmarcRefusedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "domains.dmarcKnown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                ip: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    label?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ip: string;
+                        known: boolean;
+                        label: string | null;
+                        markedBy: string | null;
+                        markedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "domains.dmarcUnknown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                ip: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ip: string;
+                        known: boolean;
+                        label: string | null;
+                        markedBy: string | null;
+                        markedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "mailboxes.list": {
         parameters: {
             query?: {
@@ -8893,6 +10122,7 @@ export interface operations {
                             lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                             snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
                             /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
@@ -9005,6 +10235,7 @@ export interface operations {
                             lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                             snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
                             /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
@@ -9196,6 +10427,229 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.summarizeThread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    refresh?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summary: string;
+                        bullets: string[];
+                        version: string;
+                        cached: boolean;
+                        model: string | null;
+                        generatedAt: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict | AssistantRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"] | components["schemas"]["AssistantRefusedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "mail.draftReply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    instructions?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        draft: {
+                            id: string;
+                            threadId: string | null;
+                            inReplyTo: string | null;
+                            references: string[];
+                            from: string | null;
+                            to: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            cc: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            bcc: {
+                                name: string | null;
+                                address: string;
+                            }[];
+                            subject: string;
+                            bodyText: string;
+                            bodyHtml: string | null;
+                            attachments: {
+                                /** @description The `key` POST /v1/mailboxes/{id}/uploads answered with. */
+                                key: string;
+                                filename: string;
+                                mimeType: string;
+                                size: number | ("Infinity" | "-Infinity" | "NaN");
+                                /**
+                                 * @description How it would go if sent now: in the message, or as an expiring link because the message would pass Email Service's 5 MiB. Read-only; ignored on input.
+                                 * @enum {string}
+                                 */
+                                delivery?: "inline" | "link";
+                            }[];
+                            /** @enum {string} */
+                            status: "draft" | "scheduled" | "due";
+                            sendAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            replyMode: ("reply" | "replyAll" | "forward") | null;
+                            sourceMessageId: string | null;
+                            lastError: string | null;
+                            /** @description Why the last send was refused before it went out, as SendBlocked's reason; cleared when the draft is edited. */
+                            blockedReason: ("quota_exhausted" | "domain_unhealthy" | "all_recipients_suppressed") | null;
+                            track: {
+                                opens: boolean;
+                                clicks: boolean;
+                            } | null;
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        };
+                        model: string | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict | AssistantRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"] | components["schemas"]["AssistantRefusedEncoded"];
                 };
             };
             /** @description RateLimited */
@@ -9527,6 +10981,7 @@ export interface operations {
                             lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                             sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                             snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
                             /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
@@ -11468,8 +12923,13 @@ export interface operations {
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                             updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
                         };
-                        sendAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        sendAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         undoUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        approval: {
+                            id: string;
+                            /** @enum {string} */
+                            status: "pending";
+                        } | null;
                     };
                 };
             };
@@ -14701,6 +16161,17 @@ export interface operations {
                             /** @enum {string} */
                             to: "subscribed" | "unconfirmed" | "unsubscribed";
                             source: string;
+                            evidence: {
+                                importId?: string;
+                                attestedBy?: string;
+                                attestedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                                statement?: string;
+                                ip?: string;
+                                userAgent?: string;
+                                page?: string;
+                                formId?: string;
+                                formVersion?: string;
+                            } | null;
                         } | {
                             /** @enum {string} */
                             kind: "delivery";
@@ -14718,6 +16189,19 @@ export interface operations {
                             topicId: string;
                             topic: string;
                             source: string;
+                            /** @enum {string} */
+                            method: "double_opt_in" | "form" | "preference_page";
+                            evidence: {
+                                importId?: string;
+                                attestedBy?: string;
+                                attestedAt?: number | ("Infinity" | "-Infinity" | "NaN");
+                                statement?: string;
+                                ip?: string;
+                                userAgent?: string;
+                                page?: string;
+                                formId?: string;
+                                formVersion?: string;
+                            } | null;
                         } | {
                             /** @enum {string} */
                             kind: "reply";
@@ -14726,6 +16210,9 @@ export interface operations {
                             subject: string | null;
                             to: string;
                             inReplyTo: string | null;
+                            mailboxId: string | null;
+                            threadId: string | null;
+                            messageId: string | null;
                         } | {
                             /** @enum {string} */
                             kind: "automation";
@@ -16374,7 +17861,8 @@ export interface operations {
             content: {
                 "application/json": {
                     name: string;
-                    filter: unknown;
+                    /** @description A SegmentRule tree. A tree that can't work is a 400 with the rule's path in `field`. */
+                    filter: components["schemas"]["SegmentRule"];
                 };
             };
         };
@@ -16440,6 +17928,73 @@ export interface operations {
             };
         };
     };
+    "segments.fromText": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    text: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        rule: components["schemas"]["SegmentRule"];
+                        explanation: string | null;
+                        count: number | ("Infinity" | "-Infinity" | "NaN");
+                        model: string | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description AssistantRefused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantRefusedEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "segments.preview": {
         parameters: {
             query?: never;
@@ -16450,7 +18005,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    filter: unknown;
+                    /** @description A SegmentRule tree. A tree that can't work is a 400 with the rule's path in `field`. */
+                    filter: components["schemas"]["SegmentRule"];
                 };
             };
         };
@@ -16709,7 +18265,8 @@ export interface operations {
             content: {
                 "application/json": {
                     name?: string;
-                    filter?: unknown;
+                    /** @description A SegmentRule tree. A tree that can't work is a 400 with the rule's path in `field`. */
+                    filter?: components["schemas"]["SegmentRule"];
                 };
             };
         };
@@ -17375,7 +18932,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "open" | "resolved" | "all";
-                kind?: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed";
+                kind?: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending";
                 severity?: "info" | "warning" | "critical";
                 cursor?: string;
                 limit?: string;
@@ -17399,7 +18956,7 @@ export interface operations {
                              * @description What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).
                              * @enum {string}
                              */
-                            kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed";
+                            kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending";
                             /** @enum {string} */
                             severity: "info" | "warning" | "critical";
                             title: string;
@@ -17478,7 +19035,7 @@ export interface operations {
                          * @description What the alert is about. Conditions clear themselves when they stop holding: delivery_events_missing, campaign_paused (on resume), dns_drift, reputation_warning, reputation_at_risk, bounce_spike, complaint_spike, quota_80, quota_100, webhook_dead_letter, automation_failed. Notices clear after a while: export_ready (a day), domain_activated and import_failed (a week).
                          * @enum {string}
                          */
-                        kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed";
+                        kind: "delivery_events_missing" | "campaign_paused" | "dns_drift" | "reputation_warning" | "reputation_at_risk" | "bounce_spike" | "complaint_spike" | "quota_80" | "quota_100" | "webhook_dead_letter" | "import_failed" | "export_ready" | "domain_activated" | "automation_failed" | "approval_pending";
                         /** @enum {string} */
                         severity: "info" | "warning" | "critical";
                         title: string;
@@ -22998,12 +24555,20 @@ export interface operations {
                     "application/json": {
                         range: string;
                         received: number | ("Infinity" | "-Infinity" | "NaN");
-                        /** @description Mailyard's own refusals (no such address). Email Routing rejects DMARC failures and listed senders before mail reaches Mailyard, so those are null until its analytics are read. */
+                        /** @description `total` and `noSuchAddress` are Mailyard's own refusals. The rest are Email Routing's, read from its analytics with CLOUDFLARE_ANALYTICS_TOKEN. */
                         rejected: {
                             total: number | ("Infinity" | "-Infinity" | "NaN");
                             noSuchAddress: number | ("Infinity" | "-Infinity" | "NaN");
                             dmarcFail: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            authFail: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            upstreamRejected: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             rbl: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            upstream: {
+                                connected: boolean;
+                                reason: string | null;
+                                zones: number | ("Infinity" | "-Infinity" | "NaN");
+                                from: string | null;
+                            };
                         };
                         held: number | ("Infinity" | "-Infinity" | "NaN");
                         spam: number | ("Infinity" | "-Infinity" | "NaN");
@@ -23153,6 +24718,7 @@ export interface operations {
                                 answered: number | ("Infinity" | "-Infinity" | "NaN");
                                 firstResponseMedianMin: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                                 firstResponseP90Min: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                resolved: number | ("Infinity" | "-Infinity" | "NaN");
                                 resolutionMedianHours: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             }[];
                         }[];
@@ -23406,6 +24972,7 @@ export interface operations {
                                 lastAt: number | ("Infinity" | "-Infinity" | "NaN");
                                 sortAt: number | ("Infinity" | "-Infinity" | "NaN");
                                 snoozedUntil: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                                 /** @description The API key id handling it; see assignedTo for the name. */
                                 assignee: string | null;
                                 /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
@@ -23808,6 +25375,12 @@ export interface operations {
                                 hour: number;
                                 /** @enum {string} */
                                 repeat: "yearly" | "once";
+                            } | {
+                                /** @enum {string} */
+                                kind: "mail_received";
+                                mailboxIds?: string[];
+                                senderDomains?: string[];
+                                subjectContains?: string;
                             }) | null;
                             version: number | ("Infinity" | "-Infinity" | "NaN");
                             publishedVersion: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -23893,6 +25466,12 @@ export interface operations {
                                 hour: number;
                                 /** @enum {string} */
                                 repeat: "yearly" | "once";
+                            } | {
+                                /** @enum {string} */
+                                kind: "mail_received";
+                                mailboxIds?: string[];
+                                senderDomains?: string[];
+                                subjectContains?: string;
                             };
                         } | {
                             id: string;
@@ -24064,6 +25643,12 @@ export interface operations {
                             hour: number;
                             /** @enum {string} */
                             repeat: "yearly" | "once";
+                        } | {
+                            /** @enum {string} */
+                            kind: "mail_received";
+                            mailboxIds?: string[];
+                            senderDomains?: string[];
+                            subjectContains?: string;
                         }) | null;
                         version: number | ("Infinity" | "-Infinity" | "NaN");
                         publishedVersion: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -24105,6 +25690,12 @@ export interface operations {
                                     hour: number;
                                     /** @enum {string} */
                                     repeat: "yearly" | "once";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "mail_received";
+                                    mailboxIds?: string[];
+                                    senderDomains?: string[];
+                                    subjectContains?: string;
                                 };
                             } | {
                                 id: string;
@@ -24388,6 +25979,12 @@ export interface operations {
                             hour: number;
                             /** @enum {string} */
                             repeat: "yearly" | "once";
+                        } | {
+                            /** @enum {string} */
+                            kind: "mail_received";
+                            mailboxIds?: string[];
+                            senderDomains?: string[];
+                            subjectContains?: string;
                         }) | null;
                         version: number | ("Infinity" | "-Infinity" | "NaN");
                         publishedVersion: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -24429,6 +26026,12 @@ export interface operations {
                                     hour: number;
                                     /** @enum {string} */
                                     repeat: "yearly" | "once";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "mail_received";
+                                    mailboxIds?: string[];
+                                    senderDomains?: string[];
+                                    subjectContains?: string;
                                 };
                             } | {
                                 id: string;
@@ -24728,6 +26331,12 @@ export interface operations {
                                 hour: number;
                                 /** @enum {string} */
                                 repeat: "yearly" | "once";
+                            } | {
+                                /** @enum {string} */
+                                kind: "mail_received";
+                                mailboxIds?: string[];
+                                senderDomains?: string[];
+                                subjectContains?: string;
                             };
                         } | {
                             id: string;
@@ -24899,6 +26508,12 @@ export interface operations {
                             hour: number;
                             /** @enum {string} */
                             repeat: "yearly" | "once";
+                        } | {
+                            /** @enum {string} */
+                            kind: "mail_received";
+                            mailboxIds?: string[];
+                            senderDomains?: string[];
+                            subjectContains?: string;
                         }) | null;
                         version: number | ("Infinity" | "-Infinity" | "NaN");
                         publishedVersion: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -24940,6 +26555,12 @@ export interface operations {
                                     hour: number;
                                     /** @enum {string} */
                                     repeat: "yearly" | "once";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "mail_received";
+                                    mailboxIds?: string[];
+                                    senderDomains?: string[];
+                                    subjectContains?: string;
                                 };
                             } | {
                                 id: string;
@@ -25334,6 +26955,12 @@ export interface operations {
                             hour: number;
                             /** @enum {string} */
                             repeat: "yearly" | "once";
+                        } | {
+                            /** @enum {string} */
+                            kind: "mail_received";
+                            mailboxIds?: string[];
+                            senderDomains?: string[];
+                            subjectContains?: string;
                         }) | null;
                         version: number | ("Infinity" | "-Infinity" | "NaN");
                         publishedVersion: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -25375,6 +27002,12 @@ export interface operations {
                                     hour: number;
                                     /** @enum {string} */
                                     repeat: "yearly" | "once";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "mail_received";
+                                    mailboxIds?: string[];
+                                    senderDomains?: string[];
+                                    subjectContains?: string;
                                 };
                             } | {
                                 id: string;
@@ -25616,6 +27249,12 @@ export interface operations {
                             hour: number;
                             /** @enum {string} */
                             repeat: "yearly" | "once";
+                        } | {
+                            /** @enum {string} */
+                            kind: "mail_received";
+                            mailboxIds?: string[];
+                            senderDomains?: string[];
+                            subjectContains?: string;
                         }) | null;
                         version: number | ("Infinity" | "-Infinity" | "NaN");
                         publishedVersion: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -25657,6 +27296,12 @@ export interface operations {
                                     hour: number;
                                     /** @enum {string} */
                                     repeat: "yearly" | "once";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "mail_received";
+                                    mailboxIds?: string[];
+                                    senderDomains?: string[];
+                                    subjectContains?: string;
                                 };
                             } | {
                                 id: string;
@@ -25898,6 +27543,12 @@ export interface operations {
                             hour: number;
                             /** @enum {string} */
                             repeat: "yearly" | "once";
+                        } | {
+                            /** @enum {string} */
+                            kind: "mail_received";
+                            mailboxIds?: string[];
+                            senderDomains?: string[];
+                            subjectContains?: string;
                         }) | null;
                         version: number | ("Infinity" | "-Infinity" | "NaN");
                         publishedVersion: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
@@ -25939,6 +27590,12 @@ export interface operations {
                                     hour: number;
                                     /** @enum {string} */
                                     repeat: "yearly" | "once";
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "mail_received";
+                                    mailboxIds?: string[];
+                                    senderDomains?: string[];
+                                    subjectContains?: string;
                                 };
                             } | {
                                 id: string;
@@ -26134,6 +27791,155 @@ export interface operations {
             };
         };
     };
+    "automations.testStep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                nodeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    version?: number;
+                    contactId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        nodeId: string;
+                        url: string;
+                        status: number | ("Infinity" | "-Infinity" | "NaN");
+                        ok: boolean;
+                        tookMs: number | ("Infinity" | "-Infinity" | "NaN");
+                        error: ("timeout" | "network") | null;
+                        response: string | null;
+                        contact: {
+                            id: string;
+                            email: string;
+                            sample: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "automations.eventKeys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        sampled: number | ("Infinity" | "-Infinity" | "NaN");
+                        from: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        to: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        keys: {
+                            key: string;
+                            tag: string;
+                            seen: number | ("Infinity" | "-Infinity" | "NaN");
+                            types: string[];
+                            example: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "automations.dryRun": {
         parameters: {
             query?: never;
@@ -26193,6 +27999,7 @@ export interface operations {
                             /** @enum {string} */
                             outcome: "would-run" | "would-wait" | "yes" | "no" | "event" | "timed-out" | "would-send" | "skipped" | "deferred" | "exited" | "stopped";
                             detail: string;
+                            missing?: string[];
                             send?: {
                                 to: string;
                                 subject: string;
@@ -26507,6 +28314,7 @@ export interface operations {
                             port: string | null;
                             detail: string;
                             messageId: string | null;
+                            missing: string[];
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
@@ -26590,6 +28398,7 @@ export interface operations {
                             port: string | null;
                             detail: string;
                             messageId: string | null;
+                            missing: string[];
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
@@ -26682,6 +28491,7 @@ export interface operations {
                             port: string | null;
                             detail: string;
                             messageId: string | null;
+                            missing: string[];
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
@@ -28720,6 +30530,1065 @@ export interface operations {
             };
         };
     };
+    "agents.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agents: {
+                            id: string;
+                            name: string;
+                            mailbox: {
+                                id: string;
+                                address: string | null;
+                            };
+                            key: {
+                                id: string;
+                                prefix: string;
+                                scopes: ("send" | "track" | "read" | "admin")[];
+                                lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                revoked: boolean;
+                            } | null;
+                            limits: {
+                                sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                /** @enum {string} */
+                                recipients: "any" | "contacts" | "domains";
+                                allowDomains: string[];
+                                requireApproval: boolean;
+                            } | null;
+                            sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                            pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    address: string;
+                    displayName?: string;
+                    scopes?: ("send" | "track" | "read" | "admin")[];
+                    limits?: {
+                        sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        /** @enum {string} */
+                        recipients: "any" | "contacts" | "domains";
+                        allowDomains: string[];
+                        requireApproval: boolean;
+                    };
+                    wake?: {
+                        url: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agent: {
+                            id: string;
+                            name: string;
+                            mailbox: {
+                                id: string;
+                                address: string | null;
+                            };
+                            key: {
+                                id: string;
+                                prefix: string;
+                                scopes: ("send" | "track" | "read" | "admin")[];
+                                lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                revoked: boolean;
+                            } | null;
+                            limits: {
+                                sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                /** @enum {string} */
+                                recipients: "any" | "contacts" | "domains";
+                                allowDomains: string[];
+                                requireApproval: boolean;
+                            } | null;
+                            sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                            pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        };
+                        key: string;
+                        mcp: {
+                            url: string;
+                            command: string;
+                        };
+                        wake: {
+                            endpointId: string;
+                            secret: string;
+                        } | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        mailbox: {
+                            id: string;
+                            address: string | null;
+                        };
+                        key: {
+                            id: string;
+                            prefix: string;
+                            scopes: ("send" | "track" | "read" | "admin")[];
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            revoked: boolean;
+                        } | null;
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                        pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        mailbox: {
+                            id: string;
+                            address: string | null;
+                        };
+                        key: {
+                            id: string;
+                            prefix: string;
+                            scopes: ("send" | "track" | "read" | "admin")[];
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            revoked: boolean;
+                        } | null;
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                        pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    limits?: {
+                        sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        /** @enum {string} */
+                        recipients: "any" | "contacts" | "domains";
+                        allowDomains: string[];
+                        requireApproval: boolean;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        mailbox: {
+                            id: string;
+                            address: string | null;
+                        };
+                        key: {
+                            id: string;
+                            prefix: string;
+                            scopes: ("send" | "track" | "read" | "admin")[];
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            revoked: boolean;
+                        } | null;
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                        pendingApprovals: number | ("Infinity" | "-Infinity" | "NaN");
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.getLimits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "agents.putLimits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    limits: {
+                        sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        /** @enum {string} */
+                        recipients: "any" | "contacts" | "domains";
+                        allowDomains: string[];
+                        requireApproval: boolean;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        limits: {
+                            sendsPerDay: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            /** @enum {string} */
+                            recipients: "any" | "contacts" | "domains";
+                            allowDomains: string[];
+                            requireApproval: boolean;
+                        } | null;
+                        sentToday: number | ("Infinity" | "-Infinity" | "NaN");
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.list": {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected" | "failed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approvals: {
+                            id: string;
+                            keyId: string;
+                            /** @enum {string} */
+                            kind: "transactional" | "draft";
+                            mailboxId: string | null;
+                            draftId: string | null;
+                            recipients: string[];
+                            subject: string;
+                            from: string | null;
+                            /** @enum {string} */
+                            status: "pending" | "approved" | "rejected" | "failed";
+                            createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                            decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            decidedBy: string | null;
+                            reason: string | null;
+                            result: Record<string, never> | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        keyId: string;
+                        /** @enum {string} */
+                        kind: "transactional" | "draft";
+                        mailboxId: string | null;
+                        draftId: string | null;
+                        recipients: string[];
+                        subject: string;
+                        from: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "failed";
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        decidedBy: string | null;
+                        reason: string | null;
+                        result: Record<string, never> | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": unknown | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        keyId: string;
+                        /** @enum {string} */
+                        kind: "transactional" | "draft";
+                        mailboxId: string | null;
+                        draftId: string | null;
+                        recipients: string[];
+                        subject: string;
+                        from: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "failed";
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        decidedBy: string | null;
+                        reason: string | null;
+                        result: Record<string, never> | null;
+                    };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "approvals.reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                } | null;
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        keyId: string;
+                        /** @enum {string} */
+                        kind: "transactional" | "draft";
+                        mailboxId: string | null;
+                        draftId: string | null;
+                        recipients: string[];
+                        subject: string;
+                        from: string | null;
+                        /** @enum {string} */
+                        status: "pending" | "approved" | "rejected" | "failed";
+                        createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                        decidedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        decidedBy: string | null;
+                        reason: string | null;
+                        result: Record<string, never> | null;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
+    "integrations.get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        mcp: {
+                            endpoint: string | null;
+                            keyCount: number | ("Infinity" | "-Infinity" | "NaN");
+                            agentCount: number | ("Infinity" | "-Infinity" | "NaN");
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            keys: {
+                                id: string;
+                                name: string;
+                                prefix: string;
+                                scopes: string[];
+                                lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                createdAt: number | ("Infinity" | "-Infinity" | "NaN");
+                                agent: {
+                                    id: string;
+                                    name: string;
+                                    mailboxId: string;
+                                    address: string | null;
+                                } | null;
+                            }[] | null;
+                        };
+                        webhooks: {
+                            count: number | ("Infinity" | "-Infinity" | "NaN");
+                            enabled: number | ("Infinity" | "-Infinity" | "NaN");
+                            paused: number | ("Infinity" | "-Infinity" | "NaN");
+                            failing: number | ("Infinity" | "-Infinity" | "NaN");
+                            deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
+                            held: number | ("Infinity" | "-Infinity" | "NaN");
+                            failingEndpoints: {
+                                id: string;
+                                url: string;
+                                deadLetters: number | ("Infinity" | "-Infinity" | "NaN");
+                                lastFailureAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                                lastSuccessAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            }[];
+                        };
+                        hermes: {
+                            connected: boolean;
+                            lane: string | null;
+                            mailboxes: string[];
+                            allMailboxes: boolean;
+                            since: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                            available: boolean;
+                        };
+                        siblings: {
+                            app: string;
+                            name: string;
+                            /** @enum {string} */
+                            via: "mcp" | "queue";
+                            connected: boolean;
+                            keyId: string | null;
+                            lastUsedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnauthorizedEncoded"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForbiddenEncoded"];
+                };
+            };
+            /** @description RateLimited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateLimitedEncoded"];
+                };
+            };
+        };
+    };
     "mcp.rpc": {
         parameters: {
             query?: never;
@@ -29155,6 +32024,110 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+        };
+    };
+    "mail.wait": {
+        parameters: {
+            query?: {
+                /** @description The cursor from the last answer. */
+                since?: number;
+                /** @description Seconds to wait. */
+                timeout?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The mailbox. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mail arrived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        cursor: number;
+                        reset: boolean;
+                        messages: {
+                            id?: string;
+                            threadId?: string;
+                            subject?: string;
+                            from?: Record<string, never> | null;
+                            snippet?: string;
+                            receivedAt?: number;
+                            folder?: string;
+                            seen?: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description Nothing arrived before the timeout; the cursor is in x-mailyard-cursor. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description since or timeout isn't valid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
+                };
+            };
+            /** @description No key or session, or one that no longer works. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
+                };
+            };
+            /** @description The key can't read this mailbox. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
+                };
+            };
+            /** @description No such mailbox. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: {
+                            message?: string;
+                            reason?: string;
+                        };
+                    };
                 };
             };
         };

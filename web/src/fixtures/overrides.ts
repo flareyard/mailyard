@@ -11,9 +11,20 @@
  *   sign-in link to …@no-sender.example              → 503 NoSystemSender
  *   sign-in link to …@rate-limited.example           → 429
  */
-import type { paths } from "../api/schema"
 
-type Json<P extends keyof paths, M extends "get" | "post", S extends number = 200> = paths[P][M] extends {
+import { ANALYTICS_OVERRIDES } from "../analytics/fixtures.ts"
+import type { paths } from "../api/schema"
+import { DOMAINS_OVERRIDES } from "../domains/fixtures.ts"
+import { SETTINGS_AGENTS_OVERRIDES } from "../settings/agents-fixtures.ts"
+import { SETTINGS_OVERRIDES } from "../settings/fixtures.ts"
+import { TRANSACTIONAL_OVERRIDES } from "../transactional/fixtures.ts"
+import { TRANSACTIONAL_KEYS_OVERRIDES } from "../transactional/keys-fixtures.ts"
+
+export type Json<
+  P extends keyof paths,
+  M extends "get" | "post" | "put" | "patch" | "delete",
+  S extends number = 200,
+> = paths[P][M] extends {
   responses: { [K in S]: { content: { "application/json": infer R } } }
 }
   ? R
@@ -24,8 +35,12 @@ type MeBody = Json<"/v1/invites/{token}/accept", "post">
 type LinkSent = Json<"/v1/session/link", "post", 202>
 type Claimed = Json<"/v1/workspace/claim", "post">
 
-type Answer = { status: number; body: unknown }
-type Override = { method: string; path: RegExp; answer: (m: RegExpMatchArray, body: unknown) => Answer }
+export type Answer = { status: number; body: unknown; headers?: Record<string, string> }
+export type Override = {
+  method: string
+  path: RegExp
+  answer: (m: RegExpMatchArray, body: unknown, url: URL) => Answer
+}
 
 const DAY = 86_400_000
 const workspace = {
@@ -151,10 +166,23 @@ export const OVERRIDES: readonly Override[] = [
   },
 ]
 
+// ── Ops (HAL-3309): Transactional, Domains, Analytics and Settings ────────────────────────────────────────────
+// Each area keeps its overrides in its own folder (`src/<area>/fixtures.ts`), typed against the schema the same
+// way, for routes the design fixtures predate (agents, approvals, members and invites, sessions, workspace
+// deletion, key limits) and for the designed states a fixture variant can't pick on its own.
+const OPS_OVERRIDES: readonly Override[] = [
+  ...TRANSACTIONAL_OVERRIDES,
+  ...TRANSACTIONAL_KEYS_OVERRIDES,
+  ...DOMAINS_OVERRIDES,
+  ...ANALYTICS_OVERRIDES,
+  ...SETTINGS_OVERRIDES,
+  ...SETTINGS_AGENTS_OVERRIDES,
+]
+
 /** The override answering this request, if any. */
 export async function findOverride(request: Request): Promise<Answer | undefined> {
   const url = new URL(request.url)
-  for (const o of OVERRIDES) {
+  for (const o of [...OVERRIDES, ...OPS_OVERRIDES]) {
     if (o.method !== request.method) continue
     const m = url.pathname.match(o.path)
     if (!m) continue
@@ -164,7 +192,7 @@ export async function findOverride(request: Request): Promise<Answer | undefined
         body = await request.clone().json()
       } catch {}
     }
-    return o.answer(m, body)
+    return o.answer(m, body, url)
   }
   return undefined
 }

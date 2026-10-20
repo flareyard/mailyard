@@ -1,0 +1,97 @@
+/* API keys: only what the design CSS leaves to the screen. Tokens only. */
+.key-name {
+  font-weight: 600;
+  color: var(--my-fg);
+  overflow-wrap: anywhere;
+}
+.keys-foot {
+  margin-top: 12px;
+}
+.tb-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.tb-fieldset > .label {
+  margin-bottom: 6px;
+}
+.tb-check {
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+}
+.tb-of {
+  font-family: var(--font-sans);
+}
+.tb-inline {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tb-inline > .input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.tb-end {
+  justify-content: flex-end;
+}
+.field-error {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--red-900);
+  font: var(--text-label-13);
+}
+.tb-meta {
+  justify-content: flex-end;
+}
+/* audience.css makes every `.kv dd` a flex row, which splits mixed text into columns; the ops design flows it. */
+.kv.tb-kv dd {
+  display: block;
+}
+.kv.tb-kv dd > .pill,
+.kv.tb-kv dd > .tag {
+  vertical-align: middle;
+}
+.tb-between {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.tb-pager {
+  margin-top: 12px;
+}
+.tb-fg {
+  color: var(--my-fg);
+}
+.tb-url {
+  overflow-wrap: anywhere;
+}
+.tb-auto {
+  width: auto;
+}
+.tb-group {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+}
+.tb-events {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.tb-ev-link {
+  font: inherit;
+  color: var(--my-fg);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.tb-ev-link:hover {
+  text-decoration: underline;
+}
+.tb-fieldset > .seg,
+.tb-fieldset > .has-reason {
+  align-self: flex-start;
+  max-width: 100%;
+}
+.tb-events .p-name {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
