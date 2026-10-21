@@ -32,8 +32,8 @@ export const contactsQuery = (s: ContactsSearch) =>
 export const statusCountQuery = (status: string) =>
   queryOptions({
     queryKey: ["contacts", "count", "status", status],
-    queryFn: async () =>
-      (await unwrap(api.GET("/v1/contacts", { params: { query: { status, limit: "1" } } })))?.total ?? null,
+    queryFn: () => unwrap(api.GET("/v1/contacts", { params: { query: { status, limit: "1" } } })),
+    select: (r) => r?.total ?? null,
     staleTime: 60_000,
   })
 
@@ -70,6 +70,7 @@ export const bulkJobQuery = (id: string) =>
 
 export const exportsQuery = queryOptions({
   queryKey: ["exports"],
-  queryFn: async () => (await unwrap(api.GET("/v1/exports")))?.exports ?? [],
+  queryFn: () => unwrap(api.GET("/v1/exports")),
+  select: (r) => r?.exports ?? [],
   staleTime: 15_000,
 })

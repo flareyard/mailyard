@@ -256,8 +256,9 @@ function EditSheet({ f, onClose }: { f: ContactField; onClose: () => void }) {
     mutationFn: () =>
       unwrap(api.PATCH("/v1/contact-fields/{key}", { params: { path: { key: f.key } }, body: patch ?? {} })),
     onSuccess: (updated) => {
-      qc.setQueryData(fieldsQuery.queryKey, (list: ContactField[] | undefined) =>
-        list?.map((x) => (x.key === f.key && updated ? updated : x)),
+      // The cache holds the API's response ({ fields }); `select` makes the list (query-keys.test.ts).
+      qc.setQueryData(fieldsQuery.queryKey, (old) =>
+        old ? { ...old, fields: old.fields.map((x) => (x.key === f.key && updated ? updated : x)) } : old,
       )
       qc.invalidateQueries({ queryKey: ["contact-fields"] })
       onClose()

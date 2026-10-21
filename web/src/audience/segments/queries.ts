@@ -37,8 +37,9 @@ export type FromText = Json<"/v1/segments/from-text", "post">
 
 export const campaignNamesQuery = queryOptions({
   queryKey: ["campaigns", "names"],
-  queryFn: async () =>
-    arr<{ id: string; name: string }>((await unwrap(api.GET("/v1/campaigns")))?.campaigns).map((c) => ({
+  queryFn: () => unwrap(api.GET("/v1/campaigns")),
+  select: (r) =>
+    arr<{ id: string; name: string }>(r?.campaigns).map((c) => ({
       id: c.id,
       name: c.name,
     })),

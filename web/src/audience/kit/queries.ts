@@ -33,31 +33,36 @@ export type TemplateSummary = Json<"/v1/templates", "get">["templates"][number]
 /** Every topic, archived ones included; screens filter as they need. */
 export const allTopicsQuery = queryOptions({
   queryKey: ["topics", "all"],
-  queryFn: async () => arr<Topic>((await unwrap(api.GET("/v1/topics")))?.topics),
+  queryFn: () => unwrap(api.GET("/v1/topics")),
+  select: (r) => arr<Topic>(r?.topics),
   staleTime: 60_000,
 })
 
 export const segmentsQuery = queryOptions({
   queryKey: ["segments"],
-  queryFn: async () => arr<Segment>((await unwrap(api.GET("/v1/segments")))?.segments),
+  queryFn: () => unwrap(api.GET("/v1/segments")),
+  select: (r) => arr<Segment>(r?.segments),
   staleTime: 30_000,
 })
 
 export const fieldsQuery = queryOptions({
   queryKey: ["contact-fields"],
-  queryFn: async () => arr<ContactField>((await unwrap(api.GET("/v1/contact-fields")))?.fields),
+  queryFn: () => unwrap(api.GET("/v1/contact-fields")),
+  select: (r) => arr<ContactField>(r?.fields),
   staleTime: 5 * 60_000,
 })
 
 export const identitiesQuery = queryOptions({
   queryKey: ["identities"],
-  queryFn: async () => arr<Identity>((await unwrap(api.GET("/v1/identities")))?.identities),
+  queryFn: () => unwrap(api.GET("/v1/identities")),
+  select: (r) => arr<Identity>(r?.identities),
   staleTime: 5 * 60_000,
 })
 
 export const templatesQuery = queryOptions({
   queryKey: ["templates"],
-  queryFn: async () => arr<TemplateSummary>((await unwrap(api.GET("/v1/templates")))?.templates),
+  queryFn: () => unwrap(api.GET("/v1/templates")),
+  select: (r) => arr<TemplateSummary>(r?.templates),
   staleTime: 60_000,
 })
 
@@ -67,7 +72,8 @@ export const templatesQuery = queryOptions({
  */
 export const keysQuery = queryOptions({
   queryKey: ["api-keys"],
-  queryFn: async () => arr<ApiKey>((await unwrap(api.GET("/v1/api-keys")))?.keys),
+  queryFn: () => unwrap(api.GET("/v1/api-keys")),
+  select: (r) => arr<ApiKey>(r?.keys),
   staleTime: 5 * 60_000,
   retry: false,
 })

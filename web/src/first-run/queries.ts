@@ -37,7 +37,8 @@ const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : [])
 
 export const domainsQuery = queryOptions({
   queryKey: ["domains"],
-  queryFn: async () => arr<DomainSummary>((await unwrap(api.GET("/v1/domains")))?.domains),
+  queryFn: () => unwrap(api.GET("/v1/domains")),
+  select: (r) => arr<DomainSummary>(r?.domains),
 })
 
 export const domainQuery = (id: string) =>
@@ -55,21 +56,15 @@ export const candidatesQuery = queryOptions({
 /** Test sends that went out, from the message log (the `test` stream). */
 export const testMessagesQuery = queryOptions({
   queryKey: ["messages", { stream: "test", limit: 20 }],
-  queryFn: async () =>
-    arr<{ source: string; stream: string; status: string }>(
-      (await unwrap(api.GET("/v1/messages", { params: { query: { stream: "test", limit: "20" } } })))
-        ?.messages,
-    ),
+  queryFn: () => unwrap(api.GET("/v1/messages", { params: { query: { stream: "test", limit: "20" } } })),
+  select: (r) => arr<{ source: string; stream: string; status: string }>(r?.messages),
 })
 
 /** Whether this workspace has delivered anything at all: a workspace already sending is past its test. */
 export const deliveredQuery = queryOptions({
   queryKey: ["messages", { status: "delivered", limit: 1 }],
-  queryFn: async () =>
-    arr<{ source: string; stream: string; status: string }>(
-      (await unwrap(api.GET("/v1/messages", { params: { query: { status: "delivered", limit: "1" } } })))
-        ?.messages,
-    ),
+  queryFn: () => unwrap(api.GET("/v1/messages", { params: { query: { status: "delivered", limit: "1" } } })),
+  select: (r) => arr<{ source: string; stream: string; status: string }>(r?.messages),
 })
 
 export const testSendQuery = (id: string) =>
@@ -87,10 +82,11 @@ export const verifiedQuery = queryOptions({
 export const mailImportsQuery = (mailboxId: string) =>
   queryOptions({
     queryKey: ["mailboxes", mailboxId, "imports"],
-    queryFn: async () =>
+    queryFn: () => unwrap(api.GET("/v1/mailboxes/{id}/imports", { params: { path: { id: mailboxId } } })),
+    select: (r) =>
       arr<MailImport>(
         (
-          (await unwrap(api.GET("/v1/mailboxes/{id}/imports", { params: { path: { id: mailboxId } } }))) as {
+          r as {
             imports?: unknown
           }
         )?.imports,
@@ -108,12 +104,14 @@ export const mailImportQuery = (mailboxId: string, importId: string) =>
 
 export const contactFieldsQuery = queryOptions({
   queryKey: ["contact-fields"],
-  queryFn: async () => arr<ContactField>((await unwrap(api.GET("/v1/contact-fields")))?.fields),
+  queryFn: () => unwrap(api.GET("/v1/contact-fields")),
+  select: (r) => arr<ContactField>(r?.fields),
   staleTime: 5 * 60_000,
 })
 
 export const topicsQuery = queryOptions({
   queryKey: ["topics"],
-  queryFn: async () => arr<Topic>((await unwrap(api.GET("/v1/topics")))?.topics).filter((t) => !t.archived),
+  queryFn: () => unwrap(api.GET("/v1/topics")),
+  select: (r) => arr<Topic>(r?.topics).filter((t) => !t.archived),
   staleTime: 5 * 60_000,
 })

@@ -1259,8 +1259,8 @@ function TriggerSheet({ c, onClose }: { c: Contact; onClose: () => void }) {
   const id = useId()
   const list = useQuery({
     queryKey: ["automations", "for-enter"],
-    queryFn: async () =>
-      (await unwrap(api.GET("/v1/automations", { params: { query: { range: "7d" } } })))?.automations ?? [],
+    queryFn: () => unwrap(api.GET("/v1/automations", { params: { query: { range: "7d" } } })),
+    select: (r) => r?.automations ?? [],
   })
   const live = (list.data ?? []).filter((a) => a.status === "live")
   const [pick, setPick] = useState("")

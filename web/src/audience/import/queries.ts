@@ -25,7 +25,8 @@ const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : [])
 
 export const contactImportsQuery = queryOptions({
   queryKey: ["imports"],
-  queryFn: async () => arr<ContactImport>((await unwrap(api.GET("/v1/imports")))?.imports),
+  queryFn: () => unwrap(api.GET("/v1/imports")),
+  select: (r) => arr<ContactImport>(r?.imports),
 })
 
 export const contactImportQuery = (id: string) =>

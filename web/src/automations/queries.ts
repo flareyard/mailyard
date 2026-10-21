@@ -43,8 +43,8 @@ export type RunsFilter = { status?: Run["status"]; version?: string; cursor?: st
 export const runsQuery = (id: string, f: RunsFilter) =>
   queryOptions({
     queryKey: ["automations", id, "runs", f],
-    queryFn: async () => {
-      const r = await unwrap(
+    queryFn: () =>
+      unwrap(
         api.GET("/v1/automations/{id}/runs", {
           params: {
             path: { id },
@@ -56,9 +56,8 @@ export const runsQuery = (id: string, f: RunsFilter) =>
             },
           },
         }),
-      )
-      return { runs: arr<Run>(r?.runs), total: r?.total ?? 0, nextCursor: r?.nextCursor ?? null }
-    },
+      ),
+    select: (r) => ({ runs: arr<Run>(r?.runs), total: r?.total ?? 0, nextCursor: r?.nextCursor ?? null }),
   })
 
 export const runQuery = (id: string) =>
@@ -78,13 +77,12 @@ export const templateQuery = (id: string) =>
 export const contactPickQuery = (q: string) =>
   queryOptions({
     queryKey: ["contacts", "pick", q],
-    queryFn: async () => {
-      const r = await unwrap(
+    queryFn: () =>
+      unwrap(
         api.GET("/v1/contacts", {
           params: { query: { limit: "8", sort: "-lastActivityAt", ...(q ? { q } : {}) } },
         }),
-      )
-      return arr<{ id: string; email: string; name: string | null }>(r?.contacts)
-    },
+      ),
+    select: (r) => arr<{ id: string; email: string; name: string | null }>(r?.contacts),
     staleTime: 30_000,
   })

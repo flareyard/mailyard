@@ -9,7 +9,8 @@ export type Range = "7d" | "30d" | "90d"
 
 export const formsQuery = queryOptions({
   queryKey: ["forms"],
-  queryFn: async () => arr<Form>((await unwrap(api.GET("/v1/forms")))?.forms),
+  queryFn: () => unwrap(api.GET("/v1/forms")),
+  select: (r) => arr<Form>(r?.forms),
   staleTime: 30_000,
 })
 

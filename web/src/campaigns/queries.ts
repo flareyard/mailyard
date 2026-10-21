@@ -47,14 +47,13 @@ export const countsQuery = queryOptions({
 export const listQuery = (status: ListStatus | undefined, cursor: string | undefined) =>
   queryOptions({
     queryKey: ["campaigns", "list", status ?? "all", cursor ?? null],
-    queryFn: async () => {
-      const r = await unwrap(
+    queryFn: () =>
+      unwrap(
         api.GET("/v1/campaigns", {
           params: { query: { ...(status ? { status } : {}), ...(cursor ? { cursor } : {}), limit: "50" } },
         }),
-      )
-      return { campaigns: arr<CampaignListItem>(r?.campaigns), nextCursor: r?.nextCursor ?? null }
-    },
+      ),
+    select: (r) => ({ campaigns: arr<CampaignListItem>(r?.campaigns), nextCursor: r?.nextCursor ?? null }),
   })
 
 export const campaignQuery = (id: string) =>
@@ -167,14 +166,9 @@ export const reputationQuery = queryOptions({
 
 export const pausedAlertsQuery = queryOptions({
   queryKey: ["alerts", "campaign_paused"],
-  queryFn: async () =>
-    arr<Alert>(
-      (
-        await unwrap(
-          api.GET("/v1/alerts", { params: { query: { kind: "campaign_paused", status: "open" } } }),
-        )
-      )?.alerts,
-    ),
+  queryFn: () =>
+    unwrap(api.GET("/v1/alerts", { params: { query: { kind: "campaign_paused", status: "open" } } })),
+  select: (r) => arr<Alert>(r?.alerts),
 })
 
 export const verifiedQuery = queryOptions({
@@ -186,10 +180,8 @@ export const verifiedQuery = queryOptions({
 /** A few contacts to render the preview as. */
 export const sampleContactsQuery = queryOptions({
   queryKey: ["contacts", "sample", 12],
-  queryFn: async () =>
-    arr<ContactLite>(
-      (await unwrap(api.GET("/v1/contacts", { params: { query: { limit: "12", sort: "-lastActivityAt" } } })))
-        ?.contacts,
-    ),
+  queryFn: () =>
+    unwrap(api.GET("/v1/contacts", { params: { query: { limit: "12", sort: "-lastActivityAt" } } })),
+  select: (r) => arr<ContactLite>(r?.contacts),
   staleTime: 5 * 60_000,
 })
