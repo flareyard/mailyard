@@ -954,10 +954,10 @@ const integrations = (withKeys: boolean): Integrations => ({
   ],
 })
 
-const AGENT_PAGES = ["/settings/integrations"]
+const AGENT_PAGES = ["/settings/integrations", "/agents"]
 const DATA = ["/settings/data"]
 const DANGER = ["/settings/danger"]
-const AUDIT_PAGES = ["/settings/audit", "/settings/integrations/agents"]
+const AUDIT_PAGES = ["/settings/audit", "/agents"]
 
 export const SETTINGS_AGENTS_OVERRIDES: readonly Override[] = [
   // Hermes lane
@@ -1119,7 +1119,7 @@ export const SETTINGS_AGENTS_OVERRIDES: readonly Override[] = [
     path: /^\/v1\/approvals$/,
     answer: (_, __, url) => {
       const s = fx()
-      if (on("/settings/integrations/approvals")) {
+      if (on("/agents/approvals")) {
         if (s === "error") return refusal(500, "InternalError", "The approval queue couldn’t be read.")
         if (s === "loading") return hang()
         if (s === "empty") return ok({ approvals: [] })
@@ -1149,9 +1149,7 @@ export const SETTINGS_AGENTS_OVERRIDES: readonly Override[] = [
   },
   {
     method: "GET",
-    path: new Scoped(/^\/v1\/mailboxes\/[^/]+\/drafts\/([^/]+)$/, () =>
-      on("/settings/integrations/approvals"),
-    ),
+    path: new Scoped(/^\/v1\/mailboxes\/[^/]+\/drafts\/([^/]+)$/, () => on("/agents/approvals")),
     answer: ([, id = ""]) => (DRAFTS[id] ? ok(draft(id)) : refusal(404, "NotFound", "No such draft.")),
   },
   // Audit

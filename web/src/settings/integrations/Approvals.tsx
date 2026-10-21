@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getRouteApi, Link } from "@tanstack/react-router"
 import { useState } from "react"
+import { AgentsHead } from "../../agents/ui.tsx"
 import { ApiError, api, unwrap } from "../../api/client.ts"
 import { Gated } from "../../auth/NoPermission.tsx"
 import { useMe } from "../../auth/session.ts"
@@ -18,12 +19,11 @@ import { isAdmin } from "../../ops/roles.ts"
 import { toast } from "../../ops/toast.tsx"
 import { Icon } from "../../ui/icons.tsx"
 import { Panel } from "../../ui/Panel.tsx"
-import { SectionHead } from "./common.tsx"
 import { MutationError } from "./KeySheets.tsx"
 import { type Approval, agentsQuery, approvalsQuery, mcpKeysQuery } from "./queries.ts"
 import "./integrations.css"
 
-const route = getRouteApi("/_app/settings/integrations/approvals")
+const route = getRouteApi("/_app/agents/approvals")
 
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "failed"
 const STATUSES: { key: ApprovalStatus; label: string }[] = [
@@ -59,14 +59,9 @@ export function Approvals() {
 
   return (
     <>
-      <SectionHead
-        title="Agents and integrations"
-        sub="Agents with their own mailboxes, and the apps that work with this workspace."
-      />
+      <AgentsHead count={waiting ?? 0} />
       <div className="spread" style={{ marginBottom: 12, flexWrap: "wrap", gap: 12 }}>
-        <Link className="link-quiet t-small" to="/settings/integrations">
-          Integrations
-        </Link>
+        <span className="t-small muted">Sends an agent's limits held for a person to approve.</span>
         {/* biome-ignore lint/a11y/useSemanticElements: the design's segmented control */}
         <div className="seg" role="group" aria-label="Which sends">
           {STATUSES.map((s) => (
@@ -190,7 +185,7 @@ function ApprovalCard({
       <header className="spread" style={{ flexWrap: "wrap", gap: 8 }}>
         <span className="agent-name">
           {asker?.agentId ? (
-            <Link to="/settings/integrations/agents/$id" params={{ id: asker.agentId }}>
+            <Link to="/agents/$id" params={{ id: asker.agentId }}>
               <b>{name}</b>
             </Link>
           ) : (

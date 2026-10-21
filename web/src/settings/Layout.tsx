@@ -38,13 +38,12 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { to: "/settings/ai", label: "AI", icon: "cpu", od: "ai" },
       {
         to: "/settings/integrations",
-        label: "Agents and integrations",
+        label: "Integrations",
         icon: "plug",
         od: "integrations",
         exact: true,
       },
       { to: "/settings/alerts", label: "Alerts", icon: "bell", od: "alerts" },
-      { to: "/settings/integrations/approvals", label: "Approvals", icon: "check-circle", od: "approvals" },
     ],
   },
   {

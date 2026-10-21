@@ -313,7 +313,7 @@ function Result({ result, onClose }: { result: Created; onClose: () => void }) {
       odId="agent-new-sheet"
       foot={
         <>
-          <Link className="btn btn-secondary" to="/settings/integrations/agents/$id" params={{ id: a.id }}>
+          <Link className="btn btn-secondary" to="/agents/$id" params={{ id: a.id }}>
             Open the agent
           </Link>
           <button className="btn btn-primary" type="button" onClick={onClose}>

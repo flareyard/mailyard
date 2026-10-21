@@ -6,6 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useState } from "react"
+import { AgentsHead } from "../../agents/ui.tsx"
 import { ApiError, api, unwrap } from "../../api/client.ts"
 import { Gated } from "../../auth/NoPermission.tsx"
 import { useMe } from "../../auth/session.ts"
@@ -18,7 +19,7 @@ import { toast } from "../../ops/toast.tsx"
 import { Icon } from "../../ui/icons.tsx"
 import { PanelError, PanelSkeleton } from "../../ui/Panel.tsx"
 import { actionName, diffLines, targetRoute } from "../audit/logic.ts"
-import { AgentStatusPill, LimitsFields, ScopeTags, SectionHead } from "./common.tsx"
+import { AgentStatusPill, LimitsFields, ScopeTags } from "./common.tsx"
 import { MutationError, RotateKeySheet } from "./KeySheets.tsx"
 import {
   activityKind,
@@ -36,7 +37,7 @@ import {
 import { type Agent, type AuditEntry, agentQuery, type Body, keyAuditQuery } from "./queries.ts"
 import "./integrations.css"
 
-const route = getRouteApi("/_app/settings/integrations/agents/$id")
+const route = getRouteApi("/_app/agents/$id")
 
 export function AgentDetail() {
   const { id } = route.useParams()
@@ -51,12 +52,7 @@ export function AgentDetail() {
       replace: !sheet,
     })
 
-  const head = (
-    <SectionHead
-      title="Agents and integrations"
-      sub="Agents with their own mailboxes, and the apps that work with this workspace."
-    />
-  )
+  const head = <AgentsHead title={q.data?.name ?? "Agent"} sub={null} crumb />
   if (!admin)
     return (
       <>
@@ -76,8 +72,8 @@ export function AgentDetail() {
             An agent’s page shows its key, limits and everything it did, so only owners, admins and admin keys
             can open it.
           </p>
-          <Link className="btn btn-secondary" to="/settings/integrations">
-            Back to integrations
+          <Link className="btn btn-secondary" to="/agents">
+            Back to agents
           </Link>
         </div>
       </>
@@ -108,9 +104,6 @@ export function AgentDetail() {
     return (
       <>
         {head}
-        <Link className="link-quiet t-small" to="/settings/integrations">
-          Integrations
-        </Link>
         <section className="panel is-error" data-endpoint={`GET /v1/agents/${id}`}>
           <div className="panel-body">
             {q.error instanceof ApiError && q.error.status === 404 ? (
@@ -118,8 +111,8 @@ export function AgentDetail() {
                 icon="bot"
                 title="No agent with this id"
                 action={
-                  <Link className="btn btn-secondary" to="/settings/integrations">
-                    Back to integrations
+                  <Link className="btn btn-secondary" to="/agents">
+                    Back to agents
                   </Link>
                 }
               >
@@ -144,10 +137,7 @@ export function AgentDetail() {
         style={{ alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}
       >
         <div className="stack stack-4" style={{ minWidth: 0 }}>
-          <Link className="link-quiet t-small" to="/settings/integrations">
-            Integrations
-          </Link>
-          <h2 className="t-h2 agent-title">{a.name}</h2>
+          <h2 className="t-h2 agent-title sr-only">{a.name}</h2>
           <span className="muted cluster" style={{ gap: 6 }}>
             {a.mailbox.address ? (
               <span className="mono">{a.mailbox.address}</span>
@@ -429,7 +419,7 @@ function LimitsPanel({ agent }: { agent: Agent }) {
           <span className="hint">
             Resets 00:00 UTC. Over the cap a send gets <span className="mono">409 agent_limit</span>.{" "}
             {held ? (
-              <Link className="link" to="/settings/integrations/approvals">
+              <Link className="link" to="/agents/approvals">
                 {fmtInt(held)} held for approval
               </Link>
             ) : (

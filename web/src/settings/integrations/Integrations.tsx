@@ -18,7 +18,6 @@ import { isAdmin } from "../../ops/roles.ts"
 import { Icon } from "../../ui/icons.tsx"
 import { Panel, PanelError } from "../../ui/Panel.tsx"
 import { alertSettingsQuery } from "../alerts/AlertsPage.tsx"
-import { AgentNewSheet } from "./AgentNewSheet.tsx"
 import { ConnectSheet } from "./ConnectSheet.tsx"
 import { AgentStatusPill, PlannedTag, RepoPill, ScopeTags, SectionHead } from "./common.tsx"
 import { HermesLane } from "./HermesLane.tsx"
@@ -47,10 +46,14 @@ export function Integrations() {
   return (
     <>
       <SectionHead
-        title="Agents and integrations"
-        sub="Agents with their own mailboxes, and the apps that work with this workspace."
+        title="Integrations"
+        sub={
+          <>
+            The MCP server, OAuth apps, keys and linked apps that work with this workspace. Agent mailboxes
+            have their own section: <Link to="/agents">Agents</Link>.
+          </>
+        }
       />
-      <AgentMailboxes admin={admin} onNew={() => open({ sheet: "agent-new" })} />
       <LinkedApps />
       <HermesLane />
       <McpServer admin={admin} onConnect={() => open({ sheet: "connect" })} />
@@ -64,7 +67,6 @@ export function Integrations() {
       <AlertChannels />
       <MailTrigger />
       <Reshape />
-      {search.sheet === "agent-new" && admin ? <AgentNewSheet onClose={close} /> : null}
       {search.sheet === "connect" && admin ? <ConnectSheet onClose={close} /> : null}
       {search.rotate && admin ? <RotateKeySheet keyId={search.rotate} onClose={close} /> : null}
       {search.revoke && admin ? <RevokeKeySheet keyId={search.revoke} onClose={close} /> : null}
@@ -72,7 +74,7 @@ export function Integrations() {
   )
 }
 
-function AgentMailboxes({ admin, onNew }: { admin: boolean; onNew: () => void }) {
+export function AgentMailboxes({ admin, onNew }: { admin: boolean; onNew: () => void }) {
   const q = useQuery(agentsQuery)
   const pending = useQuery({ ...approvalsQuery("pending"), enabled: admin })
   const waiting = pending.data?.approvals.length ?? 0
@@ -116,7 +118,7 @@ function AgentMailboxes({ admin, onNew }: { admin: boolean; onNew: () => void })
             </p>
             <span className="cluster">
               {newButton}
-              <Link className="panel-link" to="/settings/integrations/approvals">
+              <Link className="panel-link" to="/agents/approvals">
                 Approval queue
                 {waiting ? <span className="nav-count">{waiting}</span> : null}
               </Link>
@@ -144,7 +146,7 @@ function AgentMailboxes({ admin, onNew }: { admin: boolean; onNew: () => void })
                       <td className="is-head">
                         <div className="cell-main">
                           <span className="agent-name">
-                            <Link to="/settings/integrations/agents/$id" params={{ id: a.id }}>
+                            <Link to="/agents/$id" params={{ id: a.id }}>
                               {a.name}
                             </Link>
                           </span>
@@ -195,7 +197,7 @@ function AgentMailboxes({ admin, onNew }: { admin: boolean; onNew: () => void })
                         )}
                         <span className="cell-sub" style={{ display: "block", marginTop: 4 }}>
                           {held ? (
-                            <Link className="link" to="/settings/integrations/approvals">
+                            <Link className="link" to="/agents/approvals">
                               <b>{fmtInt(held)}</b> held
                             </Link>
                           ) : (

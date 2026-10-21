@@ -285,7 +285,7 @@ function McpKeys({ keys }: { keys: NonNullable<Integrations["mcp"]["keys"]> }) {
               </td>
               <td data-label="Agent">
                 {k.agent ? (
-                  <Link className="link" to="/settings/integrations/agents/$id" params={{ id: k.agent.id }}>
+                  <Link className="link" to="/agents/$id" params={{ id: k.agent.id }}>
                     {k.agent.name}
                   </Link>
                 ) : (
