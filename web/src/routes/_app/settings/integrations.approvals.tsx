@@ -1,15 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { type ApprovalStatus, Approvals } from "../../../settings/integrations/Approvals.tsx"
-
-export type ApprovalsSearch = { status?: Exclude<ApprovalStatus, "pending">; reject?: string }
+/** The approval queue moved to Agents (2026-10-21); old links land there. */
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_app/settings/integrations/approvals")({
-  staticData: { title: "Approval queue" },
-  validateSearch: (s: Record<string, unknown>): ApprovalsSearch => ({
-    ...(s.status === "approved" || s.status === "rejected" || s.status === "failed"
-      ? { status: s.status }
-      : {}),
-    ...(typeof s.reject === "string" && s.reject ? { reject: s.reject } : {}),
-  }),
-  component: Approvals,
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: "/agents/approvals", search: search as never, replace: true })
+  },
 })

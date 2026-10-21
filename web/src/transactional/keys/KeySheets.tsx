@@ -846,8 +846,8 @@ function LimitsForm({
         Require approval for every send
       </label>
       <span className="hint" style={{ marginTop: -8 }}>
-        Held sends wait in <Link to="/settings/integrations">the approval queue</Link> until a person approves
-        or rejects them.
+        Held sends wait in <Link to="/agents/approvals">the approval queue</Link> until a person approves or
+        rejects them.
       </span>
       {tried && problem ? (
         <p className="field-error" role="alert">

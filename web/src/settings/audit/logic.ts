@@ -171,7 +171,7 @@ export function targetRoute(target: { type: string | null; id: string } | null |
     case "webhook":
       return `/transactional/webhooks/${id}`
     case "agent":
-      return `/settings/integrations/agents/${id}`
+      return `/agents/${id}`
     case "settings":
       return id === "brand"
         ? "/settings/brand"

@@ -14,6 +14,7 @@ import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignedOutRouteImport } from './routes/signed-out'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAgentsRouteImport } from './routes/_app/agents'
 import { Route as AppAnalyticsRouteImport } from './routes/_app/analytics'
 import { Route as AppAudienceRouteImport } from './routes/_app/audience'
 import { Route as AppAutomationsRouteImport } from './routes/_app/automations'
@@ -23,6 +24,9 @@ import { Route as AppMailRouteImport } from './routes/_app/mail'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppTransactionalRouteImport } from './routes/_app/transactional'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as AppAgentsIndexRouteImport } from './routes/_app/agents/index'
+import { Route as AppAgentsIdRouteImport } from './routes/_app/agents/$id'
+import { Route as AppAgentsApprovalsRouteImport } from './routes/_app/agents/approvals'
 import { Route as AppAnalyticsIndexRouteImport } from './routes/_app/analytics/index'
 import { Route as AppAnalyticsAudienceRouteImport } from './routes/_app/analytics/audience'
 import { Route as AppAnalyticsEngagementRouteImport } from './routes/_app/analytics/engagement'
@@ -130,6 +134,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAgentsRoute = AppAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -174,6 +183,21 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAgentsIndexRoute = AppAgentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAgentsRoute,
+} as any)
+const AppAgentsIdRoute = AppAgentsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppAgentsRoute,
+} as any)
+const AppAgentsApprovalsRoute = AppAgentsApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => AppAgentsRoute,
 } as any)
 const AppAnalyticsIndexRoute = AppAnalyticsIndexRouteImport.update({
   id: '/',
@@ -624,6 +648,7 @@ export interface FileRoutesByFullPath {
   '/claim': typeof ClaimRoute
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
+  '/agents': typeof AppAgentsRouteWithChildren
   '/analytics': typeof AppAnalyticsRouteWithChildren
   '/audience': typeof AppAudienceRouteWithChildren
   '/automations': typeof AppAutomationsRouteWithChildren
@@ -633,6 +658,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRouteWithChildren
   '/transactional': typeof AppTransactionalRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
+  '/agents/$id': typeof AppAgentsIdRoute
+  '/agents/approvals': typeof AppAgentsApprovalsRoute
   '/analytics/audience': typeof AppAnalyticsAudienceRoute
   '/analytics/engagement': typeof AppAnalyticsEngagementRoute
   '/analytics/inbound': typeof AppAnalyticsInboundRoute
@@ -664,6 +691,7 @@ export interface FileRoutesByFullPath {
   '/settings/tracking': typeof AppSettingsTrackingRoute
   '/transactional/keys': typeof AppTransactionalKeysRoute
   '/transactional/quickstart': typeof AppTransactionalQuickstartRoute
+  '/agents/': typeof AppAgentsIndexRoute
   '/analytics/': typeof AppAnalyticsIndexRoute
   '/audience/': typeof AppAudienceIndexRoute
   '/automations/': typeof AppAutomationsIndexRoute
@@ -722,6 +750,8 @@ export interface FileRoutesByTo {
   '/signed-out': typeof SignedOutRoute
   '/invite/$token': typeof InviteTokenRoute
   '/': typeof AppIndexRoute
+  '/agents/$id': typeof AppAgentsIdRoute
+  '/agents/approvals': typeof AppAgentsApprovalsRoute
   '/analytics/audience': typeof AppAnalyticsAudienceRoute
   '/analytics/engagement': typeof AppAnalyticsEngagementRoute
   '/analytics/inbound': typeof AppAnalyticsInboundRoute
@@ -751,6 +781,7 @@ export interface FileRoutesByTo {
   '/settings/tracking': typeof AppSettingsTrackingRoute
   '/transactional/keys': typeof AppTransactionalKeysRoute
   '/transactional/quickstart': typeof AppTransactionalQuickstartRoute
+  '/agents': typeof AppAgentsIndexRoute
   '/analytics': typeof AppAnalyticsIndexRoute
   '/audience': typeof AppAudienceIndexRoute
   '/automations': typeof AppAutomationsIndexRoute
@@ -809,6 +840,7 @@ export interface FileRoutesById {
   '/claim': typeof ClaimRoute
   '/sign-in': typeof SignInRoute
   '/signed-out': typeof SignedOutRoute
+  '/_app/agents': typeof AppAgentsRouteWithChildren
   '/_app/analytics': typeof AppAnalyticsRouteWithChildren
   '/_app/audience': typeof AppAudienceRouteWithChildren
   '/_app/automations': typeof AppAutomationsRouteWithChildren
@@ -819,6 +851,8 @@ export interface FileRoutesById {
   '/_app/transactional': typeof AppTransactionalRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/agents/$id': typeof AppAgentsIdRoute
+  '/_app/agents/approvals': typeof AppAgentsApprovalsRoute
   '/_app/analytics/audience': typeof AppAnalyticsAudienceRoute
   '/_app/analytics/engagement': typeof AppAnalyticsEngagementRoute
   '/_app/analytics/inbound': typeof AppAnalyticsInboundRoute
@@ -850,6 +884,7 @@ export interface FileRoutesById {
   '/_app/settings/tracking': typeof AppSettingsTrackingRoute
   '/_app/transactional/keys': typeof AppTransactionalKeysRoute
   '/_app/transactional/quickstart': typeof AppTransactionalQuickstartRoute
+  '/_app/agents/': typeof AppAgentsIndexRoute
   '/_app/analytics/': typeof AppAnalyticsIndexRoute
   '/_app/audience/': typeof AppAudienceIndexRoute
   '/_app/automations/': typeof AppAutomationsIndexRoute
@@ -909,6 +944,7 @@ export interface FileRouteTypes {
     | '/claim'
     | '/sign-in'
     | '/signed-out'
+    | '/agents'
     | '/analytics'
     | '/audience'
     | '/automations'
@@ -918,6 +954,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/transactional'
     | '/invite/$token'
+    | '/agents/$id'
+    | '/agents/approvals'
     | '/analytics/audience'
     | '/analytics/engagement'
     | '/analytics/inbound'
@@ -949,6 +987,7 @@ export interface FileRouteTypes {
     | '/settings/tracking'
     | '/transactional/keys'
     | '/transactional/quickstart'
+    | '/agents/'
     | '/analytics/'
     | '/audience/'
     | '/automations/'
@@ -1007,6 +1046,8 @@ export interface FileRouteTypes {
     | '/signed-out'
     | '/invite/$token'
     | '/'
+    | '/agents/$id'
+    | '/agents/approvals'
     | '/analytics/audience'
     | '/analytics/engagement'
     | '/analytics/inbound'
@@ -1036,6 +1077,7 @@ export interface FileRouteTypes {
     | '/settings/tracking'
     | '/transactional/keys'
     | '/transactional/quickstart'
+    | '/agents'
     | '/analytics'
     | '/audience'
     | '/automations'
@@ -1093,6 +1135,7 @@ export interface FileRouteTypes {
     | '/claim'
     | '/sign-in'
     | '/signed-out'
+    | '/_app/agents'
     | '/_app/analytics'
     | '/_app/audience'
     | '/_app/automations'
@@ -1103,6 +1146,8 @@ export interface FileRouteTypes {
     | '/_app/transactional'
     | '/invite/$token'
     | '/_app/'
+    | '/_app/agents/$id'
+    | '/_app/agents/approvals'
     | '/_app/analytics/audience'
     | '/_app/analytics/engagement'
     | '/_app/analytics/inbound'
@@ -1134,6 +1179,7 @@ export interface FileRouteTypes {
     | '/_app/settings/tracking'
     | '/_app/transactional/keys'
     | '/_app/transactional/quickstart'
+    | '/_app/agents/'
     | '/_app/analytics/'
     | '/_app/audience/'
     | '/_app/automations/'
@@ -1232,6 +1278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/agents': {
+      id: '/_app/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AppAgentsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/analytics': {
       id: '/_app/analytics'
       path: '/analytics'
@@ -1294,6 +1347,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/agents/': {
+      id: '/_app/agents/'
+      path: '/'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof AppAgentsIndexRouteImport
+      parentRoute: typeof AppAgentsRoute
+    }
+    '/_app/agents/$id': {
+      id: '/_app/agents/$id'
+      path: '/$id'
+      fullPath: '/agents/$id'
+      preLoaderRoute: typeof AppAgentsIdRouteImport
+      parentRoute: typeof AppAgentsRoute
+    }
+    '/_app/agents/approvals': {
+      id: '/_app/agents/approvals'
+      path: '/approvals'
+      fullPath: '/agents/approvals'
+      preLoaderRoute: typeof AppAgentsApprovalsRouteImport
+      parentRoute: typeof AppAgentsRoute
     }
     '/_app/analytics/': {
       id: '/_app/analytics/'
@@ -1872,6 +1946,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppAgentsRouteChildren {
+  AppAgentsIdRoute: typeof AppAgentsIdRoute
+  AppAgentsApprovalsRoute: typeof AppAgentsApprovalsRoute
+  AppAgentsIndexRoute: typeof AppAgentsIndexRoute
+}
+
+const AppAgentsRouteChildren: AppAgentsRouteChildren = {
+  AppAgentsIdRoute: AppAgentsIdRoute,
+  AppAgentsApprovalsRoute: AppAgentsApprovalsRoute,
+  AppAgentsIndexRoute: AppAgentsIndexRoute,
+}
+
+const AppAgentsRouteWithChildren = AppAgentsRoute._addFileChildren(
+  AppAgentsRouteChildren,
+)
+
 interface AppAnalyticsRouteChildren {
   AppAnalyticsAudienceRoute: typeof AppAnalyticsAudienceRoute
   AppAnalyticsEngagementRoute: typeof AppAnalyticsEngagementRoute
@@ -2141,6 +2231,7 @@ const AppTransactionalRouteWithChildren =
   AppTransactionalRoute._addFileChildren(AppTransactionalRouteChildren)
 
 interface AppRouteChildren {
+  AppAgentsRoute: typeof AppAgentsRouteWithChildren
   AppAnalyticsRoute: typeof AppAnalyticsRouteWithChildren
   AppAudienceRoute: typeof AppAudienceRouteWithChildren
   AppAutomationsRoute: typeof AppAutomationsRouteWithChildren
@@ -2153,6 +2244,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAgentsRoute: AppAgentsRouteWithChildren,
   AppAnalyticsRoute: AppAnalyticsRouteWithChildren,
   AppAudienceRoute: AppAudienceRouteWithChildren,
   AppAutomationsRoute: AppAutomationsRouteWithChildren,
