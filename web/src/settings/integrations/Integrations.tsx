@@ -46,10 +46,13 @@ export function Integrations() {
 
   return (
     <>
-      <SectionHead title="Integrations" sub="Agents and apps that work with this workspace." />
+      <SectionHead
+        title="Agents and integrations"
+        sub="Agents with their own mailboxes, and the apps that work with this workspace."
+      />
+      <AgentMailboxes admin={admin} onNew={() => open({ sheet: "agent-new" })} />
       <LinkedApps />
       <HermesLane />
-      <AgentMailboxes admin={admin} onNew={() => open({ sheet: "agent-new" })} />
       <McpServer admin={admin} onConnect={() => open({ sheet: "connect" })} />
       <OAuthApps />
       <AgentKeys

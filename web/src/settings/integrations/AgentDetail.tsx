@@ -51,7 +51,12 @@ export function AgentDetail() {
       replace: !sheet,
     })
 
-  const head = <SectionHead title="Integrations" sub="Agents and apps that work with this workspace." />
+  const head = (
+    <SectionHead
+      title="Agents and integrations"
+      sub="Agents with their own mailboxes, and the apps that work with this workspace."
+    />
+  )
   if (!admin)
     return (
       <>
