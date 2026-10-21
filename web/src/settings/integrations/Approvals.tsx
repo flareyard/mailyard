@@ -59,7 +59,10 @@ export function Approvals() {
 
   return (
     <>
-      <SectionHead title="Integrations" sub="Agents and apps that work with this workspace." />
+      <SectionHead
+        title="Agents and integrations"
+        sub="Agents with their own mailboxes, and the apps that work with this workspace."
+      />
       <div className="spread" style={{ marginBottom: 12, flexWrap: "wrap", gap: 12 }}>
         <Link className="link-quiet t-small" to="/settings/integrations">
           Integrations

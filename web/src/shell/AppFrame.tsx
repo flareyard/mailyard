@@ -190,7 +190,10 @@ function Sidebar({ me, onToggle }: { me: Me | undefined; onToggle: () => void })
   const unread = (i: number) =>
     num(folders[i]?.data?.folders.find((f) => f.folder === "inbox")?.unreadThreads) ?? 0
   const totalUnread = boxes.reduce((n, _, i) => n + unread(i), 0)
-  const isCurrent = (to: string) => (to === "/" ? path === "/" : path === to || path.startsWith(`${to}/`))
+  const matches = (to: string) => (to === "/" ? path === "/" : path === to || path.startsWith(`${to}/`))
+  // The most specific section wins, so Agents (/settings/integrations) doesn't also light up Settings.
+  const current = SECTIONS.filter((s) => matches(s.to)).sort((a, b) => b.to.length - a.to.length)[0]?.to
+  const isCurrent = (to: string) => to === current
 
   return (
     <aside
@@ -231,6 +234,8 @@ function Sidebar({ me, onToggle }: { me: Me | undefined; onToggle: () => void })
               <Link
                 className="nav-item"
                 to={s.to}
+                // The router only marks exact matches; which section a deeper page belongs to is isCurrent's call.
+                activeOptions={{ exact: true, includeSearch: false }}
                 {...(isCurrent(s.to) ? { "aria-current": "page" as const } : {})}
                 title={`${s.label} · G then ${s.chord.toUpperCase()}`}
               >
