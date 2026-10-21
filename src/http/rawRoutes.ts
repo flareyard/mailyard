@@ -272,7 +272,7 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
     get: {
       tags: ["signInLink"],
       operationId: "signInLink.page",
-      summary: "The page a sign-in link opens (HAL-3361)",
+      summary: "The page a sign-in link opens",
       description:
         "An HTML page with one button: opening the link signs nobody in, so a mail scanner that fetches it can't use it up. The button POSTs to the same path.",
       parameters: [idParam("token", "The token from the emailed link.")],
@@ -297,7 +297,7 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
     get: {
       tags: ["oauth"],
       operationId: "oauth.protectedResource",
-      summary: "Protected-resource metadata for /mcp (RFC 9728, HAL-3462)",
+      summary: "Protected-resource metadata for /mcp (RFC 9728)",
       description:
         "Names /mcp as the resource, this origin as its authorization server, and the scopes a client asks for by default (read, send). /mcp's 401 points here in WWW-Authenticate's resource_metadata.",
       responses: { "200": { description: "The metadata document (JSON)." } },
@@ -401,7 +401,7 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
     get: {
       tags: ["session"],
       operationId: "session.flareyardStart",
-      summary: "Sign in through Flareyard (HAL-3360)",
+      summary: "Sign in through Flareyard",
       description:
         "Only on installs Flareyard made (FLAREYARD_URL and FLAREYARD_INSTALL_ID set); elsewhere this path isn't listed and answers 404. Keeps a PKCE verifier and state in a ten-minute cookie and redirects to Flareyard, which checks the person owns this install. `return` is a path on this site to land on afterwards.",
       parameters: [
@@ -443,7 +443,7 @@ export const RAW_PATHS: Record<string, Record<string, unknown>> = {
     get: {
       tags: ["mail"],
       operationId: "mail.wait",
-      summary: "Wait for new mail (long-poll, HAL-3461)",
+      summary: "Wait for new mail (long-poll)",
       description:
         "Blocks until mail newer than `since` is in the mailbox, at once if it already is, else answers 204 at the timeout. Sent copies don't count. Wait again from the `cursor` (also in `x-mailyard-cursor`). `reset: true` means the cursor was older than the kept log: refetch, then wait from `cursor`. Without `since` it waits for mail from now on. For an agent that can't run a webhook receiver.",
       security: bearer,
@@ -546,8 +546,31 @@ const withSegmentRules = (paths: Record<string, any>) => {
   return out
 }
 
-/** Adds the raw routes to the generated document, and types the segment rule bodies. */
+const INVALID_REQUEST = {
+  description: "InvalidRequest",
+  content: { "application/json": { schema: { $ref: "#/components/schemas/InvalidRequestEncoded" } } },
+}
+
+/**
+ * Every operation that decodes a path, query, header or body can answer 400 InvalidRequest when it
+ * doesn't fit the schema (src/http/schemaErrors.ts, HAL-3781), so the document says so where the
+ * endpoint's own errors don't already.
+ */
+const withSchemaErrors = (paths: Record<string, any>) => {
+  const out: Record<string, any> = {}
+  for (const [path, item] of Object.entries(paths)) {
+    out[path] = { ...item }
+    for (const method of ["get", "post", "put", "patch", "delete"]) {
+      const op = item[method]
+      if (!op || (!op.requestBody && !(op.parameters?.length > 0)) || op.responses?.["400"]) continue
+      out[path][method] = { ...op, responses: { ...op.responses, "400": INVALID_REQUEST } }
+    }
+  }
+  return out
+}
+
+/** Adds the raw routes to the generated document, types the segment rule bodies, and declares schema 400s. */
 export const withRawRoutes = (spec: Record<string, any>) => ({
   ...spec,
-  paths: { ...withSegmentRules(spec.paths), ...RAW_PATHS },
+  paths: { ...withSchemaErrors(withSegmentRules(spec.paths)), ...RAW_PATHS },
 })

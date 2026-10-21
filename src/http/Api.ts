@@ -55,7 +55,9 @@ export class SystemApi extends HttpApiGroup.make("system", { topLevel: true }).a
 // (branch next, 2026-10-16), so the Plunk SDK works by changing only its base URL.
 // ---------------------------------------------------------------------------------------------
 
-const Email = Schema.String.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+const Email = Schema.String.check(
+  Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { expected: "an email address" }),
+)
 const Named = Schema.Struct({ email: Email, name: Schema.optionalKey(Schema.String) })
 const Recipient = Schema.Union([Email, Named])
 
@@ -1886,7 +1888,7 @@ export const ThreadSchema = Schema.Struct({
   }),
   assignedTo: Schema.optionalKey(
     Schema.NullOr(Schema.Struct({ id: Schema.String, name: Schema.String })).annotate({
-      description: "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+      description: "Who is handling it, with a name to show: the key's name until people exist.",
     }),
   ),
   scheduledSendAt: Schema.optionalKey(
@@ -4953,7 +4955,9 @@ export class CampaignsApi extends HttpApiGroup.make("campaigns")
         postalAddress: Schema.NullOr(Schema.String.check(Schema.isMaxLength(300))),
         linkAllowlist: Schema.Array(Schema.String.check(Schema.isPattern(/^[a-z0-9.-]+\.[a-z]{2,}$/i))),
         seedAddresses: Schema.Array(
-          Schema.String.check(Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)),
+          Schema.String.check(
+            Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { expected: "an email address" }),
+          ),
         ).check(Schema.isMaxLength(5)),
         trackingOrigin: Schema.optionalKey(
           Schema.NullOr(Schema.String.check(Schema.isPattern(/^https:\/\/[a-z0-9.-]+$/i))),

@@ -1632,7 +1632,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "description": "The metadata document (JSON).",
           },
         },
-        "summary": "Protected-resource metadata for /mcp (RFC 9728, HAL-3462)",
+        "summary": "Protected-resource metadata for /mcp (RFC 9728)",
         "tags": [
           "oauth",
         ],
@@ -2169,6 +2169,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -3247,6 +3257,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -3552,6 +3572,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -4334,6 +4364,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -4553,6 +4593,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -4783,6 +4833,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -5230,6 +5290,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -5386,6 +5456,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -5901,6 +5981,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -6141,6 +6231,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -6352,6 +6452,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -6860,6 +6970,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -7151,6 +7271,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -7683,6 +7813,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -10097,6 +10237,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -11475,6 +11625,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -14248,6 +14408,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -16003,6 +16173,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -17708,6 +17888,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -17931,6 +18121,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -19405,6 +19605,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -20800,6 +21010,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -23134,6 +23354,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -24377,6 +24607,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -26727,6 +26967,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -27963,6 +28213,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -28125,6 +28385,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -28378,6 +28648,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -29625,6 +29905,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -29922,6 +30212,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -30747,6 +31047,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -33404,6 +33714,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -35197,6 +35517,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -36967,6 +37297,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -37054,6 +37394,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -37477,6 +37827,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -38048,6 +38408,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -38175,6 +38545,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -38266,6 +38646,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -40591,6 +40981,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -41096,6 +41496,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -42515,6 +42925,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -43570,6 +43990,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -44078,6 +44508,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -44268,6 +44708,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -44642,6 +45092,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -45476,6 +45936,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -46372,6 +46842,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -46813,6 +47293,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -47058,6 +47548,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -48136,6 +48636,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -49412,6 +49922,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -50108,6 +50628,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -50420,6 +50950,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -50674,6 +51214,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -50939,6 +51489,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -51624,6 +52184,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -52413,6 +52983,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -52672,6 +53252,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -52953,6 +53543,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -53154,6 +53754,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "404": {
             "content": {
@@ -53521,6 +54131,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "403": {
             "content": {
               "application/json": {
@@ -53851,6 +54471,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -54024,6 +54654,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -54971,6 +55611,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -55548,6 +56198,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -74333,7 +74993,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "null",
                               },
                             ],
-                            "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                            "description": "Who is handling it, with a name to show: the key's name until people exist.",
                           },
                           "assignee": {
                             "anyOf": [
@@ -75806,7 +76466,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                 "type": "null",
                               },
                             ],
-                            "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                            "description": "Who is handling it, with a name to show: the key's name until people exist.",
                           },
                           "assignee": {
                             "anyOf": [
@@ -77406,7 +78066,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                               "type": "null",
                             },
                           ],
-                          "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                          "description": "Who is handling it, with a name to show: the key's name until people exist.",
                         },
                         "assignee": {
                           "anyOf": [
@@ -78982,7 +79642,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "bearer": [],
           },
         ],
-        "summary": "Wait for new mail (long-poll, HAL-3461)",
+        "summary": "Wait for new mail (long-poll)",
         "tags": [
           "mail",
         ],
@@ -80136,6 +80796,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -80308,6 +80978,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -81048,6 +81728,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -81698,6 +82388,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -82441,6 +83141,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -83566,6 +84276,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -83894,6 +84614,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -84233,6 +84963,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -84654,7 +85394,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
                                       "type": "null",
                                     },
                                   ],
-                                  "description": "Who is handling it, with a name to show: the key's name until people exist (HAL-3361).",
+                                  "description": "Who is handling it, with a name to show: the key's name until people exist.",
                                 },
                                 "assignee": {
                                   "anyOf": [
@@ -85047,6 +85787,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -85587,6 +86337,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -86269,6 +87029,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -86481,6 +87251,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -88263,6 +89043,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -88343,6 +89133,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "403": {
             "content": {
@@ -88783,7 +89583,7 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             "description": "The page.",
           },
         },
-        "summary": "The page a sign-in link opens (HAL-3361)",
+        "summary": "The page a sign-in link opens",
         "tags": [
           "signInLink",
         ],
@@ -89165,6 +89965,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
         "responses": {
           "204": {
             "description": "<No Content>",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -92348,6 +93158,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -92662,6 +93482,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -92799,6 +93629,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -93560,6 +94400,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -93937,6 +94787,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -94413,6 +95273,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -94592,6 +95462,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -94850,6 +95730,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -95139,6 +96029,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -96743,6 +97643,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -97080,6 +97990,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -97685,6 +98605,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -98185,6 +99115,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -98466,6 +99406,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -99553,6 +100503,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -99984,6 +100944,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -100897,6 +101867,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -101535,6 +102515,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -102289,6 +103279,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -102857,6 +103857,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -102996,6 +104006,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -104187,6 +105207,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -105594,6 +106624,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -105906,6 +106946,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -106631,6 +107681,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -106765,6 +107825,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -106867,6 +107937,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {
@@ -107196,6 +108276,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
             },
             "description": "Success",
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
+          },
           "401": {
             "content": {
               "application/json": {
@@ -107338,6 +108428,16 @@ exports[`GET /openapi.json > matches the committed contract, so any API change s
               },
             },
             "description": "Success",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestEncoded",
+                },
+              },
+            },
+            "description": "InvalidRequest",
           },
           "401": {
             "content": {

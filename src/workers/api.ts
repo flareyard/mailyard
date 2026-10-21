@@ -5,6 +5,8 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder"
 import * as Layer from "effect/Layer"
 import type { Env } from "../Bindings.ts"
 import { VIEW_PATH } from "../campaigns/content.ts"
+import type { OpenApiDoc } from "../docs/reference.ts"
+import { handleDocs, isDocsPath } from "../docs/serve.ts"
 import { BRAND_LOGO_PATH } from "../domain/brand.ts"
 import { UNSUBSCRIBE_PATH } from "../domain/unsubscribe.ts"
 import { pendingDeletion } from "../domain/workspaceDeletion.ts"
@@ -38,6 +40,7 @@ import { InviteLinkHandlers, PeopleHandlers, SignInLinkHandlers } from "../http/
 import { PublicFormsHandlers } from "../http/publicFormsHandlers.ts"
 import { PushHandlers } from "../http/pushHandlers.ts"
 import { RulesHandlers } from "../http/ruleHandlers.ts"
+import { SchemaErrorsAsJson } from "../http/schemaErrors.ts"
 import { SearchHandlers } from "../http/searchHandlers.ts"
 import { AlertsHandlers, SendingHandlers } from "../http/sendingHandlers.ts"
 import { MeHandlers, SessionHandlers } from "../http/sessionHandlers.ts"
@@ -49,7 +52,7 @@ import { WorkspaceHandlers } from "../http/workspaceHandlers.ts"
 import { currentRequestId, withRequestContext } from "../kit/requestContext.ts"
 import { appLayer } from "../layers.ts"
 import { handleMcp, MCP_PATH } from "../mcp/handler.ts"
-import { canonicalRedirect, configurePublicOrigin, isWorkerPath } from "../public/origin.ts"
+import { canonicalRedirect, configurePublicOrigin, isWorkerPath, linkOrigin } from "../public/origin.ts"
 import {
   ATTACHMENT_PATH,
   FILE_PATH,
@@ -153,7 +156,9 @@ const Routes = HttpApiBuilder.layer(MailApi, { openapiPath: "/openapi.json" }).p
 )
 
 // Built once per isolate; Workers reuse an isolate across requests.
-const { handler } = HttpRouter.toWebHandler(Routes, { disableLogger: true })
+const { handler } = HttpRouter.toWebHandler(Layer.mergeAll(Routes, SchemaErrorsAsJson), {
+  disableLogger: true,
+})
 
 /** /openapi.json without the Flareyard handoff's paths, for installs Flareyard didn't make. */
 const withoutFlareyardSignIn = async (pending: Response | Promise<Response>) => {
@@ -169,6 +174,14 @@ const withoutFlareyardSignIn = async (pending: Response | Promise<Response>) => 
   return new Response(JSON.stringify(doc), { status: response.status, headers })
 }
 
+/** This Worker's OpenAPI document, as `/openapi.json` answers it, for the docs' API reference. */
+const openapiDoc = (env: Env, origin: string) => async () => {
+  const pending = handler(new Request(`${origin}/openapi.json`))
+  const response = await (flareyardSignIn(env) ? pending : withoutFlareyardSignIn(pending))
+  if (!response.ok) throw new Error(`openapi.json answered ${response.status}`)
+  return (await response.json()) as OpenApiDoc
+}
+
 /** The Worker's routes: bytes and sockets beside the schema-first API. */
 const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> => {
   // Routes that carry bytes or sockets rather than JSON sit beside the schema-first API.
@@ -178,7 +191,16 @@ const route = (request: Request, env: Env, ctx: ExecutionContext): Response | Pr
   const path = new URL(request.url).pathname
   // The web app's pages and files, when this deployment serves them (wrangler.jsonc `assets`).
   if (env.ASSETS && !isWorkerPath(path)) return env.ASSETS.fetch(request)
-  if (path === MCP_PATH) return handleMcp(request, env)
+  if (isDocsPath(path)) {
+    const origin = linkOrigin(request.url) ?? new URL(request.url).origin
+    return handleDocs(request, origin, { openapi: openapiDoc(env, origin) }).then(
+      (r) => r ?? new Response(null, { status: 404 }),
+    )
+  }
+  if (path === MCP_PATH) {
+    const origin = linkOrigin(request.url) ?? new URL(request.url).origin
+    return handleMcp(request, env, { openapi: openapiDoc(env, origin) })
+  }
   const oauth = OAUTH_PATH.exec(path)
   if (oauth) return handleOAuth(request, env, oauth)
   const d = (s: string | undefined) => decodeURIComponent(s ?? "")

@@ -20,6 +20,13 @@ bun run build    # wrangler dry-run build
 | `tools/manifest/` | Validator for `cloudflare-app.json` (copy of the platform's schema) and its check against `wrangler.jsonc` |
 | `docs/` | The plan (`email-platform.html`) and the UI spec with the API contract (`email-ui.html`) |
 
+## Docs
+
+Every install serves its own docs, readable signed out: `/docs` for people, any page as Markdown with `.md` added, `/llms.txt` and `/llms-full.txt` for agents, and `mailyard://docs/<page>` as MCP resources. Examples use the install's own address.
+
+- The guides are Markdown in `docs/site/` (`NN-slug.md`, front matter with a one-line `summary:`, `{{origin}}` where the install's address goes). After editing one, run `bun run docs:build`; `bun run check` fails while `src/docs/content.gen.ts` is stale.
+- The HTTP API and MCP tool pages are written from `/openapi.json` and the MCP tool list on each request, so they can't drift.
+
 ## Releasing through Flareyard
 
 `bun run release` builds `flareyard-release.json` with the platform's CLI. That's `packages/manifest/src/release-cli.ts` in a checkout of flareyard/flareyard, at `../flareyard` unless `FLAREYARD_DIR` says otherwise. The release holds the manifest, the bindings mapped to named resources, and the module `wrangler deploy --dry-run` emits. The platform contract is `docs/apps-contract.md` in that repo.

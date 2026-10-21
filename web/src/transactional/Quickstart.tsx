@@ -265,6 +265,10 @@ function Checks() {
             </li>
           ))}
         </ol>
+        <p className="hint" style={{ marginTop: 12 }}>
+          Every field, templates, idempotency and webhooks are in the docs:{" "}
+          <a href="/docs/sending">Sending email</a>.
+        </p>
       </div>
     </section>
   )

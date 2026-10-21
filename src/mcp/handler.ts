@@ -4,11 +4,13 @@ import * as Exit from "effect/Exit"
 import * as Schema from "effect/Schema"
 import pkg from "../../package.json" with { type: "json" }
 import type { Env } from "../Bindings.ts"
+import { DOC_PAGES, type DocsSources, docMarkdown } from "../docs/serve.ts"
 import type { Caller } from "../domain/apiKeys.ts"
 import { recordAudit } from "../domain/audit.ts"
 import { linkOrigin } from "../public/origin.ts"
 import { authorize, problem } from "../workers/auth.ts"
 import { runtimeFor } from "../workers/inbound.ts"
+import { inputSchemaOf } from "./schema.ts"
 import { TOOLS, type Tool } from "./tools.ts"
 
 /**
@@ -35,16 +37,37 @@ const ERR = {
   methodNotFound: -32601,
   invalidParams: -32602,
   internal: -32603,
+  /** MCP's code for a resource that doesn't exist. */
+  resourceNotFound: -32002,
 }
 
-/** The tool's input schema as JSON Schema, definitions inlined under $defs. */
-const inputSchemaOf = (tool: Tool) => {
-  const doc = Schema.toJsonSchemaDocument(tool.input) as {
-    schema: Record<string, unknown>
-    definitions?: Record<string, unknown>
-  }
-  const defs = doc.definitions && Object.keys(doc.definitions).length > 0 ? { $defs: doc.definitions } : {}
-  return { type: "object", ...doc.schema, ...defs }
+/** The docs as MCP resources (HAL-3773): `mailyard://docs/<page>`, Markdown, readable by any connected key. */
+const DOCS_URI = "mailyard://docs/"
+const docUri = (slug: string) => `${DOCS_URI}${slug || "index"}`
+
+const listResources = () =>
+  DOC_PAGES.map((p) => ({
+    uri: docUri(p.slug),
+    name: p.slug || "index",
+    title: p.title,
+    description: p.summary,
+    mimeType: "text/markdown",
+  }))
+
+const readResource = async (
+  params: Record<string, unknown> | undefined,
+  origin: string,
+  docs: DocsSources,
+) => {
+  const uri = typeof params?.uri === "string" ? params.uri : ""
+  const name = uri.startsWith(DOCS_URI) ? uri.slice(DOCS_URI.length) : null
+  const slug = name === "index" ? "" : name
+  const page = slug === null ? undefined : DOC_PAGES.find((p) => p.slug === slug)
+  if (slug === null || !page)
+    return { error: { code: ERR.resourceNotFound, message: `No resource ${uri || "(no uri)"}.` } }
+  const text = await docMarkdown(slug, origin, docs)
+  if (text === null) return { error: { code: ERR.resourceNotFound, message: `No resource ${uri}.` } }
+  return { result: { contents: [{ uri, mimeType: "text/markdown", text }] } }
 }
 
 const listTools = (caller: Caller) =>
@@ -171,6 +194,7 @@ const answer = async (
   caller: Caller,
   message: RpcRequest,
   origin: string,
+  docs: DocsSources,
 ): Promise<RpcResponse | null> => {
   const id = message.id ?? null
   const isNotification = message.id === undefined
@@ -187,10 +211,10 @@ const answer = async (
       return reply({
         result: {
           protocolVersion,
-          capabilities: { tools: { listChanged: false } },
+          capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
           serverInfo: { name: "mailyard", title: "Mailyard", version: pkg.version },
           instructions:
-            "Mailyard is this workspace's email: mailboxes, transactional sending, contacts and campaigns. Start with list_mailboxes or search_mail; read_thread lists attachments and read_attachment reads them. Write with compose_message or draft_reply, and tidy with mark_read, archive, label, snooze and move. Drafting never sends; send_draft and send_email need confirm: true, so show the user what will go out first. A key may have send limits or need a person's approval: a held send says so.",
+            "Mailyard is this workspace's email: mailboxes, transactional sending, contacts and campaigns. Start with list_mailboxes or search_mail; read_thread lists attachments and read_attachment reads them. Write with compose_message or draft_reply, and tidy with mark_read, archive, label, snooze and move. Drafting never sends; send_draft and send_email need confirm: true, so show the user what will go out first. A key may have send limits or need a person's approval: a held send says so. Mailyard's docs are resources (mailyard://docs/index lists them), and on the web at /docs and /llms.txt.",
         },
       })
     }
@@ -200,6 +224,12 @@ const answer = async (
       return reply({ result: { tools: listTools(caller) } })
     case "tools/call":
       return reply(await callTool(env, caller, message.params, origin))
+    case "resources/list":
+      return reply({ result: { resources: listResources() } })
+    case "resources/templates/list":
+      return reply({ result: { resourceTemplates: [] } })
+    case "resources/read":
+      return reply(await readResource(message.params, origin, docs))
     default:
       if (message.method.startsWith("notifications/")) return null
       return reply({ error: { code: ERR.methodNotFound, message: `No method ${message.method}.` } })
@@ -282,7 +312,7 @@ const missingScope = (caller: Caller, messages: ReadonlyArray<RpcRequest>) => {
   return null
 }
 
-export const handleMcp = async (request: Request, env: Env): Promise<Response> => {
+export const handleMcp = async (request: Request, env: Env, docs: DocsSources): Promise<Response> => {
   if (request.method === "GET" || request.method === "DELETE")
     return new Response(null, { status: 405, headers: { allow: "POST" } })
   if (request.method !== "POST") return problem(405, "POST JSON-RPC to /mcp.")
@@ -358,7 +388,13 @@ export const handleMcp = async (request: Request, env: Env): Promise<Response> =
   const answers = (
     await Promise.all(
       messages.map((m) =>
-        answer(env, auth.caller, m as RpcRequest, linkOrigin(request.url) ?? new URL(request.url).origin),
+        answer(
+          env,
+          auth.caller,
+          m as RpcRequest,
+          linkOrigin(request.url) ?? new URL(request.url).origin,
+          docs,
+        ),
       ),
     )
   ).filter((a): a is RpcResponse => a !== null)

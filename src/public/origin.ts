@@ -49,8 +49,18 @@ const WORKER_PREFIXES = [
   "/brand/",
   "/oauth/",
   "/.well-known/oauth-",
+  "/docs/",
 ]
-const WORKER_PATHS = new Set(["/v1", "/mcp", "/healthz", "/openapi.json"])
+const WORKER_PATHS = new Set([
+  "/v1",
+  "/mcp",
+  "/healthz",
+  "/openapi.json",
+  "/docs",
+  "/docs.md",
+  "/llms.txt",
+  "/llms-full.txt",
+])
 
 export const isWorkerPath = (path: string) =>
   WORKER_PATHS.has(path) || WORKER_PREFIXES.some((prefix) => path.startsWith(prefix))

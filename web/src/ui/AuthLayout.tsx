@@ -58,7 +58,7 @@ export function AuthLayout({ children, caption }: { children: ReactNode; caption
             <a className="link-quiet" href="https://github.com/flareyard/mailyard">
               Open source
             </a>
-            <a className="link-quiet" href="https://flareyard.dev/docs/mailyard">
+            <a className="link-quiet" href="/docs">
               Docs
             </a>
           </span>
