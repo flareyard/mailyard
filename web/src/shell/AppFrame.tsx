@@ -454,6 +454,10 @@ function MeMenu({ me }: { me: Me | undefined }) {
             <Icon name="settings" />
             <span className="grow">Settings</span>
           </Link>
+          <a className="menu-item" role="menuitem" href="/docs">
+            <Icon name="file" />
+            <span className="grow">Docs</span>
+          </a>
           <button
             className="menu-item"
             role="menuitem"

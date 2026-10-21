@@ -8,15 +8,17 @@
     "./contracts/mail-events": "./src/contracts/mailEvents.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tools/manifest && tsc --noEmit -p scripts",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tools/manifest && tsc --noEmit -p tools/docs && tsc --noEmit -p scripts",
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
-    "check": "bun run typecheck && bun run lint && bun run manifest && bun run test && bun run web:check",
+    "check": "bun run typecheck && bun run lint && bun run manifest && bun run docs:check && bun run test && bun run web:check",
     "manifest": "bun tools/manifest/cli.ts cloudflare-app.json",
+    "docs:build": "bun tools/docs/build.ts",
+    "docs:check": "bun tools/docs/build.ts --check",
     "contracts": "bun tools/contracts/mailEventsSchema.ts",
     "templates:install": "bun tools/templates/install.ts",
-    "release": "bun run web:build && bun \"${FLAREYARD_DIR:-../flareyard}/packages/manifest/src/release-cli.ts\" release . --out flareyard-release.json",
+    "release": "bun run docs:check && bun run web:build && bun \"${FLAREYARD_DIR:-../flareyard}/packages/manifest/src/release-cli.ts\" release . --out flareyard-release.json",
     "dev": "wrangler dev",
     "deploy": "bun scripts/deploy.ts",
     "claim-link": "bun scripts/deploy.ts --claim-link",
@@ -32,6 +34,7 @@
   "dependencies": {
     "drizzle-orm": "0.45.4",
     "effect": "4.0.5",
+    "marked": "18.1.1",
     "postal-mime": "4.0.7",
     "worker-mailer": "1.2.1"
   },

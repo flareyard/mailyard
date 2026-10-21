@@ -3565,7 +3565,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The page a sign-in link opens (HAL-3361)
+         * The page a sign-in link opens
          * @description An HTML page with one button: opening the link signs nobody in, so a mail scanner that fetches it can't use it up. The button POSTs to the same path.
          */
         get: operations["signInLink.page"];
@@ -3589,7 +3589,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Protected-resource metadata for /mcp (RFC 9728, HAL-3462)
+         * Protected-resource metadata for /mcp (RFC 9728)
          * @description Names /mcp as the resource, this origin as its authorization server, and the scopes a client asks for by default (read, send). /mcp's 401 points here in WWW-Authenticate's resource_metadata.
          */
         get: operations["oauth.protectedResource"];
@@ -3750,7 +3750,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Sign in through Flareyard (HAL-3360)
+         * Sign in through Flareyard
          * @description Only on installs Flareyard made (FLAREYARD_URL and FLAREYARD_INSTALL_ID set); elsewhere this path isn't listed and answers 404. Keeps a PKCE verifier and state in a ten-minute cookie and redirects to Flareyard, which checks the person owns this install. `return` is a path on this site to land on afterwards.
          */
         get: operations["session.flareyardStart"];
@@ -3790,7 +3790,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Wait for new mail (long-poll, HAL-3461)
+         * Wait for new mail (long-poll)
          * @description Blocks until mail newer than `since` is in the mailbox, at once if it already is, else answers 204 at the timeout. Sent copies don't count. Wait again from the `cursor` (also in `x-mailyard-cursor`). `reset: true` means the cursor was older than the kept log: refetch, then wait from `cursor`. Without `since` it waits for mail from now on. For an agent that can't run a webhook receiver.
          */
         get: operations["mail.wait"];
@@ -4424,6 +4424,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -4584,6 +4593,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -4654,6 +4672,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         requests24h?: number | ("Infinity" | "-Infinity" | "NaN");
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -4751,6 +4778,15 @@ export interface operations {
                         }[];
                         nextCursor: string | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -4859,6 +4895,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -4938,6 +4983,15 @@ export interface operations {
                             };
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -5146,6 +5200,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -5242,6 +5305,15 @@ export interface operations {
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -5457,6 +5529,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -5559,6 +5640,15 @@ export interface operations {
                             createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -6508,6 +6598,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -6745,6 +6844,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -6820,6 +6928,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -7006,6 +7123,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -7086,6 +7212,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -7154,6 +7289,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -7215,6 +7359,15 @@ export interface operations {
                         /** @enum {string} */
                         status: "pending" | "succeeded" | "retrying" | "dead" | "paused";
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -7287,6 +7440,15 @@ export interface operations {
                         eventId: string;
                         eventType: string;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -7502,6 +7664,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -7606,6 +7777,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -7685,6 +7865,15 @@ export interface operations {
                             unsubscribed: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -7804,6 +7993,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -7878,6 +8076,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -7936,6 +8143,15 @@ export interface operations {
                             total: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -8113,6 +8329,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -8179,6 +8404,15 @@ export interface operations {
                         receivedAt: number | ("Infinity" | "-Infinity" | "NaN");
                         filedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -8256,6 +8490,15 @@ export interface operations {
                         receivedAt: number | ("Infinity" | "-Infinity" | "NaN");
                         filedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -8629,6 +8872,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -8699,6 +8951,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -8949,6 +9210,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -9067,6 +9337,15 @@ export interface operations {
                             relay?: components["schemas"]["RelayRefusal"];
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -9220,6 +9499,15 @@ export interface operations {
                             nextRecord: string | null;
                         };
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -9540,6 +9828,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -9819,6 +10116,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -9886,6 +10192,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         updatedAt: number | ("Infinity" | "-Infinity" | "NaN");
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -10530,7 +10845,7 @@ export interface operations {
                             resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
-                            /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
+                            /** @description Who is handling it, with a name to show: the key's name until people exist. */
                             assignedTo?: {
                                 id: string;
                                 name: string;
@@ -10643,7 +10958,7 @@ export interface operations {
                             resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
-                            /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
+                            /** @description Who is handling it, with a name to show: the key's name until people exist. */
                             assignedTo?: {
                                 id: string;
                                 name: string;
@@ -11389,7 +11704,7 @@ export interface operations {
                             resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                             /** @description The API key id handling it; see assignedTo for the name. */
                             assignee: string | null;
-                            /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
+                            /** @description Who is handling it, with a name to show: the key's name until people exist. */
                             assignedTo?: {
                                 id: string;
                                 name: string;
@@ -16716,6 +17031,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -16775,6 +17099,15 @@ export interface operations {
                         id: string;
                         deleted: boolean;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -17378,6 +17711,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -17519,6 +17861,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -17585,6 +17936,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -17647,6 +18007,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -17707,6 +18076,15 @@ export interface operations {
                         erased: boolean;
                         messagesScrubbed: number | ("Infinity" | "-Infinity" | "NaN");
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -17914,6 +18292,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -17970,6 +18357,15 @@ export interface operations {
                         subscribers: number | ("Infinity" | "-Infinity" | "NaN");
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -18317,6 +18713,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -18493,6 +18898,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -18565,6 +18979,15 @@ export interface operations {
                             refused: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -18775,6 +19198,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -18962,6 +19394,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -19021,6 +19462,15 @@ export interface operations {
                         id: string;
                         deleted: boolean;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -19480,6 +19930,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -19650,6 +20109,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -19802,6 +20270,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -19870,6 +20347,15 @@ export interface operations {
                         /** @description Who resolved it: an API key id, or the system (sweep, expired, watchdog, …) when its condition cleared. */
                         resolvedBy: string | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -20116,6 +20602,15 @@ export interface operations {
                         }[];
                         nextCursor: string | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -20784,6 +21279,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -20843,6 +21347,15 @@ export interface operations {
                         id: string;
                         deleted: boolean;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -21515,6 +22028,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -21586,6 +22108,15 @@ export interface operations {
                             recentlySent: number | ("Infinity" | "-Infinity" | "NaN");
                         };
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -22078,6 +22609,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -22318,6 +22858,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         updatedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -22562,6 +23111,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -22640,6 +23198,15 @@ export interface operations {
                             at: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         };
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -22773,6 +23340,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -22852,6 +23428,15 @@ export interface operations {
                         }[];
                         nextCursor: string | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -23654,6 +24239,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -23748,6 +24342,15 @@ export interface operations {
                         startedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                         finishedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -23920,6 +24523,15 @@ export interface operations {
                 };
                 content: {
                     "text/csv": string;
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -24721,6 +25333,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -24794,6 +25415,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         finishedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -24943,6 +25573,15 @@ export interface operations {
                             readOnly: boolean;
                         }[] | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -25231,6 +25870,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -25330,6 +25978,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -25417,6 +26074,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -25485,6 +26151,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -25549,6 +26224,15 @@ export interface operations {
                         }[];
                         unavailable: string[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -25619,6 +26303,15 @@ export interface operations {
                         }[];
                         nextCursor: string | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -25800,7 +26493,7 @@ export interface operations {
                                 resolvedAt?: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                                 /** @description The API key id handling it; see assignedTo for the name. */
                                 assignee: string | null;
-                                /** @description Who is handling it, with a name to show: the key's name until people exist (HAL-3361). */
+                                /** @description Who is handling it, with a name to show: the key's name until people exist. */
                                 assignedTo?: {
                                     id: string;
                                     name: string;
@@ -25819,6 +26512,15 @@ export interface operations {
                             reason: "timeout" | "error";
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -25903,6 +26605,15 @@ export interface operations {
                         }[];
                         nextCursor: string | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -26106,6 +26817,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -26219,6 +26939,15 @@ export interface operations {
                             failed: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -27005,6 +27734,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -27064,6 +27802,15 @@ export interface operations {
                         id: string;
                         deleted: boolean;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -27613,6 +28360,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -27693,6 +28449,15 @@ export interface operations {
                             activeRuns: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -28736,6 +29501,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -28919,6 +29693,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -29001,6 +29784,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -29059,6 +29851,15 @@ export interface operations {
                     "application/json": {
                         secret: string;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -29145,6 +29946,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -29227,6 +30037,15 @@ export interface operations {
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -29320,6 +30139,15 @@ export interface operations {
                             at: number | ("Infinity" | "-Infinity" | "NaN");
                         }[];
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -29434,6 +30262,15 @@ export interface operations {
                             absoluteExpiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                         } | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -29822,6 +30659,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -29884,6 +30730,15 @@ export interface operations {
                     "application/json": {
                         sent: boolean;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Forbidden */
@@ -30162,6 +31017,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description NotFound */
             404: {
                 headers: {
@@ -30249,6 +31113,15 @@ export interface operations {
                             absoluteExpiresAt: number | ("Infinity" | "-Infinity" | "NaN");
                         } | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Forbidden */
@@ -30573,6 +31446,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -30638,6 +31520,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         lastActiveAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -30992,6 +31883,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -31100,6 +32000,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -31202,6 +32111,15 @@ export interface operations {
                         /** @enum {string} */
                         status: "draft" | "sent" | "expired" | "accepted" | "revoked";
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -31711,6 +32629,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -31792,6 +32719,15 @@ export interface operations {
                         createdAt: number | ("Infinity" | "-Infinity" | "NaN");
                         removedAt: (number | ("Infinity" | "-Infinity" | "NaN")) | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -31966,6 +32902,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -32131,6 +33076,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -32195,6 +33149,15 @@ export interface operations {
                         reason: string | null;
                         result: Record<string, never> | null;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -32375,6 +33338,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -32548,6 +33520,15 @@ export interface operations {
                         /** @enum {boolean} */
                         revoked: true;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */
@@ -32785,6 +33766,15 @@ export interface operations {
                     "application/json": {
                         deleted: string;
                     };
+                };
+            };
+            /** @description InvalidRequest */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRequestEncoded"];
                 };
             };
             /** @description Unauthorized */

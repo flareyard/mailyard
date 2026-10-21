@@ -10,6 +10,7 @@
       "!design",
       "!**/migrations/meta",
       "!web/src/routeTree.gen.ts",
+      "!src/docs/content.gen.ts",
       "!web/src/api/schema.d.ts",
       "!web/src/fixtures/fixtures.json",
       "!web/e2e/responsive-audit.mjs",
