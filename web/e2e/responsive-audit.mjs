@@ -378,7 +378,7 @@ function writeReport(results) {
   );
 }
 
-const browser = await (ENGINE === "webkit" ? webkit : chromium).launch();
+const browser = await (ENGINE === "webkit" ? webkit : chromium).launch({ chromiumSandbox: true });
 try {
   const pages = args["video-only"] ? PAGES : await audit(browser);
   if (args.video || args["video-only"]) {
