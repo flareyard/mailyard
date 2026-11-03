@@ -64,7 +64,7 @@ if (!link) fail("no /invite/{token} link in the invitation")
 const path = new URL(link as string).pathname
 step(`the invitation links to the app route ${path.replace(/[^/]+$/, "{token}")}`)
 
-const browser = await chromium.launch()
+const browser = await chromium.launch({ chromiumSandbox: true })
 try {
   const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
   const errors: string[] = []

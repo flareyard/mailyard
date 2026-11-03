@@ -24,7 +24,7 @@ const fail = (s: string): never => {
   process.exit(1)
 }
 
-const browser = await chromium.launch()
+const browser = await chromium.launch({ chromiumSandbox: true })
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 const errors: string[] = []
 page.on("pageerror", (e) => errors.push(String(e)))
